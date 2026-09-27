@@ -1,0 +1,9 @@
+# Ignorar todas las carpetas __pycache__ recursivamente
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Entorno virtual y configuraciones locales
+.venv/
+.env
+.github.env

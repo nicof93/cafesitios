@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cafe-sitios | Catálogo de Café de Especialidad</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        pastel: {
+                            blue: '#e0f2fe',
+                            teal: '#ccfbf1',
+                            green: '#d1fae5',
+                            ice: '#f0f9ff',
+                            slate: '#f8fafc'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-700 font-sans min-h-screen flex flex-col justify-between antialiased">
+
+    <!-- BARRA SUPERIOR / HEADER MINIMALISTA -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-sm">☕</span>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-slate-800">Cafe-sitios</h1>
+                    <p class="text-xs text-slate-400 font-normal">Comparador de café de especialidad en Chile</p>
+                </div>
+            </div>
+
+            <!-- BADGE DE ÚLTIMA SINCRONIZACIÓN -->
+            <div class="bg-sky-50 border border-sky-100 rounded-full px-3.5 py-1 text-xs text-sky-800 flex items-center gap-2 shadow-sm">
+                <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
+                <span>Última sincronización: <strong id="last-sync-time" class="font-semibold">Cargando...</strong></span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-8 w-full space-y-8">
+
+        <!-- RESUMEN MINIMALISTA DE PRODUCTOS POR TIENDA -->
+        <section class="bg-white rounded-2xl border border-slate-200/60 p-5 shadow-sm">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                <span>🏪</span> Tiendas Disponibles
+            </h2>
+            <div id="stores-summary" class="flex flex-wrap gap-2">
+                <span class="text-xs text-slate-400 italic">Cargando tiendas...</span>
+            </div>
+        </section>
+
+        <!-- PANEL DE BÚSQUEDA Y FILTROS -->
+        <section class="bg-white rounded-2xl border border-slate-200/60 p-5 shadow-sm">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                
+                <!-- BUSCADOR -->
+                <div class="md:col-span-7">
+                    <label for="search-input" class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                        Buscar variedad, café o nota de cata
+                    </label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="search-input" 
+                            placeholder="Ej. Geisha, Bourbon, Lavado, Frutal, Singular..." 
+                            class="w-full bg-slate-50 border border-slate-200/80 rounded-xl px-4 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition"
+                        >
+                        <span class="absolute right-3.5 top-2.5 text-slate-300 text-sm">🔍</span>
+                    </div>
+                </div>
+
+                <!-- ORDENAMIENTO -->
+                <div class="md:col-span-3">
+                    <label for="sort-select" class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                        Ordenar Por
+                    </label>
+                    <select id="sort-select" class="w-full bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition">
+                        <option value="kilo" selected>🌱 Más baratos por Kilo ($/kg)</option>
+                        <option value="unit">🏷️ Más baratos por Bolsa ($ CLP)</option>
+                    </select>
+                </div>
+
+                <!-- BOTÓN BUSCAR -->
+                <div class="md:col-span-2 flex items-end">
+                    <button 
+                        id="btn-search" 
+                        onclick="nuevaBusqueda()"
+                        class="w-full bg-slate-800 hover:bg-slate-900 text-white font-medium py-2.5 px-4 rounded-xl text-sm transition duration-150 shadow-sm hover:shadow"
+                    >
+                        Buscar
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- RESULTADOS / GRILLA -->
+        <section>
+            <div class="flex justify-between items-center mb-5">
+                <h2 class="text-base font-bold text-slate-800">Catálogo Destacado</h2>
+                <span id="results-count" class="text-xs font-medium text-slate-400">cargando...</span>
+            </div>
+
+            <!-- GRILLA DE TARJETAS -->
+            <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Se puebla dinámicamente -->
+            </div>
+
+            <!-- BOTÓN CARGAR MÁS PRODUCTOS -->
+            <div class="mt-10 text-center">
+                <button 
+                    id="btn-load-more" 
+                    onclick="cargarMasProductos()"
+                    class="hidden bg-white hover:bg-sky-50/50 text-slate-600 border border-slate-200 hover:border-sky-200 font-semibold px-6 py-3 rounded-xl text-sm transition duration-200 shadow-sm"
+                >
+                    Cargar más productos ⬇️
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER MINIMALISTA -->
+    <footer class="border-t border-slate-200/60 bg-white py-6 mt-16 text-center text-xs text-slate-400">
+        <p>Cafe-sitios &copy; 2026 &bull; Comparador automático de café de especialidad</p>
+    </footer>
+
+    <!-- LOGICA JAVASCRIPT -->
+    <script>
+        const API_URL = "http://localhost:8000/api/v1/products/cheapest";
+        
+        let paginaActual = 1;
+        const limitePorPagina = 12;
+        let totalCargados = 0;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            nuevaBusqueda();
+        });
+
+        document.getElementById("search-input").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") nuevaBusqueda();
+        });
+
+        function nuevaBusqueda() {
+            paginaActual = 1;
+            totalCargados = 0;
+            document.getElementById("products-grid").innerHTML = "";
+            obtenerProductos(false);
+        }
+
+        function cargarMasProductos() {
+            paginaActual++;
+            obtenerProductos(true);
+        }
+
+        async function obtenerProductos(append = false) {
+            const query = document.getElementById("search-input").value.trim();
+            const sortBy = document.getElementById("sort-select").value;
+            const gridContainer = document.getElementById("products-grid");
+            const btnLoadMore = document.getElementById("btn-load-more");
+
+            if (!append) {
+                gridContainer.innerHTML = `
+                    <div class="col-span-full py-16 text-center text-slate-400">
+                        <div class="inline-block animate-spin rounded-full h-7 w-7 border-2 border-sky-400 border-t-transparent mb-3"></div>
+                        <p class="text-xs">Buscando las mejores ofertas...</p>
+                    </div>
+                `;
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    sort_by: sortBy,
+                    limit: limitePorPagina,
+                    only_available: true
+                });
+
+                if (query) params.append("search_query", query);
+
+                const response = await fetch(`${API_URL}?${params.toString()}`);
+                if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+
+                const result = await response.json();
+                renderizarCatalogo(result.data, result.total_items, append);
+
+            } catch (error) {
+                console.error("Error al consultar API:", error);
+                if (!append) {
+                    gridContainer.innerHTML = `
+                        <div class="col-span-full bg-slate-100 border border-slate-200 text-slate-600 p-6 rounded-2xl text-center text-xs">
+                            ❌ No se pudo conectar con la API en <code>http://localhost:8000</code>.
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function renderizarCatalogo(productos, totalItems, append) {
+            const gridContainer = document.getElementById("products-grid");
+            const storesSummaryContainer = document.getElementById("stores-summary");
+            const countLabel = document.getElementById("results-count");
+            const btnLoadMore = document.getElementById("btn-load-more");
+            const lastSyncLabel = document.getElementById("last-sync-time");
+
+            totalCargados += productos.length;
+            countLabel.textContent = `Mostrando ${totalCargados} de ${totalItems} resultados`;
+
+            if (!append && productos.length === 0) {
+                gridContainer.innerHTML = `
+                    <div class="col-span-full bg-white p-12 text-center rounded-2xl border border-slate-200/60 text-slate-400 text-sm">
+                        ☕ No se encontraron cafés que coincidan con la búsqueda.
+                    </div>
+                `;
+                btnLoadMore.classList.add("hidden");
+                return;
+            }
+
+            const tiendasConteo = {};
+
+            const htmlTarjetas = productos.map(item => {
+                tiendasConteo[item.tienda] = (tiendasConteo[item.tienda] || 0) + 1;
+
+                const varData = item.variante;
+                const esRegalo = varData.precio_clp === 0 || varData.precio_original_clp === 0;
+                const esOferta = varData.en_oferta && !esRegalo;
+                const imagenUrl = item.imagen || "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop";
+
+                return `
+                    <div class="bg-white rounded-2xl border border-slate-200/70 hover:border-sky-200 hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden group">
+                        
+                        <div>
+                            <!-- IMAGEN Y BADGES PASTEL -->
+                            <div class="relative h-44 bg-slate-100 overflow-hidden">
+                                <img src="${item.imagen || imagenUrl}" alt="${item.nombre}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                                
+                                <span class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-slate-700 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
+                                    ${item.tienda}
+                                </span>
+
+                                <!-- INDICADOR DE REGALO O DESCUENTO -->
+                                ${esRegalo ? `
+                                    <span class="absolute top-3 right-3 bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-sm">
+                                        🎁 Regalo / Muestra
+                                    </span>
+                                ` : esOferta ? `
+                                    <span class="absolute top-3 right-3 bg-sky-100 text-sky-800 border border-sky-200 text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
+                                        -${varData.descuento_porcentaje}% OFF
+                                    </span>
+                                ` : ''}
+                            </div>
+
+                            <!-- DATOS DEL PRODUCTO -->
+                            <div class="p-4 space-y-2">
+                                <h3 class="font-bold text-slate-800 text-sm line-clamp-2 leading-snug group-hover:text-sky-700 transition">
+                                    ${item.nombre}
+                                </h3>
+
+                                <div class="flex items-center gap-1.5 text-[11px] text-slate-400">
+                                    <span class="bg-slate-100 px-2 py-0.5 rounded-md font-medium text-slate-500">
+                                        ${varData.formato_gramos}g &bull; ${varData.opcion}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BLOQUE INFERIOR / PRECIOS -->
+                        <div class="p-4 pt-0 space-y-3">
+                            <div class="border-t border-slate-100 pt-3 flex justify-between items-end">
+                                <div>
+                                    <p class="text-[10px] uppercase font-bold text-slate-400">Precio / kg</p>
+                                    ${esRegalo ? `
+                                        <p class="text-sm font-bold text-emerald-600">¡Gratis!</p>
+                                    ` : `
+                                        <p class="text-base font-extrabold text-teal-700">
+                                            $${varData.precio_por_kilo.toLocaleString('es-CL')} <span class="text-[10px] font-normal text-slate-400">/kg</span>
+                                        </p>
+                                    `}
+                                </div>
+
+                                <div class="text-right">
+                                    ${esRegalo ? `
+                                        <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold px-2 py-0.5 rounded-md">
+                                            $0 CLP
+                                        </span>
+                                    ` : `
+                                        ${esOferta ? `<p class="text-[10px] text-slate-400 line-through">$${varData.precio_original_clp.toLocaleString('es-CL')}</p>` : ''}
+                                        <p class="text-sm font-bold text-slate-800">
+                                            $${varData.precio_clp.toLocaleString('es-CL')}
+                                        </p>
+                                    `}
+                                </div>
+                            </div>
+
+                            <!-- LINK EXTERNO -->
+                            <a 
+                                href="${item.url_detalle}" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                class="w-full bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200/80 font-semibold py-2 px-3 rounded-xl text-center text-xs block transition duration-150 flex items-center justify-center gap-1.5"
+                            >
+                                <span>Ver en tienda</span>
+                                <span class="text-[10px]">↗</span>
+                            </a>
+                        </div>
+
+                    </div>
+                `;
+            }).join('');
+
+            if (append) {
+                gridContainer.insertAdjacentHTML("beforeend", htmlTarjetas);
+            } else {
+                gridContainer.innerHTML = htmlTarjetas;
+            }
+
+            if (totalCargados < totalItems) {
+                btnLoadMore.classList.remove("hidden");
+            } else {
+                btnLoadMore.classList.add("hidden");
+            }
+
+            storesSummaryContainer.innerHTML = Object.entries(tiendasConteo).map(([tienda, cantidad]) => `
+                <span class="inline-flex items-center gap-1.5 bg-sky-50 text-sky-800 border border-sky-100 text-xs font-medium px-3 py-1 rounded-full">
+                    <span>${tienda}</span>
+                    <span class="bg-sky-200 text-sky-900 px-1.5 py-0.2 rounded-full text-[10px] font-bold">${cantidad}</span>
+                </span>
+            `).join('');
+
+            const ahora = new Date();
+            lastSyncLabel.textContent = ahora.toLocaleString('es-CL', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            }) + " hrs";
+        }
+    </script>
+</body>
+</html>
