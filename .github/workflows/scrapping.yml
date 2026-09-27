@@ -28,4 +28,4 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          python sync_scraper.py
+          python scrapper_application.py
