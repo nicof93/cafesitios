@@ -25,7 +25,8 @@ cafe-sitios/
 ## Ejecución
 1. Instalar dependencias: `pip install -r requirements.txt`
 2. Ejecutar el scraper: `python application.py`
-3. Iniciar la API: `uvicorn main:app --reload`
+3. Iniciar la API: `python -m uvicorn main:app --reload`
+4. Ejecutar test: `python -m unittest discover tests`
 
 ## Links de interes
 - Documentación Interactiva (Swagger UI): http://localhost:8000/docs

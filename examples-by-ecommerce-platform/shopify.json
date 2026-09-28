@@ -1,0 +1,2600 @@
+{
+    "products": [
+        {
+            "id": 8046661435440,
+            "title": "Catuaí Natural Lote 28, Mi Finquita, Panamá",
+            "handle": "catuai-natural-lote-28-mi-finquita-panama",
+            "body_html": "\u003ch4 style=\"text-align: center;\"\u003eDETALLES\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProductor \u003c\/strong\u003eTessie \u0026amp; Ratibor Hartmann\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003ePaís\u003c\/strong\u003e Panamá\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eRegión \u003c\/strong\u003eLos Pozos, Chiriquí\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eAltitud\u003c\/strong\u003e 1.800 msnm\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eVariedad \u003c\/strong\u003eCatuaí\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProceso \u003c\/strong\u003eNatural\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eCosecha \u003c\/strong\u003e2026\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003ePERFIL DE TAZA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eNotas \u003c\/b\u003eChocolate - Mora - Panela\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003eHISTORIA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp\u003eLa familia Hartmann es una de las pioneras del café de especialidad en Panamá. Su historia comenzó hace dos generaciones con \u003cstrong\u003eAlois Hartmann\u003c\/strong\u003e, quien se estableció en el país en 1912. Su hijo \u003cstrong\u003eRatibor\u003c\/strong\u003e fundó \u003cstrong\u003eFinca Hartmann\u003c\/strong\u003e, aprovechando 100 hectáreas de bosque virgen heredadas de su padre. Hoy en día, esta finca es gestionada en conjunto por los cinco hijos de Ratibor, cada uno con un rol clave dentro de la operación familiar.\u003c\/p\u003e\n\u003cp\u003eSin conformarse con producir algunos de los cafés más reconocidos del mundo en Finca Hartmann, \u003cstrong\u003eRatibor Jr.\u003c\/strong\u003e y su esposa \u003cstrong\u003eTessie\u003c\/strong\u003e dieron inicio al proyecto \u003cstrong\u003eMi Finquita\u003c\/strong\u003e.\u003c\/p\u003e\n\u003cp\u003e\u003cstrong\u003eMi Finquita\u003c\/strong\u003e, está ubicada en las cercanías del poblado de \u003cstrong\u003eLos Pozos\u003c\/strong\u003e, en Chiriquí. Fue concebida como una forma de seguir impulsando el desarrollo del café de especialidad en la región. Integrando métodos científicos, prácticas tradicionales y técnicas de procesamiento innovadoras sumadas a la experiencia adquirida en la gestión de la reconocida Finca Hartmann, \u003cstrong\u003eMi Finquita\u003c\/strong\u003e representa la visión de la familia Hartmann para destacar en un mercado cafetalero cada vez más competitivo.\u003c\/p\u003e",
+            "published_at": "2026-08-13T09:56:39-04:00",
+            "created_at": "2026-08-11T12:27:06-04:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "SINGULAR COFFEE ROASTERS",
+            "product_type": "Origen",
+            "tags": [],
+            "variants": [
+                {
+                    "id": 43479204855856,
+                    "title": "Grano \/ 200g",
+                    "option1": "Grano",
+                    "option2": "200g",
+                    "option3": null,
+                    "sku": "CATUAINATLOT28125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "25000",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 8046661435440,
+                    "created_at": "2026-08-11T12:27:06-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43479204888624,
+                    "title": "Molienda Fina (Espresso) \/ 200g",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "200g",
+                    "option3": null,
+                    "sku": "CATUAINATLOT28125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "25000",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 8046661435440,
+                    "created_at": "2026-08-11T12:27:06-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43479204921392,
+                    "title": "Molienda Media (Americana - Mokha) \/ 200g",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "200g",
+                    "option3": null,
+                    "sku": "CATUAINATLOT28125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "25000",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 8046661435440,
+                    "created_at": "2026-08-11T12:27:06-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43479204954160,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 200g",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "200g",
+                    "option3": null,
+                    "sku": "CATUAINATLOT28125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "25000",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 8046661435440,
+                    "created_at": "2026-08-11T12:27:06-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 39938668331056,
+                    "created_at": "2026-08-11T12:36:40-04:00",
+                    "position": 1,
+                    "updated_at": "2026-08-11T12:36:41-04:00",
+                    "product_id": 8046661435440,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsAppImage2026-08-11at12.31.52.jpg?v=1786466201",
+                    "width": 1600,
+                    "height": 1600
+                }
+            ],
+            "options": [
+                {
+                    "name": "¿Grano o molido?",
+                    "position": 1,
+                    "values": [
+                        "Grano",
+                        "Molienda Fina (Espresso)",
+                        "Molienda Media (Americana - Mokha)",
+                        "Molienda Gruesa (Prensa - Filtrado)"
+                    ]
+                },
+                {
+                    "name": "Formato",
+                    "position": 2,
+                    "values": [
+                        "200g"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 8046659534896,
+            "title": "Catuaí Natural Serie L, Mi Finquita, Panamá",
+            "handle": "catuai-natural-serie-l-mi-finquita-panama",
+            "body_html": "\u003ch4 style=\"text-align: center;\"\u003eDETALLES\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProductor \u003c\/strong\u003eTessie \u0026amp; Ratibor Hartmann\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003ePaís\u003c\/strong\u003e Panamá\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eRegión \u003c\/strong\u003eLos Pozos, Chiriquí\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eAltitud\u003c\/strong\u003e 1.800 msnm\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eVariedad \u003c\/strong\u003eCatuaí\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProceso \u003c\/strong\u003eNatural\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eCosecha \u003c\/strong\u003e2026\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003ePERFIL DE TAZA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eNotas \u003c\/b\u003eDurazno - Caramelo - Miel\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003eHISTORIA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp\u003eLa familia Hartmann es una de las pioneras del café de especialidad en Panamá. Su historia comenzó hace dos generaciones con \u003cstrong\u003eAlois Hartmann\u003c\/strong\u003e, quien se estableció en el país en 1912. Su hijo \u003cstrong\u003eRatibor\u003c\/strong\u003e fundó \u003cstrong\u003eFinca Hartmann\u003c\/strong\u003e, aprovechando 100 hectáreas de bosque virgen heredadas de su padre. Hoy en día, esta finca es gestionada en conjunto por los cinco hijos de Ratibor, cada uno con un rol clave dentro de la operación familiar.\u003c\/p\u003e\n\u003cp\u003eSin conformarse con producir algunos de los cafés más reconocidos del mundo en Finca Hartmann, \u003cstrong\u003eRatibor Jr.\u003c\/strong\u003e y su esposa \u003cstrong\u003eTessie\u003c\/strong\u003e dieron inicio al proyecto \u003cstrong\u003eMi Finquita\u003c\/strong\u003e.\u003c\/p\u003e\n\u003cp\u003e\u003cstrong\u003eMi Finquita\u003c\/strong\u003e, está ubicada en las cercanías del poblado de \u003cstrong\u003eLos Pozos\u003c\/strong\u003e, en Chiriquí. Fue concebida como una forma de seguir impulsando el desarrollo del café de especialidad en la región. Integrando métodos científicos, prácticas tradicionales y técnicas de procesamiento innovadoras sumadas a la experiencia adquirida en la gestión de la reconocida Finca Hartmann, \u003cstrong\u003eMi Finquita\u003c\/strong\u003e representa la visión de la familia Hartmann para destacar en un mercado cafetalero cada vez más competitivo.\u003c\/p\u003e",
+            "published_at": "2026-08-13T09:56:47-04:00",
+            "created_at": "2026-08-11T12:24:03-04:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "SINGULAR COFFEE ROASTERS",
+            "product_type": "Origen",
+            "tags": [],
+            "variants": [
+                {
+                    "id": 43479200530480,
+                    "title": "Grano \/ 200g",
+                    "option1": "Grano",
+                    "option2": "200g",
+                    "option3": null,
+                    "sku": "CATUAINATSERIEL125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "25000",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 8046659534896,
+                    "created_at": "2026-08-11T12:24:03-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43479200563248,
+                    "title": "Molienda Fina (Espresso) \/ 200g",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "200g",
+                    "option3": null,
+                    "sku": "CATUAINATSERIEL125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "25000",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 8046659534896,
+                    "created_at": "2026-08-11T12:24:03-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43479200596016,
+                    "title": "Molienda Media (Americana - Mokha) \/ 200g",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "200g",
+                    "option3": null,
+                    "sku": "CATUAINATSERIEL125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "25000",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 8046659534896,
+                    "created_at": "2026-08-11T12:24:03-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43479200628784,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 200g",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "200g",
+                    "option3": null,
+                    "sku": "CATUAINATSERIEL125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "25000",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 8046659534896,
+                    "created_at": "2026-08-11T12:24:03-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 39938675343408,
+                    "created_at": "2026-08-11T12:39:27-04:00",
+                    "position": 1,
+                    "updated_at": "2026-08-11T12:39:29-04:00",
+                    "product_id": 8046659534896,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsAppImage2026-08-11at12.31.53.jpg?v=1786466369",
+                    "width": 1600,
+                    "height": 1600
+                }
+            ],
+            "options": [
+                {
+                    "name": "¿Grano o molido?",
+                    "position": 1,
+                    "values": [
+                        "Grano",
+                        "Molienda Fina (Espresso)",
+                        "Molienda Media (Americana - Mokha)",
+                        "Molienda Gruesa (Prensa - Filtrado)"
+                    ]
+                },
+                {
+                    "name": "Formato",
+                    "position": 2,
+                    "values": [
+                        "200g"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 8046656192560,
+            "title": "Caturra Natural, Mi Finquita, Panamá",
+            "handle": "caturra-natural-mi-finquita-panama",
+            "body_html": "\u003ch4 style=\"text-align: center;\"\u003eDETALLES\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProductor \u003c\/strong\u003eTessie \u0026amp; Ratibor Hartmann\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003ePaís\u003c\/strong\u003e Panamá\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eRegión \u003c\/strong\u003eLos Pozos, Chiriquí\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eAltitud\u003c\/strong\u003e 1.800 msnm\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eVariedad \u003c\/strong\u003eCaturra\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProceso \u003c\/strong\u003eNatural\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eCosecha \u003c\/strong\u003e2026\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003ePERFIL DE TAZA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eNotas \u003c\/b\u003eMaracuyá - Mango - Miel - Avellana\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003eHISTORIA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp\u003eLa familia Hartmann es una de las pioneras del café de especialidad en Panamá. Su historia comenzó hace dos generaciones con \u003cstrong\u003eAlois Hartmann\u003c\/strong\u003e, quien se estableció en el país en 1912. Su hijo \u003cstrong\u003eRatibor\u003c\/strong\u003e fundó \u003cstrong\u003eFinca Hartmann\u003c\/strong\u003e, aprovechando 100 hectáreas de bosque virgen heredadas de su padre. Hoy en día, esta finca es gestionada en conjunto por los cinco hijos de Ratibor, cada uno con un rol clave dentro de la operación familiar.\u003c\/p\u003e\n\u003cp\u003eSin conformarse con producir algunos de los cafés más reconocidos del mundo en Finca Hartmann, \u003cstrong\u003eRatibor Jr.\u003c\/strong\u003e y su esposa \u003cstrong\u003eTessie\u003c\/strong\u003e dieron inicio al proyecto \u003cstrong\u003eMi Finquita\u003c\/strong\u003e.\u003c\/p\u003e\n\u003cp\u003e\u003cstrong\u003eMi Finquita\u003c\/strong\u003e, está ubicada en las cercanías del poblado de \u003cstrong\u003eLos Pozos\u003c\/strong\u003e, en Chiriquí. Fue concebida como una forma de seguir impulsando el desarrollo del café de especialidad en la región. Integrando métodos científicos, prácticas tradicionales y técnicas de procesamiento innovadoras sumadas a la experiencia adquirida en la gestión de la reconocida Finca Hartmann, \u003cstrong\u003eMi Finquita\u003c\/strong\u003e representa la visión de la familia Hartmann para destacar en un mercado cafetalero cada vez más competitivo.\u003c\/p\u003e",
+            "published_at": "2026-08-13T09:56:57-04:00",
+            "created_at": "2026-08-11T12:17:00-04:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "SINGULAR COFFEE ROASTERS",
+            "product_type": "Origen",
+            "tags": [],
+            "variants": [
+                {
+                    "id": 43479193780272,
+                    "title": "Grano \/ 200g",
+                    "option1": "Grano",
+                    "option2": "200g",
+                    "option3": null,
+                    "sku": "CATURRALOTE37125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "25000",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 8046656192560,
+                    "created_at": "2026-08-11T12:17:00-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43479193845808,
+                    "title": "Molienda Fina (Espresso) \/ 200g",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "200g",
+                    "option3": null,
+                    "sku": "CATURRALOTE37125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "25000",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 8046656192560,
+                    "created_at": "2026-08-11T12:17:00-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43479193911344,
+                    "title": "Molienda Media (Americana - Mokha) \/ 200g",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "200g",
+                    "option3": null,
+                    "sku": "CATURRALOTE37125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "25000",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 8046656192560,
+                    "created_at": "2026-08-11T12:17:00-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43479193976880,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 200g",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "200g",
+                    "option3": null,
+                    "sku": "CATURRALOTE37125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "25000",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 8046656192560,
+                    "created_at": "2026-08-11T12:17:00-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 39950073036848,
+                    "created_at": "2026-08-13T11:18:28-04:00",
+                    "position": 1,
+                    "updated_at": "2026-08-13T11:18:30-04:00",
+                    "product_id": 8046656192560,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/MockupCaturracorregido2.png?v=1786634310",
+                    "width": 4501,
+                    "height": 4500
+                }
+            ],
+            "options": [
+                {
+                    "name": "¿Grano o molido?",
+                    "position": 1,
+                    "values": [
+                        "Grano",
+                        "Molienda Fina (Espresso)",
+                        "Molienda Media (Americana - Mokha)",
+                        "Molienda Gruesa (Prensa - Filtrado)"
+                    ]
+                },
+                {
+                    "name": "Formato",
+                    "position": 2,
+                    "values": [
+                        "200g"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 7756847579184,
+            "title": "Colombia, Manzanares Caldas",
+            "handle": "colombia-manzanares-caldas",
+            "body_html": "\u003ch4 style=\"text-align: center;\"\u003eDETALLES\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003ePais\u003c\/strong\u003e Colombia\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eRegión \u003c\/b\u003eManzanares\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eAltitud\u003c\/strong\u003e 1900 \u003cspan\u003em s. n. m\u003c\/span\u003e\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eVariedad \u003c\/strong\u003eCaturra - Castillo\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProceso \u003c\/strong\u003eLavado\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eCosecha \u003c\/strong\u003e2024\u003c\/p\u003e\n\u003cblockquote\u003e\u003c\/blockquote\u003e\n\u003ch4 style=\"text-align: center;\"\u003ePERFIL DE TAZA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eSabor y Retrogusto \u003c\/strong\u003eChocolate - Cáscara de Limón - Vainilla\u003c\/p\u003e",
+            "published_at": "2026-07-02T15:48:11-04:00",
+            "created_at": "2025-10-03T10:38:50-03:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "Singular Coffee Roasters",
+            "product_type": "Origen",
+            "tags": [
+                "Colombia",
+                "Origen_Colombia"
+            ],
+            "variants": [
+                {
+                    "id": 42450473844784,
+                    "title": "Grano \/ 250g",
+                    "option1": "Grano",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "COLCHINCHICALGRA250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "15900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 7756847579184,
+                    "created_at": "2025-10-03T10:38:51-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42450473877552,
+                    "title": "Grano \/ 1kg",
+                    "option1": "Grano",
+                    "option2": "1kg",
+                    "option3": null,
+                    "sku": "COLOMCHINCHICALGRA1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "36900",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 7756847579184,
+                    "created_at": "2025-10-03T10:38:51-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42450473910320,
+                    "title": "Molienda Fina (Espresso) \/ 250g",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "COLCHINCHICALGRA250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "15900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 7756847579184,
+                    "created_at": "2025-10-03T10:38:51-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42450473943088,
+                    "title": "Molienda Fina (Espresso) \/ 1kg",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "1kg",
+                    "option3": null,
+                    "sku": "COLOMCHINCHICALGRA1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "36900",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 7756847579184,
+                    "created_at": "2025-10-03T10:38:51-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42450473975856,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 250g",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "COLCHINCHICALGRA250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "15900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 5,
+                    "product_id": 7756847579184,
+                    "created_at": "2025-10-03T10:38:51-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42450474008624,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 1kg",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "1kg",
+                    "option3": null,
+                    "sku": "COLOMCHINCHICALGRA1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "36900",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 6,
+                    "product_id": 7756847579184,
+                    "created_at": "2025-10-03T10:38:51-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42450474041392,
+                    "title": "Molienda Media (Americana - Mokha) \/ 250g",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "COLCHINCHICALGRA250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "15900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 7,
+                    "product_id": 7756847579184,
+                    "created_at": "2025-10-03T10:38:51-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42450474074160,
+                    "title": "Molienda Media (Americana - Mokha) \/ 1kg",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "1kg",
+                    "option3": null,
+                    "sku": "COLOMCHINCHICALGRA1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "36900",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 8,
+                    "product_id": 7756847579184,
+                    "created_at": "2025-10-03T10:38:51-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 37500179021872,
+                    "created_at": "2025-10-03T10:40:09-03:00",
+                    "position": 1,
+                    "updated_at": "2025-11-04T09:30:50-03:00",
+                    "product_id": 7756847579184,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsAppImage2025-09-24at11.11.42.jpg?v=1762259450",
+                    "width": 1270,
+                    "height": 1270
+                }
+            ],
+            "options": [
+                {
+                    "name": "¿Molido o Grano?",
+                    "position": 1,
+                    "values": [
+                        "Grano",
+                        "Molienda Fina (Espresso)",
+                        "Molienda Gruesa (Prensa - Filtrado)",
+                        "Molienda Media (Americana - Mokha)"
+                    ]
+                },
+                {
+                    "name": "Formato",
+                    "position": 2,
+                    "values": [
+                        "250g",
+                        "1kg"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 7782451445808,
+            "title": "Finca Mi Finquita Panamá, Caturra",
+            "handle": "finca-mi-finquita-panama-caturra",
+            "body_html": "\u003ch4 style=\"text-align: center;\"\u003eDETALLES\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProductor \u003c\/strong\u003eTessie \u0026amp; Ratibor Hartmann\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003ePaís\u003c\/strong\u003e Panamá\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eRegión \u003c\/strong\u003eLos Pozos, Chiriquí\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eAltitud\u003c\/strong\u003e 1.800 msnm\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eVariedad \u003c\/strong\u003eCaturra\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProceso \u003c\/strong\u003eLavado\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eCosecha \u003c\/strong\u003e2026\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003ePERFIL DE TAZA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eNotas \u003c\/b\u003eChocolate\u003cb\u003e \u003c\/b\u003e- Caramelo - Avellana\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003eHISTORIA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp\u003eLa familia Hartmann es una de las pioneras del café de especialidad en Panamá. Su historia comenzó hace dos generaciones con \u003cstrong\u003eAlois Hartmann\u003c\/strong\u003e, quien se estableció en el país en 1912. Su hijo \u003cstrong\u003eRatibor\u003c\/strong\u003e fundó \u003cstrong\u003eFinca Hartmann\u003c\/strong\u003e, aprovechando 100 hectáreas de bosque virgen heredadas de su padre. Hoy en día, esta finca es gestionada en conjunto por los cinco hijos de Ratibor, cada uno con un rol clave dentro de la operación familiar.\u003c\/p\u003e\n\u003cp\u003eSin conformarse con producir algunos de los cafés más reconocidos del mundo en Finca Hartmann, \u003cstrong\u003eRatibor Jr.\u003c\/strong\u003e y su esposa \u003cstrong\u003eTessie\u003c\/strong\u003e dieron inicio al proyecto \u003cstrong\u003eMi Finquita\u003c\/strong\u003e.\u003c\/p\u003e\n\u003cp\u003e\u003cstrong\u003eMi Finquita\u003c\/strong\u003e, está ubicada en las cercanías del poblado de \u003cstrong\u003eLos Pozos\u003c\/strong\u003e, en Chiriquí. Fue concebida como una forma de seguir impulsando el desarrollo del café de especialidad en la región. Integrando métodos científicos, prácticas tradicionales y técnicas de procesamiento innovadoras sumadas a la experiencia adquirida en la gestión de la reconocida Finca Hartmann, \u003cstrong\u003eMi Finquita\u003c\/strong\u003e representa la visión de la familia Hartmann para destacar en un mercado cafetalero cada vez más competitivo.\u003c\/p\u003e",
+            "published_at": "2025-11-11T12:22:11-03:00",
+            "created_at": "2025-11-11T12:17:52-03:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "SINGULAR COFFEE ROASTERS",
+            "product_type": "Origen",
+            "tags": [],
+            "variants": [
+                {
+                    "id": 42553525207088,
+                    "title": "Grano \/ 250g",
+                    "option1": "Grano",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "PANACAT250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "15900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 7782451445808,
+                    "created_at": "2025-11-11T12:17:52-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42553525239856,
+                    "title": "Grano \/ 1k",
+                    "option1": "Grano",
+                    "option2": "1k",
+                    "option3": null,
+                    "sku": "PANACAT1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "36900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 7782451445808,
+                    "created_at": "2025-11-11T12:17:52-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42553525272624,
+                    "title": "Molienda Fina (Espresso) \/ 250g",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "PANACAT250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "15900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 7782451445808,
+                    "created_at": "2025-11-11T12:17:52-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42553525305392,
+                    "title": "Molienda Fina (Espresso) \/ 1k",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "1k",
+                    "option3": null,
+                    "sku": "PANACAT1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "36900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 7782451445808,
+                    "created_at": "2025-11-11T12:17:52-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42553525338160,
+                    "title": "Molienda Media (Americana - Mokha) \/ 250g",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "PANACAT250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "15900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 5,
+                    "product_id": 7782451445808,
+                    "created_at": "2025-11-11T12:17:52-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42553525370928,
+                    "title": "Molienda Media (Americana - Mokha) \/ 1k",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "1k",
+                    "option3": null,
+                    "sku": "PANACAT1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "36900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 6,
+                    "product_id": 7782451445808,
+                    "created_at": "2025-11-11T12:17:52-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42553525403696,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 250g",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "PANACAT250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "15900",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 7,
+                    "product_id": 7782451445808,
+                    "created_at": "2025-11-11T12:17:52-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42553525436464,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 1k",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "1k",
+                    "option3": null,
+                    "sku": "PANACAT1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "36900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 8,
+                    "product_id": 7782451445808,
+                    "created_at": "2025-11-11T12:17:52-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 39662752268336,
+                    "created_at": "2026-06-25T09:38:47-04:00",
+                    "position": 1,
+                    "updated_at": "2026-06-25T09:38:48-04:00",
+                    "product_id": 7782451445808,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsApp_Image_2026-06-05_at_11.03.34.jpg?v=1782394728",
+                    "width": 1599,
+                    "height": 1600
+                }
+            ],
+            "options": [
+                {
+                    "name": "¿Grano o molido?",
+                    "position": 1,
+                    "values": [
+                        "Grano",
+                        "Molienda Fina (Espresso)",
+                        "Molienda Media (Americana - Mokha)",
+                        "Molienda Gruesa (Prensa - Filtrado)"
+                    ]
+                },
+                {
+                    "name": "Formato",
+                    "position": 2,
+                    "values": [
+                        "250g",
+                        "1k"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 7946953916464,
+            "title": "Honduras, La Paz",
+            "handle": "honduras-las-delicias-copia-1",
+            "body_html": "\u003ch4 style=\"text-align: center;\"\u003eDETALLES\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003ePais\u003c\/strong\u003e Honduras\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eRegión \u003c\/b\u003eOjos de Agua, La Paz\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eAltitud\u003c\/strong\u003e 1600\u003cspan\u003em s. n. m\u003c\/span\u003e\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eVariedad \u003c\/strong\u003eCatuaí, Ihcafe 90\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProceso \u003c\/strong\u003eLavado\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eCosecha \u003c\/strong\u003e2025\u003c\/p\u003e\n\u003cblockquote\u003e\u003c\/blockquote\u003e\n\u003ch4 style=\"text-align: center;\"\u003ePERFIL DE TAZA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eSabor y Retrogusto \u003c\/strong\u003eCaramelo - Panela - Naranja\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e \u003c\/p\u003e",
+            "published_at": "2026-07-02T15:47:56-04:00",
+            "created_at": "2026-04-13T10:49:44-04:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "SINGULAR COFFEE ROASTERS",
+            "product_type": "Origen",
+            "tags": [
+                "Honduras",
+                "Origen_Honduras"
+            ],
+            "variants": [
+                {
+                    "id": 42940989374512,
+                    "title": "Grano \/ 250g",
+                    "option1": "Grano",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "HONLAPAZ250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "15900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 7946953916464,
+                    "created_at": "2026-04-13T10:49:44-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42940989407280,
+                    "title": "Grano \/ 1k",
+                    "option1": "Grano",
+                    "option2": "1k",
+                    "option3": null,
+                    "sku": "HONDULAPAZ1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "35900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 7946953916464,
+                    "created_at": "2026-04-13T10:49:44-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42940989440048,
+                    "title": "Molienda Fina (Espresso) \/ 250g",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "HONLAPAZ250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "15900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 7946953916464,
+                    "created_at": "2026-04-13T10:49:44-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42940989472816,
+                    "title": "Molienda Fina (Espresso) \/ 1k",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "1k",
+                    "option3": null,
+                    "sku": "HONDULAPAZ1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "35900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 7946953916464,
+                    "created_at": "2026-04-13T10:49:44-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42940989505584,
+                    "title": "Molienda Media (Americana - Mokha) \/ 250g",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "HONLAPAZ250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "15900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 5,
+                    "product_id": 7946953916464,
+                    "created_at": "2026-04-13T10:49:44-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42940989538352,
+                    "title": "Molienda Media (Americana - Mokha) \/ 1k",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "1k",
+                    "option3": null,
+                    "sku": "HONDULAPAZ1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "35900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 6,
+                    "product_id": 7946953916464,
+                    "created_at": "2026-04-13T10:49:44-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42940989571120,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 250g",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "HONLAPAZ250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "15900",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 7,
+                    "product_id": 7946953916464,
+                    "created_at": "2026-04-13T10:49:44-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42940989603888,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 1k",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "1k",
+                    "option3": null,
+                    "sku": "HONDULAPAZ1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "35900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 8,
+                    "product_id": 7946953916464,
+                    "created_at": "2026-04-13T10:49:44-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 39220988379184,
+                    "created_at": "2026-04-13T11:06:17-04:00",
+                    "position": 1,
+                    "updated_at": "2026-04-13T11:06:20-04:00",
+                    "product_id": 7946953916464,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/HondurasLapaz_948c5032-1d93-43a8-803d-d031f0b3fdb2.png?v=1776092780",
+                    "width": 4601,
+                    "height": 4600
+                }
+            ],
+            "options": [
+                {
+                    "name": "¿Grano o molido?",
+                    "position": 1,
+                    "values": [
+                        "Grano",
+                        "Molienda Fina (Espresso)",
+                        "Molienda Media (Americana - Mokha)",
+                        "Molienda Gruesa (Prensa - Filtrado)"
+                    ]
+                },
+                {
+                    "name": "Formato",
+                    "position": 2,
+                    "values": [
+                        "250g",
+                        "1k"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 7671557292080,
+            "title": "Kenia Gachami AB",
+            "handle": "kenia-gachami-ab",
+            "body_html": "\u003ch4 style=\"text-align: center;\"\u003eDETALLES\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003ePais\u003c\/strong\u003e Kenia\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eRegión \u003c\/b\u003eKirinyaga\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eCooperativa \u003c\/b\u003e\u003cspan style=\"color: rgb(0, 0, 0);\"\u003eMwirua Farmers Cooperative Society\u003c\/span\u003e\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eAltitud\u003c\/strong\u003e 1800\u003cspan\u003em s. n. m\u003c\/span\u003e\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eVariedad \u003c\/strong\u003eSL28 - SL34 \u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProceso \u003c\/strong\u003eLavado y Doble Fermentación\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eCosecha \u003c\/strong\u003e2025\u003c\/p\u003e\n\u003cblockquote\u003e\u003c\/blockquote\u003e\n\u003ch4 style=\"text-align: center;\"\u003ePERFIL DE TAZA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eNotas \u003c\/strong\u003eManzana roja\u003cstrong\u003e \u003c\/strong\u003e\u003cspan style=\"color: rgb(0, 0, 0);\"\u003e- Canela - Vainilla\u003c\/span\u003e\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003eHISTORIA\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003e____________________________________\u003c\/strong\u003e\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cmeta charset=\"UTF-8\"\u003e\u003cspan\u003eLa Fábrica de Café Getuya, fundada en 1964, está gestionada por la Sociedad Cooperativa de Agricultores de Mwirua. Recibe cerezas de 900 pequeños productores que cosechan sus cultivos en las tierras agrícolas circundantes.\u003c\/span\u003e\u003cbr\u003e\u003cbr\u003e\u003cspan\u003eA su llegada, el café pasa por un minucioso proceso que incluye el despulpado inmediato y una fermentación bajo agua que dura entre 15 y 24 horas. Luego, los granos se lavan dos veces, se remojan en agua limpia y se secan cuidadosamente en camas africanas durante 6 a 7 días.\u003c\/span\u003e\u003cbr\u003e\u003cbr\u003e\u003cspan\u003eSituada en el centro de Kenia, la región de Kirinyaga alberga el Monte Kenia y cuenta con una impresionante precipitación anual de 1270 mm. Los ríos de la zona y el suelo volcánico rico en nutrientes proporcionan recursos esenciales para que los pequeños agricultores y las cooperativas cultiven algunos de los cafés más fructíferos de Kenia.\u003c\/span\u003e\u003cbr\u003e\u003cbr\u003e\u003cspan\u003eLos microlotes de Kenia son trazables hasta el nivel de estación de lavado (fábrica) o de la finca individual (cuando sea posible) y se seleccionan en función de la puntuación en taza. Debido a la limitada propiedad de tierra de los productores de café en Kenia, la mayoría entrega el café cereza a una fábrica local para su clasificación y procesamiento, lo que da como resultado lotes diarios que comprenden las entregas del día después de la mezcla y el procesamiento en la fábrica.\u003c\/span\u003e\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e \u003c\/p\u003e",
+            "published_at": "2026-05-22T09:28:56-04:00",
+            "created_at": "2025-05-12T09:46:40-04:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "SINGULAR COFFEE ROASTERS",
+            "product_type": "Origen",
+            "tags": [
+                "Origen - Kenia"
+            ],
+            "variants": [
+                {
+                    "id": 42028021776432,
+                    "title": "Grano \/ 200gr",
+                    "option1": "Grano",
+                    "option2": "200gr",
+                    "option3": null,
+                    "sku": "KENIAGASHAGRA200GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "17900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 7671557292080,
+                    "created_at": "2025-05-12T09:46:40-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42028021841968,
+                    "title": "Molienda Fina (Espresso) \/ 200gr",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "200gr",
+                    "option3": null,
+                    "sku": "KENIAGASHAGRA200GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "17900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 7671557292080,
+                    "created_at": "2025-05-12T09:46:40-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42028021907504,
+                    "title": "Molienda Media (Americana - Mokha) \/ 200gr",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "200gr",
+                    "option3": null,
+                    "sku": "KENIAGASHAGRA200GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "17900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 7671557292080,
+                    "created_at": "2025-05-12T09:46:40-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 42028021973040,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 200gr",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "200gr",
+                    "option3": null,
+                    "sku": "KENIAGASHAGRA200GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "17900",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 7671557292080,
+                    "created_at": "2025-05-12T09:46:40-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 38628350656560,
+                    "created_at": "2026-02-09T15:20:32-03:00",
+                    "position": 1,
+                    "updated_at": "2026-02-09T15:20:33-03:00",
+                    "product_id": 7671557292080,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsAppImage2026-02-03at15.37.16.jpg?v=1770661233",
+                    "width": 1600,
+                    "height": 1600
+                }
+            ],
+            "options": [
+                {
+                    "name": "¿Grano o molido?",
+                    "position": 1,
+                    "values": [
+                        "Grano",
+                        "Molienda Fina (Espresso)",
+                        "Molienda Media (Americana - Mokha)",
+                        "Molienda Gruesa (Prensa - Filtrado)"
+                    ]
+                },
+                {
+                    "name": "Formato",
+                    "position": 2,
+                    "values": [
+                        "200gr"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 7988195426352,
+            "title": "LÖNA x SINGULAR",
+            "handle": "singular-x-lona-verde",
+            "body_html": "\u003cp\u003eYa tenemos disponibles nuestras nuevas Totebags, desarrolladas en colaboración con LÖNA, una marca local.\u003c\/p\u003e\n\u003cp\u003e\u003cbr\u003eEstán confeccionadas en Chile con telas de manufactura nacional y disponibles en 4 colores:\u003c\/p\u003e\n\u003cp\u003e•⁠  ⁠Lona cruda\u003cbr\u003e•⁠  ⁠Lona algodón teñido negro\u003cbr\u003e•⁠  ⁠Lona algodón teñido verde botella\u003cbr\u003e•⁠  ⁠Cachemira azul mar\u003c\/p\u003e\n\u003cp\u003e\u003cbr\u003eAdemás, cuentan con un bolsillo exterior, ideal para llevar a mano los objetos de uso frecuente.\u003c\/p\u003e",
+            "published_at": "2026-06-18T12:30:34-04:00",
+            "created_at": "2026-06-05T10:09:47-04:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "Singular Coffee Roasters",
+            "product_type": "Producto",
+            "tags": [],
+            "variants": [
+                {
+                    "id": 43266245132336,
+                    "title": "Negro",
+                    "option1": "Negro",
+                    "option2": null,
+                    "option3": null,
+                    "sku": null,
+                    "requires_shipping": true,
+                    "taxable": true,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "20900",
+                    "grams": 0,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 7988195426352,
+                    "created_at": "2026-06-05T10:09:47-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43266245165104,
+                    "title": "Beige",
+                    "option1": "Beige",
+                    "option2": null,
+                    "option3": null,
+                    "sku": null,
+                    "requires_shipping": true,
+                    "taxable": true,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "20900",
+                    "grams": 0,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 7988195426352,
+                    "created_at": "2026-06-05T10:09:47-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43266286911536,
+                    "title": "Verde",
+                    "option1": "Verde",
+                    "option2": null,
+                    "option3": null,
+                    "sku": null,
+                    "requires_shipping": true,
+                    "taxable": true,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "20900",
+                    "grams": 0,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 7988195426352,
+                    "created_at": "2026-06-05T10:15:04-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43266286944304,
+                    "title": "Azul marino",
+                    "option1": "Azul marino",
+                    "option2": null,
+                    "option3": null,
+                    "sku": null,
+                    "requires_shipping": true,
+                    "taxable": true,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "20900",
+                    "grams": 0,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 7988195426352,
+                    "created_at": "2026-06-05T10:15:04-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 39747902767152,
+                    "created_at": "2026-07-09T12:41:37-04:00",
+                    "position": 1,
+                    "updated_at": "2026-07-09T12:55:57-04:00",
+                    "product_id": 7988195426352,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/DSCF0260.jpg?v=1783616157",
+                    "width": 4000,
+                    "height": 4000
+                },
+                {
+                    "id": 39747902701616,
+                    "created_at": "2026-07-09T12:41:37-04:00",
+                    "position": 2,
+                    "updated_at": "2026-07-09T12:41:40-04:00",
+                    "product_id": 7988195426352,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/DSCF0239.jpg?v=1783615300",
+                    "width": 4000,
+                    "height": 5333
+                },
+                {
+                    "id": 39747902734384,
+                    "created_at": "2026-07-09T12:41:37-04:00",
+                    "position": 3,
+                    "updated_at": "2026-07-09T12:41:40-04:00",
+                    "product_id": 7988195426352,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/DSCF0269.jpg?v=1783615300",
+                    "width": 3743,
+                    "height": 4679
+                },
+                {
+                    "id": 39747913711664,
+                    "created_at": "2026-07-09T12:51:58-04:00",
+                    "position": 4,
+                    "updated_at": "2026-07-09T12:52:00-04:00",
+                    "product_id": 7988195426352,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/DSCF0291.jpg?v=1783615920",
+                    "width": 4000,
+                    "height": 6000
+                }
+            ],
+            "options": [
+                {
+                    "name": "Color",
+                    "position": 1,
+                    "values": [
+                        "Negro",
+                        "Beige",
+                        "Verde",
+                        "Azul marino"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 6767821979696,
+            "title": "Muela de Acero para Molino Timemore Chestnut C2",
+            "handle": "muela-de-acero-para-molinillo-slim",
+            "body_html": "\u003cp\u003e\u003cspan data-mce-fragment=\"1\"\u003e• Muela de repuesto para Molino Timemore Chestnut C2\u003c\/span\u003e\u003c\/p\u003e\n\u003cp\u003e\u003cspan data-mce-fragment=\"1\"\u003e• Material: Acero\u003c\/span\u003e\u003c\/p\u003e",
+            "published_at": "2021-12-06T21:08:51-03:00",
+            "created_at": "2021-12-06T21:08:52-03:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "Singular Coffee Roasters",
+            "product_type": "Repuesto",
+            "tags": [
+                "Muela para molino",
+                "Timemore"
+            ],
+            "variants": [
+                {
+                    "id": 39858535465008,
+                    "title": "Default Title",
+                    "option1": "Default Title",
+                    "option2": null,
+                    "option3": null,
+                    "sku": "MUELACEMOLTIMECHEC2",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": false,
+                    "price": "25000",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 6767821979696,
+                    "created_at": "2021-12-06T21:08:53-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 29200192864304,
+                    "created_at": "2021-12-06T21:08:53-03:00",
+                    "position": 1,
+                    "updated_at": "2021-12-06T21:08:53-03:00",
+                    "product_id": 6767821979696,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/products\/muela-3.jpg?v=1638835733",
+                    "width": 891,
+                    "height": 891
+                },
+                {
+                    "id": 29200192897072,
+                    "created_at": "2021-12-06T21:08:53-03:00",
+                    "position": 2,
+                    "updated_at": "2021-12-06T21:08:53-03:00",
+                    "product_id": 6767821979696,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/products\/muela-4.jpg?v=1638835733",
+                    "width": 891,
+                    "height": 891
+                }
+            ],
+            "options": [
+                {
+                    "name": "Title",
+                    "position": 1,
+                    "values": [
+                        "Default Title"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 6767822012464,
+            "title": "Muela de Titanio para Molino Timemore Slim",
+            "handle": "muela-de-titanio-para-molinillo-slim",
+            "body_html": "\u003cp\u003e\u003cspan data-mce-fragment=\"1\"\u003e• Muela de repuesto para Molinillo Timemore Slim\u003c\/span\u003e\u003c\/p\u003e\n\u003cp\u003e\u003cspan data-mce-fragment=\"1\"\u003e• Material: Titanio\u003c\/span\u003e\u003c\/p\u003e",
+            "published_at": "2021-12-06T21:08:53-03:00",
+            "created_at": "2021-12-06T21:08:55-03:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "Singular Coffee Roasters",
+            "product_type": "Repuesto",
+            "tags": [
+                "muela para molino",
+                "Timemore"
+            ],
+            "variants": [
+                {
+                    "id": 39858535497776,
+                    "title": "Default Title",
+                    "option1": "Default Title",
+                    "option2": null,
+                    "option3": null,
+                    "sku": "MUELTITMOLTIMESLIM",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "55000",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 6767822012464,
+                    "created_at": "2021-12-06T21:08:55-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 29200193028144,
+                    "created_at": "2021-12-06T21:08:55-03:00",
+                    "position": 1,
+                    "updated_at": "2021-12-06T21:08:55-03:00",
+                    "product_id": 6767822012464,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/products\/muela-2.jpg?v=1638835735",
+                    "width": 1045,
+                    "height": 1045
+                },
+                {
+                    "id": 29200193060912,
+                    "created_at": "2021-12-06T21:08:55-03:00",
+                    "position": 2,
+                    "updated_at": "2021-12-06T21:08:55-03:00",
+                    "product_id": 6767822012464,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/products\/muela.jpg?v=1638835735",
+                    "width": 927,
+                    "height": 927
+                }
+            ],
+            "options": [
+                {
+                    "name": "Title",
+                    "position": 1,
+                    "values": [
+                        "Default Title"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 7980340838448,
+            "title": "Panamá, Coffea Estate - Bourbon Rojo Natural",
+            "handle": "panama-coffea-estate-bourbon-natural",
+            "body_html": "\u003ch4 style=\"text-align: center;\"\u003eDETALLES\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProductor \u003c\/strong\u003eRony Jiménez\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003ePaís\u003c\/strong\u003e Panamá\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eFinca\u003c\/strong\u003e Coffea Estate\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eRegión \u003c\/strong\u003ePiedra de Candela,\u003cstrong\u003e \u003c\/strong\u003eRenacimiento, Chiriquí\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eAltitud\u003c\/strong\u003e 1.450 msnm\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eVariedad \u003c\/strong\u003eBourbon Rojo\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProceso \u003c\/strong\u003eNatural Fermentado\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eCosecha \u003c\/strong\u003e2026\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003ePERFIL DE TAZA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eNotas \u003c\/b\u003eCiruela - Cacao - Azúcar Morena - Vino\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003eHISTORIA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003cspan\u003e\u003cstrong\u003e\u003c\/strong\u003e\u003c\/span\u003e\u003c\/p\u003e\n\u003cp\u003eDurante el siglo XVIII, los franceses llevaron plantas de café desde \u003cspan class=\"hover:entity-accent entity-underline inline cursor-pointer align-baseline\"\u003e\u003cspan class=\"whitespace-normal\"\u003eYemen\u003c\/span\u003e\u003c\/span\u003e a la isla de Bourbon, hoy conocida como \u003cspan class=\"hover:entity-accent entity-underline inline cursor-pointer align-baseline\"\u003e\u003cspan class=\"whitespace-normal\"\u003eRéunion\u003c\/span\u003e\u003c\/span\u003e. Allí, tras varias generaciones de cultivo, apareció una mutación natural que se diferenciaba de Typica por su mayor productividad y características agronómicas propias.\u003c\/p\u003e\n\u003cp\u003eEsa mutación se convirtió en la variedad Bourbon.\u003c\/p\u003e\n\u003ch3\u003e¿Por qué \"Rojo\"?\u003c\/h3\u003e\n\u003cp\u003eEl nombre Bourbon describe la variedad genética. Dentro de ella existen mutaciones que producen frutos de distintos colores:\u003c\/p\u003e\n\u003cul\u003e\n\u003cli\u003eBourbon Rojo\u003c\/li\u003e\n\u003cli\u003eBourbon Amarillo\u003c\/li\u003e\n\u003cli\u003eBourbon Rosado (menos común)\u003c\/li\u003e\n\u003c\/ul\u003e\n\u003cp\u003eCuando hablamos de Bourbon Rojo nos referimos a la expresión clásica de la variedad, cuyos frutos maduran de color rojo intenso.\u003c\/p\u003e\n\u003cp class=\"p1\"\u003eEste café tiene un proceso natural fermentado en frío durante más de 170 horas, a temperaturas inferiores a 10 °C, desarrollando un perfil complejo y de alta intensidad aromática.  El secado inicia en camas africanas y continúa lentamente en canastas, dentro de un cuarto oscuro y controlado a 23 °C, favoreciendo una evolución uniforme y estable del grano. El proceso culmina al alcanzar una humedad óptima, preservando la dulzura y la expresión sensorial del café en taza.\u003c\/p\u003e",
+            "published_at": "2026-07-31T10:13:16-04:00",
+            "created_at": "2026-05-26T11:40:42-04:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "SINGULAR COFFEE ROASTERS",
+            "product_type": "Origen",
+            "tags": [],
+            "variants": [
+                {
+                    "id": 43076571496496,
+                    "title": "Grano \/ 125g",
+                    "option1": "Grano",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFSTATBOUROFER06125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "23600",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 7980340838448,
+                    "created_at": "2026-05-26T11:40:42-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43076571529264,
+                    "title": "Molienda Fina (Espresso) \/ 125g",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFSTATBOUROFER06125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "23600",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 7980340838448,
+                    "created_at": "2026-05-26T11:40:42-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43076571562032,
+                    "title": "Molienda Media (Americana - Mokha) \/ 125g",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFSTATBOUROFER06125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "23600",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 7980340838448,
+                    "created_at": "2026-05-26T11:40:42-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43076571594800,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 125g",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFSTATBOUROFER06125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "23600",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 7980340838448,
+                    "created_at": "2026-05-26T11:40:42-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 39450084573232,
+                    "created_at": "2026-05-26T15:45:50-04:00",
+                    "position": 1,
+                    "updated_at": "2026-05-26T15:45:51-04:00",
+                    "product_id": 7980340838448,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/Mesadetrabajo6.png?v=1779824751",
+                    "width": 1080,
+                    "height": 1080
+                }
+            ],
+            "options": [
+                {
+                    "name": "¿Grano o molido?",
+                    "position": 1,
+                    "values": [
+                        "Grano",
+                        "Molienda Fina (Espresso)",
+                        "Molienda Media (Americana - Mokha)",
+                        "Molienda Gruesa (Prensa - Filtrado)"
+                    ]
+                },
+                {
+                    "name": "Formato",
+                    "position": 2,
+                    "values": [
+                        "125g"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 7980340543536,
+            "title": "Panamá, Coffea Estate - Catuaí Natural con Mosto",
+            "handle": "panama-coffea-estate-catuai-natural-con-mosto",
+            "body_html": "\u003ch4 style=\"text-align: center;\"\u003eDETALLES\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProductor \u003c\/strong\u003eRony Jiménez\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003ePaís\u003c\/strong\u003e Panamá\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eFinca\u003c\/strong\u003e Coffea Estate\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eRegión \u003c\/strong\u003ePiedra de Candela,\u003cstrong\u003e \u003c\/strong\u003eRenacimiento, Chiriquí\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eAltitud\u003c\/strong\u003e 1.450 msnm\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eVariedad \u003c\/strong\u003eCatuaí\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProceso \u003c\/strong\u003eNatural\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eCosecha \u003c\/strong\u003e2026\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003ePERFIL DE TAZA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eNotas \u003c\/b\u003eFrutos Rojos - Papaya - Miel - Vino - Chocolate\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003eHISTORIA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003cspan\u003e\u003cstrong\u003e\u003c\/strong\u003e\u003c\/span\u003e\u003c\/p\u003e\n\u003cp class=\"p1\"\u003eEste café pasa por un proceso de rociado con mosto natural en cereza, una técnica que aporta mayor profundidad, complejidad y expresión al perfil del café. Posteriormente, se seca lentamente entre 15 y 25 días en camas africanas, permitiendo una evolución controlada de la dulzura y una mayor estabilidad durante el secado. En taza presenta un perfil sensorial complejo y jugoso, con una expresión aromática intensa y un balance que resalta su carácter distintivo.\u003c\/p\u003e",
+            "published_at": "2026-07-30T16:45:28-04:00",
+            "created_at": "2026-05-26T11:38:00-04:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "SINGULAR COFFEE ROASTERS",
+            "product_type": "Origen",
+            "tags": [],
+            "variants": [
+                {
+                    "id": 43076569628720,
+                    "title": "Grano \/ 125g",
+                    "option1": "Grano",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTATCATNAT05125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "19500",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 7980340543536,
+                    "created_at": "2026-05-26T11:38:01-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43076569661488,
+                    "title": "Molienda Fina (Espresso) \/ 125g",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTATCATNAT05125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "19500",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 7980340543536,
+                    "created_at": "2026-05-26T11:38:01-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43076569694256,
+                    "title": "Molienda Media (Americana - Mokha) \/ 125g",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTATCATNAT05125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "19500",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 7980340543536,
+                    "created_at": "2026-05-26T11:38:01-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43076569727024,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 125g",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTATCATNAT05125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "19500",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 7980340543536,
+                    "created_at": "2026-05-26T11:38:01-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 39450084048944,
+                    "created_at": "2026-05-26T15:45:13-04:00",
+                    "position": 1,
+                    "updated_at": "2026-05-26T15:45:15-04:00",
+                    "product_id": 7980340543536,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/Mesadetrabajo5.png?v=1779824715",
+                    "width": 1080,
+                    "height": 1080
+                }
+            ],
+            "options": [
+                {
+                    "name": "¿Grano o molido?",
+                    "position": 1,
+                    "values": [
+                        "Grano",
+                        "Molienda Fina (Espresso)",
+                        "Molienda Media (Americana - Mokha)",
+                        "Molienda Gruesa (Prensa - Filtrado)"
+                    ]
+                },
+                {
+                    "name": "Formato",
+                    "position": 2,
+                    "values": [
+                        "125g"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 7985988173872,
+            "title": "Panamá, Coffea Estate - Catuai SH3 Naked",
+            "handle": "panama-coffea-estate-catuai-sh3-honey-fermentado",
+            "body_html": "\u003ch4 style=\"text-align: center;\"\u003eDETALLES\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProductor \u003c\/strong\u003eRony Jiménez\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003ePaís\u003c\/strong\u003e Panamá\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eFinca\u003c\/strong\u003e Coffea Estate\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eRegión \u003c\/strong\u003ePiedra de Candela,\u003cstrong\u003e \u003c\/strong\u003eRenacimiento, Chiriquí\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eAltitud\u003c\/strong\u003e 1.450 msnm\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eVariedad \u003c\/strong\u003eCatuai\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProceso \u003c\/strong\u003eHoney Fermentado\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eCosecha \u003c\/strong\u003e2026\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003ePERFIL DE TAZA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eNotas \u003c\/b\u003eLimón -\u003cb\u003e \u003c\/b\u003eSandía - Manzana Roja\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003eHISTORIA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp class=\"p1\"\u003eUn Catuaí SH3 procesado bajo método Honey. Las cerezas son despulpadas conservand parte de su mucílago, para luego pasar por un fermentación controlada y un secado lent sobre camas elevadas. Cada etapa se desarrolla con precisión para resaltar l expresión natural de la variedad. El resultado es una taza limpia y equilibrada, de acidez brillante, dulzor persistente y textura sedosa.\u003c\/p\u003e",
+            "published_at": "2026-06-19T12:57:09-04:00",
+            "created_at": "2026-06-02T14:33:58-04:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "SINGULAR COFFEE ROASTERS",
+            "product_type": "Origen",
+            "tags": [],
+            "variants": [
+                {
+                    "id": 43255324737584,
+                    "title": "Grano \/ 125g",
+                    "option1": "Grano",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTANAKEDHON125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "21500",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 7985988173872,
+                    "created_at": "2026-06-02T14:33:58-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43255324770352,
+                    "title": "Molienda Fina (Espresso) \/ 125g",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTANAKEDHON125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "21500",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 7985988173872,
+                    "created_at": "2026-06-02T14:33:58-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43255324803120,
+                    "title": "Molienda Media (Americana - Mokha) \/ 125g",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTANAKEDHON125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "21500",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 7985988173872,
+                    "created_at": "2026-06-02T14:33:58-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43255324835888,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 125g",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTANAKEDHON125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "21500",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 7985988173872,
+                    "created_at": "2026-06-02T14:33:58-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 39659996676144,
+                    "created_at": "2026-06-24T20:41:38-04:00",
+                    "position": 1,
+                    "updated_at": "2026-06-24T20:41:39-04:00",
+                    "product_id": 7985988173872,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsAppImage2026-06-24at16.23.31_1.jpg?v=1782348099",
+                    "width": 1600,
+                    "height": 1600
+                }
+            ],
+            "options": [
+                {
+                    "name": "¿Grano o molido?",
+                    "position": 1,
+                    "values": [
+                        "Grano",
+                        "Molienda Fina (Espresso)",
+                        "Molienda Media (Americana - Mokha)",
+                        "Molienda Gruesa (Prensa - Filtrado)"
+                    ]
+                },
+                {
+                    "name": "Formato",
+                    "position": 2,
+                    "values": [
+                        "125g"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 7985987977264,
+            "title": "Panamá, Coffea Estate - Caturra Oxi Natural",
+            "handle": "panama-coffea-estate-caturra-oxi-natural",
+            "body_html": "\u003ch4 style=\"text-align: center;\"\u003eDETALLES\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProductor \u003c\/strong\u003eRony Jiménez\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003ePaís\u003c\/strong\u003e Panamá\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eFinca\u003c\/strong\u003e Coffea Estate\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eRegión \u003c\/strong\u003ePiedra de Candela,\u003cstrong\u003e \u003c\/strong\u003eRenacimiento, Chiriquí\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eAltitud\u003c\/strong\u003e 1.450 msnm\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eVariedad \u003c\/strong\u003eCaturra\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProceso \u003c\/strong\u003eNatural Aeróbico\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eCosecha \u003c\/strong\u003e2026\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003ePERFIL DE TAZA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eNotas \u003c\/b\u003ePanela - Avellana - Durazno\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003eHISTORIA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp class=\"p1\"\u003eProceso Natural desarrollado en tanque con presencia de oxígeno durante 48 horas,\u003c\/p\u003e\n\u003cp class=\"p1\"\u003epermitiendo una etapa de oxidación previa a la fermentación. Esta interacción favorece una evolución más compleja de azúcares y compuestos aromáticos, aportando mayor profundidad sensorial al perfil del café. Posteriormente, el café es secado en camas africanas o marquesinas bajo un enfoque tradicional, buscando replicar métodos históricos de secado y conservar una referencia más auténtica del trabajo realizado en la finca.\u003c\/p\u003e",
+            "published_at": "2026-06-19T12:57:19-04:00",
+            "created_at": "2026-06-02T14:33:25-04:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "SINGULAR COFFEE ROASTERS",
+            "product_type": "Origen",
+            "tags": [
+                "Nuevo"
+            ],
+            "variants": [
+                {
+                    "id": 43255324180528,
+                    "title": "Grano \/ 125g",
+                    "option1": "Grano",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTCATUOKI125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "23500",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 7985987977264,
+                    "created_at": "2026-06-02T14:33:25-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43255324213296,
+                    "title": "Molienda Fina (Espresso) \/ 125g",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTCATUOKI125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "23500",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 7985987977264,
+                    "created_at": "2026-06-02T14:33:25-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43255324246064,
+                    "title": "Molienda Media (Americana - Mokha) \/ 125g",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTCATUOKI125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "23500",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 7985987977264,
+                    "created_at": "2026-06-02T14:33:25-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43255324278832,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 125g",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTCATUOKI125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "23500",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 7985987977264,
+                    "created_at": "2026-06-02T14:33:25-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 39659997134896,
+                    "created_at": "2026-06-24T20:42:12-04:00",
+                    "position": 1,
+                    "updated_at": "2026-06-24T20:42:13-04:00",
+                    "product_id": 7985987977264,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsApp_Image_2026-06-24_at_16.23.31_2.jpg?v=1782348133",
+                    "width": 1600,
+                    "height": 1600
+                }
+            ],
+            "options": [
+                {
+                    "name": "¿Grano o molido?",
+                    "position": 1,
+                    "values": [
+                        "Grano",
+                        "Molienda Fina (Espresso)",
+                        "Molienda Media (Americana - Mokha)",
+                        "Molienda Gruesa (Prensa - Filtrado)"
+                    ]
+                },
+                {
+                    "name": "Formato",
+                    "position": 2,
+                    "values": [
+                        "125g"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 7980338937904,
+            "title": "Panamá, Coffea Estate - Geisha Lavado",
+            "handle": "panama-coffea-estate-geisha-lavado",
+            "body_html": "\u003ch4 style=\"text-align: center;\"\u003eDETALLES\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProductor \u003c\/strong\u003eRony Jiménez\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003ePaís\u003c\/strong\u003e Panamá\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eFinca\u003c\/strong\u003e Coffea Estate\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eRegión \u003c\/strong\u003ePiedra de Candela,\u003cstrong\u003e \u003c\/strong\u003eRanacimiento, Chiriquí\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eAltitud\u003c\/strong\u003e 1.450 msnm\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eVariedad \u003c\/strong\u003eGeisha\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProceso \u003c\/strong\u003eLavado Aeróbico\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eCosecha \u003c\/strong\u003e2026\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003ePERFIL DE TAZA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eNotas \u003c\/b\u003eJazmín - Limón - Miel - Té Negro\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003eHISTORIA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003cspan\u003e\u003cstrong\u003e\u003c\/strong\u003e\u003c\/span\u003e\u003c\/p\u003e\n\u003cp style=\"text-align: left;\"\u003e\u003cmeta charset=\"UTF-8\"\u003e\u003cspan\u003eLos cafés Geisha de Panamá son reconocidos mundialmente por su perfil sensorial elegante y complejo. Cultivados en las tierras altas de Chiriquí, especialmente en regiones como Boquete y Renacimiento, destacan por sus intensos aromas florales, acidez brillante y notas que pueden recordar al jazmín, frutas tropicales, cítricos y miel. Su combinación de variedad, altitud y procesos cuidadosos ha convertido al Geisha panameño en uno de los cafés más valorados y exclusivos del mundo.\u003c\/span\u003e\u003c\/p\u003e\n\u003cp class=\"p1\" style=\"text-align: left;\"\u003e\u003cstrong\u003eAcerca del Proceso:\u003c\/strong\u003e\u003c\/p\u003e\n\u003cp class=\"p1\" style=\"text-align: left;\"\u003eLa cereza entra al tanque en presencia de oxígeno entre 24 y 48 horas. Posteriormente, el café pasa por un secado aproximado de 28 días, utilizando flujo de aire y deshumidificadores paraextraer la humedad del grano de manera lenta y estable hasta alcanzar el punto óptimo. Este método permite obtener una clean cup, es decir una taza con un perfil clásico y una expresión floral, características distintivas de los Geishas de Panamá.\u003c\/p\u003e",
+            "published_at": "2026-07-31T16:41:44-04:00",
+            "created_at": "2026-05-26T11:22:25-04:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "SINGULAR COFFEE ROASTERS",
+            "product_type": "Origen",
+            "tags": [],
+            "variants": [
+                {
+                    "id": 43076562321456,
+                    "title": "Grano \/ 125g",
+                    "option1": "Grano",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "GEIWASANA01125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "23600",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 7980338937904,
+                    "created_at": "2026-05-26T11:22:25-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43076562354224,
+                    "title": "Molienda Fina (Espresso) \/ 125g",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "GEIWASANA01125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "23600",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 7980338937904,
+                    "created_at": "2026-05-26T11:22:25-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43076562386992,
+                    "title": "Molienda Media (Americana - Mokha) \/ 125g",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "GEIWASANA01125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "23600",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 7980338937904,
+                    "created_at": "2026-05-26T11:22:25-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43076562419760,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 125g",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "GEIWASANA01125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "23600",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 7980338937904,
+                    "created_at": "2026-05-26T11:22:25-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 39659998576688,
+                    "created_at": "2026-06-24T20:43:53-04:00",
+                    "position": 1,
+                    "updated_at": "2026-06-24T20:43:54-04:00",
+                    "product_id": 7980338937904,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsApp_Image_2026-06-24_at_16.23.29.jpg?v=1782348234",
+                    "width": 1600,
+                    "height": 1600
+                }
+            ],
+            "options": [
+                {
+                    "name": "¿Grano o molido?",
+                    "position": 1,
+                    "values": [
+                        "Grano",
+                        "Molienda Fina (Espresso)",
+                        "Molienda Media (Americana - Mokha)",
+                        "Molienda Gruesa (Prensa - Filtrado)"
+                    ]
+                },
+                {
+                    "name": "Formato",
+                    "position": 2,
+                    "values": [
+                        "125g"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 7980336250928,
+            "title": "Panamá, Coffea Estate - Paraíso Amarillo Natural",
+            "handle": "panama-coffea-estate-paraiso-amarillo-natural",
+            "body_html": "\u003ch4 style=\"text-align: center;\"\u003eDETALLES\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProductor \u003c\/strong\u003eRony Jiménez\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003ePaís\u003c\/strong\u003e Panamá\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eFinca\u003c\/strong\u003e Coffea Estate\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eRegión \u003c\/strong\u003ePiedra de Candela,\u003cstrong\u003e \u003c\/strong\u003eRenacimiento, Chiriquí\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eAltitud\u003c\/strong\u003e 1.450 msnm\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eVariedad \u003c\/strong\u003eParaíso Amarillo\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProceso \u003c\/strong\u003eNatural Fermentado\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eCosecha \u003c\/strong\u003e2026\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003ePERFIL DE TAZA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eNotas \u003c\/b\u003ePiña - Maracuyá - Mango - Panela\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003eHISTORIA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp class=\"p1\"\u003eEn Coffea Estate, la experimentación e innovación forman parte esencial de su visión; es por ello que en esta ocasión presentan Paraíso Amarillo, una variedad proveniente de Brasil que se caracteriza por ofrecer una taza moderna, altamente expresiva y de gran complejidad sensorial. El objetivo de Rony Jimenez fue explorar el comportamiento de esta variedad en terroir panameño y descubrir su expresión única en este origen. Para este lote se realizó un proceso de fermentación prolongada, superando las 72 horas, desarrollando un perfil aromático intenso, una dulzura pronunciada y notas tropicales que aportan complejidad en taza.\u003c\/p\u003e\n\u003cdiv\u003e\n\u003cspan\u003e\u003c\/span\u003e\n\u003cdiv\u003e\n\u003cdiv\u003e\n\u003cp\u003e\u003cspan\u003e\u003cstrong\u003eParaíso Amarillo\u003c\/strong\u003e\u003cbr\u003e\u003c\/span\u003e\u003c\/p\u003e\n\u003cp\u003e\u003cspan\u003eSe originó en 1980 a partir de un cruce entre Catuaí Amarillo y Timor Híbrido.\u003c\/span\u003e\u003c\/p\u003e\n\u003cp\u003e\u003cspan\u003eEl objetivo era combinar:\u003c\/span\u003e\u003c\/p\u003e\n\u003c\/div\u003e\n\u003cul\u003e\n\u003cli\u003e\u003cspan\u003ecalidad y productividad del Catuaí\u003c\/span\u003e\u003c\/li\u003e\n\u003cli\u003e\u003cspan\u003eresistencia a roya proveniente del Timor Híbrido. (La roya es una enfermedad fúngica común de las plantas).\u003c\/span\u003e\u003c\/li\u003e\n\u003c\/ul\u003e\n\u003cdiv\u003e\n\u003cp\u003e\u003cspan\u003eEl “Amarillo” en Paraíso Amarillo hace referencia al color del fruto maduro (cerezo), que madura en tonos amarillos en lugar de rojos.\u003c\/span\u003e\u003cspan\u003e\u003c\/span\u003e\u003c\/p\u003e\n\u003cp class=\"p1\"\u003e \u003c\/p\u003e\n\u003c\/div\u003e\n\u003c\/div\u003e\n\u003c\/div\u003e",
+            "published_at": "2026-05-26T16:03:30-04:00",
+            "created_at": "2026-05-26T11:05:45-04:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "SINGULAR COFFEE ROASTERS",
+            "product_type": "Origen",
+            "tags": [],
+            "variants": [
+                {
+                    "id": 43076551508016,
+                    "title": "Grano \/ 125g",
+                    "option1": "Grano",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTAPARAMA04125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "19500",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 7980336250928,
+                    "created_at": "2026-05-26T11:05:45-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43076551573552,
+                    "title": "Molienda Fina (Espresso) \/ 125g",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTAPARAMA04125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "19500",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 7980336250928,
+                    "created_at": "2026-05-26T11:05:45-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43076551639088,
+                    "title": "Molienda Media (Americana - Mokha) \/ 125g",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTAPARAMA04125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "19500",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 7980336250928,
+                    "created_at": "2026-05-26T11:05:45-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43076551704624,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 125g",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "125g",
+                    "option3": null,
+                    "sku": "COFESTAPARAMA04125GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "19500",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 7980336250928,
+                    "created_at": "2026-05-26T11:05:45-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 39663113404464,
+                    "created_at": "2026-06-25T11:54:13-04:00",
+                    "position": 1,
+                    "updated_at": "2026-06-25T11:54:15-04:00",
+                    "product_id": 7980336250928,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsAppImage2026-06-25at11.50.42.jpg?v=1782402855",
+                    "width": 1600,
+                    "height": 1600
+                }
+            ],
+            "options": [
+                {
+                    "name": "¿Grano o molido?",
+                    "position": 1,
+                    "values": [
+                        "Grano",
+                        "Molienda Fina (Espresso)",
+                        "Molienda Media (Americana - Mokha)",
+                        "Molienda Gruesa (Prensa - Filtrado)"
+                    ]
+                },
+                {
+                    "name": "Formato",
+                    "position": 2,
+                    "values": [
+                        "125g"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 8086056566832,
+            "title": "Perú, Palma Pampa",
+            "handle": "peru-palma-pampa",
+            "body_html": "\u003ch4 style=\"text-align: center;\"\u003eDETALLES\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003ePais\u003c\/strong\u003e Perú\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eRegión \u003c\/b\u003eJunín\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cb\u003eFinca \u003c\/b\u003eChurupampa\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eAltitud\u003c\/strong\u003e 1970 \u003cspan\u003em s. n. m\u003c\/span\u003e\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eVariedad \u003c\/strong\u003eBourbon Rosado\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eProceso \u003c\/strong\u003eLavado\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eCosecha \u003c\/strong\u003e2026\u003c\/p\u003e\n\u003cblockquote\u003e\u003c\/blockquote\u003e\n\u003ch4 style=\"text-align: center;\"\u003ePERFIL DE TAZA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e\u003cstrong\u003eSabor y Retrogusto \u003c\/strong\u003eMandarina - Miel - Floral\u003c\/p\u003e\n\u003ch4 style=\"text-align: center;\"\u003eHISTORIA\u003cspan\u003e\u003c\/span\u003e\n\u003c\/h4\u003e\n\u003cp style=\"text-align: center;\"\u003e____________________________________\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003e El café de Palma Pampa, ubicado en la región de Junín, en el centro de Perú, se caracteriza por su calidad y perfiles de taza distintivos. Cultivado en las zonas montañosas de Chanchamayo, este café se beneficia de las condiciones climáticas y de altitud propias de la región, junto con prácticas agrícolas tradicionales que favorecen el desarrollo de granos de alta calidad.\u003c\/p\u003e\n\u003cp style=\"text-align: center;\"\u003eEste café tiene cosecha selectiva, con un proceso de fermentación de 24 horas en cereza y 12 en despulpado teniendo en cuenta PH y TEMPERATURA, luego es pasado a las camas africanas por un promedio de 3 dias para que escurra el agua y asi ser pasado a los módulos de secado  por un promedio de 15 a 18 dias  hasta tener 10.5 de humedad del  grano.\u003c\/p\u003e",
+            "published_at": "2026-09-21T10:27:25-03:00",
+            "created_at": "2026-09-14T15:04:01-03:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "Singular Coffee Roasters",
+            "product_type": "Origen",
+            "tags": [
+                "Origen_Perú",
+                "Perú"
+            ],
+            "variants": [
+                {
+                    "id": 43616264585264,
+                    "title": "Grano \/ 250g",
+                    "option1": "Grano",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "PEPALPAMBOUROSA250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "16900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 8086056566832,
+                    "created_at": "2026-09-14T15:04:02-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43616264618032,
+                    "title": "Grano \/ 1kg",
+                    "option1": "Grano",
+                    "option2": "1kg",
+                    "option3": null,
+                    "sku": "PEPALPAMBOUROS1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "38900",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 8086056566832,
+                    "created_at": "2026-09-14T15:04:02-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43616264650800,
+                    "title": "Molienda Fina (Espresso) \/ 250g",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "PEPALPAMBOUROSA250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "16900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 8086056566832,
+                    "created_at": "2026-09-14T15:04:02-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43616264683568,
+                    "title": "Molienda Fina (Espresso) \/ 1kg",
+                    "option1": "Molienda Fina (Espresso)",
+                    "option2": "1kg",
+                    "option3": null,
+                    "sku": "PEPALPAMBOUROS1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "38900",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 8086056566832,
+                    "created_at": "2026-09-14T15:04:02-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43616264716336,
+                    "title": "Molienda Media (Americana - Mokha) \/ 250g",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "PEPALPAMBOUROSA250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "16900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 5,
+                    "product_id": 8086056566832,
+                    "created_at": "2026-09-14T15:04:02-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43616264749104,
+                    "title": "Molienda Media (Americana - Mokha) \/ 1kg",
+                    "option1": "Molienda Media (Americana - Mokha)",
+                    "option2": "1kg",
+                    "option3": null,
+                    "sku": "PEPALPAMBOUROS1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "38900",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 6,
+                    "product_id": 8086056566832,
+                    "created_at": "2026-09-14T15:04:02-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43616264781872,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 250g",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "250g",
+                    "option3": null,
+                    "sku": "PEPALPAMBOUROSA250GR",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "16900",
+                    "grams": 250,
+                    "compare_at_price": null,
+                    "position": 7,
+                    "product_id": 8086056566832,
+                    "created_at": "2026-09-14T15:04:02-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43616264814640,
+                    "title": "Molienda Gruesa (Prensa - Filtrado) \/ 1kg",
+                    "option1": "Molienda Gruesa (Prensa - Filtrado)",
+                    "option2": "1kg",
+                    "option3": null,
+                    "sku": "PEPALPAMBOUROS1KG",
+                    "requires_shipping": true,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "38900",
+                    "grams": 1000,
+                    "compare_at_price": null,
+                    "position": 8,
+                    "product_id": 8086056566832,
+                    "created_at": "2026-09-14T15:04:02-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 40240766255152,
+                    "created_at": "2026-09-14T15:08:59-03:00",
+                    "position": 1,
+                    "updated_at": "2026-09-14T15:09:01-03:00",
+                    "product_id": 8086056566832,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsAppImage2026-09-14at15.08.39.jpg?v=1789409341",
+                    "width": 1600,
+                    "height": 1600
+                }
+            ],
+            "options": [
+                {
+                    "name": "¿Molido o Grano?",
+                    "position": 1,
+                    "values": [
+                        "Grano",
+                        "Molienda Fina (Espresso)",
+                        "Molienda Media (Americana - Mokha)",
+                        "Molienda Gruesa (Prensa - Filtrado)"
+                    ]
+                },
+                {
+                    "name": "Formato",
+                    "position": 2,
+                    "values": [
+                        "250g",
+                        "1kg"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 7265555677232,
+            "title": "Sesión de Cata en Singular Coffee",
+            "handle": "cupping-singular-coffee-roasters",
+            "body_html": "\u003cdiv id=\"v1v1v1v1v1v1v1replybody1\"\u003e\n\u003cdiv class=\"v1v1v1v1v1v1v1v1gmail_quote\"\u003e\n\u003cdiv id=\"v1v1v1v1v1v1v1v1m_-7407322900991044040v1v1v1v1v1v1v1v1v1v1v1v1v1v1m_707570095417743474v1replybody1\"\u003e\n\u003cdiv style=\"text-align: left;\"\u003e\n\u003cp data-start=\"172\" data-end=\"242\" style=\"text-align: center;\"\u003eEn \u003cstrong data-start=\"175\" data-end=\"194\"\u003eSingular Coffee\u003c\/strong\u003e queremos que vivas el café más allá de la taza.\u003c\/p\u003e\n\u003cp data-start=\"244\" data-end=\"587\"\u003eCada semana, nuestro equipo realiza sesiones de \u003cstrong data-start=\"292\" data-end=\"314\"\u003econtrol de calidad\u003c\/strong\u003e donde catamos todos los cafés de nuestro menú, evaluamos sus atributos y descubrimos nuevas características que nos sorprenden.\u003c\/p\u003e\n\u003cp data-start=\"589\" data-end=\"681\"\u003eAhora, queremos \u003cstrong data-start=\"605\" data-end=\"644\"\u003eabrir estas experiencias al público\u003c\/strong\u003e y que puedas catar junto a nosotros.\u003c\/p\u003e\n\u003cp data-start=\"683\" data-end=\"1128\"\u003eEn nuestras catas con el equipo de Singular Coffee te invitamos a explorar el fascinante mundo del café de especialidad desde adentro:\u003cbr data-start=\"821\" data-end=\"824\"\u003e- Aprenderás cómo analizamos el café desde los aromas hasta el sabor residual.\u003cbr data-start=\"921\" data-end=\"924\"\u003e- Descubrirás distintos orígenes, procesos, variedades y las historias detrás de cada grano.\u003cbr data-start=\"1017\" data-end=\"1020\"\u003e- Vivirás una experiencia sensorial donde podrás evaluar acidez, cuerpo, dulzor y complejidad de cada café.\u003c\/p\u003e\n\u003cp data-start=\"1130\" data-end=\"1368\"\u003eDurante 1h30 hora, recorreremos juntos los cafés que tenemos disponibles (y también algunos que están por llegar), mediante una cata guiada al estilo brasileño, en la que nuestro equipo compartirá todo su conocimiento y pasión por el café.\u003c\/p\u003e\n\u003cp data-start=\"1370\" data-end=\"1462\"\u003ePorque detrás de cada taza hay personas, viajes, decisiones y un mundo entero por descubrir.\u003c\/p\u003e\n\u003cp data-start=\"1464\" data-end=\"1552\"\u003eVen a catar, aprender y disfrutar con nosotros.\u003c\/p\u003e\n\u003cp data-start=\"1464\" data-end=\"1552\" style=\"text-align: center;\"\u003e\u003cstrong data-start=\"1464\" data-end=\"1515\"\u003eLocal: Girardi 1569, Barrio Italia\u003c\/strong\u003e\u003c\/p\u003e\n\u003c\/div\u003e\n\u003c\/div\u003e\n\u003c\/div\u003e\n\u003c\/div\u003e",
+            "published_at": "2025-11-05T09:27:09-03:00",
+            "created_at": "2023-08-17T16:50:15-04:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "Singular Coffee Roasters",
+            "product_type": "Servicio",
+            "tags": [
+                "CATA",
+                "CUPPING"
+            ],
+            "variants": [
+                {
+                    "id": 43522411659312,
+                    "title": "Sábado 26 de septiembre 2026 (10:00-12:00)",
+                    "option1": "Sábado 26 de septiembre 2026 (10:00-12:00)",
+                    "option2": null,
+                    "option3": null,
+                    "sku": null,
+                    "requires_shipping": false,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": false,
+                    "price": "20000",
+                    "grams": 0,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 7265555677232,
+                    "created_at": "2026-08-24T09:52:39-04:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43621485740080,
+                    "title": "Sábado 3 de octubre 2026 (10:00-12:00)",
+                    "option1": "Sábado 3 de octubre 2026 (10:00-12:00)",
+                    "option2": null,
+                    "option3": null,
+                    "sku": null,
+                    "requires_shipping": false,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "20000",
+                    "grams": 0,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 7265555677232,
+                    "created_at": "2026-09-15T14:47:22-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43621485772848,
+                    "title": "Sábado 10 de octubre 2026 (10:00-12:00)",
+                    "option1": "Sábado 10 de octubre 2026 (10:00-12:00)",
+                    "option2": null,
+                    "option3": null,
+                    "sku": null,
+                    "requires_shipping": false,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "20000",
+                    "grams": 0,
+                    "compare_at_price": null,
+                    "position": 3,
+                    "product_id": 7265555677232,
+                    "created_at": "2026-09-15T14:47:22-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43621485805616,
+                    "title": "Sábado 17 de octubre 2026 (10:00-12:00)",
+                    "option1": "Sábado 17 de octubre 2026 (10:00-12:00)",
+                    "option2": null,
+                    "option3": null,
+                    "sku": null,
+                    "requires_shipping": false,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "20000",
+                    "grams": 0,
+                    "compare_at_price": null,
+                    "position": 4,
+                    "product_id": 7265555677232,
+                    "created_at": "2026-09-15T14:47:22-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 37924149166128,
+                    "created_at": "2025-11-04T15:54:31-03:00",
+                    "position": 1,
+                    "updated_at": "2025-11-04T15:57:47-03:00",
+                    "product_id": 7265555677232,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/DSCF7570.jpg?v=1762282667",
+                    "width": 4000,
+                    "height": 4000
+                },
+                {
+                    "id": 37924147658800,
+                    "created_at": "2025-11-04T15:54:19-03:00",
+                    "position": 2,
+                    "updated_at": "2025-11-04T15:57:47-03:00",
+                    "product_id": 7265555677232,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/DSCF7574.jpg?v=1762282667",
+                    "width": 4000,
+                    "height": 4000
+                },
+                {
+                    "id": 37924148805680,
+                    "created_at": "2025-11-04T15:54:28-03:00",
+                    "position": 3,
+                    "updated_at": "2025-11-04T15:57:47-03:00",
+                    "product_id": 7265555677232,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/DSCF7597.jpg?v=1762282667",
+                    "width": 3996,
+                    "height": 3996
+                },
+                {
+                    "id": 37924148281392,
+                    "created_at": "2025-11-04T15:54:24-03:00",
+                    "position": 4,
+                    "updated_at": "2025-11-04T15:57:47-03:00",
+                    "product_id": 7265555677232,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/DSCF7745.jpg?v=1762282667",
+                    "width": 4000,
+                    "height": 4000
+                }
+            ],
+            "options": [
+                {
+                    "name": "Fecha",
+                    "position": 1,
+                    "values": [
+                        "Sábado 26 de septiembre 2026 (10:00-12:00)",
+                        "Sábado 3 de octubre 2026 (10:00-12:00)",
+                        "Sábado 10 de octubre 2026 (10:00-12:00)",
+                        "Sábado 17 de octubre 2026 (10:00-12:00)"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 7870246289456,
+            "title": "Taller de Filtrado - Método V60",
+            "handle": "taller-de-filtrado-metodo-v60",
+            "body_html": "\u003cp data-start=\"116\" data-end=\"285\"\u003eEn este curso de filtrado con método V60 aprenderás a preparar café con mayor precisión y criterio, entendiendo en profundidad qué ocurre en cada etapa de la extracción.\u003c\/p\u003e\n\u003cp data-start=\"290\" data-end=\"626\"\u003eA lo largo de la sesión combinamos teoría y práctica para que puedas conocer el origen del café, sus procesos y perfiles, y cómo estos influyen en el resultado en taza. Además, exploraremos las principales variables del método V60, como la molienda, temperatura, ratio, tiempo y vertido, y cómo controlarlas para mejorar tu preparación.\u003c\/p\u003e\n\u003cp data-start=\"628\" data-end=\"831\"\u003eA través de ejercicios guiados y catas comparativas, experimentarás directamente cómo pequeños cambios impactan en el sabor, permitiéndote desarrollar criterio y sensibilidad al momento de preparar café.\u003c\/p\u003e\n\u003cp data-start=\"833\" data-end=\"996\"\u003eEl objetivo es que no solo sigas una receta, sino que puedas crear y ajustar la tuya según tus preferencias, logrando tazas más equilibradas, limpias y expresivas.\u003c\/p\u003e\n\u003cp data-start=\"998\" data-end=\"1122\"\u003eUn curso pensado para quienes quieren profundizar en el mundo del café filtrado y llevar su preparación diaria a otro nivel.\u003c\/p\u003e\n\u003cp data-start=\"998\" data-end=\"1122\"\u003e\u003cmeta charset=\"UTF-8\"\u003eEl curso lo realizamos en \u003cstrong\u003eBarrio Italia\u003c\/strong\u003e (\u003ca href=\"https:\/\/www.google.com\/maps\/place\/Girardi+1569,+7770182+%C3%91u%C3%B1oa,+Regi%C3%B3n+Metropolitana\/data=!4m2!3m1!1s0x9662c57dbb0af3a5:0xf9260a42c6a92da3?sa=X\u0026amp;ved=1t:242\u0026amp;ictx=111\"\u003eGirardi 1569\u003c\/a\u003e)\u003cstrong\u003e \u003c\/strong\u003een nuestra\u003cstrong\u003e \u003c\/strong\u003eSala de Cata. Le damos mucha importancia a la calidad y atención personalizada en las formaciones, por eso número máximo de asistentes es de 6 personas.\u003c\/p\u003e\n\u003cp data-start=\"109\" data-end=\"139\"\u003e\u003cstrong data-start=\"109\" data-end=\"139\"\u003eNuestros precios reflejan:\u003c\/strong\u003e\u003c\/p\u003e\n\u003cul data-start=\"141\" data-end=\"531\"\u003e\n\u003cli data-section-id=\"1wqu10q\" data-start=\"141\" data-end=\"245\"\u003eLa calidad de la formación, respaldada por años de experiencia en el sector del café.\u003c\/li\u003e\n\u003cli data-section-id=\"qcju9e\" data-start=\"246\" data-end=\"299\"\u003eLa preparación y dedicación detrás de cada clase.\u003c\/li\u003e\n\u003cli data-section-id=\"1koyi3k\" data-start=\"300\" data-end=\"440\"\u003eEl uso de equipamiento profesional y materiales de alta calidad, junto a insumos seleccionados como café.\u003c\/li\u003e\n\u003cli data-section-id=\"awgmu2\" data-start=\"441\" data-end=\"531\"\u003eGrupos reducidos, que permiten una experiencia más personalizada y un mejor aprendizaje.\u003c\/li\u003e\n\u003c\/ul\u003e\n\u003cp\u003e\u003cmeta charset=\"UTF-8\"\u003e\u003cb\u003ePuntualidad\u003c\/b\u003e\u003cbr\u003e\u003cbr\u003e\u003cspan\u003eTe pedimos que llegues con puntualidad al curso. Daremos un margen de cortesía de 5 minutos antes de comenzar. Pasados 15 minutos desde la hora de inicio, no se permitirá la entrada, por respeto al resto de participantes y al correcto desarrollo de la clase. Agradecemos tu comprensión.\u003c\/span\u003e\u003c\/p\u003e\n\u003cp data-end=\"116\" data-start=\"89\"\u003e\u003cstrong data-end=\"116\" data-start=\"89\"\u003ePolítica de cancelación\u003c\/strong\u003e\u003c\/p\u003e\n\u003cp data-end=\"281\" data-start=\"118\"\u003eAl reservar un cupo en nuestros cursos, comenzamos de inmediato la preparación de la clase, por lo que ese lugar deja de estar disponible para otros participantes.\u003c\/p\u003e\n\u003cul data-end=\"566\" data-start=\"283\"\u003e\n\u003cli data-end=\"429\" data-start=\"283\" data-section-id=\"wbt1be\"\u003eSe realizará la \u003cstrong data-end=\"335\" data-start=\"301\"\u003edevolución completa del dinero\u003c\/strong\u003e si la cancelación se solicita con al menos \u003cstrong data-end=\"405\" data-start=\"379\"\u003e7 días de anticipación\u003c\/strong\u003e a la fecha del curso.\u003c\/li\u003e\n\u003cli data-end=\"566\" data-start=\"430\" data-section-id=\"1pnxs7d\"\u003eNo se realizarán devoluciones ni cambios si la cancelación se realiza con menos de \u003cstrong data-end=\"536\" data-start=\"515\"\u003e48 horas de aviso\u003c\/strong\u003e o en caso de no asistencia.\u003c\/li\u003e\n\u003c\/ul\u003e\n\u003cp data-end=\"716\" data-start=\"568\"\u003eEn caso de contar con solo un participante inscrito, nos reservamos el derecho de reprogramar el curso o realizar la devolución completa del dinero.\u003c\/p\u003e",
+            "published_at": "2026-04-09T12:03:20-04:00",
+            "created_at": "2026-01-20T14:43:03-03:00",
+            "updated_at": "2026-09-28T08:51:23-03:00",
+            "vendor": "Singular Coffee Roasters",
+            "product_type": "Servicio",
+            "tags": [],
+            "variants": [
+                {
+                    "id": 43621559369776,
+                    "title": "Sábado 3 de Octubre 2026 (14:00 a 18:00)",
+                    "option1": "Sábado 3 de Octubre 2026 (14:00 a 18:00)",
+                    "option2": null,
+                    "option3": null,
+                    "sku": null,
+                    "requires_shipping": false,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "70000",
+                    "grams": 0,
+                    "compare_at_price": null,
+                    "position": 1,
+                    "product_id": 7870246289456,
+                    "created_at": "2026-09-15T15:02:43-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                },
+                {
+                    "id": 43621562253360,
+                    "title": "Sábado 17 de Octubre 2026 (14:00 a 18:00)",
+                    "option1": "Sábado 17 de Octubre 2026 (14:00 a 18:00)",
+                    "option2": null,
+                    "option3": null,
+                    "sku": null,
+                    "requires_shipping": false,
+                    "taxable": false,
+                    "featured_image": null,
+                    "available": true,
+                    "price": "70000",
+                    "grams": 0,
+                    "compare_at_price": null,
+                    "position": 2,
+                    "product_id": 7870246289456,
+                    "created_at": "2026-09-15T15:03:19-03:00",
+                    "updated_at": "2026-09-28T08:51:23-03:00"
+                }
+            ],
+            "images": [
+                {
+                    "id": 39196529819696,
+                    "created_at": "2026-04-08T11:23:05-04:00",
+                    "position": 1,
+                    "updated_at": "2026-04-08T11:27:11-04:00",
+                    "product_id": 7870246289456,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsAppImage2026-04-08at11.19.55.jpg?v=1775662031",
+                    "width": 3328,
+                    "height": 3328
+                },
+                {
+                    "id": 39197159751728,
+                    "created_at": "2026-04-08T14:51:26-04:00",
+                    "position": 2,
+                    "updated_at": "2026-04-08T14:52:00-04:00",
+                    "product_id": 7870246289456,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsApp_Image_2026-04-08_at_11.19.56.jpg?v=1775674320",
+                    "width": 3328,
+                    "height": 3328
+                },
+                {
+                    "id": 39197159784496,
+                    "created_at": "2026-04-08T14:51:28-04:00",
+                    "position": 3,
+                    "updated_at": "2026-04-08T14:52:22-04:00",
+                    "product_id": 7870246289456,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsApp_Image_2026-04-08_at_11.19.53.jpg?v=1775674342",
+                    "width": 2773,
+                    "height": 2774
+                },
+                {
+                    "id": 39197159817264,
+                    "created_at": "2026-04-08T14:51:30-04:00",
+                    "position": 4,
+                    "updated_at": "2026-04-08T14:53:19-04:00",
+                    "product_id": 7870246289456,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsApp_Image_2026-04-08_at_11.19.53_1.jpg?v=1775674399",
+                    "width": 2773,
+                    "height": 2774
+                },
+                {
+                    "id": 39197159850032,
+                    "created_at": "2026-04-08T14:51:32-04:00",
+                    "position": 5,
+                    "updated_at": "2026-04-08T14:53:19-04:00",
+                    "product_id": 7870246289456,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/WhatsApp_Image_2026-04-08_at_11.19.54.jpg?v=1775674399",
+                    "width": 3215,
+                    "height": 3215
+                },
+                {
+                    "id": 39201108918320,
+                    "created_at": "2026-04-09T14:00:04-04:00",
+                    "position": 6,
+                    "updated_at": "2026-04-09T14:00:06-04:00",
+                    "product_id": 7870246289456,
+                    "variant_ids": [],
+                    "src": "https:\/\/cdn.shopify.com\/s\/files\/1\/0552\/0788\/6896\/files\/LOGOINSTAGRAM-10.png?v=1775757606",
+                    "width": 2000,
+                    "height": 2000
+                }
+            ],
+            "options": [
+                {
+                    "name": "Fecha",
+                    "position": 1,
+                    "values": [
+                        "Sábado 3 de Octubre 2026 (14:00 a 18:00)",
+                        "Sábado 17 de Octubre 2026 (14:00 a 18:00)"
+                    ]
+                }
+            ]
+        }
+    ]
+}

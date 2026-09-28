@@ -5,8 +5,16 @@ BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 from db.database import DatabaseManager
 from scrapper.shopify_driver import ShopifyDriver
+from scrapper.woocommerce_driver import WooCommerceDriver
 
 tiendas_shopify = [
     {"nombre": "Singular Coffee Roasters", "url_base": "https://singularcoffee.cl/collections/all/products.json"},
@@ -16,7 +24,12 @@ tiendas_shopify = [
     {"nombre": "Holaste", "url_base": "https://holaste.cl/collections/cafecito/products.json"},
     {"nombre": "Artisan Roast Chile (Orígenes)", "url_base": "https://shop.artisanroast.cl/collections/origenes/products.json"},
     {"nombre": "Artisan Roast Chile (Blends)", "url_base": "https://shop.artisanroast.cl/collections/blends/products.json"},
-    {"nombre": "Dosis - Ultravioleta", "url_base": "https://dosisbebidatiempo.cl/collections/ultravioleta/products.json"}
+    {"nombre": "Dosis - Ultravioleta", "url_base": "https://dosisbebidatiempo.cl/collections/ultravioleta/products.json"},
+    {"nombre": "WR4 / WRoasters", "url_base": "https://www.wearefour.cl/collections/tuestes/products.json"}
+]
+
+tiendas_woocommerce = [
+    {"nombre": "Café Altura", "url_base": "https://cafealtura.cl/wp-json/wc/store/v1/products?category=cafe-en-grano"}
 ]
 
 def main():
@@ -28,6 +41,12 @@ def main():
 
     for tienda in tiendas_shopify:
         driver = ShopifyDriver(nombre=tienda['nombre'], url_base=tienda['url_base'])
+        productos = driver.consumir_productos()
+        catalogo_global.extend(productos)
+
+    print("\n🚀 Iniciando escaneo de tiendas WooCommerce en Cafe-sitios...\n")
+    for tienda in tiendas_woocommerce:
+        driver = WooCommerceDriver(nombre=tienda['nombre'], url_base=tienda['url_base'])
         productos = driver.consumir_productos()
         catalogo_global.extend(productos)
 

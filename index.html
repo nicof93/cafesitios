@@ -4,27 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cafe-sitios | Catálogo de Café de Especialidad</title>
+
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-K7NGDFFM');</script>
+    <!-- End Google Tag Manager -->
+
+    <!-- Google Analytics 4 (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-Y24BT0FC34"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      // Configuración inicial de GA4
+      gtag('config', 'G-Y24BT0FC34', {
+        'send_page_view': true
+      });
+    </script>
+    <!-- End Google Analytics 4 -->
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        pastel: {
-                            blue: '#e0f2fe',
-                            teal: '#ccfbf1',
-                            green: '#d1fae5',
-                            ice: '#f0f9ff',
-                            slate: '#f8fafc'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
 </head>
 <body class="bg-slate-50 text-slate-700 font-sans min-h-screen flex flex-col justify-between antialiased">
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-K7NGDFFM"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
 
     <!-- BARRA SUPERIOR / HEADER MINIMALISTA -->
     <header class="bg-white/80 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-50">
@@ -47,7 +57,7 @@
 
     <main class="max-w-7xl mx-auto px-6 py-8 w-full space-y-8">
 
-        <!-- RESUMEN MINIMALISTA DE PRODUCTOS POR TIENDA -->
+        <!-- RESUMEN DE TIENDAS -->
         <section class="bg-white rounded-2xl border border-slate-200/60 p-5 shadow-sm">
             <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
                 <span>🏪</span> Tiendas Disponibles
@@ -101,7 +111,7 @@
             </div>
         </section>
 
-        <!-- RESULTADOS / GRILLA -->
+        <!-- RESULTADOS -->
         <section>
             <div class="flex justify-between items-center mb-5">
                 <h2 class="text-base font-bold text-slate-800">Catálogo Destacado</h2>
@@ -109,11 +119,9 @@
             </div>
 
             <!-- GRILLA DE TARJETAS -->
-            <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                <!-- Se puebla dinámicamente -->
-            </div>
+            <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
 
-            <!-- BOTÓN CARGAR MÁS PRODUCTOS -->
+            <!-- BOTÓN CARGAR MÁS -->
             <div class="mt-10 text-center">
                 <button 
                     id="btn-load-more" 
@@ -127,18 +135,35 @@
 
     </main>
 
-    <!-- FOOTER MINIMALISTA -->
     <footer class="border-t border-slate-200/60 bg-white py-6 mt-16 text-center text-xs text-slate-400">
         <p>Cafe-sitios &copy; 2026 &bull; Comparador automático de café de especialidad</p>
     </footer>
 
-    <!-- LOGICA JAVASCRIPT -->
+    <!-- LOGICA JAVASCRIPT Y SEGUIMIENTO DE EVENTOS (ANALYTICS) -->
     <script>
         const API_URL = "http://localhost:8000/api/v1/products/cheapest";
-        
         let paginaActual = 1;
         const limitePorPagina = 12;
         let totalCargados = 0;
+
+        /**
+         * Envia eventos de métricas de usuario tanto a Google Analytics (gtag)
+         * como a Google Tag Manager (dataLayer).
+         */
+        function trackEvent(eventName, eventParams = {}) {
+            // 1. Enviar a GA4 si está disponible
+            if (typeof gtag === 'function') {
+                gtag('event', eventName, eventParams);
+            }
+            // 2. Enviar a dataLayer (GTM)
+            if (window.dataLayer) {
+                window.dataLayer.push({
+                    event: eventName,
+                    ...eventParams
+                });
+            }
+            console.log(`[Analytics Event] ${eventName}:`, eventParams);
+        }
 
         document.addEventListener("DOMContentLoaded", () => {
             nuevaBusqueda();
@@ -152,11 +177,26 @@
             paginaActual = 1;
             totalCargados = 0;
             document.getElementById("products-grid").innerHTML = "";
+
+            const query = document.getElementById("search-input").value.trim();
+            const sortBy = document.getElementById("sort-select").value;
+
+            // Registro analítico de la búsqueda
+            if (query) {
+                trackEvent('search', {
+                    search_term: query,
+                    sort_by: sortBy
+                });
+            }
+
             obtenerProductos(false);
         }
 
         function cargarMasProductos() {
             paginaActual++;
+            trackEvent('load_more_products', {
+                page: paginaActual
+            });
             obtenerProductos(true);
         }
 
@@ -164,7 +204,6 @@
             const query = document.getElementById("search-input").value.trim();
             const sortBy = document.getElementById("sort-select").value;
             const gridContainer = document.getElementById("products-grid");
-            const btnLoadMore = document.getElementById("btn-load-more");
 
             if (!append) {
                 gridContainer.innerHTML = `
@@ -191,7 +230,7 @@
                 renderizarCatalogo(result.data, result.total_items, append);
 
             } catch (error) {
-                console.error("Error al consultar API:", error);
+                console.error("Error API:", error);
                 if (!append) {
                     gridContainer.innerHTML = `
                         <div class="col-span-full bg-slate-100 border border-slate-200 text-slate-600 p-6 rounded-2xl text-center text-xs">
@@ -202,12 +241,25 @@
             }
         }
 
+        function trackOutboundClick(tienda, productoNombre, precio, url) {
+            trackEvent('outbound_click', {
+                store_name: tienda,
+                product_name: productoNombre,
+                price: precio,
+                destination_url: url
+            });
+            trackEvent('select_item', {
+                item_name: productoNombre,
+                item_brand: tienda,
+                price: precio
+            });
+        }
+
         function renderizarCatalogo(productos, totalItems, append) {
             const gridContainer = document.getElementById("products-grid");
             const storesSummaryContainer = document.getElementById("stores-summary");
             const countLabel = document.getElementById("results-count");
             const btnLoadMore = document.getElementById("btn-load-more");
-            const lastSyncLabel = document.getElementById("last-sync-time");
 
             totalCargados += productos.length;
             countLabel.textContent = `Mostrando ${totalCargados} de ${totalItems} resultados`;
@@ -236,15 +288,13 @@
                     <div class="bg-white rounded-2xl border border-slate-200/70 hover:border-sky-200 hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden group">
                         
                         <div>
-                            <!-- IMAGEN Y BADGES PASTEL -->
                             <div class="relative h-44 bg-slate-100 overflow-hidden">
-                                <img src="${item.imagen || imagenUrl}" alt="${item.nombre}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                                <img src="${imagenUrl}" alt="${item.nombre}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
                                 
                                 <span class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-slate-700 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
                                     ${item.tienda}
                                 </span>
 
-                                <!-- INDICADOR DE REGALO O DESCUENTO -->
                                 ${esRegalo ? `
                                     <span class="absolute top-3 right-3 bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-sm">
                                         🎁 Regalo / Muestra
@@ -256,7 +306,6 @@
                                 ` : ''}
                             </div>
 
-                            <!-- DATOS DEL PRODUCTO -->
                             <div class="p-4 space-y-2">
                                 <h3 class="font-bold text-slate-800 text-sm line-clamp-2 leading-snug group-hover:text-sky-700 transition">
                                     ${item.nombre}
@@ -270,7 +319,6 @@
                             </div>
                         </div>
 
-                        <!-- BLOQUE INFERIOR / PRECIOS -->
                         <div class="p-4 pt-0 space-y-3">
                             <div class="border-t border-slate-100 pt-3 flex justify-between items-end">
                                 <div>
@@ -298,11 +346,11 @@
                                 </div>
                             </div>
 
-                            <!-- LINK EXTERNO -->
                             <a 
                                 href="${item.url_detalle}" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
+                                onclick="trackOutboundClick('${item.tienda}', '${item.nombre.replace(/'/g, "\'")}', ${varData.precio_clp}, '${item.url_detalle}')"
                                 class="w-full bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200/80 font-semibold py-2 px-3 rounded-xl text-center text-xs block transition duration-150 flex items-center justify-center gap-1.5"
                             >
                                 <span>Ver en tienda</span>
@@ -334,7 +382,7 @@
             `).join('');
 
             const ahora = new Date();
-            lastSyncLabel.textContent = ahora.toLocaleString('es-CL', {
+            document.getElementById("last-sync-time").textContent = ahora.toLocaleString('es-CL', {
                 day: '2-digit', month: '2-digit', year: 'numeric',
                 hour: '2-digit', minute: '2-digit'
             }) + " hrs";

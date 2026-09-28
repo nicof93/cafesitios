@@ -66,7 +66,12 @@ class HistorialPrecio(Base):
 class DatabaseManager:
     def __init__(self, db_url: str = None):
         url_final = db_url or settings.database_url
-        self.engine = create_engine(url_final, echo=False)
+        self.engine = create_engine(
+            url_final,
+            echo=False,
+            pool_pre_ping=True,
+            pool_recycle=300
+        )
         self.SessionLocal = sessionmaker(bind=self.engine)
 
     def inicializar_db(self):
@@ -82,16 +87,21 @@ class DatabaseManager:
             total_historial = 0
             fecha_actual = datetime.utcnow()
 
+            # Cache de tiendas para evitar SELECTs repetitivos por cada producto
+            tiendas_cache = {t.nombre: t.id for t in session.query(Tienda).all()}
+
             for prod_data in catalogo:
                 nombre_tienda = prod_data['tienda']
-                tienda = session.query(Tienda).filter_by(nombre=nombre_tienda).first()
-                if not tienda:
+                tienda_id = tiendas_cache.get(nombre_tienda)
+                if not tienda_id:
                     tienda = Tienda(nombre=nombre_tienda, url_base=prod_data['url_detalle'])
                     session.add(tienda)
                     session.flush()
+                    tienda_id = tienda.id
+                    tiendas_cache[nombre_tienda] = tienda_id
 
                 stmt_prod = insert(Producto).values(
-                    tienda_id=tienda.id,
+                    tienda_id=tienda_id,
                     nombre=prod_data['nombre'],
                     url_detalle=prod_data['url_detalle'],
                     imagen=prod_data['imagen'],
@@ -154,11 +164,19 @@ class DatabaseManager:
                     session.add(historial_entry)
                     total_historial += 1
 
+                # Confirmar en lotes cada 20 productos para evitar transacciones largas sobre la red
+                if total_productos % 20 == 0:
+                    session.commit()
+
             session.commit()
             logging.info(f"💾 Persistencia exitosa: {total_productos} productos, {total_variantes} variantes y {total_historial} registros históricos.")
 
         except Exception as e:
-            session.rollback()
+            try:
+                session.rollback()
+            except Exception:
+                pass
             logging.error(f"❌ Error al guardar en la base de datos: {e}")
+            raise
         finally:
             session.close()

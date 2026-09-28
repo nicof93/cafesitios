@@ -6,17 +6,30 @@ from typing import List, Dict, Any, Optional
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
-def extraer_gramos(texto: Optional[str]) -> Optional[int]:
+def extraer_gramos(texto: Optional[str], default: Optional[int] = None) -> Optional[int]:
     if not texto:
-        return None
-    match = re.search(r'(\d+(?:\.\d+)?)\s*(g|gr|gramos|kg)', texto, re.IGNORECASE)
+        return default
+    match = re.search(r'(\d+(?:\.\d+)?)\s*[-_]?\s*(g|gr|grs|gramos|k|kg|kgs|kilo|kilos)\b', str(texto), re.IGNORECASE)
     if match:
         valor = float(match.group(1))
         unidad = match.group(2).lower()
-        return int(valor * 1000) if unidad == 'kg' else int(valor)
-    return None
+        return int(valor * 1000) if unidad in ['k', 'kg', 'kgs', 'kilo', 'kilos'] else int(valor)
+    return default
+
+def calcular_precio_por_kilo(precio_clp: int, formato_gramos: int) -> float:
+    if formato_gramos and formato_gramos > 0 and precio_clp > 0:
+        return round((precio_clp / formato_gramos) * 1000, 2)
+    return 0.0
 
 class ShopifyDriver:
+    @staticmethod
+    def extraer_gramos(texto: Optional[str], default: int = 250) -> int:
+        return extraer_gramos(texto, default=default) or default
+
+    @staticmethod
+    def calcular_precio_por_kilo(precio_clp: int, formato_gramos: int) -> float:
+        return calcular_precio_por_kilo(precio_clp, formato_gramos)
+
     def __init__(self, nombre: str, url_base: str, shopify_default: bool = True):
         self.nombre = nombre
         self.url_base = url_base
