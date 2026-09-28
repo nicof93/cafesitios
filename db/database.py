@@ -70,7 +70,8 @@ class DatabaseManager:
             url_final,
             echo=False,
             pool_pre_ping=True,
-            pool_recycle=300
+            pool_recycle=300,
+            connect_args={"prepare_threshold": None}
         )
         self.SessionLocal = sessionmaker(bind=self.engine)
 
@@ -81,6 +82,7 @@ class DatabaseManager:
 
     def guardar_catalogo(self, catalogo: List[Dict[str, Any]]):
         session = self.SessionLocal()
+        total_a_procesar = len(catalogo)
         try:
             total_productos = 0
             total_variantes = 0
@@ -89,8 +91,9 @@ class DatabaseManager:
 
             # Cache de tiendas para evitar SELECTs repetitivos por cada producto
             tiendas_cache = {t.nombre: t.id for t in session.query(Tienda).all()}
+            logging.info(f"💾 Iniciando persistencia de {total_a_procesar} productos en PostgreSQL...")
 
-            for prod_data in catalogo:
+            for i, prod_data in enumerate(catalogo, 1):
                 nombre_tienda = prod_data['tienda']
                 tienda_id = tiendas_cache.get(nombre_tienda)
                 if not tienda_id:
@@ -164,9 +167,10 @@ class DatabaseManager:
                     session.add(historial_entry)
                     total_historial += 1
 
-                # Confirmar en lotes cada 20 productos para evitar transacciones largas sobre la red
-                if total_productos % 20 == 0:
+                # Confirmar y reportar progreso cada 15 productos
+                if i % 15 == 0 or i == total_a_procesar:
                     session.commit()
+                    logging.info(f"⏳ Progreso: {i}/{total_a_procesar} productos sincronizados ({total_variantes} variantes guardadas)...")
 
             session.commit()
             logging.info(f"💾 Persistencia exitosa: {total_productos} productos, {total_variantes} variantes y {total_historial} registros históricos.")
