@@ -12,13 +12,11 @@ class Settings:
     DB_HOST: str = os.getenv("DB_HOST", "localhost")
     DB_PORT: str = os.getenv("DB_PORT", "5432")
     DB_NAME: str = os.getenv("DB_NAME", "cafesitios_db")
-    TEST: str = os.getenv("DB_HELP", "No lee nada")
 
     @property
     def database_url(self) -> str:
         url_env = os.getenv("DATABASE_URL")
         if url_env:
-            print("TAG: " + self.TEST)
             return url_env
         return f"postgresql+psycopg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
