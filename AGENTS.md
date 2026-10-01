@@ -113,3 +113,20 @@ Cualquier nuevo driver, modelo o cambio debe cumplir estrictamente estas reglas:
      * `@staticmethod extraer_gramos(texto: Optional[str], default: int = 250) -> int`
      * `@staticmethod calcular_precio_por_kilo(precio_clp: int, formato_gramos: int) -> float`
      * `consumir_productos() -> List[Dict[str, Any]]`
+
+---
+
+## 6. Política de Commits del Agente
+
+Después de completar exitosamente cada solicitud, validar los cambios aplicables y crear un commit que incluya únicamente los archivos modificados para esa solicitud. No incluir ni descartar cambios preexistentes o ajenos; preparar los archivos explícitamente en lugar de usar `git add -A`.
+
+Los mensajes deben seguir Conventional Commits con el formato `<tipo>(<ámbito>): <descripción>`, por ejemplo: `docs(agent): documentar política de commits`. Usar un tipo acorde al cambio (`feat`, `fix`, `docs`, `test`, `refactor`, `chore`, entre otros) y una descripción concreta.
+
+Nunca crear commits directamente en `main` o `master`. Si el trabajo comienza en una de esas ramas:
+
+1. Ejecutar `git fetch origin` y revisar si la rama local está sincronizada con su rama remota correspondiente.
+2. Si hay cambios remotos pendientes, actualizar la base de trabajo de forma segura, preservando todos los cambios locales y sin sobrescribirlos.
+3. Crear una rama nueva y descriptiva desde la rama remota actualizada antes de editar o confirmar cambios.
+4. Preparar y confirmar solo los archivos de la solicitud en esa rama.
+
+Si no es posible actualizar la rama o crear una rama de trabajo sin poner en riesgo cambios locales, detenerse sin confirmar en `main`/`master` y explicar el bloqueo. No hacer `push` salvo que se solicite explícitamente.
