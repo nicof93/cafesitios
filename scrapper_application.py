@@ -22,6 +22,29 @@ drivers_por_plataforma = {
 }
 
 
+def consumir_productos_tienda(tienda):
+    plataforma = (tienda.get('plataforma') or '').strip().lower()
+    if plataforma in drivers_por_plataforma:
+        driver_classes = [drivers_por_plataforma[plataforma]]
+    elif plataforma in ('', 'desconocida'):
+        driver_classes = list(drivers_por_plataforma.values())
+    else:
+        raise ValueError(f"Plataforma no soportada: {tienda['plataforma']}")
+
+    errores = []
+    for driver_class in driver_classes:
+        driver = driver_class(nombre=tienda['nombre'], url_base=tienda['url_base'])
+        try:
+            return driver.consumir_productos()
+        except Exception as error:
+            errores.append(f"{driver_class.__name__}: {error}")
+
+    raise RuntimeError(
+        f"No se pudo detectar una plataforma válida para '{tienda['nombre']}': "
+        + '; '.join(errores)
+    )
+
+
 def main():
     db = DatabaseManager()
     db.inicializar_db()
@@ -32,12 +55,7 @@ def main():
         sincronizacion_id = None
         try:
             sincronizacion_id = db.iniciar_sincronizacion(tienda['id'])
-            driver_class = drivers_por_plataforma.get(tienda['plataforma'].lower())
-            if driver_class is None:
-                raise ValueError(f"Plataforma no soportada: {tienda['plataforma']}")
-
-            driver = driver_class(nombre=tienda['nombre'], url_base=tienda['url_base'])
-            productos = driver.consumir_productos()
+            productos = consumir_productos_tienda(tienda)
             conteos = db.guardar_catalogo(productos, tienda_id=tienda['id'])
             db.finalizar_sincronizacion(sincronizacion_id, 'exitoso', **{
                 'productos_agregados': conteos['agregados'],

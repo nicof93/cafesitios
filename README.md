@@ -42,7 +42,7 @@ En una base vacía basta con ejecutar `alembic upgrade head`. Cada fila de `sinc
 
 Tiendas, productos y variantes registran `fecha_creacion` y `fecha_actualizacion`; la fecha de creación se conserva en las sincronizaciones posteriores y la de actualización cambia cuando se modifica el registro. Los productos conservan además su `id_externo` de la tienda (ID de plataforma o SKU disponible), separado del ID interno de la base de datos, para reconocerlos aunque cambie su URL.
 
-El scraper consulta las tiendas con `activo = true` en la base de datos y usa sus campos `plataforma` y `url_base`; no crea ni actualiza registros de tienda durante la sincronización. Para desactivar o reactivar una tienda comercialmente, cambie su campo `activo`:
+El scraper consulta las tiendas con `activo = true` en la base de datos y usa sus campos `plataforma` y `url_base`; no crea ni actualiza registros de tienda durante la sincronización. Si una tienda heredada aún tiene `plataforma = 'desconocida'`, prueba los drivers soportados con su `url_base` sin modificar la tienda. Para desactivar o reactivar una tienda comercialmente, cambie su campo `activo`:
 
 ```sql
 UPDATE tiendas SET activo = FALSE WHERE id = 1;

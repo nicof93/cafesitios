@@ -6,8 +6,38 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scrapper.shopify_driver import ShopifyDriver
+import scrapper_application
 
 class TestShopifyDriver(unittest.TestCase):
+    def test_unknown_legacy_platform_tries_supported_drivers(self):
+        class FailingDriver:
+            def __init__(self, nombre, url_base):
+                pass
+
+            def consumir_productos(self):
+                raise RuntimeError('Shopify endpoint not found')
+
+        class WooCommerceFallbackDriver:
+            def __init__(self, nombre, url_base):
+                pass
+
+            def consumir_productos(self):
+                return [{'nombre': 'Producto Woo detectado'}]
+
+        tienda = {
+            'nombre': 'Tienda heredada',
+            'url_base': 'https://example.com/producto',
+            'plataforma': 'desconocida',
+        }
+        with patch.dict(
+            scrapper_application.drivers_por_plataforma,
+            {'shopify': FailingDriver, 'woocommerce': WooCommerceFallbackDriver},
+            clear=True,
+        ):
+            products = scrapper_application.consumir_productos_tienda(tienda)
+
+        self.assertEqual(products, [{'nombre': 'Producto Woo detectado'}])
+
     def test_consumir_productos_preserves_external_product_id(self):
         driver = ShopifyDriver('Tienda Demo', 'https://example.com/products.json')
         response = Mock(status_code=200)
