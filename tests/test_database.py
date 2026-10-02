@@ -133,7 +133,11 @@ class TestDatabaseManager(unittest.TestCase):
             'imagen': None,
             'descripcion': '<p>Finca y notas</p>',
             'caracteristicas_cafe': {
-                'proceso': 'natural',
+                'proceso': (
+                    'post-cosecha: oxidación en cereza por 24 hrs, despulpado, '
+                    'fermentación en mucílago en tanques por 72 hrs, lavado, '
+                    'secado sobre camas en pergamino por 15 días'
+                ),
                 'finca': 'Los Robles',
                 'variedad': 'Caturra',
                 'elevacion_min_msnm': 1650,
@@ -179,7 +183,12 @@ class TestDatabaseManager(unittest.TestCase):
         session = db.SessionLocal()
         try:
             saved_product = session.query(Producto).filter_by(id_externo='coffee-001').one()
-            self.assertEqual(saved_product.proceso, 'natural')
+            self.assertEqual(
+                saved_product.proceso,
+                'post-cosecha: oxidación en cereza por 24 hrs, despulpado, '
+                'fermentación en mucílago en tanques por 72 hrs, lavado, '
+                'secado sobre camas en pergamino por 15 días',
+            )
             self.assertEqual(saved_product.finca, 'Los Robles')
             self.assertEqual(saved_product.variedad, 'Caturra')
             self.assertEqual(saved_product.elevacion_min_msnm, 1650)
@@ -286,9 +295,15 @@ class TestDatabaseManager(unittest.TestCase):
                     ).scalar_one()
 
                 self.assertEqual(store_name, 'Tienda existente')
-                self.assertEqual(revision, '0005_coffee_metadata')
+                self.assertEqual(revision, '0006_long_coffee_process')
                 self.assertIn('sincronizaciones', inspect(db.engine).get_table_names())
                 self.assertIn('estado_sincronizacion', inspect(db.engine).get_table_names())
+                product_columns = {
+                    column['name']: str(column['type']).upper()
+                    for column in inspect(db.engine).get_columns('productos')
+                }
+                self.assertEqual(product_columns['proceso'], 'TEXT')
+                self.assertEqual(product_columns['fermentacion_tipo'], 'TEXT')
             finally:
                 db.engine.dispose()
 
