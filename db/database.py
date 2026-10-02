@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 from sqlalchemy import (
     create_engine, Column, Integer, String, Text, Boolean,
-    Numeric, DateTime, ForeignKey, UniqueConstraint, inspect, text
+    Numeric, DateTime, ForeignKey, UniqueConstraint, inspect, text, Float, JSON
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
@@ -36,6 +36,13 @@ class Tienda(Base):
     productos = relationship("Producto", back_populates="tienda", cascade="all, delete-orphan")
     sincronizaciones = relationship("Sincronizacion", back_populates="tienda", cascade="all, delete-orphan")
 
+class NotaCata(Base):
+    __tablename__ = 'notas_cata'
+    id = Column(Integer, primary_key=True)
+    clave_normalizada = Column(String(160), unique=True, nullable=False)
+    nombre = Column(String(160), nullable=False)
+    productos = relationship("ProductoNotaCata", back_populates="nota")
+
 class Producto(Base):
     __tablename__ = 'productos'
     __table_args__ = (UniqueConstraint('tienda_id', 'id_externo', name='uq_producto_tienda_id_externo'),)
@@ -47,10 +54,30 @@ class Producto(Base):
     url_detalle = Column(String(500), unique=True, nullable=False)
     imagen = Column(Text, nullable=True)
     descripcion = Column(Text, nullable=True)
+    proceso = Column(String(100), nullable=True)
+    finca = Column(String(255), nullable=True)
+    variedad = Column(String(255), nullable=True)
+    elevacion_min_msnm = Column(Integer, nullable=True)
+    elevacion_max_msnm = Column(Integer, nullable=True)
+    cosecha = Column(String(100), nullable=True)
+    fermentacion_tipo = Column(String(100), nullable=True)
+    fermentacion_horas = Column(Numeric(8, 2), nullable=True)
+    caracteristicas_fuente = Column(JSON, nullable=True)
     fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
     fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
     tienda = relationship("Tienda", back_populates="productos")
     variantes = relationship("Variante", back_populates="producto", cascade="all, delete-orphan")
+    notas_cata = relationship("ProductoNotaCata", back_populates="producto", cascade="all, delete-orphan")
+
+class ProductoNotaCata(Base):
+    __tablename__ = 'producto_notas_cata'
+    producto_id = Column(Integer, ForeignKey('productos.id'), primary_key=True)
+    nota_id = Column(Integer, ForeignKey('notas_cata.id'), primary_key=True)
+    texto_origen = Column(Text, nullable=False)
+    confianza = Column(Float, nullable=False)
+    version_extractor = Column(String(50), nullable=False)
+    producto = relationship("Producto", back_populates="notas_cata")
+    nota = relationship("NotaCata", back_populates="productos")
 
 class Variante(Base):
     __tablename__ = 'variantes'
@@ -308,6 +335,8 @@ class DatabaseManager:
                 if clave_producto in unique_product_keys:
                     continue
                 unique_product_keys.add(clave_producto)
+                caracteristicas = prod_data.get('caracteristicas_cafe') or {}
+                fuentes = caracteristicas.get('fuentes') or {}
 
                 producto_mapping = {
                     'tienda_id': tienda.id,
@@ -319,7 +348,15 @@ class DatabaseManager:
                     'descripcion': prod_data['descripcion'],
                     'fecha_creacion': fecha_actual,
                     'fecha_actualizacion': fecha_actual,
+                    'caracteristicas_fuente': fuentes,
                 }
+                for field in (
+                    'proceso', 'finca', 'variedad', 'elevacion_min_msnm',
+                    'elevacion_max_msnm', 'cosecha', 'fermentacion_tipo',
+                    'fermentacion_horas',
+                ):
+                    if caracteristicas.get(field) is not None:
+                        producto_mapping[field] = caracteristicas[field]
                 productos_a_insertar.append(producto_mapping)
                 total_productos += 1
 
@@ -339,9 +376,40 @@ class DatabaseManager:
                         for campo in ('tienda_id', 'nombre', 'url_detalle', 'imagen', 'descripcion', 'activo'):
                             if getattr(producto_existente, campo) != row[campo]:
                                 cambios[campo] = row[campo]
+                        for campo in (
+                            'proceso', 'finca', 'variedad', 'elevacion_min_msnm',
+                            'elevacion_max_msnm', 'cosecha', 'fermentacion_tipo',
+                            'fermentacion_horas',
+                        ):
+                            if campo in row and getattr(producto_existente, campo) != row[campo]:
+                                cambios[campo] = row[campo]
                         if row['id_externo'] and producto_existente.id_externo != row['id_externo']:
                             cambios['id_externo'] = row['id_externo']
-                        if len(cambios) > 1:
+                        fuentes_actuales = producto_existente.caracteristicas_fuente or {}
+                        fuentes_nuevas = {**fuentes_actuales, **row['caracteristicas_fuente']}
+                        if fuentes_nuevas != fuentes_actuales:
+                            cambios['caracteristicas_fuente'] = fuentes_nuevas
+
+                        caracteristicas = next(
+                            (
+                                producto.get('caracteristicas_cafe') or {}
+                                for producto in catalogo
+                                if producto['url_detalle'] == url_detalle
+                            ),
+                            {},
+                        )
+                        notas_cambiaron = False
+                        if caracteristicas.get('notas_cata_mencionadas'):
+                            claves_nuevas = {
+                                note['clave_normalizada']
+                                for note in caracteristicas.get('notas_cata', [])
+                            }
+                            claves_actuales = {
+                                relation.nota.clave_normalizada
+                                for relation in producto_existente.notas_cata
+                            }
+                            notas_cambiaron = claves_nuevas != claves_actuales
+                        if len(cambios) > 1 or notas_cambiaron:
                             cambios['fecha_actualizacion'] = fecha_actual
                             producto_rows_actualizar.append(cambios)
                     else:
@@ -357,6 +425,61 @@ class DatabaseManager:
                 producto_ids = self._ids_por_columna(
                     session, Producto, 'url_detalle', [row['url_detalle'] for row in productos_a_insertar]
                 )
+
+                notas_por_clave = {}
+                productos_con_notas_declaradas = {}
+                for prod_data in catalogo:
+                    caracteristicas = prod_data.get('caracteristicas_cafe') or {}
+                    if not caracteristicas.get('notas_cata_mencionadas'):
+                        continue
+                    product_id = producto_ids.get(prod_data['url_detalle'])
+                    if product_id is None:
+                        continue
+                    productos_con_notas_declaradas[product_id] = caracteristicas.get('notas_cata', [])
+                    for note in caracteristicas.get('notas_cata', []):
+                        notas_por_clave[note['clave_normalizada']] = note
+
+                if productos_con_notas_declaradas:
+                    notas_existentes = {
+                        note.clave_normalizada: note
+                        for note in session.query(NotaCata)
+                        .filter(NotaCata.clave_normalizada.in_(list(notas_por_clave)))
+                        .all()
+                    } if notas_por_clave else {}
+                    for key, note in notas_por_clave.items():
+                        if key not in notas_existentes:
+                            session.add(NotaCata(
+                                clave_normalizada=key,
+                                nombre=note['nombre'],
+                            ))
+                    if notas_por_clave:
+                        session.flush()
+                        notas_existentes.update({
+                            note.clave_normalizada: note
+                            for note in session.query(NotaCata)
+                            .filter(NotaCata.clave_normalizada.in_(list(notas_por_clave)))
+                            .all()
+                        })
+
+                    notas_ids = {key: note.id for key, note in notas_existentes.items()}
+                    for product_id, product_notes in productos_con_notas_declaradas.items():
+                        session.query(ProductoNotaCata).filter(
+                            ProductoNotaCata.producto_id == product_id
+                        ).delete(synchronize_session=False)
+                        session.bulk_insert_mappings(
+                            ProductoNotaCata,
+                            [
+                                {
+                                    'producto_id': product_id,
+                                    'nota_id': notas_ids[note['clave_normalizada']],
+                                    'texto_origen': note['texto_origen'],
+                                    'confianza': note['confianza'],
+                                    'version_extractor': note.get('version_extractor', 'unknown'),
+                                }
+                                for note in product_notes
+                            ],
+                        )
+                    session.commit()
 
                 unique_variantes = set()
                 for prod_data in catalogo:

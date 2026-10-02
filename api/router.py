@@ -8,7 +8,15 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from typing import Literal, Optional
 from urllib.parse import urlsplit
 
-from db.database import DatabaseManager, EstadoSincronizacion, HistorialPrecio, Tienda, Producto, Variante
+from db.database import (
+    DatabaseManager,
+    EstadoSincronizacion,
+    HistorialPrecio,
+    Producto,
+    ProductoNotaCata,
+    Tienda,
+    Variante,
+)
 from infrastructure.postgres_repository import PostgresCoffeeRepository
 from application.get_cheapest_products import GetCheapestProductsUseCase
 from api.schemas import (
@@ -228,6 +236,7 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
         .options(
             joinedload(Producto.tienda),
             selectinload(Producto.variantes).selectinload(Variante.historial_precios),
+            selectinload(Producto.notas_cata).joinedload(ProductoNotaCata.nota),
         )
         .filter(
             Producto.id == product_id,
@@ -251,6 +260,25 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
         "url_detalle": product.url_detalle,
         "imagen": product.imagen,
         "fecha_actualizacion": product.fecha_actualizacion,
+        "proceso": product.proceso,
+        "finca": product.finca,
+        "variedad": product.variedad,
+        "elevacion_min_msnm": product.elevacion_min_msnm,
+        "elevacion_max_msnm": product.elevacion_max_msnm,
+        "cosecha": product.cosecha,
+        "fermentacion_tipo": product.fermentacion_tipo,
+        "fermentacion_horas": float(product.fermentacion_horas) if product.fermentacion_horas is not None else None,
+        "caracteristicas_fuente": product.caracteristicas_fuente or {},
+        "notas_cata": [
+            {
+                "nombre": relation.nota.nombre,
+                "clave_normalizada": relation.nota.clave_normalizada,
+                "texto_origen": relation.texto_origen,
+                "confianza": relation.confianza,
+                "version_extractor": relation.version_extractor,
+            }
+            for relation in sorted(product.notas_cata, key=lambda relation: relation.nota.clave_normalizada)
+        ],
         "variantes": [
             {
                 "id_externo": variant.id_variante_externo,

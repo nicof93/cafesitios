@@ -13,6 +13,10 @@ if sys.platform == "win32":
         pass
 
 from db.database import DatabaseManager
+from scrapper.coffee_metadata import (
+    extract_coffee_characteristics,
+    summarize_extraction_coverage,
+)
 from scrapper.shopify_driver import ShopifyDriver
 from scrapper.woocommerce_driver import WooCommerceDriver
 
@@ -56,6 +60,13 @@ def main():
         try:
             sincronizacion_id = db.iniciar_sincronizacion(tienda['id'])
             productos = consumir_productos_tienda(tienda)
+            for producto in productos:
+                producto['caracteristicas_cafe'] = extract_coffee_characteristics(
+                    producto.get('descripcion')
+                )
+            coverage = summarize_extraction_coverage([
+                producto['caracteristicas_cafe'] for producto in productos
+            ])
             conteos = db.guardar_catalogo(productos, tienda_id=tienda['id'])
             db.finalizar_sincronizacion(sincronizacion_id, 'exitoso', **{
                 'productos_agregados': conteos['agregados'],
@@ -64,6 +75,14 @@ def main():
             })
             resultados.append(True)
             print(f"✅ {tienda['nombre']}: {len(productos)} productos sincronizados.")
+            field_coverage = ', '.join(
+                f"{field} {stats['detectados']}/{coverage['total']}"
+                for field, stats in coverage['campos'].items()
+            )
+            print(
+                f"   Cobertura de extracción: {coverage['con_datos']}/{coverage['total']} "
+                f"productos ({coverage['porcentaje_con_datos']}%); {field_coverage}"
+            )
         except Exception as error:
             if sincronizacion_id is not None:
                 db.finalizar_sincronizacion(

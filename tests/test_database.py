@@ -12,7 +12,9 @@ from db.database import (
     Base,
     DatabaseManager,
     HistorialPrecio,
+    NotaCata,
     Producto,
+    ProductoNotaCata,
     Sincronizacion,
     Tienda,
     Variante,
@@ -111,6 +113,116 @@ class FakeSession:
 
 
 class TestDatabaseManager(unittest.TestCase):
+    def test_guardar_catalogo_persists_characteristics_and_normalized_notes(self):
+        engine = create_engine('sqlite:///:memory:')
+        Base.metadata.create_all(engine)
+        db = DatabaseManager.__new__(DatabaseManager)
+        db.SessionLocal = sessionmaker(bind=engine)
+        session = db.SessionLocal()
+        store = Tienda(nombre='Tienda Café', url_base='https://coffee.example')
+        session.add(store)
+        session.commit()
+        store_id = store.id
+        session.close()
+
+        product = {
+            'tienda': 'Tienda Café',
+            'id_externo': 'coffee-001',
+            'nombre': 'Café de prueba',
+            'url_detalle': 'https://coffee.example/coffee-001',
+            'imagen': None,
+            'descripcion': '<p>Finca y notas</p>',
+            'caracteristicas_cafe': {
+                'proceso': 'natural',
+                'finca': 'Los Robles',
+                'variedad': 'Caturra',
+                'elevacion_min_msnm': 1650,
+                'elevacion_max_msnm': 1800,
+                'cosecha': '2024/25',
+                'fermentacion_tipo': 'anaeróbica',
+                'fermentacion_horas': 72,
+                'fuentes': {
+                    'proceso': {
+                        'texto': 'Proceso: Natural',
+                        'confianza': 0.95,
+                        'version': 'rules-v1',
+                    },
+                },
+                'notas_cata_mencionadas': True,
+                'notas_cata': [{
+                    'nombre': 'frutos rojos',
+                    'clave_normalizada': 'frutos-rojos',
+                    'texto_origen': 'Perfil de taza: berries',
+                    'confianza': 0.9,
+                    'version_extractor': 'rules-v1',
+                }],
+            },
+            'variantes': [{
+                'id_variante_externo': 'coffee-001-250',
+                'opcion': 'Grano',
+                'formato_gramos': 250,
+                'precio_clp': 10000,
+                'precio_original_clp': 10000,
+                'en_oferta': False,
+                'descuento_porcentaje': 0,
+                'precio_por_kilo': 40000,
+                'disponible': True,
+            }],
+        }
+
+        db.guardar_catalogo([product], tienda_id=store_id)
+        product['caracteristicas_cafe'] = {
+            'notas_cata_mencionadas': False,
+        }
+        db.guardar_catalogo([product], tienda_id=store_id)
+
+        session = db.SessionLocal()
+        try:
+            saved_product = session.query(Producto).filter_by(id_externo='coffee-001').one()
+            self.assertEqual(saved_product.proceso, 'natural')
+            self.assertEqual(saved_product.finca, 'Los Robles')
+            self.assertEqual(saved_product.variedad, 'Caturra')
+            self.assertEqual(saved_product.elevacion_min_msnm, 1650)
+            self.assertEqual(saved_product.elevacion_max_msnm, 1800)
+            self.assertEqual(saved_product.cosecha, '2024/25')
+            self.assertEqual(saved_product.fermentacion_tipo, 'anaeróbica')
+            self.assertEqual(float(saved_product.fermentacion_horas), 72)
+            self.assertEqual(saved_product.caracteristicas_fuente['proceso']['confianza'], 0.95)
+            previous_update = saved_product.fecha_actualizacion
+            self.assertEqual(session.query(NotaCata).count(), 1)
+            self.assertEqual(session.query(ProductoNotaCata).count(), 1)
+            relation = session.query(ProductoNotaCata).one()
+            self.assertEqual(relation.nota.clave_normalizada, 'frutos-rojos')
+            self.assertEqual(relation.texto_origen, 'Perfil de taza: berries')
+            self.assertEqual(relation.confianza, 0.9)
+            self.assertEqual(relation.version_extractor, 'rules-v1')
+        finally:
+            session.close()
+
+        product['caracteristicas_cafe'] = {
+            'notas_cata_mencionadas': True,
+            'notas_cata': [{
+                'nombre': 'cacao',
+                'clave_normalizada': 'cacao',
+                'texto_origen': 'Tasting notes: cocoa',
+                'confianza': 0.9,
+                'version_extractor': 'rules-v1',
+            }],
+        }
+        db.guardar_catalogo([product], tienda_id=store_id)
+
+        session = db.SessionLocal()
+        try:
+            saved_product = session.query(Producto).filter_by(id_externo='coffee-001').one()
+            self.assertGreater(saved_product.fecha_actualizacion, previous_update)
+            self.assertEqual(session.query(ProductoNotaCata).count(), 1)
+            relation = session.query(ProductoNotaCata).one()
+            self.assertEqual(relation.nota.clave_normalizada, 'cacao')
+            self.assertEqual(session.query(NotaCata).count(), 2)
+        finally:
+            session.close()
+            engine.dispose()
+
     def test_listar_tiendas_activas_omits_disabled_stores(self):
         engine = create_engine('sqlite:///:memory:')
         Base.metadata.create_all(engine)
@@ -174,7 +286,7 @@ class TestDatabaseManager(unittest.TestCase):
                     ).scalar_one()
 
                 self.assertEqual(store_name, 'Tienda existente')
-                self.assertEqual(revision, '0004_active_states')
+                self.assertEqual(revision, '0005_coffee_metadata')
                 self.assertIn('sincronizaciones', inspect(db.engine).get_table_names())
                 self.assertIn('estado_sincronizacion', inspect(db.engine).get_table_names())
             finally:

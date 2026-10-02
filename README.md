@@ -56,6 +56,10 @@ UPDATE tiendas SET activo = TRUE WHERE id = 1;
 
 Los productos que desaparecen de una tienda también se conservan: pasan a `activo = false`, junto con sus variantes e historial, y se reactivan si vuelven a aparecer.
 
+Durante la sincronización se extraen, mediante reglas y etiquetas en español/inglés, notas de cata, proceso, finca, variedad, elevación, cosecha y tipo/duración de fermentación. Las notas se normalizan y relacionan con productos a través de `notas_cata` y `producto_notas_cata`, para encontrar cafés con notas compartidas. Cada dato extraído conserva el fragmento de origen, nivel de confianza y versión de reglas. Si una descripción no aporta un dato, queda desconocido; no se infiere ni se inventa. La respuesta de `/api/v1/products/{id}/detail` incluye estos atributos y sus notas.
+
+La confianza es una señal heurística de extracción etiquetada, no una probabilidad calibrada. Cada sincronización informa en consola la cobertura detectada por atributo para identificar qué campos quedan sin reconocer antes de considerar un modelo de lenguaje.
+
 ## Links de interes
 - Documentación Interactiva (Swagger UI): http://localhost:8000/docs
 - Documentación ReDoc: http://localhost:8000/redoc

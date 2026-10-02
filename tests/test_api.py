@@ -10,7 +10,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from main import app
 from api.router import get_db_session, get_product_detail, get_stores_summary
 from api.schemas import ProductDetailResponse
-from db.database import Base, HistorialPrecio, Producto, Tienda, Variante
+from db.database import (
+    Base,
+    HistorialPrecio,
+    NotaCata,
+    Producto,
+    ProductoNotaCata,
+    Tienda,
+    Variante,
+)
 from domain.models import CoffeeProductDomain, VariantDomain
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -70,7 +78,24 @@ class TestAPI(unittest.TestCase):
                     '<script>alert("xss")</script>'
                     '<img src="javascript:alert(1)" onerror="alert(1)">'
                 ),
+                proceso="natural",
+                finca="Los Robles",
+                variedad="Caturra",
+                elevacion_min_msnm=1650,
+                elevacion_max_msnm=1800,
+                cosecha="2024/25",
+                fermentacion_tipo="anaeróbica",
+                fermentacion_horas=72,
+                caracteristicas_fuente={
+                    "finca": {"texto": "Finca: Los Robles", "confianza": 0.95, "version": "rules-v1"}
+                },
             )
+            product.notas_cata = [ProductoNotaCata(
+                nota=NotaCata(nombre="frutos rojos", clave_normalizada="frutos-rojos"),
+                texto_origen="Perfil de taza: berries",
+                confianza=0.9,
+                version_extractor="rules-v1",
+            )]
             product.variantes = [
                 Variante(
                     id_variante_externo="variant-250",
@@ -116,6 +141,12 @@ class TestAPI(unittest.TestCase):
 
             self.assertEqual(result["descripcion"], '<p>Notas de <strong>cacao</strong></p>')
             self.assertEqual(result["tienda"], "Tienda Demo")
+            self.assertEqual(result["proceso"], "natural")
+            self.assertEqual(result["finca"], "Los Robles")
+            self.assertEqual(result["elevacion_min_msnm"], 1650)
+            self.assertEqual(result["fermentacion_horas"], 72)
+            self.assertEqual(result["notas_cata"][0]["clave_normalizada"], "frutos-rojos")
+            self.assertEqual(result["notas_cata"][0]["confianza"], 0.9)
             self.assertEqual(len(result["variantes"]), 2)
             self.assertEqual(result["variantes"][1]["formato_gramos"], 1000)
             self.assertFalse(result["variantes"][1]["disponible"])
