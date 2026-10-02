@@ -2,11 +2,12 @@ import sys
 from pathlib import Path
 import unittest
 from fastapi.testclient import TestClient
+from fastapi import HTTPException
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from main import app
-from api.router import get_db_session, get_product_detail
+from api.router import get_db_session, get_product_detail, get_stores_summary
 from db.database import Base, Producto, Tienda, Variante
 from domain.models import CoffeeProductDomain, VariantDomain
 from sqlalchemy import create_engine
@@ -98,6 +99,77 @@ class TestAPI(unittest.TestCase):
             self.assertEqual(len(result["variantes"]), 2)
             self.assertEqual(result["variantes"][1]["formato_gramos"], 1000)
             self.assertFalse(result["variantes"][1]["disponible"])
+
+            product.activo = False
+            session.commit()
+            with self.assertRaises(HTTPException) as error:
+                get_product_detail(product.id, session)
+            self.assertEqual(error.exception.status_code, 404)
+        finally:
+            session.close()
+            engine.dispose()
+
+    def test_store_summary_excludes_inactive_stores_and_products(self):
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(engine)
+        session = sessionmaker(bind=engine)()
+        try:
+            active_store = Tienda(nombre="Activa", url_base="https://active.example")
+            disabled_store = Tienda(
+                nombre="Desactivada",
+                url_base="https://disabled.example",
+                activo=False,
+            )
+            active_store.productos = [
+                Producto(
+                    nombre="Activo",
+                    url_detalle="https://active.example/activo",
+                    variantes=[Variante(
+                        id_variante_externo="active-variant",
+                        opcion="250g",
+                        formato_gramos=250,
+                        precio_clp=10000,
+                        precio_original_clp=10000,
+                        precio_por_kilo=40000,
+                    )],
+                ),
+                Producto(
+                    nombre="Eliminado lógico",
+                    url_detalle="https://active.example/inactivo",
+                    activo=False,
+                    variantes=[Variante(
+                        id_variante_externo="inactive-variant",
+                        opcion="250g",
+                        formato_gramos=250,
+                        precio_clp=9000,
+                        precio_original_clp=9000,
+                        precio_por_kilo=36000,
+                    )],
+                ),
+            ]
+            disabled_store.productos = [Producto(
+                nombre="Producto de tienda desactivada",
+                url_detalle="https://disabled.example/producto",
+                variantes=[Variante(
+                    id_variante_externo="disabled-variant",
+                    opcion="250g",
+                    formato_gramos=250,
+                    precio_clp=8000,
+                    precio_original_clp=8000,
+                    precio_por_kilo=32000,
+                )],
+            )]
+            session.add_all([active_store, disabled_store])
+            session.commit()
+
+            summary = get_stores_summary(1, 10, "name_asc", session)
+
+            self.assertEqual(summary["total_items"], 1)
+            self.assertEqual(summary["items"], [{"nombre": "Activa", "cantidad_productos": 1}])
         finally:
             session.close()
             engine.dispose()

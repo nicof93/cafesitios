@@ -68,7 +68,11 @@ def get_stores_summary(
         )
         .join(Producto, Producto.tienda_id == Tienda.id)
         .join(Variante, Variante.producto_id == Producto.id)
-        .filter(Variante.disponible == True)
+        .filter(
+            Tienda.activo.is_(True),
+            Producto.activo.is_(True),
+            Variante.disponible == True,
+        )
         .group_by(Tienda.id, Tienda.nombre)
     )
 
@@ -105,8 +109,13 @@ def get_stores_summary(
 def get_product_detail(product_id: int, db_session: Session = Depends(get_db_session)):
     product = (
         db_session.query(Producto)
+        .join(Tienda, Producto.tienda_id == Tienda.id)
         .options(joinedload(Producto.tienda), joinedload(Producto.variantes))
-        .filter(Producto.id == product_id)
+        .filter(
+            Producto.id == product_id,
+            Producto.activo.is_(True),
+            Tienda.activo.is_(True),
+        )
         .first()
     )
     if product is None:

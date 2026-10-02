@@ -14,6 +14,7 @@ from db.database import (
     HistorialPrecio,
     Producto,
     Sincronizacion,
+    Tienda,
     Variante,
 )
 
@@ -27,6 +28,9 @@ class FakeQuery:
 
     def all(self):
         return self._rows
+
+    def first(self):
+        return self._rows[0] if self._rows else None
 
 
 class FakeSession:
@@ -107,6 +111,31 @@ class FakeSession:
 
 
 class TestDatabaseManager(unittest.TestCase):
+    def test_listar_tiendas_activas_omits_disabled_stores(self):
+        engine = create_engine('sqlite:///:memory:')
+        Base.metadata.create_all(engine)
+        db = DatabaseManager.__new__(DatabaseManager)
+        db.SessionLocal = sessionmaker(bind=engine)
+        session = db.SessionLocal()
+        active_store = Tienda(nombre='Activa', url_base='https://active.example')
+        disabled_store = Tienda(
+            nombre='Desactivada',
+            url_base='https://disabled.example',
+            activo=False,
+        )
+        session.add_all([active_store, disabled_store])
+        session.commit()
+        disabled_store_id = disabled_store.id
+        session.close()
+
+        try:
+            stores = db.listar_tiendas_activas()
+            self.assertEqual([store['nombre'] for store in stores], ['Activa'])
+            with self.assertRaisesRegex(ValueError, 'tienda activa'):
+                db.iniciar_sincronizacion(disabled_store_id)
+        finally:
+            engine.dispose()
+
     def test_inicializar_db_adopts_legacy_schema_without_sync_state(self):
         from alembic import command
         from alembic.config import Config
@@ -145,7 +174,7 @@ class TestDatabaseManager(unittest.TestCase):
                     ).scalar_one()
 
                 self.assertEqual(store_name, 'Tienda existente')
-                self.assertEqual(revision, '0003_product_identity')
+                self.assertEqual(revision, '0004_active_states')
                 self.assertIn('sincronizaciones', inspect(db.engine).get_table_names())
                 self.assertIn('estado_sincronizacion', inspect(db.engine).get_table_names())
             finally:
@@ -208,16 +237,21 @@ class TestDatabaseManager(unittest.TestCase):
             }],
         }]
 
-        counts = db.guardar_catalogo(catalogo, plataforma='shopify')
+        fake_session.inserted[Tienda] = [SimpleNamespace(
+            id=1,
+            nombre='Tienda Demo',
+            url_base='https://example.com',
+            plataforma='shopify',
+            activo=True,
+        )]
+        counts = db.guardar_catalogo(catalogo, tienda_id=1)
 
         table_names = [name for name, _ in fake_session.calls]
-        self.assertIn('tiendas', table_names)
+        self.assertNotIn('tiendas', table_names)
         self.assertIn('productos', table_names)
         self.assertIn('variantes', table_names)
         self.assertIn('historial_precios', table_names)
         self.assertEqual(counts, {'agregados': 1, 'eliminados': 0, 'actualizados': 0})
-        tienda_mapping = next(mappings[0] for name, mappings in fake_session.calls if name == 'tiendas')
-        self.assertEqual(tienda_mapping['plataforma'], 'shopify')
 
     def test_sync_counts_product_changes_and_persists_result(self):
         engine = create_engine('sqlite:///:memory:')
@@ -225,9 +259,13 @@ class TestDatabaseManager(unittest.TestCase):
         db = DatabaseManager.__new__(DatabaseManager)
         db.SessionLocal = sessionmaker(bind=engine)
 
-        synchronization_id = db.iniciar_sincronizacion(
-            'Tienda Demo', 'https://example.com', 'woocommerce'
-        )
+        session = db.SessionLocal()
+        store = Tienda(nombre='Tienda Demo', url_base='https://example.com', plataforma='woocommerce')
+        session.add(store)
+        session.commit()
+        store_id = store.id
+        session.close()
+        synchronization_id = db.iniciar_sincronizacion(store_id)
 
         def product(name, url, variant_id, price, external_id):
             return {
@@ -253,7 +291,7 @@ class TestDatabaseManager(unittest.TestCase):
         db.guardar_catalogo([
             product('Retenido', 'https://example.com/retained', 'variant-1', 10000, 'product-1'),
             product('Eliminado', 'https://example.com/removed', 'variant-2', 12000, 'product-2'),
-        ], nombre_tienda='Tienda Demo', url_base='https://example.com', plataforma='woocommerce')
+        ], tienda_id=store_id)
 
         session = db.SessionLocal()
         try:
@@ -264,6 +302,9 @@ class TestDatabaseManager(unittest.TestCase):
             variant_created = variant.fecha_creacion
             store_created = store.fecha_creacion
             store_updated = store.fecha_actualizacion
+            removed = session.query(Producto).filter_by(id_externo='product-2').one()
+            removed_id = removed.id
+            removed_created = removed.fecha_creacion
             retained.fecha_actualizacion = datetime(2000, 1, 1)
             variant.fecha_actualizacion = datetime(2000, 1, 1)
             session.commit()
@@ -273,7 +314,7 @@ class TestDatabaseManager(unittest.TestCase):
         counts = db.guardar_catalogo([
             product('Retenido actualizado', 'https://example.com/retained-v2', 'variant-1', 11000, 'product-1'),
             product('Nuevo', 'https://example.com/new', 'variant-3', 13000, 'product-3'),
-        ], nombre_tienda='Tienda Demo', url_base='https://example.com', plataforma='woocommerce')
+        ], tienda_id=store_id)
 
         db.finalizar_sincronizacion(
             synchronization_id,
@@ -292,9 +333,9 @@ class TestDatabaseManager(unittest.TestCase):
             self.assertEqual(sync.productos_agregados, 1)
             self.assertEqual(sync.productos_eliminados, 1)
             self.assertEqual(sync.productos_actualizados, 1)
-            self.assertEqual(session.query(Producto).count(), 2)
-            self.assertEqual(session.query(Variante).count(), 2)
-            self.assertEqual(session.query(HistorialPrecio).count(), 3)
+            self.assertEqual(session.query(Producto).count(), 3)
+            self.assertEqual(session.query(Variante).count(), 3)
+            self.assertEqual(session.query(HistorialPrecio).count(), 4)
             retained = session.query(Producto).filter_by(id_externo='product-1').one()
             retained_variant = session.query(Variante).filter_by(id_variante_externo='variant-1').one()
             store = retained.tienda
@@ -306,13 +347,36 @@ class TestDatabaseManager(unittest.TestCase):
             self.assertEqual(store.fecha_creacion, store_created)
             self.assertEqual(store.fecha_actualizacion, store_updated)
             self.assertEqual(session.query(Producto).filter_by(url_detalle='https://example.com/retained').count(), 0)
+            removed = session.query(Producto).filter_by(id=removed_id).one()
+            self.assertFalse(removed.activo)
+            self.assertEqual(removed.fecha_creacion, removed_created)
+            self.assertEqual(session.query(HistorialPrecio).filter(HistorialPrecio.variante_id == removed.variantes[0].id).count(), 1)
             self.assertEqual(
                 session.query(HistorialPrecio)
                 .join(Variante)
                 .filter(Variante.id_variante_externo == 'variant-2')
                 .count(),
-                0,
+                1,
             )
+        finally:
+            session.close()
+
+        reactivation_counts = db.guardar_catalogo([
+            product('Retenido actualizado', 'https://example.com/retained-v2', 'variant-1', 11000, 'product-1'),
+            product('Nuevo', 'https://example.com/new', 'variant-3', 13000, 'product-3'),
+            product('Reaparecido', 'https://example.com/removed-v2', 'variant-2', 12000, 'product-2'),
+        ], tienda_id=store_id)
+        self.assertEqual(reactivation_counts, {'agregados': 0, 'eliminados': 0, 'actualizados': 3})
+
+        session = db.SessionLocal()
+        try:
+            reactivated = session.query(Producto).filter_by(id_externo='product-2').one()
+            self.assertEqual(reactivated.id, removed_id)
+            self.assertTrue(reactivated.activo)
+            self.assertEqual(reactivated.fecha_creacion, removed_created)
+            self.assertEqual(session.query(HistorialPrecio).filter(
+                HistorialPrecio.variante_id == reactivated.variantes[0].id
+            ).count(), 2)
         finally:
             session.close()
             engine.dispose()
@@ -361,7 +425,14 @@ class TestDatabaseManager(unittest.TestCase):
             },
         ]
 
-        db.guardar_catalogo(catalogo)
+        fake_session.inserted[Tienda] = [SimpleNamespace(
+            id=1,
+            nombre='Tienda Demo',
+            url_base='https://example.com',
+            plataforma='desconocida',
+            activo=True,
+        )]
+        db.guardar_catalogo(catalogo, tienda_id=1)
 
         product_calls = [m for name, m in fake_session.calls if name == 'productos']
         self.assertEqual(len(product_calls), 1)

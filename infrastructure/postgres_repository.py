@@ -23,7 +23,8 @@ class PostgresCoffeeRepository(ICoffeeRepository):
     ):
         query = self.session.query(Variante, Producto, Tienda)\
             .join(Producto, Variante.producto_id == Producto.id)\
-            .join(Tienda, Producto.tienda_id == Tienda.id)
+            .join(Tienda, Producto.tienda_id == Tienda.id)\
+            .filter(Producto.activo.is_(True), Tienda.activo.is_(True))
 
         if only_available:
             query = query.filter(Variante.disponible == True)

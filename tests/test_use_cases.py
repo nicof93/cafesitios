@@ -155,7 +155,50 @@ class TestUseCases(unittest.TestCase):
                     ),
                 ],
             )
-            session.add_all([multi_variant_product, single_variant_product])
+            inactive_product = Producto(
+                tienda=store,
+                nombre="Café fuera de catálogo",
+                url_detalle="https://wr4.example/producto-inactivo",
+                activo=False,
+                variantes=[Variante(
+                    id_variante_externo="wr4-inactive",
+                    opcion="Grano",
+                    formato_gramos=250,
+                    precio_clp=9000,
+                    precio_original_clp=9000,
+                    en_oferta=False,
+                    descuento_porcentaje=0,
+                    precio_por_kilo=36000,
+                    disponible=True,
+                )],
+            )
+            disabled_store = Tienda(
+                nombre="Tienda desactivada",
+                url_base="https://disabled.example",
+                activo=False,
+            )
+            disabled_store_product = Producto(
+                tienda=disabled_store,
+                nombre="Café de tienda desactivada",
+                url_detalle="https://disabled.example/producto",
+                variantes=[Variante(
+                    id_variante_externo="disabled-store-variant",
+                    opcion="Grano",
+                    formato_gramos=250,
+                    precio_clp=8000,
+                    precio_original_clp=8000,
+                    en_oferta=False,
+                    descuento_porcentaje=0,
+                    precio_por_kilo=32000,
+                    disponible=True,
+                )],
+            )
+            session.add_all([
+                multi_variant_product,
+                single_variant_product,
+                inactive_product,
+                disabled_store_product,
+            ])
             session.commit()
 
             repository = PostgresCoffeeRepository(session)
@@ -164,6 +207,8 @@ class TestUseCases(unittest.TestCase):
             self.assertEqual(repository.count_cheapest_products(store_name="WR4 / WRoasters"), 2)
             self.assertEqual(len(products), 2)
             self.assertEqual(len({product.id for product in products}), 2)
+            self.assertNotIn(inactive_product.id, {product.id for product in products})
+            self.assertNotIn(disabled_store_product.id, {product.id for product in products})
             self.assertEqual(products[0].variante_mas_barata.id_externo, "wr4-500")
         finally:
             session.close()

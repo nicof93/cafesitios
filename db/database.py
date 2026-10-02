@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone
 from typing import List, Dict, Any
 from sqlalchemy import (
-    create_engine, Column, Integer, String, Text, Boolean, 
+    create_engine, Column, Integer, String, Text, Boolean,
     Numeric, DateTime, ForeignKey, UniqueConstraint, inspect, text
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
@@ -30,6 +30,7 @@ class Tienda(Base):
     nombre = Column(String(100), unique=True, nullable=False)
     url_base = Column(String(255), nullable=False)
     plataforma = Column(String(50), nullable=False, default='desconocida', server_default='desconocida')
+    activo = Column(Boolean, nullable=False, default=True, server_default='true')
     fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
     fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
     productos = relationship("Producto", back_populates="tienda", cascade="all, delete-orphan")
@@ -41,6 +42,7 @@ class Producto(Base):
     id = Column(Integer, primary_key=True)
     tienda_id = Column(Integer, ForeignKey('tiendas.id'), nullable=False)
     id_externo = Column(String(255), nullable=True)
+    activo = Column(Boolean, nullable=False, default=True, server_default='true')
     nombre = Column(String(255), nullable=False)
     url_detalle = Column(String(500), unique=True, nullable=False)
     imagen = Column(Text, nullable=True)
@@ -150,19 +152,36 @@ class DatabaseManager:
         command.upgrade(config, 'head')
         logging.info("✅ Migraciones aplicadas correctamente.")
 
-    def iniciar_sincronizacion(self, nombre_tienda: str, url_base: str, plataforma: str) -> int:
+    def listar_tiendas_activas(self) -> List[Dict[str, Any]]:
         session = self.SessionLocal()
         try:
-            tienda = session.query(Tienda).filter(Tienda.nombre == nombre_tienda).first()
+            tiendas = (
+                session.query(Tienda)
+                .filter(Tienda.activo.is_(True))
+                .order_by(Tienda.nombre.asc())
+                .all()
+            )
+            return [
+                {
+                    'id': tienda.id,
+                    'nombre': tienda.nombre,
+                    'url_base': tienda.url_base,
+                    'plataforma': tienda.plataforma,
+                }
+                for tienda in tiendas
+            ]
+        finally:
+            session.close()
+
+    def iniciar_sincronizacion(self, tienda_id: int) -> int:
+        session = self.SessionLocal()
+        try:
+            tienda = session.query(Tienda).filter(
+                Tienda.id == tienda_id,
+                Tienda.activo.is_(True),
+            ).first()
             if tienda is None:
-                tienda = Tienda(nombre=nombre_tienda, url_base=url_base, plataforma=plataforma)
-                session.add(tienda)
-                session.flush()
-            else:
-                if tienda.url_base != url_base or tienda.plataforma != plataforma:
-                    tienda.url_base = url_base
-                    tienda.plataforma = plataforma
-                    tienda.fecha_actualizacion = _utcnow()
+                raise ValueError(f"La tienda activa con id {tienda_id} no existe.")
 
             sincronizacion = Sincronizacion(
                 tienda_id=tienda.id,
@@ -241,9 +260,7 @@ class DatabaseManager:
     def guardar_catalogo(
         self,
         catalogo: List[Dict[str, Any]],
-        nombre_tienda: str = None,
-        url_base: str = None,
-        plataforma: str = 'desconocida',
+        tienda_id: int,
     ):
         session = self.SessionLocal()
         total_a_procesar = len(catalogo)
@@ -253,62 +270,30 @@ class DatabaseManager:
             total_historial = 0
             fecha_actual = _utcnow()
 
-            tiendas_existentes = {t.nombre: t for t in session.query(Tienda).all()}
-            tiendas_cache = {nombre: tienda.id for nombre, tienda in tiendas_existentes.items()}
-            tiendas_a_insertar = []
-            tiendas_a_actualizar = []
-            tiendas_insertadas_vistas = set()
+            tienda = session.query(Tienda).filter(
+                Tienda.id == tienda_id,
+                Tienda.activo.is_(True),
+            ).first()
+            if tienda is None:
+                raise ValueError(f"La tienda activa con id {tienda_id} no existe.")
+            if any(producto['tienda'] != tienda.nombre for producto in catalogo):
+                raise ValueError('Cada sincronización debe contener productos de una sola tienda.')
+
             productos_a_insertar = []
             productos_a_actualizar = []
             variantes_a_insertar = []
             variantes_a_actualizar = []
             historial_a_insertar = []
-
-            if nombre_tienda is None and catalogo:
-                nombre_tienda = catalogo[0]['tienda']
-            if nombre_tienda is not None and any(p['tienda'] != nombre_tienda for p in catalogo):
-                raise ValueError('Cada sincronización debe contener productos de una sola tienda.')
+            productos_encontrados_ids = set()
 
             logging.info(f"💾 Iniciando persistencia de {total_a_procesar} productos en PostgreSQL...")
-
-            for prod_data in catalogo:
-                nombre_tienda = prod_data['tienda']
-                tienda_url_base = url_base or prod_data.get('url_base') or prod_data['url_detalle']
-                if nombre_tienda not in tiendas_cache and nombre_tienda not in tiendas_insertadas_vistas:
-                    tiendas_insertadas_vistas.add(nombre_tienda)
-                    tiendas_a_insertar.append({
-                        'nombre': nombre_tienda,
-                        'url_base': tienda_url_base,
-                        'plataforma': plataforma,
-                        'fecha_creacion': fecha_actual,
-                        'fecha_actualizacion': fecha_actual,
-                    })
-                elif nombre_tienda in tiendas_cache:
-                    tienda = tiendas_existentes[nombre_tienda]
-                    if tienda.url_base != tienda_url_base or tienda.plataforma != plataforma:
-                        tiendas_a_actualizar.append({
-                            'id': tienda.id,
-                            'nombre': nombre_tienda,
-                            'url_base': tienda_url_base,
-                            'plataforma': plataforma,
-                            'fecha_actualizacion': fecha_actual,
-                        })
-
-            if tiendas_a_insertar:
-                self._bulk_insert_batch(session, Tienda, tiendas_a_insertar)
-                tiendas_cache.update(self._ids_por_columna(session, Tienda, 'nombre', [row['nombre'] for row in tiendas_a_insertar]))
-
-            if tiendas_a_actualizar:
-                self._bulk_update_batch(session, Tienda, tiendas_a_actualizar)
 
             productos_agregados = 0
             productos_actualizados = 0
             productos_eliminados = 0
-            ids_eliminados = []
-            tienda_id_actual = tiendas_cache.get(nombre_tienda) if nombre_tienda else None
-            productos_existentes = []
-            if tienda_id_actual is not None:
-                productos_existentes = session.query(Producto).filter(Producto.tienda_id == tienda_id_actual).all()
+            productos_existentes = session.query(Producto).filter(
+                Producto.tienda_id == tienda.id
+            ).all()
             productos_por_id_externo = {
                 prod.id_externo: prod for prod in productos_existentes if prod.id_externo
             }
@@ -324,13 +309,10 @@ class DatabaseManager:
                     continue
                 unique_product_keys.add(clave_producto)
 
-                tienda_id = tiendas_cache.get(prod_data['tienda'])
-                if tienda_id is None:
-                    continue
-
                 producto_mapping = {
-                    'tienda_id': tienda_id,
+                    'tienda_id': tienda.id,
                     'id_externo': id_externo,
+                    'activo': True,
                     'nombre': prod_data['nombre'],
                     'url_detalle': url_detalle,
                     'imagen': prod_data['imagen'],
@@ -344,7 +326,6 @@ class DatabaseManager:
             if productos_a_insertar:
                 producto_rows_nuevos = []
                 producto_rows_actualizar = []
-                productos_encontrados_ids = set()
 
                 for row in productos_a_insertar:
                     url_detalle = row['url_detalle']
@@ -355,7 +336,7 @@ class DatabaseManager:
                         productos_actualizados += 1
                         productos_encontrados_ids.add(producto_existente.id)
                         cambios = {'id': producto_existente.id}
-                        for campo in ('tienda_id', 'nombre', 'url_detalle', 'imagen', 'descripcion'):
+                        for campo in ('tienda_id', 'nombre', 'url_detalle', 'imagen', 'descripcion', 'activo'):
                             if getattr(producto_existente, campo) != row[campo]:
                                 cambios[campo] = row[campo]
                         if row['id_externo'] and producto_existente.id_externo != row['id_externo']:
@@ -366,12 +347,6 @@ class DatabaseManager:
                     else:
                         productos_agregados += 1
                         producto_rows_nuevos.append(row)
-
-                ids_eliminados = [
-                    prod.id for prod in productos_existentes
-                    if prod.id not in productos_encontrados_ids
-                ]
-                productos_eliminados = len(ids_eliminados)
 
                 if producto_rows_nuevos:
                     self._bulk_insert_batch(session, Producto, producto_rows_nuevos)
@@ -470,12 +445,23 @@ class DatabaseManager:
                     if historial_a_insertar:
                         self._bulk_insert_batch(session, HistorialPrecio, historial_a_insertar)
 
+            ids_eliminados = [
+                producto.id for producto in productos_existentes
+                if producto.activo and producto.id not in productos_encontrados_ids
+            ]
+            productos_eliminados = len(ids_eliminados)
             if ids_eliminados:
-                variantes_ids = [row[0] for row in session.query(Variante.id).filter(Variante.producto_id.in_(ids_eliminados)).all()]
-                if variantes_ids:
-                    session.query(HistorialPrecio).filter(HistorialPrecio.variante_id.in_(variantes_ids)).delete(synchronize_session=False)
-                    session.query(Variante).filter(Variante.id.in_(variantes_ids)).delete(synchronize_session=False)
-                session.query(Producto).filter(Producto.id.in_(ids_eliminados)).delete(synchronize_session=False)
+                session.bulk_update_mappings(
+                    Producto,
+                    [
+                        {
+                            'id': producto_id,
+                            'activo': False,
+                            'fecha_actualizacion': fecha_actual,
+                        }
+                        for producto_id in ids_eliminados
+                    ],
+                )
                 session.commit()
 
             logging.info(f"💾 Persistencia exitosa: {total_productos} productos, {total_variantes} variantes y {total_historial} registros históricos.")
