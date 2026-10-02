@@ -37,6 +37,12 @@ class ProductVariantDetailResponse(BaseModel):
     precio_por_kilo: float
     disponible: bool
     fecha_actualizacion: Optional[datetime] = None
+    historial_precios: List["ProductPriceHistoryResponse"] = []
+
+class ProductPriceHistoryResponse(BaseModel):
+    fecha_registro: datetime
+    precio_clp: int
+    precio_por_kilo: float
 
 class ProductDetailResponse(BaseModel):
     id: int

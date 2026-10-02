@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 import unittest
+from datetime import datetime
 from fastapi.testclient import TestClient
 from fastapi import HTTPException
 
@@ -8,7 +9,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from main import app
 from api.router import get_db_session, get_product_detail, get_stores_summary
-from db.database import Base, Producto, Tienda, Variante
+from api.schemas import ProductDetailResponse
+from db.database import Base, HistorialPrecio, Producto, Tienda, Variante
 from domain.models import CoffeeProductDomain, VariantDomain
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -63,7 +65,11 @@ class TestAPI(unittest.TestCase):
                 tienda=store,
                 nombre="Café de prueba",
                 url_detalle="https://example.com/cafe",
-                descripcion="Notas de cacao y frutos rojos",
+                descripcion=(
+                    '<p>Notas de <strong>cacao</strong></p>'
+                    '<script>alert("xss")</script>'
+                    '<img src="javascript:alert(1)" onerror="alert(1)">'
+                ),
             )
             product.variantes = [
                 Variante(
@@ -76,6 +82,20 @@ class TestAPI(unittest.TestCase):
                     descuento_porcentaje=17,
                     precio_por_kilo=40000,
                     disponible=True,
+                    historial_precios=[
+                        HistorialPrecio(
+                            precio_clp=11000,
+                            precio_original_clp=11000,
+                            precio_por_kilo=44000,
+                            fecha_registro=datetime(2026, 9, 1),
+                        ),
+                        HistorialPrecio(
+                            precio_clp=10000,
+                            precio_original_clp=10000,
+                            precio_por_kilo=40000,
+                            fecha_registro=datetime(2026, 9, 2),
+                        ),
+                    ],
                 ),
                 Variante(
                     id_variante_externo="variant-1000",
@@ -94,11 +114,15 @@ class TestAPI(unittest.TestCase):
 
             result = get_product_detail(product.id, session)
 
-            self.assertEqual(result["descripcion"], "Notas de cacao y frutos rojos")
+            self.assertEqual(result["descripcion"], '<p>Notas de <strong>cacao</strong></p>')
             self.assertEqual(result["tienda"], "Tienda Demo")
             self.assertEqual(len(result["variantes"]), 2)
             self.assertEqual(result["variantes"][1]["formato_gramos"], 1000)
             self.assertFalse(result["variantes"][1]["disponible"])
+            history = result["variantes"][0]["historial_precios"]
+            self.assertEqual([item["precio_clp"] for item in history], [11000, 10000])
+            validated_result = ProductDetailResponse.model_validate(result)
+            self.assertEqual(len(validated_result.variantes[0].historial_precios), 2)
 
             product.activo = False
             session.commit()

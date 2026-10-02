@@ -14,6 +14,9 @@ cafe-sitios/
 ├── requirements.txt
 ├── application.py          # Script principal de escaneo e ingesta
 ├── main.py                 # Servidor de FastAPI
+├── index.html              # Catálogo y acceso a fichas de producto
+├── stores.html             # Listado de tiendas
+├── product.html            # Detalle de producto e historial de precios
 ├── db/                     # Configuración y modelos SQLAlchemy
 ├── scrapper/               # Drivers de extracción (Shopify, etc.)
 ├── domain/                 # Entidades e Interfaces de Dominio (DDD)
@@ -41,6 +44,8 @@ alembic upgrade head
 En una base vacía basta con ejecutar `alembic upgrade head`. Cada fila de `sincronizaciones` representa una ejecución por tienda y almacena fechas, resultado, detalle de error y conteos de productos agregados, eliminados y actualizados.
 
 Tiendas, productos y variantes registran `fecha_creacion` y `fecha_actualizacion`; la fecha de creación se conserva en las sincronizaciones posteriores y la de actualización cambia cuando se modifica el registro. Los productos conservan además su `id_externo` de la tienda (ID de plataforma o SKU disponible), separado del ID interno de la base de datos, para reconocerlos aunque cambie su URL.
+
+El detalle abre una página propia (`product.html?id=<id>`), donde se muestra la descripción HTML saneada que publica la tienda, las variantes y un gráfico Chart.js con la evolución diaria del precio por variante. El endpoint `/api/v1/products/{id}/detail` devuelve el historial para cada variante.
 
 El scraper consulta las tiendas con `activo = true` en la base de datos y usa sus campos `plataforma` y `url_base`; no crea ni actualiza registros de tienda durante la sincronización. Si una tienda heredada aún tiene `plataforma = 'desconocida'`, prueba los drivers soportados con su `url_base` sin modificar la tienda. Para desactivar o reactivar una tienda comercialmente, cambie su campo `activo`:
 
