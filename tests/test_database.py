@@ -107,6 +107,70 @@ class FakeSession:
 
 
 class TestDatabaseManager(unittest.TestCase):
+    def test_inicializar_db_adopts_complete_legacy_schema(self):
+        from alembic import command
+        from alembic.config import Config
+        from sqlalchemy import inspect, text
+        from tempfile import TemporaryDirectory
+
+        project_root = Path(__file__).resolve().parent.parent
+        with TemporaryDirectory() as directory:
+            database_path = Path(directory) / 'legacy.sqlite'
+            database_url = f"sqlite:///{database_path.as_posix()}"
+            config = Config(str(project_root / 'alembic.ini'))
+            config.attributes['database_url'] = database_url
+            config.set_main_option('sqlalchemy.url', database_url)
+            command.upgrade(config, '0001_baseline')
+
+            legacy_engine = create_engine(database_url)
+            with legacy_engine.begin() as connection:
+                connection.execute(
+                    text("INSERT INTO tiendas (nombre, url_base) VALUES ('Tienda existente', 'https://example.com')")
+                )
+                connection.execute(text('DROP TABLE alembic_version'))
+            legacy_engine.dispose()
+
+            db = DatabaseManager.__new__(DatabaseManager)
+            db.engine = create_engine(database_url)
+            try:
+                db.inicializar_db()
+
+                with db.engine.connect() as connection:
+                    store_name = connection.execute(
+                        text('SELECT nombre FROM tiendas WHERE id = 1')
+                    ).scalar_one()
+                    revision = connection.execute(
+                        text('SELECT version_num FROM alembic_version')
+                    ).scalar_one()
+
+                self.assertEqual(store_name, 'Tienda existente')
+                self.assertEqual(revision, '0003_product_identity')
+                self.assertIn('sincronizaciones', inspect(db.engine).get_table_names())
+            finally:
+                db.engine.dispose()
+
+    def test_inicializar_db_rejects_partial_unversioned_schema(self):
+        from tempfile import TemporaryDirectory
+        from sqlalchemy import inspect, text
+
+        project_root = Path(__file__).resolve().parent.parent
+        with TemporaryDirectory() as directory:
+            database_url = f"sqlite:///{(Path(directory) / 'partial.sqlite').as_posix()}"
+            db = DatabaseManager.__new__(DatabaseManager)
+            db.engine = create_engine(database_url)
+            try:
+                with db.engine.begin() as connection:
+                    connection.execute(text(
+                        'CREATE TABLE tiendas (id INTEGER PRIMARY KEY, nombre VARCHAR(100), url_base VARCHAR(255))'
+                    ))
+
+                with self.assertRaisesRegex(RuntimeError, 'incompleto y sin versionar'):
+                    db.inicializar_db()
+
+                self.assertNotIn('productos', inspect(db.engine).get_table_names())
+            finally:
+                db.engine.dispose()
+
     def test_registrar_ultima_sincronizacion_persists_singleton(self):
         db = DatabaseManager.__new__(DatabaseManager)
         fake_session = FakeSession()

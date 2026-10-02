@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 from sqlalchemy import (
     create_engine, Column, Integer, String, Text, Boolean, 
-    Numeric, DateTime, ForeignKey, UniqueConstraint
+    Numeric, DateTime, ForeignKey, UniqueConstraint, inspect, text
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
@@ -12,6 +12,13 @@ from db.config import settings
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 Base = declarative_base()
+BASELINE_TABLES = {
+    'tiendas',
+    'productos',
+    'variantes',
+    'historial_precios',
+    'estado_sincronizacion',
+}
 
 def _utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
@@ -113,6 +120,28 @@ class DatabaseManager:
         database_url = self.engine.url.render_as_string(hide_password=False)
         config.attributes['database_url'] = database_url
         config.set_main_option('sqlalchemy.url', database_url.replace('%', '%%'))
+
+        existing_tables = set(inspect(self.engine).get_table_names())
+        revision = None
+        if 'alembic_version' in existing_tables:
+            with self.engine.connect() as connection:
+                revision = connection.execute(
+                    text('SELECT version_num FROM alembic_version LIMIT 1')
+                ).scalar_one_or_none()
+
+        if revision is None:
+            existing_baseline_tables = existing_tables.intersection(BASELINE_TABLES)
+            if existing_baseline_tables == BASELINE_TABLES:
+                logging.info("Esquema heredado completo detectado; registrando baseline Alembic.")
+                command.stamp(config, '0001_baseline')
+            elif existing_baseline_tables:
+                missing_tables = sorted(BASELINE_TABLES - existing_baseline_tables)
+                raise RuntimeError(
+                    "Esquema de base de datos incompleto y sin versionar. "
+                    f"Faltan tablas del baseline: {', '.join(missing_tables)}. "
+                    "Revise la base antes de aplicar migraciones."
+                )
+
         command.upgrade(config, 'head')
         logging.info("✅ Migraciones aplicadas correctamente.")
 
