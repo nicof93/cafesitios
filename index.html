@@ -59,9 +59,15 @@
 
         <!-- RESUMEN DE TIENDAS -->
         <section class="bg-white rounded-2xl border border-slate-200/60 p-5 shadow-sm">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
-                <span>🏪</span> Tiendas Disponibles
-            </h2>
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <span>🏪</span> Tiendas Disponibles
+                </h2>
+                <div class="flex items-center gap-3">
+                    <button id="clear-store-filter" type="button" onclick="filtrarPorTienda('')" class="hidden text-xs font-semibold text-slate-500 hover:text-slate-800">Mostrar todas</button>
+                    <a href="stores.html" class="text-xs font-semibold text-sky-700 hover:text-sky-800">Todas las tiendas →</a>
+                </div>
+            </div>
             <div id="stores-summary" class="flex flex-wrap gap-2">
                 <span class="text-xs text-slate-400 italic">Cargando tiendas...</span>
             </div>
@@ -114,7 +120,7 @@
         <!-- RESULTADOS -->
         <section>
             <div class="flex justify-between items-center mb-5">
-                <h2 class="text-base font-bold text-slate-800">Catálogo Destacado</h2>
+                <h2 id="catalog-title" class="text-base font-bold text-slate-800">Catálogo Destacado</h2>
                 <span id="results-count" class="text-xs font-medium text-slate-400">cargando...</span>
             </div>
 
@@ -133,6 +139,52 @@
             </div>
         </section>
 
+        <dialog id="product-detail-dialog" class="w-[min(94vw,56rem)] max-h-[90vh] rounded-lg p-0 shadow-2xl backdrop:bg-slate-950/60">
+            <div class="max-h-[90vh] overflow-y-auto bg-white">
+                <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-7">
+                    <div>
+                        <p id="detail-store" class="text-xs font-semibold uppercase tracking-wider text-sky-700"></p>
+                        <h2 id="detail-name" class="mt-1 text-xl font-bold text-slate-800"></h2>
+                    </div>
+                    <button type="button" onclick="cerrarDetalleProducto()" aria-label="Cerrar detalle" title="Cerrar detalle" class="shrink-0 rounded-md px-2 py-1 text-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800">×</button>
+                </div>
+                <div id="detail-loading" role="status" aria-live="polite" class="hidden items-center justify-center gap-3 px-5 py-12 text-sm text-slate-500">
+                    <span class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-sky-500 border-t-transparent"></span>
+                    Cargando detalle del producto...
+                </div>
+                <div id="detail-content" class="hidden grid gap-6 px-5 py-5 sm:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] sm:px-7">
+                    <img id="detail-image" alt="" class="hidden aspect-[4/3] w-full rounded-md bg-slate-100 object-cover">
+                    <div id="detail-description-wrap" class="min-w-0">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Descripción</h3>
+                        <p id="detail-description" class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600"></p>
+                    </div>
+                    <section class="min-w-0 sm:col-span-2">
+                        <h3 class="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Presentaciones y precios</h3>
+                        <div class="overflow-x-auto rounded-md border border-slate-200">
+                            <table class="w-full min-w-[34rem] text-left text-sm">
+                                <thead class="bg-slate-50 text-[11px] uppercase text-slate-500">
+                                    <tr>
+                                        <th class="px-3 py-2.5">Tamaño</th>
+                                        <th class="px-3 py-2.5">Opción</th>
+                                        <th class="px-3 py-2.5">Precio</th>
+                                        <th class="px-3 py-2.5">Precio/kg</th>
+                                        <th class="px-3 py-2.5">Disponibilidad</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detail-variants" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+                <div id="detail-footer" class="hidden flex flex-col-reverse justify-between gap-3 border-t border-slate-200 px-5 py-4 sm:flex-row sm:px-7">
+                    <span id="detail-updated" class="self-center text-xs text-slate-400"></span>
+                    <a id="detail-store-link" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 rounded-md bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-900">
+                        Ir a la tienda <span aria-hidden="true">↗</span>
+                    </a>
+                </div>
+            </div>
+        </dialog>
+
     </main>
 
     <footer class="border-t border-slate-200/60 bg-white py-6 mt-16 text-center text-xs text-slate-400">
@@ -142,20 +194,21 @@
     <!-- LOGICA JAVASCRIPT Y SEGUIMIENTO DE EVENTOS (ANALYTICS) -->
     <script>
         const API_URL = "http://localhost:8000/api/v1/products/cheapest";
+        const PRODUCT_DETAIL_API_URL = "http://localhost:8000/api/v1/products";
+        const STORES_API_URL = "http://localhost:8000/api/v1/stores";
         let paginaActual = 1;
-        const limitePorPagina = 12;
+        const limitePorPagina = 30;
         let totalCargados = 0;
+        let tiendaSeleccionada = new URLSearchParams(window.location.search).get("store_name") || "";
 
         /**
          * Envia eventos de métricas de usuario tanto a Google Analytics (gtag)
          * como a Google Tag Manager (dataLayer).
          */
         function trackEvent(eventName, eventParams = {}) {
-            // 1. Enviar a GA4 si está disponible
             if (typeof gtag === 'function') {
                 gtag('event', eventName, eventParams);
             }
-            // 2. Enviar a dataLayer (GTM)
             if (window.dataLayer) {
                 window.dataLayer.push({
                     event: eventName,
@@ -166,6 +219,8 @@
         }
 
         document.addEventListener("DOMContentLoaded", () => {
+            cargarTiendasDisponibles();
+            cargarUltimaSincronizacion();
             nuevaBusqueda();
         });
 
@@ -200,6 +255,95 @@
             obtenerProductos(true);
         }
 
+        async function cargarTiendasDisponibles() {
+            const storesSummaryContainer = document.getElementById("stores-summary");
+
+            try {
+                const params = new URLSearchParams({
+                    page: 1,
+                    page_size: 10,
+                    sort_by: "product_count_desc"
+                });
+
+                const response = await fetch(`${STORES_API_URL}?${params.toString()}`);
+                if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+
+                const data = await response.json();
+                const tiendas = data.items || [];
+
+                if (!tiendas.length) {
+                    storesSummaryContainer.innerHTML = '<span class="text-xs text-slate-400 italic">No hay tiendas disponibles.</span>';
+                    return;
+                }
+
+                storesSummaryContainer.replaceChildren(...tiendas.map((tienda) => {
+                    const seleccionada = tienda.nombre === tiendaSeleccionada;
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = seleccionada
+                        ? "inline-flex items-center gap-2 bg-sky-800 text-white border border-sky-800 text-xs font-medium px-3 py-1.5 rounded-full focus:outline-none focus:ring-2 focus:ring-sky-300"
+                        : "inline-flex items-center gap-2 bg-sky-50 text-sky-800 border border-sky-100 text-xs font-medium px-3 py-1.5 rounded-full hover:bg-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-300";
+                    button.setAttribute("aria-pressed", String(seleccionada));
+                    button.textContent = tienda.nombre;
+
+                    const count = document.createElement("span");
+                    count.className = seleccionada
+                        ? "bg-sky-600 text-white px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+                        : "bg-sky-200 text-sky-900 px-1.5 py-0.5 rounded-full text-[10px] font-bold";
+                    count.textContent = tienda.cantidad_productos;
+                    button.append(count);
+                    button.addEventListener("click", () => filtrarPorTienda(tienda.nombre));
+                    return button;
+                }));
+
+            } catch (error) {
+                console.error("Error cargando tiendas:", error);
+                storesSummaryContainer.innerHTML = '<span class="text-xs text-slate-400 italic">No se pudieron cargar las tiendas.</span>';
+            }
+        }
+
+        function filtrarPorTienda(nombreTienda) {
+            tiendaSeleccionada = nombreTienda;
+            const url = new URL(window.location.href);
+
+            if (nombreTienda) {
+                url.searchParams.set("store_name", nombreTienda);
+            } else {
+                url.searchParams.delete("store_name");
+            }
+
+            window.history.replaceState({}, "", url);
+            document.getElementById("clear-store-filter").classList.toggle("hidden", !nombreTienda);
+            document.getElementById("catalog-title").textContent = nombreTienda
+                ? `Productos de ${nombreTienda}`
+                : "Catálogo Destacado";
+            cargarTiendasDisponibles();
+            nuevaBusqueda();
+        }
+
+        async function cargarUltimaSincronizacion() {
+            const lastSyncLabel = document.getElementById("last-sync-time");
+
+            try {
+                const response = await fetch("http://localhost:8000/api/v1/sync/last");
+                if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+
+                const data = await response.json();
+                if (!data.last_sync) {
+                    lastSyncLabel.textContent = "Sin sincronizaciones";
+                    return;
+                }
+
+                lastSyncLabel.textContent = new Date(data.last_sync).toLocaleString("es-CL", {
+                    day: "2-digit", month: "2-digit", year: "numeric",
+                    hour: "2-digit", minute: "2-digit"
+                }) + " hrs";
+            } catch (error) {
+                console.error("Error cargando la última sincronización:", error);
+                lastSyncLabel.textContent = "No disponible";
+            }
+        }
+
         async function obtenerProductos(append = false) {
             const query = document.getElementById("search-input").value.trim();
             const sortBy = document.getElementById("sort-select").value;
@@ -222,6 +366,7 @@
                 });
 
                 if (query) params.append("search_query", query);
+                if (tiendaSeleccionada) params.append("store_name", tiendaSeleccionada);
 
                 const response = await fetch(`${API_URL}?${params.toString()}`);
                 if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
@@ -257,11 +402,14 @@
 
         function renderizarCatalogo(productos, totalItems, append) {
             const gridContainer = document.getElementById("products-grid");
-            const storesSummaryContainer = document.getElementById("stores-summary");
             const countLabel = document.getElementById("results-count");
             const btnLoadMore = document.getElementById("btn-load-more");
 
             totalCargados += productos.length;
+            document.getElementById("clear-store-filter").classList.toggle("hidden", !tiendaSeleccionada);
+            document.getElementById("catalog-title").textContent = tiendaSeleccionada
+                ? `Productos de ${tiendaSeleccionada}`
+                : "Catálogo Destacado";
             countLabel.textContent = `Mostrando ${totalCargados} de ${totalItems} resultados`;
 
             if (!append && productos.length === 0) {
@@ -274,11 +422,7 @@
                 return;
             }
 
-            const tiendasConteo = {};
-
             const htmlTarjetas = productos.map(item => {
-                tiendasConteo[item.tienda] = (tiendasConteo[item.tienda] || 0) + 1;
-
                 const varData = item.variante;
                 const esRegalo = varData.precio_clp === 0 || varData.precio_original_clp === 0;
                 const esOferta = varData.en_oferta && !esRegalo;
@@ -346,16 +490,20 @@
                                 </div>
                             </div>
 
-                            <a 
-                                href="${item.url_detalle}" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                onclick="trackOutboundClick('${item.tienda}', '${item.nombre.replace(/'/g, "\'")}', ${varData.precio_clp}, '${item.url_detalle}')"
-                                class="w-full bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200/80 font-semibold py-2 px-3 rounded-xl text-center text-xs block transition duration-150 flex items-center justify-center gap-1.5"
-                            >
-                                <span>Ver en tienda</span>
-                                <span class="text-[10px]">↗</span>
-                            </a>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" onclick="mostrarDetalleProducto(${item.id})" class="rounded-md border border-slate-300 bg-white px-2 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+                                    Ver detalle
+                                </button>
+                                <a 
+                                    href="${item.url_detalle}" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    onclick="trackOutboundClick('${item.tienda}', '${item.nombre.replace(/'/g, "\'")}', ${varData.precio_clp}, '${item.url_detalle}')"
+                                    class="rounded-md border border-sky-200/80 bg-sky-50 px-2 py-2 text-center text-xs font-semibold text-sky-800 transition hover:bg-sky-100"
+                                >
+                                    Ver en tienda ↗
+                                </a>
+                            </div>
                         </div>
 
                     </div>
@@ -374,18 +522,107 @@
                 btnLoadMore.classList.add("hidden");
             }
 
-            storesSummaryContainer.innerHTML = Object.entries(tiendasConteo).map(([tienda, cantidad]) => `
-                <span class="inline-flex items-center gap-1.5 bg-sky-50 text-sky-800 border border-sky-100 text-xs font-medium px-3 py-1 rounded-full">
-                    <span>${tienda}</span>
-                    <span class="bg-sky-200 text-sky-900 px-1.5 py-0.2 rounded-full text-[10px] font-bold">${cantidad}</span>
-                </span>
-            `).join('');
+        }
 
-            const ahora = new Date();
-            document.getElementById("last-sync-time").textContent = ahora.toLocaleString('es-CL', {
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
-            }) + " hrs";
+        async function mostrarDetalleProducto(productId) {
+            const dialog = document.getElementById("product-detail-dialog");
+            const loading = document.getElementById("detail-loading");
+            const detailContent = document.getElementById("detail-content");
+            const detailFooter = document.getElementById("detail-footer");
+            const detailName = document.getElementById("detail-name");
+            const detailStore = document.getElementById("detail-store");
+            const description = document.getElementById("detail-description");
+            const variantsBody = document.getElementById("detail-variants");
+
+            detailName.textContent = "Cargando detalle...";
+            detailStore.textContent = "";
+            description.textContent = "";
+            variantsBody.replaceChildren();
+            document.getElementById("detail-updated").textContent = "";
+            document.getElementById("detail-image").classList.add("hidden");
+            loading.classList.remove("hidden");
+            loading.classList.add("flex");
+            detailContent.classList.add("hidden");
+            detailFooter.classList.add("hidden");
+            dialog.showModal();
+
+            try {
+                const response = await fetch(`${PRODUCT_DETAIL_API_URL}/${productId}/detail`);
+                if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+                const product = await response.json();
+                loading.classList.add("hidden");
+                loading.classList.remove("flex");
+                detailContent.classList.remove("hidden");
+                detailFooter.classList.remove("hidden");
+
+                detailName.textContent = product.nombre;
+                detailStore.textContent = product.tienda;
+                description.textContent = product.descripcion || "Sin descripción disponible.";
+
+                const image = document.getElementById("detail-image");
+                if (product.imagen) {
+                    image.src = product.imagen;
+                    image.alt = product.nombre;
+                    image.classList.remove("hidden");
+                    document.getElementById("detail-description-wrap").classList.add("sm:col-start-2");
+                } else {
+                    document.getElementById("detail-description-wrap").classList.remove("sm:col-start-2");
+                }
+
+                const rows = product.variantes.map((variant) => {
+                    const row = document.createElement("tr");
+                    if (!variant.disponible) row.className = "bg-slate-50 text-slate-400";
+                    const values = [
+                        `${variant.formato_gramos} g`,
+                        variant.opcion,
+                        `${variant.precio_clp.toLocaleString("es-CL")} CLP${variant.en_oferta ? ` (antes ${variant.precio_original_clp.toLocaleString("es-CL")} CLP, -${variant.descuento_porcentaje}%)` : ""}`,
+                        `${variant.precio_por_kilo.toLocaleString("es-CL")} CLP/kg`,
+                        variant.disponible ? "Disponible" : "Agotado"
+                    ];
+
+                    values.forEach((value, index) => {
+                        const cell = document.createElement("td");
+                        const cellColor = variant.disponible
+                            ? (index === 2 ? "font-semibold text-slate-800" : "text-slate-600")
+                            : "text-slate-400";
+                        cell.className = `px-3 py-3 ${cellColor}`;
+                        cell.textContent = value;
+                        row.append(cell);
+                    });
+                    return row;
+                });
+                variantsBody.replaceChildren(...rows);
+
+                const updatedLabel = document.getElementById("detail-updated");
+                if (product.fecha_actualizacion) {
+                    updatedLabel.textContent = `Información actualizada: ${new Date(product.fecha_actualizacion).toLocaleString("es-CL")}`;
+                }
+
+                const storeLink = document.getElementById("detail-store-link");
+                storeLink.href = product.url_detalle;
+                storeLink.onclick = () => trackOutboundClick(product.tienda, product.nombre, product.variantes[0]?.precio_clp || 0, product.url_detalle);
+
+                if (!rows.length) {
+                    const row = document.createElement("tr");
+                    const cell = document.createElement("td");
+                    cell.colSpan = 5;
+                    cell.className = "px-3 py-5 text-center text-slate-500";
+                    cell.textContent = "No hay presentaciones disponibles.";
+                    row.append(cell);
+                    variantsBody.append(row);
+                }
+            } catch (error) {
+                console.error("Error cargando detalle del producto:", error);
+                loading.classList.add("hidden");
+                loading.classList.remove("flex");
+                detailContent.classList.remove("hidden");
+                detailName.textContent = "No se pudo cargar el detalle";
+                description.textContent = "Intenta nuevamente en unos momentos.";
+            }
+        }
+
+        function cerrarDetalleProducto() {
+            document.getElementById("product-detail-dialog").close();
         }
     </script>
 </body>

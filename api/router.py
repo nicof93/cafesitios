@@ -1,13 +1,21 @@
+import math
 from fastapi import APIRouter, Depends, Query, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy import func, distinct
+from sqlalchemy.orm import Session, joinedload
 from typing import Literal, Optional
 
-from db.database import DatabaseManager
+from db.database import DatabaseManager, EstadoSincronizacion, Tienda, Producto, Variante
 from infrastructure.postgres_repository import PostgresCoffeeRepository
 from application.get_cheapest_products import GetCheapestProductsUseCase
-from api.schemas import PaginatedProductsResponse, CheapestProductResponse, VariantResponse
+from api.schemas import (
+    PaginatedProductsResponse,
+    CheapestProductResponse,
+    VariantResponse,
+    ProductDetailResponse,
+)
 
 router = APIRouter(prefix="/api/v1/products", tags=["Productos"])
+stores_router = APIRouter(prefix="/api/v1", tags=["Tiendas"])
 
 def get_db_session():
     db = DatabaseManager()
@@ -16,6 +24,122 @@ def get_db_session():
         yield session
     finally:
         session.close()
+
+@stores_router.get(
+    "/sync/last",
+    status_code=status.HTTP_200_OK,
+    summary="Obtener la fecha de la última sincronización exitosa"
+)
+def get_last_sync(db_session: Session = Depends(get_db_session)):
+    if not hasattr(db_session, "get"):
+        return {"last_sync": None}
+
+    estado = db_session.get(EstadoSincronizacion, 1)
+    return {"last_sync": estado.ultima_ejecucion if estado else None}
+
+@stores_router.get(
+    "/stores",
+    status_code=status.HTTP_200_OK,
+    summary="Obtener tiendas con su cantidad de productos disponibles",
+    description="Devuelve el ranking de tiendas según la cantidad de productos disponibles, con paginación y orden configurable."
+)
+def get_stores_summary(
+    page: int = Query(1, ge=1, description="Número de página (empezando en 1)"),
+    page_size: int = Query(10, ge=1, le=100, description="Cantidad de tiendas por página"),
+    sort_by: Literal["product_count_desc", "name_asc"] = Query(
+        "product_count_desc",
+        description="Orden de resultados: 'product_count_desc' o 'name_asc'"
+    ),
+    db_session: Session = Depends(get_db_session)
+):
+    if not hasattr(db_session, "query"):
+        return {
+            "items": [],
+            "page": page,
+            "page_size": page_size,
+            "total_items": 0,
+            "total_pages": 0,
+        }
+
+    query = (
+        db_session.query(
+            Tienda.nombre.label("nombre"),
+            func.count(distinct(Producto.id)).label("cantidad_productos")
+        )
+        .join(Producto, Producto.tienda_id == Tienda.id)
+        .join(Variante, Variante.producto_id == Producto.id)
+        .filter(Variante.disponible == True)
+        .group_by(Tienda.id, Tienda.nombre)
+    )
+
+    if sort_by == "name_asc":
+        query = query.order_by(Tienda.nombre.asc())
+    else:
+        query = query.order_by(func.count(distinct(Producto.id)).desc(), Tienda.nombre.asc())
+
+    total_items = query.count()
+    total_pages = math.ceil(total_items / page_size) if total_items else 0
+    offset = (page - 1) * page_size
+    rows = query.offset(offset).limit(page_size).all()
+
+    return {
+        "items": [
+            {
+                "nombre": row.nombre,
+                "cantidad_productos": row.cantidad_productos,
+            }
+            for row in rows
+        ],
+        "page": page,
+        "page_size": page_size,
+        "total_items": total_items,
+        "total_pages": total_pages,
+    }
+
+@router.get(
+    "/{product_id}/detail",
+    response_model=ProductDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Obtener el detalle de un producto y todas sus variantes"
+)
+def get_product_detail(product_id: int, db_session: Session = Depends(get_db_session)):
+    product = (
+        db_session.query(Producto)
+        .options(joinedload(Producto.tienda), joinedload(Producto.variantes))
+        .filter(Producto.id == product_id)
+        .first()
+    )
+    if product is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Producto no encontrado"
+        )
+
+    return {
+        "id": product.id,
+        "tienda": product.tienda.nombre,
+        "tienda_url": product.tienda.url_base,
+        "nombre": product.nombre,
+        "descripcion": product.descripcion,
+        "url_detalle": product.url_detalle,
+        "imagen": product.imagen,
+        "fecha_actualizacion": product.fecha_actualizacion,
+        "variantes": [
+            {
+                "id_externo": variant.id_variante_externo,
+                "opcion": variant.opcion,
+                "formato_gramos": variant.formato_gramos,
+                "precio_clp": variant.precio_clp,
+                "precio_original_clp": variant.precio_original_clp,
+                "en_oferta": variant.en_oferta,
+                "descuento_porcentaje": variant.descuento_porcentaje,
+                "precio_por_kilo": float(variant.precio_por_kilo),
+                "disponible": variant.disponible,
+                "fecha_actualizacion": variant.fecha_actualizacion,
+            }
+            for variant in product.variantes
+        ],
+    }
 
 @router.get(
     "/cheapest", 
@@ -55,6 +179,19 @@ def get_cheapest_coffee_products(
             max_price=max_price
         )
 
+        total_items = len(productos_dominio)
+        if hasattr(repository, "count_cheapest_products"):
+            total_items = repository.count_cheapest_products(
+                sort_by=sort_by,
+                only_available=only_available,
+                store_name=store_name,
+                min_weight_g=min_weight_g,
+                max_weight_g=max_weight_g,
+                search_query=search_query,
+                min_price=min_price,
+                max_price=max_price,
+            )
+
         items_dto = [
             CheapestProductResponse(
                 id=prod.id,
@@ -77,7 +214,7 @@ def get_cheapest_coffee_products(
         ]
 
         return PaginatedProductsResponse(
-            total_items=len(items_dto),
+            total_items=total_items,
             criterio_orden=f"Precio por {'kilo ($/kg)' if sort_by == 'kilo' else 'unidad ($ CLP)'}",
             data=items_dto
         )

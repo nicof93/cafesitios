@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.router import router as products_router
+from api.router import router as products_router, stores_router
 
 app = FastAPI(
     title="Cafe-sitios API",
@@ -17,6 +17,7 @@ app.add_middleware(
 )
 
 app.include_router(products_router)
+app.include_router(stores_router)
 
 @app.get("/", tags=["Healthcheck"])
 def healthcheck():

@@ -47,3 +47,6 @@ Tiendas, productos y variantes registran `fecha_creacion` y `fecha_actualizacion
 - Documentación ReDoc: http://localhost:8000/redoc
 - Healthcheck: http://localhost:8000/
 - Endpoint de Productos más Baratos: http://localhost:8000/api/v1/products/cheapest?sort_by=kilo
+- Listado paginado de tiendas: http://localhost:8000/api/v1/stores?page=1&page_size=10&sort_by=product_count_desc
+- Detalle de producto y variantes: http://localhost:8000/api/v1/products/1/detail
+- Última sincronización: http://localhost:8000/api/v1/sync/last

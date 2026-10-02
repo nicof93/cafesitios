@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todas las tiendas | Cafe-sitios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-700 min-h-screen">
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between gap-3">
+            <div>
+                <h1 class="text-xl font-bold text-slate-800">Todas las tiendas</h1>
+                <p class="text-xs text-slate-400">Listado completo ordenado alfabéticamente</p>
+            </div>
+            <a href="index.html" class="bg-slate-800 hover:bg-slate-900 text-white font-medium px-4 py-2 rounded-xl text-sm">← Volver al catálogo</a>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 py-8">
+        <div class="mb-5 flex items-center justify-between">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400">Tiendas disponibles</h2>
+            <span id="stores-meta" class="text-xs text-slate-400">Cargando...</span>
+        </div>
+
+        <div id="stores-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </main>
+
+    <script>
+        const STORES_API_URL = "http://localhost:8000/api/v1/stores";
+        const STORES_PAGE_SIZE = 100;
+
+        async function obtenerPaginaTiendas(page) {
+            const params = new URLSearchParams({
+                page,
+                page_size: STORES_PAGE_SIZE,
+                sort_by: "name_asc"
+            });
+
+            const response = await fetch(`${STORES_API_URL}?${params.toString()}`);
+            if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+            return response.json();
+        }
+
+        async function cargarTodasLasTiendas() {
+            const storesList = document.getElementById("stores-list");
+            const storesMeta = document.getElementById("stores-meta");
+
+            try {
+                const primeraPagina = await obtenerPaginaTiendas(1);
+                const paginasRestantes = Array.from(
+                    { length: Math.max(primeraPagina.total_pages - 1, 0) },
+                    (_, index) => obtenerPaginaTiendas(index + 2)
+                );
+                const paginas = await Promise.all(paginasRestantes);
+                const tiendas = [primeraPagina, ...paginas].flatMap((pagina) => pagina.items || []);
+
+                storesMeta.textContent = `${primeraPagina.total_items} tiendas`;
+
+                if (!tiendas.length) {
+                    storesList.innerHTML = '<div class="col-span-full bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-400">No hay tiendas disponibles.</div>';
+                    return;
+                }
+
+                storesList.replaceChildren(...tiendas.map((tienda) => {
+                    const storeLink = document.createElement("a");
+                    storeLink.href = `index.html?store_name=${encodeURIComponent(tienda.nombre)}`;
+                    storeLink.className = "bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-sky-200 transition focus:outline-none focus:ring-2 focus:ring-sky-300";
+
+                    const row = document.createElement("div");
+                    row.className = "flex items-center justify-between gap-3";
+
+                    const details = document.createElement("div");
+                    const name = document.createElement("h3");
+                    name.className = "font-bold text-slate-800 text-sm";
+                    name.textContent = tienda.nombre;
+                    const description = document.createElement("p");
+                    description.className = "text-[11px] text-slate-400 mt-1";
+                    description.textContent = "Ver productos disponibles";
+                    details.append(name, description);
+
+                    const count = document.createElement("span");
+                    count.className = "bg-sky-100 text-sky-800 border border-sky-200 font-bold text-sm px-2.5 py-1 rounded-full";
+                    count.textContent = tienda.cantidad_productos;
+
+                    row.append(details, count);
+                    storeLink.append(row);
+                    return storeLink;
+                }));
+            } catch (error) {
+                console.error("Error cargando tiendas:", error);
+                storesMeta.textContent = "No disponible";
+                storesList.innerHTML = '<div class="col-span-full bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500">No se pudo cargar la lista de tiendas.</div>';
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", cargarTodasLasTiendas);
+    </script>
+</body>
+</html>
