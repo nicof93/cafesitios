@@ -107,7 +107,7 @@ class FakeSession:
 
 
 class TestDatabaseManager(unittest.TestCase):
-    def test_inicializar_db_adopts_complete_legacy_schema(self):
+    def test_inicializar_db_adopts_legacy_schema_without_sync_state(self):
         from alembic import command
         from alembic.config import Config
         from sqlalchemy import inspect, text
@@ -127,6 +127,7 @@ class TestDatabaseManager(unittest.TestCase):
                 connection.execute(
                     text("INSERT INTO tiendas (nombre, url_base) VALUES ('Tienda existente', 'https://example.com')")
                 )
+                connection.execute(text('DROP TABLE estado_sincronizacion'))
                 connection.execute(text('DROP TABLE alembic_version'))
             legacy_engine.dispose()
 
@@ -146,6 +147,7 @@ class TestDatabaseManager(unittest.TestCase):
                 self.assertEqual(store_name, 'Tienda existente')
                 self.assertEqual(revision, '0003_product_identity')
                 self.assertIn('sincronizaciones', inspect(db.engine).get_table_names())
+                self.assertIn('estado_sincronizacion', inspect(db.engine).get_table_names())
             finally:
                 db.engine.dispose()
 

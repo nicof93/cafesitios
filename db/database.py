@@ -19,6 +19,7 @@ BASELINE_TABLES = {
     'historial_precios',
     'estado_sincronizacion',
 }
+REQUIRED_LEGACY_TABLES = BASELINE_TABLES - {'estado_sincronizacion'}
 
 def _utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
@@ -131,11 +132,15 @@ class DatabaseManager:
 
         if revision is None:
             existing_baseline_tables = existing_tables.intersection(BASELINE_TABLES)
-            if existing_baseline_tables == BASELINE_TABLES:
-                logging.info("Esquema heredado completo detectado; registrando baseline Alembic.")
+            existing_legacy_tables = existing_tables.intersection(REQUIRED_LEGACY_TABLES)
+            if existing_legacy_tables == REQUIRED_LEGACY_TABLES:
+                if 'estado_sincronizacion' not in existing_tables:
+                    logging.info("Creando la tabla auxiliar estado_sincronizacion ausente en el esquema heredado.")
+                    EstadoSincronizacion.__table__.create(bind=self.engine, checkfirst=True)
+                logging.info("Esquema heredado compatible detectado; registrando baseline Alembic.")
                 command.stamp(config, '0001_baseline')
             elif existing_baseline_tables:
-                missing_tables = sorted(BASELINE_TABLES - existing_baseline_tables)
+                missing_tables = sorted(REQUIRED_LEGACY_TABLES - existing_legacy_tables)
                 raise RuntimeError(
                     "Esquema de base de datos incompleto y sin versionar. "
                     f"Faltan tablas del baseline: {', '.join(missing_tables)}. "

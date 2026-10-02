@@ -31,7 +31,7 @@ cafe-sitios/
 
 ### Versionado de base de datos
 
-El esquema se versiona con Alembic. Al iniciar el scraper, una base heredada sin `alembic_version` se adopta automáticamente si contiene todas las tablas del baseline; luego se aplican las revisiones pendientes. Las bases vacías reciben todas las migraciones. Si se ejecutan migraciones manualmente sobre una base heredada, primero se debe marcar el baseline:
+El esquema se versiona con Alembic. Al iniciar el scraper, una base heredada sin `alembic_version` se adopta automáticamente si contiene las tablas principales del esquema anterior; si falta la tabla auxiliar `estado_sincronizacion`, se crea antes de registrar el baseline. Luego se aplican las revisiones pendientes. Las bases vacías reciben todas las migraciones. Si se ejecutan migraciones manualmente sobre una base heredada, primero se debe marcar el baseline:
 
 ```bash
 alembic stamp 0001_baseline
