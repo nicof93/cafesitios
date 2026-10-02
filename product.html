@@ -132,7 +132,7 @@
 
     <footer id="related-bar" class="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] backdrop-blur">
         <div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-            <div class="grid min-w-0 grid-cols-2 gap-3 sm:flex sm:items-center sm:gap-6">
+            <div class="grid min-w-0 grid-cols-2 gap-3 sm:flex sm:flex-1 sm:items-center sm:gap-6">
                 <div class="min-w-0">
                     <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Proceso</span>
                     <a id="related-process" href="#" class="hidden truncate text-sm font-semibold text-teal-800 underline decoration-teal-300 underline-offset-2 hover:text-teal-950"></a>
@@ -142,6 +142,11 @@
                     <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">País / origen</span>
                     <a id="related-country" href="#" class="hidden truncate text-sm font-semibold text-teal-800 underline decoration-teal-300 underline-offset-2 hover:text-teal-950"></a>
                     <span id="missing-country" class="text-sm text-slate-400">No informado</span>
+                </div>
+                <div class="col-span-2 min-w-0 sm:col-span-1 sm:flex-1">
+                    <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Notas de cata</span>
+                    <div id="related-notes" aria-label="Notas de cata" tabindex="0" class="hidden max-w-full gap-1.5 overflow-x-auto whitespace-nowrap py-1"></div>
+                    <span id="missing-notes" class="text-sm text-slate-400">Sin notas informadas</span>
                 </div>
             </div>
             <a id="store-product-link" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
@@ -186,6 +191,24 @@
             link.title = `Ver cafés con ${parameter === "process" ? "proceso" : "origen"}: ${value}`;
             link.classList.remove("hidden");
             missing.classList.add("hidden");
+        }
+
+        function renderRelatedNotes(notes) {
+            const container = document.getElementById("related-notes");
+            const emptyLabel = document.getElementById("missing-notes");
+            const uniqueNotes = [...new Map(
+                (notes || []).map((note) => [note.clave_normalizada, note])
+            ).values()];
+            container.replaceChildren(...uniqueNotes.map((note) => {
+                const chip = document.createElement("span");
+                chip.className = "inline-flex rounded-md border border-slate-200 bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700";
+                chip.textContent = note.nombre;
+                chip.title = note.texto_origen;
+                return chip;
+            }));
+            container.classList.toggle("hidden", uniqueNotes.length === 0);
+            container.classList.toggle("flex", uniqueNotes.length > 0);
+            emptyLabel.classList.toggle("hidden", uniqueNotes.length > 0);
         }
 
         function money(value) {
@@ -311,6 +334,7 @@
             document.getElementById("store-product-link").href = product.url_detalle;
             setRelatedFilter("related-process", "missing-process", product.proceso, "process");
             setRelatedFilter("related-country", "missing-country", product.pais_origen, "country");
+            renderRelatedNotes(product.notas_cata);
             document.getElementById("product-description").innerHTML = product.descripcion || "<p>La tienda no publicó una descripción.</p>";
 
             if (product.fecha_actualizacion) {
