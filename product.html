@@ -44,16 +44,26 @@
     </style>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-700 antialiased">
-    <header class="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
-            <a href="index.html" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900">
-                <span aria-hidden="true">←</span> Catálogo
-            </a>
-            <span class="text-sm font-bold text-slate-800">Cafe-sitios</span>
+    <header class="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 backdrop-blur">
+        <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-4 sm:flex-row">
+            <div class="flex items-center gap-3">
+                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-700">☕</span>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-slate-800">Cafe-sitios</h1>
+                    <p class="text-xs font-normal text-slate-400">Comparador de café de especialidad en Chile</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 rounded-full border border-sky-100 bg-sky-50 px-3.5 py-1 text-xs text-sky-800 shadow-sm">
+                <span class="h-2 w-2 animate-pulse rounded-full bg-teal-400"></span>
+                <span>Última sincronización: <strong id="last-sync-time" class="font-semibold">Cargando...</strong></span>
+            </div>
         </div>
     </header>
 
-    <main class="mx-auto max-w-6xl space-y-8 px-5 py-7 sm:px-8 sm:py-10">
+    <main class="mx-auto max-w-6xl space-y-8 px-5 py-7 pb-48 sm:px-8 sm:py-10 sm:pb-40">
+        <a href="index.html" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900">
+            <span aria-hidden="true">←</span> Volver al catálogo
+        </a>
         <div id="page-status" role="status" aria-live="polite" class="py-16 text-center text-sm text-slate-500">
             <span class="mb-3 inline-block h-6 w-6 animate-spin rounded-full border-2 border-teal-700 border-t-transparent"></span>
             <p>Cargando producto...</p>
@@ -72,9 +82,6 @@
                         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Descripción de la tienda</h2>
                         <div id="product-description" class="product-copy mt-3 break-words text-sm text-slate-700"></div>
                     </div>
-                    <a id="store-product-link" href="#" target="_blank" rel="noopener noreferrer" class="mt-6 inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
-                        Ver producto en la tienda <span aria-hidden="true">↗</span>
-                    </a>
                 </div>
             </section>
 
@@ -123,6 +130,26 @@
         </div>
     </main>
 
+    <footer id="related-bar" class="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] backdrop-blur">
+        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            <div class="grid min-w-0 grid-cols-2 gap-3 sm:flex sm:items-center sm:gap-6">
+                <div class="min-w-0">
+                    <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Proceso</span>
+                    <a id="related-process" href="#" class="hidden truncate text-sm font-semibold text-teal-800 underline decoration-teal-300 underline-offset-2 hover:text-teal-950"></a>
+                    <span id="missing-process" class="text-sm text-slate-400">No informado</span>
+                </div>
+                <div class="min-w-0">
+                    <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">País / origen</span>
+                    <a id="related-country" href="#" class="hidden truncate text-sm font-semibold text-teal-800 underline decoration-teal-300 underline-offset-2 hover:text-teal-950"></a>
+                    <span id="missing-country" class="text-sm text-slate-400">No informado</span>
+                </div>
+            </div>
+            <a id="store-product-link" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
+                Ver en tienda <span aria-hidden="true">↗</span>
+            </a>
+        </div>
+    </footer>
+
     <script>
         const API_URL = "http://localhost:8000/api/v1/products";
         const currency = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 });
@@ -134,6 +161,32 @@
         let productData;
         let chart;
         let priceMode = "unit";
+
+        async function loadLastSync() {
+            const label = document.getElementById("last-sync-time");
+            try {
+                const response = await fetch("http://localhost:8000/api/v1/sync/last");
+                if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+                const data = await response.json();
+                label.textContent = data.last_sync
+                    ? `${new Date(data.last_sync).toLocaleString("es-CL")} hrs`
+                    : "Sin sincronizaciones";
+            } catch (error) {
+                label.textContent = "No disponible";
+            }
+        }
+
+        function setRelatedFilter(linkId, missingId, value, parameter) {
+            const link = document.getElementById(linkId);
+            const missing = document.getElementById(missingId);
+            if (!value) return;
+            const params = new URLSearchParams({ [parameter]: value });
+            link.href = `index.html?${params.toString()}`;
+            link.textContent = value;
+            link.title = `Ver cafés con ${parameter === "process" ? "proceso" : "origen"}: ${value}`;
+            link.classList.remove("hidden");
+            missing.classList.add("hidden");
+        }
 
         function money(value) {
             return `${currency.format(value)} CLP`;
@@ -256,6 +309,8 @@
             storeName.textContent = product.tienda;
             storeName.href = product.tienda_url;
             document.getElementById("store-product-link").href = product.url_detalle;
+            setRelatedFilter("related-process", "missing-process", product.proceso, "process");
+            setRelatedFilter("related-country", "missing-country", product.pais_origen, "country");
             document.getElementById("product-description").innerHTML = product.descripcion || "<p>La tienda no publicó una descripción.</p>";
 
             if (product.fecha_actualizacion) {
@@ -299,7 +354,10 @@
         variantSelect.addEventListener("change", renderChart);
         document.getElementById("unit-price").addEventListener("click", () => updatePriceMode("unit"));
         document.getElementById("kilo-price").addEventListener("click", () => updatePriceMode("kilo"));
-        document.addEventListener("DOMContentLoaded", loadProduct);
+        document.addEventListener("DOMContentLoaded", () => {
+            loadLastSync();
+            loadProduct();
+        });
     </script>
 </body>
 </html>

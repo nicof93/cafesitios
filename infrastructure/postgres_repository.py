@@ -20,6 +20,8 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         search_query: Optional[str] = None,
         min_price: Optional[int] = None,
         max_price: Optional[int] = None,
+        process: Optional[str] = None,
+        country: Optional[str] = None,
     ):
         query = self.session.query(Variante, Producto, Tienda)\
             .join(Producto, Variante.producto_id == Producto.id)\
@@ -32,6 +34,10 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         if store_name:
             query = query.filter(Tienda.nombre.ilike(f"%{store_name}%"))
 
+        if process:
+            query = query.filter(Producto.proceso.ilike(f"%{process}%"))
+        if country:
+            query = query.filter(Producto.pais_origen.ilike(country))
         if min_weight_g is not None:
             query = query.filter(Variante.formato_gramos >= min_weight_g)
         if max_weight_g is not None:
@@ -61,7 +67,9 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         max_weight_g: Optional[int] = None,
         search_query: Optional[str] = None,
         min_price: Optional[int] = None,
-        max_price: Optional[int] = None
+        max_price: Optional[int] = None,
+        process: Optional[str] = None,
+        country: Optional[str] = None,
     ) -> int:
         query = self._build_base_query(
             sort_by=sort_by,
@@ -72,6 +80,8 @@ class PostgresCoffeeRepository(ICoffeeRepository):
             search_query=search_query,
             min_price=min_price,
             max_price=max_price,
+            process=process,
+            country=country,
         )
         return query.with_entities(func.count(distinct(Producto.id))).order_by(None).scalar() or 0
 
@@ -85,7 +95,9 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         max_weight_g: Optional[int] = None,
         search_query: Optional[str] = None,
         min_price: Optional[int] = None,
-        max_price: Optional[int] = None
+        max_price: Optional[int] = None,
+        process: Optional[str] = None,
+        country: Optional[str] = None,
     ) -> List[CoffeeProductDomain]:
         query = self._build_base_query(
             sort_by=sort_by,
@@ -96,6 +108,8 @@ class PostgresCoffeeRepository(ICoffeeRepository):
             search_query=search_query,
             min_price=min_price,
             max_price=max_price,
+            process=process,
+            country=country,
         )
 
         precio_orden = Variante.precio_por_kilo if sort_by == "kilo" else Variante.precio_clp

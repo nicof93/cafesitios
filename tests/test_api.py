@@ -30,10 +30,13 @@ class MockDatabaseSession:
     pass
 
 class MockCoffeeRepositoryForAPI:
+    last_filters = {}
+
     def __init__(self, session=None):
         pass
 
     def get_cheapest_products(self, **kwargs):
+        MockCoffeeRepositoryForAPI.last_filters = kwargs
         return [
             CoffeeProductDomain(
                 id=1,
@@ -51,6 +54,7 @@ class MockCoffeeRepositoryForAPI:
         ]
 
     def count_cheapest_products(self, **kwargs):
+        MockCoffeeRepositoryForAPI.last_filters = kwargs
         return 2
 
 def mock_get_db_session_override():
@@ -78,6 +82,7 @@ class TestAPI(unittest.TestCase):
                     '<script>alert("xss")</script>'
                     '<img src="javascript:alert(1)" onerror="alert(1)">'
                 ),
+                pais_origen="Etiopía",
                 proceso="natural",
                 finca="Los Robles",
                 variedad="Caturra",
@@ -141,6 +146,8 @@ class TestAPI(unittest.TestCase):
 
             self.assertEqual(result["descripcion"], '<p>Notas de <strong>cacao</strong></p>')
             self.assertEqual(result["tienda"], "Tienda Demo")
+            self.assertEqual(result["proceso"], "natural")
+            self.assertEqual(result["pais_origen"], "Etiopía")
             self.assertEqual(result["proceso"], "natural")
             self.assertEqual(result["finca"], "Los Robles")
             self.assertEqual(result["elevacion_min_msnm"], 1650)
@@ -240,11 +247,15 @@ class TestAPI(unittest.TestCase):
         original_repo = api.router.PostgresCoffeeRepository
         api.router.PostgresCoffeeRepository = MockCoffeeRepositoryForAPI
         try:
-            response = client.get("/api/v1/products/cheapest?limit=5")
+            response = client.get(
+                "/api/v1/products/cheapest?limit=5&process=natural&country=Etiop%C3%ADa"
+            )
             self.assertEqual(response.status_code, 200)
             data = response.json()
             self.assertIn("data", data)
             self.assertEqual(data["total_items"], 2)
+            self.assertEqual(api.router.PostgresCoffeeRepository.last_filters["process"], "natural")
+            self.assertEqual(api.router.PostgresCoffeeRepository.last_filters["country"], "Etiopía")
         finally:
             api.router.PostgresCoffeeRepository = original_repo
 

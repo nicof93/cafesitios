@@ -261,6 +261,7 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
         "imagen": product.imagen,
         "fecha_actualizacion": product.fecha_actualizacion,
         "proceso": product.proceso,
+        "pais_origen": product.pais_origen,
         "finca": product.finca,
         "variedad": product.variedad,
         "elevacion_min_msnm": product.elevacion_min_msnm,
@@ -327,6 +328,8 @@ def get_cheapest_coffee_products(
     search_query: Optional[str] = Query(None, description="Búsqueda por texto en el nombre del café (ej. 'Geisha')"),
     min_price: Optional[int] = Query(None, ge=0, description="Precio unitario mínimo en CLP"),
     max_price: Optional[int] = Query(None, ge=0, description="Precio unitario máximo en CLP"),
+    process: Optional[str] = Query(None, min_length=1, max_length=255, description="Filtrar por proceso de beneficio"),
+    country: Optional[str] = Query(None, min_length=1, max_length=255, description="Filtrar por país de origen"),
     db_session: Session = Depends(get_db_session)
 ):
     try:
@@ -342,7 +345,9 @@ def get_cheapest_coffee_products(
             max_weight_g=max_weight_g,
             search_query=search_query,
             min_price=min_price,
-            max_price=max_price
+            max_price=max_price,
+            process=process,
+            country=country,
         )
 
         total_items = len(productos_dominio)
@@ -356,6 +361,8 @@ def get_cheapest_coffee_products(
                 search_query=search_query,
                 min_price=min_price,
                 max_price=max_price,
+                process=process,
+                country=country,
             )
 
         items_dto = [

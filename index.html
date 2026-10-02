@@ -64,7 +64,7 @@
                     <span>🏪</span> Tiendas Disponibles
                 </h2>
                 <div class="flex items-center gap-3">
-                    <button id="clear-store-filter" type="button" onclick="filtrarPorTienda('')" class="hidden text-xs font-semibold text-slate-500 hover:text-slate-800">Mostrar todas</button>
+                    <button id="clear-store-filter" type="button" onclick="limpiarFiltrosCatalogo()" class="hidden text-xs font-semibold text-slate-500 hover:text-slate-800">Quitar filtros</button>
                     <a href="stores.html" class="text-xs font-semibold text-sky-700 hover:text-sky-800">Todas las tiendas →</a>
                 </div>
             </div>
@@ -152,7 +152,10 @@
         let paginaActual = 1;
         const limitePorPagina = 30;
         let totalCargados = 0;
-        let tiendaSeleccionada = new URLSearchParams(window.location.search).get("store_name") || "";
+        const initialFilters = new URLSearchParams(window.location.search);
+        let tiendaSeleccionada = initialFilters.get("store_name") || "";
+        let procesoSeleccionado = initialFilters.get("process") || "";
+        let paisSeleccionado = initialFilters.get("country") || "";
 
         /**
          * Envia eventos de métricas de usuario tanto a Google Analytics (gtag)
@@ -266,10 +269,32 @@
             }
 
             window.history.replaceState({}, "", url);
-            document.getElementById("clear-store-filter").classList.toggle("hidden", !nombreTienda);
-            document.getElementById("catalog-title").textContent = nombreTienda
-                ? `Productos de ${nombreTienda}`
+            actualizarContextoCatalogo();
+            cargarTiendasDisponibles();
+            nuevaBusqueda();
+        }
+
+        function actualizarContextoCatalogo() {
+            const activeFilters = [];
+            if (tiendaSeleccionada) activeFilters.push(`Tienda: ${tiendaSeleccionada}`);
+            if (procesoSeleccionado) activeFilters.push(`Proceso: ${procesoSeleccionado}`);
+            if (paisSeleccionado) activeFilters.push(`País: ${paisSeleccionado}`);
+            document.getElementById("clear-store-filter").classList.toggle("hidden", activeFilters.length === 0);
+            document.getElementById("catalog-title").textContent = activeFilters.length
+                ? `Cafés relacionados · ${activeFilters.join(" · ")}`
                 : "Catálogo Destacado";
+        }
+
+        function limpiarFiltrosCatalogo() {
+            tiendaSeleccionada = "";
+            procesoSeleccionado = "";
+            paisSeleccionado = "";
+            const url = new URL(window.location.href);
+            url.searchParams.delete("store_name");
+            url.searchParams.delete("process");
+            url.searchParams.delete("country");
+            window.history.replaceState({}, "", url);
+            actualizarContextoCatalogo();
             cargarTiendasDisponibles();
             nuevaBusqueda();
         }
@@ -320,6 +345,8 @@
 
                 if (query) params.append("search_query", query);
                 if (tiendaSeleccionada) params.append("store_name", tiendaSeleccionada);
+                if (procesoSeleccionado) params.append("process", procesoSeleccionado);
+                if (paisSeleccionado) params.append("country", paisSeleccionado);
 
                 const response = await fetch(`${API_URL}?${params.toString()}`);
                 if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
@@ -359,10 +386,7 @@
             const btnLoadMore = document.getElementById("btn-load-more");
 
             totalCargados += productos.length;
-            document.getElementById("clear-store-filter").classList.toggle("hidden", !tiendaSeleccionada);
-            document.getElementById("catalog-title").textContent = tiendaSeleccionada
-                ? `Productos de ${tiendaSeleccionada}`
-                : "Catálogo Destacado";
+            actualizarContextoCatalogo();
             countLabel.textContent = `Mostrando ${totalCargados} de ${totalItems} resultados`;
 
             if (!append && productos.length === 0) {

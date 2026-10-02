@@ -45,7 +45,7 @@ En una base vacía basta con ejecutar `alembic upgrade head`. Cada fila de `sinc
 
 Tiendas, productos y variantes registran `fecha_creacion` y `fecha_actualizacion`; la fecha de creación se conserva en las sincronizaciones posteriores y la de actualización cambia cuando se modifica el registro. Los productos conservan además su `id_externo` de la tienda (ID de plataforma o SKU disponible), separado del ID interno de la base de datos, para reconocerlos aunque cambie su URL.
 
-El detalle abre una página propia (`product.html?id=<id>`), donde se muestra la descripción HTML saneada que publica la tienda, las variantes y un gráfico Chart.js con la evolución diaria del precio por variante. El endpoint `/api/v1/products/{id}/detail` devuelve el historial para cada variante.
+El detalle abre una página propia (`product.html?id=<id>`), conserva el encabezado del catálogo y muestra la descripción HTML saneada, las variantes y un gráfico Chart.js con la evolución diaria del precio por variante. Su barra fija inferior enlaza al catálogo filtrado por proceso o país de origen e incluye el acceso de compra a la tienda. El endpoint `/api/v1/products/{id}/detail` devuelve el historial y estos atributos.
 
 El scraper consulta las tiendas con `activo = true` en la base de datos y usa sus campos `plataforma` y `url_base`; no crea ni actualiza registros de tienda durante la sincronización. Si una tienda heredada aún tiene `plataforma = 'desconocida'`, prueba los drivers soportados con su `url_base` sin modificar la tienda. Para desactivar o reactivar una tienda comercialmente, cambie su campo `activo`:
 
@@ -65,6 +65,7 @@ La confianza es una señal heurística de extracción etiquetada, no una probabi
 - Documentación ReDoc: http://localhost:8000/redoc
 - Healthcheck: http://localhost:8000/
 - Endpoint de Productos más Baratos: http://localhost:8000/api/v1/products/cheapest?sort_by=kilo
+- Catálogo filtrado por proceso y origen: http://localhost:8000/api/v1/products/cheapest?sort_by=kilo&process=natural&country=Etiop%C3%ADa
 - Listado paginado de tiendas: http://localhost:8000/api/v1/stores?page=1&page_size=10&sort_by=product_count_desc
 - Detalle de producto y variantes: http://localhost:8000/api/v1/products/1/detail
 - Última sincronización: http://localhost:8000/api/v1/sync/last

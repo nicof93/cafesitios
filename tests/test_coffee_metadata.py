@@ -15,6 +15,7 @@ class TestCoffeeMetadataExtraction(unittest.TestCase):
         description = """
         <h4>Detalles</h4>
         <table>
+            <tr><th>País de origen</th><td>Etiopía</td></tr>
             <tr><th>Proceso</th><td>Honey</td></tr>
             <tr><th>Finca</th><td>Los Robles</td></tr>
             <tr><th>Varietal</th><td>Bourbon, Caturra</td></tr>
@@ -29,6 +30,7 @@ class TestCoffeeMetadataExtraction(unittest.TestCase):
         result = extract_coffee_characteristics(description)
 
         self.assertEqual(result['proceso'], 'honey')
+        self.assertEqual(result['pais_origen'], 'Etiopía')
         self.assertEqual(result['finca'], 'Los Robles')
         self.assertEqual(result['variedad'], 'Bourbon, Caturra')
         self.assertEqual(result['elevacion_min_msnm'], 1650)
@@ -45,6 +47,7 @@ class TestCoffeeMetadataExtraction(unittest.TestCase):
 
     def test_aliases_and_prefix_variations_produce_the_same_note_keys(self):
         description = """
+        <p>Country of origin: Guatemala</p>
         <p><strong>Process:</strong> washed</p>
         <p>Tasting notes - red berries, chocolate</p>
         <p>Altitude 1,600–1,800 meters above sea level</p>
@@ -54,6 +57,7 @@ class TestCoffeeMetadataExtraction(unittest.TestCase):
         result = extract_coffee_characteristics(description)
 
         self.assertEqual(result['proceso'], 'lavado')
+        self.assertEqual(result['pais_origen'], 'Guatemala')
         self.assertEqual(
             [note['clave_normalizada'] for note in result['notas_cata']],
             ['frutos-rojos', 'chocolate'],
@@ -68,6 +72,7 @@ class TestCoffeeMetadataExtraction(unittest.TestCase):
         self.assertIsNone(result['proceso'])
         self.assertIsNone(result['finca'])
         self.assertIsNone(result['variedad'])
+        self.assertIsNone(result['pais_origen'])
         self.assertIsNone(result['elevacion_min_msnm'])
         self.assertIsNone(result['elevacion_max_msnm'])
         self.assertIsNone(result['cosecha'])

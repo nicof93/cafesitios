@@ -140,6 +140,7 @@ class TestDatabaseManager(unittest.TestCase):
                 ),
                 'finca': 'Los Robles',
                 'variedad': 'Caturra',
+                'pais_origen': 'Etiopía',
                 'elevacion_min_msnm': 1650,
                 'elevacion_max_msnm': 1800,
                 'cosecha': '2024/25',
@@ -191,6 +192,7 @@ class TestDatabaseManager(unittest.TestCase):
             )
             self.assertEqual(saved_product.finca, 'Los Robles')
             self.assertEqual(saved_product.variedad, 'Caturra')
+            self.assertEqual(saved_product.pais_origen, 'Etiopía')
             self.assertEqual(saved_product.elevacion_min_msnm, 1650)
             self.assertEqual(saved_product.elevacion_max_msnm, 1800)
             self.assertEqual(saved_product.cosecha, '2024/25')
@@ -295,7 +297,7 @@ class TestDatabaseManager(unittest.TestCase):
                     ).scalar_one()
 
                 self.assertEqual(store_name, 'Tienda existente')
-                self.assertEqual(revision, '0006_long_coffee_process')
+                self.assertEqual(revision, '0007_product_country')
                 self.assertIn('sincronizaciones', inspect(db.engine).get_table_names())
                 self.assertIn('estado_sincronizacion', inspect(db.engine).get_table_names())
                 product_columns = {

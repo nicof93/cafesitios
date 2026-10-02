@@ -16,7 +16,9 @@ class GetCheapestProductsUseCase:
         max_weight_g: Optional[int] = None,
         search_query: Optional[str] = None,
         min_price: Optional[int] = None,
-        max_price: Optional[int] = None
+        max_price: Optional[int] = None,
+        process: Optional[str] = None,
+        country: Optional[str] = None,
     ) -> List[CoffeeProductDomain]:
         
         return self.repository.get_cheapest_products(
@@ -29,4 +31,6 @@ class GetCheapestProductsUseCase:
             search_query=search_query,
             min_price=min_price,
             max_price=max_price
+            ,process=process,
+            country=country,
         )

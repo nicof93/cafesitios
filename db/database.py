@@ -57,6 +57,7 @@ class Producto(Base):
     proceso = Column(Text, nullable=True)
     finca = Column(String(255), nullable=True)
     variedad = Column(String(255), nullable=True)
+    pais_origen = Column(String(255), nullable=True)
     elevacion_min_msnm = Column(Integer, nullable=True)
     elevacion_max_msnm = Column(Integer, nullable=True)
     cosecha = Column(String(100), nullable=True)
@@ -351,7 +352,7 @@ class DatabaseManager:
                     'caracteristicas_fuente': fuentes,
                 }
                 for field in (
-                    'proceso', 'finca', 'variedad', 'elevacion_min_msnm',
+                    'proceso', 'finca', 'variedad', 'pais_origen', 'elevacion_min_msnm',
                     'elevacion_max_msnm', 'cosecha', 'fermentacion_tipo',
                     'fermentacion_horas',
                 ):
@@ -377,7 +378,7 @@ class DatabaseManager:
                             if getattr(producto_existente, campo) != row[campo]:
                                 cambios[campo] = row[campo]
                         for campo in (
-                            'proceso', 'finca', 'variedad', 'elevacion_min_msnm',
+                            'proceso', 'finca', 'variedad', 'pais_origen', 'elevacion_min_msnm',
                             'elevacion_max_msnm', 'cosecha', 'fermentacion_tipo',
                             'fermentacion_horas',
                         ):

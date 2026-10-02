@@ -14,7 +14,9 @@ class ICoffeeRepository(ABC):
         max_weight_g: Optional[int] = None,
         search_query: Optional[str] = None,
         min_price: Optional[int] = None,
-        max_price: Optional[int] = None
+            max_price: Optional[int] = None,
+            process: Optional[str] = None,
+            country: Optional[str] = None,
     ) -> List[CoffeeProductDomain]:
         pass
 

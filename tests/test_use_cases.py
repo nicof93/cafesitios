@@ -50,7 +50,8 @@ class MockCoffeeRepository(ICoffeeRepository):
         only_available: bool = True, store_name: Optional[str] = None,
         min_weight_g: Optional[int] = None, max_weight_g: Optional[int] = None,
         search_query: Optional[str] = None, min_price: Optional[int] = None,
-        max_price: Optional[int] = None
+            max_price: Optional[int] = None, process: Optional[str] = None,
+            country: Optional[str] = None
     ) -> List[CoffeeProductDomain]:
         prods = list(self.sample_products)
         if search_query:
@@ -112,6 +113,8 @@ class TestUseCases(unittest.TestCase):
                 tienda=store,
                 nombre="Café con varias presentaciones",
                 url_detalle="https://wr4.example/producto-1",
+                proceso="natural anaeróbico",
+                pais_origen="Etiopía",
                 variantes=[
                     Variante(
                         id_variante_externo="wr4-250",
@@ -141,6 +144,8 @@ class TestUseCases(unittest.TestCase):
                 tienda=store,
                 nombre="Café de una presentación",
                 url_detalle="https://wr4.example/producto-2",
+                proceso="lavado",
+                pais_origen="Colombia",
                 variantes=[
                     Variante(
                         id_variante_externo="wr4-1000",
@@ -210,6 +215,12 @@ class TestUseCases(unittest.TestCase):
             self.assertNotIn(inactive_product.id, {product.id for product in products})
             self.assertNotIn(disabled_store_product.id, {product.id for product in products})
             self.assertEqual(products[0].variante_mas_barata.id_externo, "wr4-500")
+
+            natural_products = repository.get_cheapest_products(process="natural")
+            ethiopian_products = repository.get_cheapest_products(country="Etiopía")
+            self.assertEqual([product.id for product in natural_products], [multi_variant_product.id])
+            self.assertEqual([product.id for product in ethiopian_products], [multi_variant_product.id])
+            self.assertEqual(repository.count_cheapest_products(country="Colombia"), 1)
         finally:
             session.close()
             engine.dispose()

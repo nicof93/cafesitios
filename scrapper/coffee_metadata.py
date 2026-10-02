@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 EXTRACTOR_VERSION = 'rules-v1'
 EXTRACTED_FIELDS = (
-    'notas_cata', 'proceso', 'finca', 'variedad', 'elevacion', 'cosecha',
+    'notas_cata', 'proceso', 'finca', 'variedad', 'pais_origen', 'elevacion', 'cosecha',
     'fermentacion_tipo', 'fermentacion_horas',
 )
 
@@ -18,6 +18,7 @@ _FIELD_LABELS = {
     'proceso': ('proceso', 'process', 'processing method', 'beneficio'),
     'finca': ('finca', 'farm', 'fazenda', 'estate'),
     'variedad': ('variedad', 'varietal', 'variety', 'cultivar'),
+    'pais_origen': ('país de origen', 'pais de origen', 'país', 'pais', 'country of origin', 'country', 'origin'),
     'elevacion': ('elevacion', 'elevación', 'elevation', 'altitud', 'altitude', 'altura'),
     'cosecha': ('cosecha', 'harvest', 'crop year', 'year'),
     'fermentacion': (
@@ -238,6 +239,7 @@ def extract_coffee_characteristics(description: Optional[str]) -> Dict[str, Any]
         'proceso': None,
         'finca': None,
         'variedad': None,
+        'pais_origen': None,
         'elevacion_min_msnm': None,
         'elevacion_max_msnm': None,
         'cosecha': None,
@@ -254,7 +256,7 @@ def extract_coffee_characteristics(description: Optional[str]) -> Dict[str, Any]
     if value and source:
         result['notas_cata'] = _extract_notes(value, source)
 
-    for field in ('proceso', 'finca', 'variedad', 'cosecha'):
+    for field in ('proceso', 'finca', 'variedad', 'pais_origen', 'cosecha'):
         value, source, _ = _find_labeled_value(lines, _FIELD_LABELS[field])
         if not value:
             continue

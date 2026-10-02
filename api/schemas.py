@@ -61,6 +61,7 @@ class ProductDetailResponse(BaseModel):
     imagen: Optional[str] = None
     fecha_actualizacion: Optional[datetime] = None
     proceso: Optional[str] = None
+    pais_origen: Optional[str] = None
     finca: Optional[str] = None
     variedad: Optional[str] = None
     elevacion_min_msnm: Optional[int] = None
