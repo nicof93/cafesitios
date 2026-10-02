@@ -24,9 +24,23 @@ cafe-sitios/
 
 ## Ejecución
 1. Instalar dependencias: `pip install -r requirements.txt`
-2. Ejecutar el scraper: `python application.py`
-3. Iniciar la API: `python -m uvicorn main:app --reload`
-4. Ejecutar test: `python -m unittest discover tests`
+2. Aplicar migraciones: `alembic upgrade head`
+3. Ejecutar el scraper: `python scrapper_application.py`
+4. Iniciar la API: `python -m uvicorn main:app --reload`
+5. Ejecutar test: `python -m unittest discover tests`
+
+### Versionado de base de datos
+
+El esquema se versiona con Alembic. Las bases existentes que fueron creadas antes de Alembic deben marcar el baseline una sola vez y luego aplicar las nuevas revisiones:
+
+```bash
+alembic stamp 0001_baseline
+alembic upgrade head
+```
+
+En una base vacía basta con ejecutar `alembic upgrade head`. Cada fila de `sincronizaciones` representa una ejecución por tienda y almacena fechas, resultado, detalle de error y conteos de productos agregados, eliminados y actualizados.
+
+Tiendas, productos y variantes registran `fecha_creacion` y `fecha_actualizacion`; la fecha de creación se conserva en las sincronizaciones posteriores y la de actualización cambia cuando se modifica el registro. Los productos conservan además su `id_externo` de la tienda (ID de plataforma o SKU disponible), separado del ID interno de la base de datos, para reconocerlos aunque cambie su URL.
 
 ## Links de interes
 - Documentación Interactiva (Swagger UI): http://localhost:8000/docs

@@ -1,12 +1,36 @@
 import sys
 from pathlib import Path
 import unittest
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scrapper.shopify_driver import ShopifyDriver
 
 class TestShopifyDriver(unittest.TestCase):
+    def test_consumir_productos_preserves_external_product_id(self):
+        driver = ShopifyDriver('Tienda Demo', 'https://example.com/products.json')
+        response = Mock(status_code=200)
+        response.json.return_value = {
+            'products': [{
+                'id': 456,
+                'title': 'Café Demo',
+                'handle': 'cafe-demo',
+                'variants': [{
+                    'id': 789,
+                    'title': '250g',
+                    'price': '10000',
+                    'grams': 250,
+                    'available': True,
+                }],
+            }],
+        }
+
+        with patch('scrapper.shopify_driver.requests.get', return_value=response):
+            products = driver.consumir_productos()
+
+        self.assertEqual(products[0]['id_externo'], '456')
+
     def test_extraer_gramos_250g(self):
         gramos = ShopifyDriver.extraer_gramos("Café Lavado 250g Molienda Fina")
         self.assertEqual(gramos, 250)

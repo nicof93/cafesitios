@@ -2,10 +2,20 @@ import sys
 from pathlib import Path
 import unittest
 from types import SimpleNamespace
+from datetime import datetime
+from sqlalchemy import create_engine, func
+from sqlalchemy.orm import sessionmaker
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from db.database import DatabaseManager
+from db.database import (
+    Base,
+    DatabaseManager,
+    HistorialPrecio,
+    Producto,
+    Sincronizacion,
+    Variante,
+)
 
 
 class FakeQuery:
@@ -24,6 +34,8 @@ class FakeSession:
         self.calls = []
         self.inserted = {}
         self.updated = {}
+        self.merged = []
+        self.commit_count = 0
 
     def query(self, *args, **kwargs):
         if not args:
@@ -72,7 +84,7 @@ class FakeSession:
         self.updated.setdefault(model, []).extend(mappings)
 
     def commit(self):
-        pass
+        self.commit_count += 1
 
     def rollback(self):
         pass
@@ -83,6 +95,10 @@ class FakeSession:
     def add(self, obj):
         pass
 
+    def merge(self, obj):
+        self.merged.append(obj)
+        return obj
+
     def flush(self):
         pass
 
@@ -91,6 +107,17 @@ class FakeSession:
 
 
 class TestDatabaseManager(unittest.TestCase):
+    def test_registrar_ultima_sincronizacion_persists_singleton(self):
+        db = DatabaseManager.__new__(DatabaseManager)
+        fake_session = FakeSession()
+        db.SessionLocal = lambda: fake_session
+
+        timestamp = db.registrar_ultima_sincronizacion()
+
+        self.assertEqual(fake_session.merged[0].id, 1)
+        self.assertEqual(fake_session.merged[0].ultima_ejecucion, timestamp)
+        self.assertEqual(fake_session.commit_count, 1)
+
     def test_guardar_catalogo_uses_bulk_insert_mappings(self):
         db = DatabaseManager.__new__(DatabaseManager)
         fake_session = FakeSession()
@@ -115,13 +142,114 @@ class TestDatabaseManager(unittest.TestCase):
             }],
         }]
 
-        db.guardar_catalogo(catalogo)
+        counts = db.guardar_catalogo(catalogo, plataforma='shopify')
 
         table_names = [name for name, _ in fake_session.calls]
         self.assertIn('tiendas', table_names)
         self.assertIn('productos', table_names)
         self.assertIn('variantes', table_names)
         self.assertIn('historial_precios', table_names)
+        self.assertEqual(counts, {'agregados': 1, 'eliminados': 0, 'actualizados': 0})
+        tienda_mapping = next(mappings[0] for name, mappings in fake_session.calls if name == 'tiendas')
+        self.assertEqual(tienda_mapping['plataforma'], 'shopify')
+
+    def test_sync_counts_product_changes_and_persists_result(self):
+        engine = create_engine('sqlite:///:memory:')
+        Base.metadata.create_all(engine)
+        db = DatabaseManager.__new__(DatabaseManager)
+        db.SessionLocal = sessionmaker(bind=engine)
+
+        synchronization_id = db.iniciar_sincronizacion(
+            'Tienda Demo', 'https://example.com', 'woocommerce'
+        )
+
+        def product(name, url, variant_id, price, external_id):
+            return {
+                'tienda': 'Tienda Demo',
+            'id_externo': external_id,
+                'nombre': name,
+                'url_detalle': url,
+                'imagen': None,
+                'descripcion': name,
+                'variantes': [{
+                    'id_variante_externo': variant_id,
+                    'opcion': '250g',
+                    'formato_gramos': 250,
+                    'precio_clp': price,
+                    'precio_original_clp': price,
+                    'en_oferta': False,
+                    'descuento_porcentaje': 0,
+                    'precio_por_kilo': price * 4,
+                    'disponible': True,
+                }],
+            }
+
+        db.guardar_catalogo([
+            product('Retenido', 'https://example.com/retained', 'variant-1', 10000, 'product-1'),
+            product('Eliminado', 'https://example.com/removed', 'variant-2', 12000, 'product-2'),
+        ], nombre_tienda='Tienda Demo', url_base='https://example.com', plataforma='woocommerce')
+
+        session = db.SessionLocal()
+        try:
+            retained = session.query(Producto).filter_by(id_externo='product-1').one()
+            variant = session.query(Variante).filter_by(id_variante_externo='variant-1').one()
+            store = retained.tienda
+            product_created = retained.fecha_creacion
+            variant_created = variant.fecha_creacion
+            store_created = store.fecha_creacion
+            store_updated = store.fecha_actualizacion
+            retained.fecha_actualizacion = datetime(2000, 1, 1)
+            variant.fecha_actualizacion = datetime(2000, 1, 1)
+            session.commit()
+        finally:
+            session.close()
+
+        counts = db.guardar_catalogo([
+            product('Retenido actualizado', 'https://example.com/retained-v2', 'variant-1', 11000, 'product-1'),
+            product('Nuevo', 'https://example.com/new', 'variant-3', 13000, 'product-3'),
+        ], nombre_tienda='Tienda Demo', url_base='https://example.com', plataforma='woocommerce')
+
+        db.finalizar_sincronizacion(
+            synchronization_id,
+            'exitoso',
+            productos_agregados=counts['agregados'],
+            productos_eliminados=counts['eliminados'],
+            productos_actualizados=counts['actualizados'],
+        )
+
+        session = db.SessionLocal()
+        try:
+            sync = session.query(Sincronizacion).one()
+            self.assertEqual(counts, {'agregados': 1, 'eliminados': 1, 'actualizados': 1})
+            self.assertEqual(sync.resultado, 'exitoso')
+            self.assertIsNotNone(sync.fecha_fin)
+            self.assertEqual(sync.productos_agregados, 1)
+            self.assertEqual(sync.productos_eliminados, 1)
+            self.assertEqual(sync.productos_actualizados, 1)
+            self.assertEqual(session.query(Producto).count(), 2)
+            self.assertEqual(session.query(Variante).count(), 2)
+            self.assertEqual(session.query(HistorialPrecio).count(), 3)
+            retained = session.query(Producto).filter_by(id_externo='product-1').one()
+            retained_variant = session.query(Variante).filter_by(id_variante_externo='variant-1').one()
+            store = retained.tienda
+            self.assertEqual(retained.url_detalle, 'https://example.com/retained-v2')
+            self.assertEqual(retained.fecha_creacion, product_created)
+            self.assertGreater(retained.fecha_actualizacion, datetime(2000, 1, 1))
+            self.assertEqual(retained_variant.fecha_creacion, variant_created)
+            self.assertGreater(retained_variant.fecha_actualizacion, datetime(2000, 1, 1))
+            self.assertEqual(store.fecha_creacion, store_created)
+            self.assertEqual(store.fecha_actualizacion, store_updated)
+            self.assertEqual(session.query(Producto).filter_by(url_detalle='https://example.com/retained').count(), 0)
+            self.assertEqual(
+                session.query(HistorialPrecio)
+                .join(Variante)
+                .filter(Variante.id_variante_externo == 'variant-2')
+                .count(),
+                0,
+            )
+        finally:
+            session.close()
+            engine.dispose()
 
     def test_guardar_catalogo_deduplica_productos_repetidos(self):
         db = DatabaseManager.__new__(DatabaseManager)

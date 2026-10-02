@@ -36,25 +36,45 @@ def main():
     db = DatabaseManager()
     db.inicializar_db()
 
-    catalogo_global = []
-    print("\n🚀 Iniciando escaneo de tiendas Shopify en Cafe-sitios...\n")
+    resultados = []
+    configuraciones = [
+        ('shopify', tiendas_shopify, ShopifyDriver),
+        ('woocommerce', tiendas_woocommerce, WooCommerceDriver),
+    ]
 
-    for tienda in tiendas_shopify:
-        driver = ShopifyDriver(nombre=tienda['nombre'], url_base=tienda['url_base'])
-        productos = driver.consumir_productos()
-        catalogo_global.extend(productos)
+    for plataforma, tiendas, driver_class in configuraciones:
+        for tienda in tiendas:
+            sincronizacion_id = db.iniciar_sincronizacion(
+                tienda['nombre'], tienda['url_base'], plataforma
+            )
+            try:
+                driver = driver_class(nombre=tienda['nombre'], url_base=tienda['url_base'])
+                productos = driver.consumir_productos()
+                conteos = db.guardar_catalogo(
+                    productos,
+                    nombre_tienda=tienda['nombre'],
+                    url_base=tienda['url_base'],
+                    plataforma=plataforma,
+                )
+                db.finalizar_sincronizacion(sincronizacion_id, 'exitoso', **{
+                    'productos_agregados': conteos['agregados'],
+                    'productos_eliminados': conteos['eliminados'],
+                    'productos_actualizados': conteos['actualizados'],
+                })
+                resultados.append(True)
+                print(f"✅ {tienda['nombre']}: {len(productos)} productos sincronizados.")
+            except Exception as error:
+                db.finalizar_sincronizacion(
+                    sincronizacion_id,
+                    'fallido',
+                    detalle_error=str(error),
+                )
+                resultados.append(False)
+                print(f"❌ {tienda['nombre']}: {error}")
 
-    print("\n🚀 Iniciando escaneo de tiendas WooCommerce en Cafe-sitios...\n")
-    for tienda in tiendas_woocommerce:
-        driver = WooCommerceDriver(nombre=tienda['nombre'], url_base=tienda['url_base'])
-        productos = driver.consumir_productos()
-        catalogo_global.extend(productos)
-
-    print(f"\n✨ Escaneo completado. Total productos obtenidos: {len(catalogo_global)}")
-
-    print("\n💾 Guardando catálogo e historial de precios en PostgreSQL...")
-    db.guardar_catalogo(catalogo_global)
-    print("🎉 Proceso finalizado con éxito.\n")
+    db.registrar_ultima_sincronizacion()
+    total_exitosas = sum(resultados)
+    print(f"\nProceso finalizado: {total_exitosas}/{len(resultados)} tiendas sincronizadas correctamente.\n")
 
 if __name__ == '__main__':
     main()

@@ -38,6 +38,7 @@ class TestWooCommerceDriver(unittest.TestCase):
         normalized = self.driver.normalizar_producto(prod_raw)
 
         self.assertEqual(normalized['tienda'], "Café Altura")
+        self.assertEqual(normalized['id_externo'], str(prod_raw['id']))
         self.assertEqual(normalized['nombre'], "Perú Finca Esperanza")
         self.assertEqual(normalized['url_detalle'], "https://cafealtura.cl/productos/peru-finca-esperanza/")
         self.assertTrue(normalized['imagen'].startswith("http"))
