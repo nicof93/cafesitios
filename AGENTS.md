@@ -120,7 +120,7 @@ Cualquier nuevo driver, modelo o cambio debe cumplir estrictamente estas reglas:
 
 Después de completar exitosamente cada solicitud, validar los cambios aplicables y crear un commit que incluya únicamente los archivos modificados para esa solicitud. No incluir ni descartar cambios preexistentes o ajenos; preparar los archivos explícitamente en lugar de usar `git add -A`.
 
-Los mensajes deben seguir Conventional Commits con el formato `<tipo>(<ámbito>): <descripción>`, por ejemplo: `docs(agent): documentar política de commits`. Usar un tipo acorde al cambio (`feat`, `fix`, `docs`, `test`, `refactor`, `chore`, entre otros) y una descripción concreta.
+Los mensajes deben seguir Conventional Commits con el formato `<tipo>(<ámbito>): <descripción>`, por ejemplo: `docs(agent): documentar política de commits`. Usar un tipo acorde al cambio (`feat`, `fix`, `docs`, `test`, `refactor`, `chore`, entre otros) y una descripción concreta, en español.
 
 Nunca crear commits directamente en `main` o `master`. Si el trabajo comienza en una de esas ramas:
 
@@ -130,3 +130,9 @@ Nunca crear commits directamente en `main` o `master`. Si el trabajo comienza en
 4. Preparar y confirmar solo los archivos de la solicitud en esa rama.
 
 Si no es posible actualizar la rama o crear una rama de trabajo sin poner en riesgo cambios locales, detenerse sin confirmar en `main`/`master` y explicar el bloqueo. No hacer `push` salvo que se solicite explícitamente.
+
+## 7. Revisión del README antes de cada commit
+
+Después de completar cada solicitud y antes de crear el commit, revisar si los cambios requieren actualizar `README.md`. Considerar, entre otros, cambios en funcionalidades, instalación, configuración, comandos, uso o estructura del proyecto.
+
+Si hace falta, actualizar el README para que refleje el comportamiento actual y validar también ese cambio. Incluir `README.md` en el commit solo si fue necesario modificarlo. Si no requiere cambios, continuar con el commit sin alterarlo.
