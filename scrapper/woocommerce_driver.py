@@ -185,6 +185,7 @@ class WooCommerceDriver:
 
         return {
             'tienda': self.nombre,
+            'id_externo': str(prod.get('id') or prod.get('sku')) if prod.get('id') or prod.get('sku') else None,
             'nombre': titulo_prod,
             'url_detalle': permalink,
             'imagen': imagen_url,
@@ -213,6 +214,7 @@ class WooCommerceDriver:
 
         productos_raw = []
         url_exitosa = None
+        respuesta_exitosa = False
 
         for base_url in urls_a_probar:
             page = 1
@@ -227,10 +229,13 @@ class WooCommerceDriver:
                     response = requests.get(paginated_url, headers=headers, timeout=15)
                     if response.status_code == 200:
                         data = response.json()
-                        if isinstance(data, list) and len(data) > 0:
+                        if isinstance(data, list):
+                            respuesta_exitosa = True
+                            url_exitosa = base_url
+                            if not data:
+                                break
                             productos_raw.extend(data)
                             url_funciona = True
-                            url_exitosa = base_url
 
                             total_pages_header = response.headers.get('X-WP-TotalPages')
                             if total_pages_header and total_pages_header.isdigit():
@@ -250,12 +255,14 @@ class WooCommerceDriver:
                     logging.warning(f"[{self.nombre}] Error al conectar a {base_url} (página {page}): {e}")
                     break
 
-            if url_funciona:
+            if url_funciona or respuesta_exitosa:
                 break
 
         if not productos_raw:
-            logging.error(f"❌ [{self.nombre}] No se pudo obtener catálogo en ningún endpoint de WooCommerce.")
-            return []
+            if respuesta_exitosa:
+                logging.info(f"✅ [{self.nombre}] Catálogo vacío obtenido desde {url_exitosa}.")
+                return []
+            raise RuntimeError(f"No se pudo obtener catálogo en ningún endpoint de WooCommerce para '{self.nombre}'.")
 
         productos_normalizados = [
             self.normalizar_producto(prod, base_site=base_site)

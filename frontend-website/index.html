@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cafe-sitios | Catálogo de Café de Especialidad</title>
+
+    <!-- Variables de ambiente para despliegues (Calidad / Producción / Local) -->
+    <meta name="api-base-url" content="__API_BASE_URL__">
+    <meta name="gtm-id" content="__GTM_ID__">
+    <meta name="ga-measurement-id" content="__GA_MEASUREMENT_ID__">
+
+    <!-- Carga y resolución de configuración de ambiente -->
+    <script src="./env-config.js"></script>
+    <script>
+        (function() {
+            const rawConfig = window.APP_CONFIG || {};
+            const metaApi = document.querySelector('meta[name="api-base-url"]')?.getAttribute("content");
+            const metaGtm = document.querySelector('meta[name="gtm-id"]')?.getAttribute("content");
+            const metaGa = document.querySelector('meta[name="ga-measurement-id"]')?.getAttribute("content");
+
+            function sanitize(val) {
+                if (typeof val === "string" && val.trim() && !val.trim().startsWith("__")) {
+                    return val.trim();
+                }
+                return "";
+            }
+
+            let apiBaseUrl = sanitize(rawConfig.apiBaseUrl) || sanitize(metaApi);
+
+            if (!apiBaseUrl) {
+                const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname) || window.location.protocol === "file:";
+                apiBaseUrl = isLocal ? "http://localhost:8000" : window.location.origin;
+            }
+            apiBaseUrl = apiBaseUrl.replace(/\/+$/, "");
+
+            const gtmId = sanitize(rawConfig.googleTagManagerId) || sanitize(metaGtm);
+            const gaId = sanitize(rawConfig.googleAnalyticsId) || sanitize(metaGa);
+
+            window.APP_CONFIG = Object.freeze({
+                apiBaseUrl: apiBaseUrl,
+                googleTagManagerId: gtmId,
+                googleAnalyticsId: gaId
+            });
+        })();
+    </script>
+    <script src="./analytics.js"></script>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#FCFBF7] text-gray-700 font-sans min-h-screen flex flex-col justify-between antialiased xl:h-screen xl:min-h-0 xl:justify-start xl:overflow-hidden">
+    <!-- ANALYTICS_NOSCRIPT -->
+
+    <!-- BARRA SUPERIOR / HEADER MINIMALISTA -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-stone-200/80 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-sm">☕</span>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-gray-900">Cafe-sitios</h1>
+                    <p class="text-xs text-gray-500 font-normal">Comparador de café de especialidad en Chile</p>
+                </div>
+            </div>
+
+            <!-- BADGE DE ÚLTIMA SINCRONIZACIÓN -->
+            <div class="bg-emerald-50 border border-emerald-100 rounded-full px-3.5 py-1 text-xs text-emerald-800 flex items-center gap-2 shadow-sm">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Última sincronización: <strong id="last-sync-time" class="font-semibold">Cargando...</strong></span>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-[90%] mx-auto px-3 py-8 space-y-8 xl:flex-1 xl:min-h-0 xl:overflow-hidden">
+
+        <div class="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-6 xl:h-full xl:min-h-0 xl:grid-rows-1 xl:items-stretch">
+            <aside class="space-y-6 xl:min-h-0 xl:overflow-y-auto xl:pr-1">
+                <!-- RESUMEN DE TIENDAS -->
+                <section class="bg-white rounded-2xl border border-stone-200/80 p-5 shadow-sm">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                            <span>🏪</span> Tiendas Disponibles
+                        </h2>
+                        <div class="flex items-center gap-3">
+                            <button id="clear-store-filter" type="button" onclick="limpiarFiltrosCatalogo()" class="hidden text-xs font-semibold text-slate-500 hover:text-slate-800">Quitar filtros</button>
+                            <a href="stores.html" class="text-xs font-semibold text-emerald-800 hover:text-emerald-950">Todas las tiendas →</a>
+                        </div>
+                    </div>
+                    <div id="stores-summary" class="flex flex-wrap gap-2">
+                        <span class="text-xs text-slate-400 italic">Cargando tiendas...</span>
+                    </div>
+                </section>
+
+                <!-- PANEL DE BÚSQUEDA Y FILTROS -->
+                <section class="bg-white rounded-2xl border border-stone-200/80 p-5 shadow-sm">
+                    <div class="grid grid-cols-1 gap-4">
+                        
+                        <!-- BUSCADOR -->
+                        <div>
+                            <label for="search-input" class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                                Buscar variedad, café o nota de cata
+                            </label>
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    id="search-input" 
+                                    placeholder="Ej. Geisha, Bourbon, Lavado, Frutal, Singular..." 
+                                    class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 transition"
+                                >
+                                <span class="absolute right-3.5 top-2.5 text-slate-300 text-sm">🔍</span>
+                            </div>
+                        </div>
+
+                        <!-- ORDENAMIENTO -->
+                        <div>
+                            <label for="sort-select" class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                                Ordenar Por
+                            </label>
+                            <select id="sort-select" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 transition">
+                                <option value="kilo" selected>🌱 Más baratos por Kilo ($/kg)</option>
+                                <option value="unit">🏷️ Más baratos por Bolsa ($ CLP)</option>
+                            </select>
+                        </div>
+
+                        <!-- BOTÓN BUSCAR -->
+                        <div>
+                            <button 
+                                id="btn-search" 
+                                onclick="nuevaBusqueda()"
+                                class="w-full bg-gray-900 hover:bg-black text-white font-medium py-2.5 px-4 rounded-xl text-sm transition duration-150 shadow-sm hover:shadow"
+                            >
+                                Buscar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 border-t border-slate-200 pt-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <button id="toggle-advanced-filters" type="button" class="inline-flex items-center gap-2 text-sm font-medium text-emerald-800 hover:text-emerald-950">
+                                <span aria-hidden="true">⚙️</span>
+                                Filtros avanzados
+                            </button>
+                            <button id="clear-advanced-filters" type="button" class="hidden text-xs font-semibold text-slate-500 hover:text-slate-800">
+                                Limpiar avanzados
+                            </button>
+                        </div>
+
+                        <div id="advanced-filters" class="hidden mt-4 rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+                            <div class="grid grid-cols-1 gap-3">
+                                <label class="block">
+                                    <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Precio mínimo</span>
+                                    <input id="min-price-input" type="number" min="0" step="100" placeholder="15000" class="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600">
+                                </label>
+                                <label class="block">
+                                    <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Precio máximo</span>
+                                    <input id="max-price-input" type="number" min="0" step="100" placeholder="30000" class="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600">
+                                </label>
+                                <label class="block">
+                                    <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">País de origen</span>
+                                    <input id="country-input" type="text" placeholder="Etiopía" class="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600">
+                                </label>
+                                <label class="block">
+                                    <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Variedad</span>
+                                    <input id="variety-input" type="text" placeholder="Caturra" class="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600">
+                                </label>
+                                <label class="block">
+                                    <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Tienda</span>
+                                    <input id="store-input" type="text" placeholder="Singular" class="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600">
+                                </label>
+                                <label class="block">
+                                    <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Nota de cata</span>
+                                    <input id="notes-input" type="text" placeholder="floral" class="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600">
+                                </label>
+                            </div>
+                            <div class="mt-3 flex justify-end gap-2">
+                                <button id="btn-apply-filters" type="button" class="bg-emerald-800 hover:bg-emerald-900 text-white font-medium px-4 py-2 rounded-xl text-sm transition">
+                                    Aplicar filtros
+                                </button>
+                                <button id="btn-clear-filters" type="button" class="bg-white border border-stone-200 text-gray-600 hover:bg-stone-100 font-medium px-4 py-2 rounded-xl text-sm transition">
+                                    Resetear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </aside>
+
+            <!-- RESULTADOS -->
+            <section class="min-w-0 xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-2">
+                <div class="flex flex-wrap justify-between items-center gap-3 mb-5">
+                    <h2 id="catalog-title" class="text-base font-bold text-slate-800">Catálogo Destacado</h2>
+                    <div class="flex items-center gap-4">
+                        <div class="inline-flex items-center rounded-lg border border-slate-200 bg-white p-1" role="group" aria-label="Productos por fila">
+                            <button id="columns-3" type="button" aria-label="Mostrar 3 productos por fila" aria-pressed="true" class="rounded-md bg-slate-800 px-2.5 py-1 text-xs font-semibold text-white">3</button>
+                            <button id="columns-4" type="button" aria-label="Mostrar 4 productos por fila" aria-pressed="false" class="rounded-md px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100">4</button>
+                        </div>
+                        <span id="results-count" class="text-xs font-medium text-slate-400">cargando...</span>
+                    </div>
+                </div>
+
+                <!-- GRILLA DE TARJETAS -->
+                <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6"></div>
+
+                <!-- BOTÓN CARGAR MÁS -->
+                <div class="mt-10 text-center">
+                    <button 
+                        id="btn-load-more" 
+                        onclick="cargarMasProductos()"
+                        class="hidden bg-white hover:bg-sky-50/50 text-slate-600 border border-slate-200 hover:border-sky-200 font-semibold px-6 py-3 rounded-xl text-sm transition duration-200 shadow-sm"
+                    >
+                        Cargar más productos ⬇️
+                    </button>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <footer class="border-t border-slate-200/60 bg-white py-6 mt-16 text-center text-xs text-slate-400">
+        <p>Cafe-sitios &copy; 2026 &bull; Comparador automático de café de especialidad</p>
+    </footer>
+
+    <!-- LOGICA JAVASCRIPT Y SEGUIMIENTO DE EVENTOS (ANALYTICS) -->
+    <script>
+        const API_BASE_ORIGIN = (window.APP_CONFIG && window.APP_CONFIG.apiBaseUrl) ? window.APP_CONFIG.apiBaseUrl : "http://localhost:8000";
+        const API_V1_BASE_URL = `${API_BASE_ORIGIN.replace(/\/+$/, "")}/api/v1`;
+        const API_URL = `${API_V1_BASE_URL}/products`;
+        const STORES_API_URL = `${API_V1_BASE_URL}/stores`;
+        let paginaActual = 1;
+        const limitePorPagina = 30;
+        let totalCargados = 0;
+        const initialFilters = new URLSearchParams(window.location.search);
+        let tiendaSeleccionada = initialFilters.get("store_name") || initialFilters.get("store") || initialFilters.get("tienda") || "";
+        let procesoSeleccionado = initialFilters.get("process") || "";
+        let paisSeleccionado = initialFilters.get("country") || initialFilters.get("pais_origen") || "";
+        let minPrecioSeleccionado = initialFilters.get("min_price") || "";
+        let maxPrecioSeleccionado = initialFilters.get("max_price") || "";
+        let variedadSeleccionada = initialFilters.get("variety") || initialFilters.get("variedad") || "";
+        let notasSeleccionadas = initialFilters.get("notes") || initialFilters.get("notas_cata") || initialFilters.get("tasting_notes") || "";
+        let columnasCatalogo = localStorage.getItem("catalog-columns") === "4" ? 4 : 3;
+
+        function establecerColumnasCatalogo(columnas) {
+            columnasCatalogo = columnas;
+            localStorage.setItem("catalog-columns", String(columnas));
+
+            const grid = document.getElementById("products-grid");
+            grid.classList.toggle("lg:grid-cols-3", columnas === 3);
+            grid.classList.toggle("lg:grid-cols-4", columnas === 4);
+            grid.classList.toggle("xl:grid-cols-3", columnas === 3);
+            grid.classList.toggle("xl:grid-cols-4", columnas === 4);
+
+            [3, 4].forEach((cantidad) => {
+                const button = document.getElementById(`columns-${cantidad}`);
+                const selected = cantidad === columnas;
+                button.setAttribute("aria-pressed", String(selected));
+                button.classList.toggle("bg-slate-800", selected);
+                button.classList.toggle("text-white", selected);
+                button.classList.toggle("text-slate-500", !selected);
+                button.classList.toggle("hover:bg-slate-100", !selected);
+            });
+        }
+
+        /**
+         * Envia eventos de métricas de usuario tanto a Google Analytics (gtag)
+         * como a Google Tag Manager (dataLayer).
+         */
+        function trackEvent(eventName, eventParams = {}) {
+            if (typeof window.gtag === 'function') {
+                window.gtag('event', eventName, eventParams);
+            }
+            if (window.dataLayer) {
+                window.dataLayer.push({
+                    event: eventName,
+                    ...eventParams
+                });
+            }
+            console.log(`[Analytics Event] ${eventName}:`, eventParams);
+        }
+
+        function sincronizarCamposAvanzados() {
+            document.getElementById("min-price-input").value = minPrecioSeleccionado;
+            document.getElementById("max-price-input").value = maxPrecioSeleccionado;
+            document.getElementById("country-input").value = paisSeleccionado;
+            document.getElementById("variety-input").value = variedadSeleccionada;
+            document.getElementById("store-input").value = tiendaSeleccionada;
+            document.getElementById("notes-input").value = notasSeleccionadas;
+        }
+
+        function toggleAdvancedFilters() {
+            const panel = document.getElementById("advanced-filters");
+            panel.classList.toggle("hidden");
+        }
+
+        function aplicarFiltrosAvanzados() {
+            const minPrice = document.getElementById("min-price-input").value.trim();
+            const maxPrice = document.getElementById("max-price-input").value.trim();
+            const country = document.getElementById("country-input").value.trim();
+            const variety = document.getElementById("variety-input").value.trim();
+            const store = document.getElementById("store-input").value.trim();
+            const notes = document.getElementById("notes-input").value.trim();
+
+            minPrecioSeleccionado = minPrice;
+            maxPrecioSeleccionado = maxPrice;
+            paisSeleccionado = country;
+            variedadSeleccionada = variety;
+            tiendaSeleccionada = store;
+            notasSeleccionadas = notes;
+
+            const url = new URL(window.location.href);
+            if (minPrice) url.searchParams.set("min_price", minPrice); else url.searchParams.delete("min_price");
+            if (maxPrice) url.searchParams.set("max_price", maxPrice); else url.searchParams.delete("max_price");
+            if (country) url.searchParams.set("country", country); else url.searchParams.delete("country");
+            if (variety) url.searchParams.set("variety", variety); else url.searchParams.delete("variety");
+            if (store) url.searchParams.set("store_name", store); else url.searchParams.delete("store_name");
+            if (notes) url.searchParams.set("notes", notes); else url.searchParams.delete("notes");
+            window.history.replaceState({}, "", url);
+
+            actualizarContextoCatalogo();
+            cargarTiendasDisponibles();
+            nuevaBusqueda();
+        }
+
+        function resetearFiltrosAvanzados() {
+            minPrecioSeleccionado = "";
+            maxPrecioSeleccionado = "";
+            paisSeleccionado = "";
+            variedadSeleccionada = "";
+            tiendaSeleccionada = "";
+            notasSeleccionadas = "";
+            const url = new URL(window.location.href);
+            ["min_price", "max_price", "country", "variety", "store_name", "notes", "store", "tienda", "pais_origen", "variedad", "notas_cata", "tasting_notes"].forEach((key) => url.searchParams.delete(key));
+            window.history.replaceState({}, "", url);
+            sincronizarCamposAvanzados();
+            actualizarContextoCatalogo();
+            cargarTiendasDisponibles();
+            nuevaBusqueda();
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            sincronizarCamposAvanzados();
+            cargarTiendasDisponibles();
+            cargarUltimaSincronizacion();
+            nuevaBusqueda();
+        });
+
+        document.getElementById("toggle-advanced-filters").addEventListener("click", toggleAdvancedFilters);
+        document.getElementById("btn-apply-filters").addEventListener("click", aplicarFiltrosAvanzados);
+        document.getElementById("btn-clear-filters").addEventListener("click", resetearFiltrosAvanzados);
+        document.getElementById("clear-advanced-filters").addEventListener("click", resetearFiltrosAvanzados);
+        document.getElementById("columns-3").addEventListener("click", () => establecerColumnasCatalogo(3));
+        document.getElementById("columns-4").addEventListener("click", () => establecerColumnasCatalogo(4));
+        establecerColumnasCatalogo(columnasCatalogo);
+
+        document.getElementById("search-input").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") nuevaBusqueda();
+        });
+
+        function nuevaBusqueda() {
+            paginaActual = 1;
+            totalCargados = 0;
+            document.getElementById("products-grid").innerHTML = "";
+
+            const query = document.getElementById("search-input").value.trim();
+            const sortBy = document.getElementById("sort-select").value;
+
+            // Registro analítico de la búsqueda
+            if (query) {
+                trackEvent('search', {
+                    search_term: query,
+                    sort_by: sortBy
+                });
+            }
+
+            obtenerProductos(false);
+        }
+
+        function cargarMasProductos() {
+            paginaActual++;
+            trackEvent('load_more_products', {
+                page: paginaActual
+            });
+            obtenerProductos(true);
+        }
+
+        async function cargarTiendasDisponibles() {
+            const storesSummaryContainer = document.getElementById("stores-summary");
+
+            try {
+                const params = new URLSearchParams({
+                    page: 1,
+                    page_size: 10,
+                    sort_by: "product_count_desc"
+                });
+
+                const response = await fetch(`${STORES_API_URL}?${params.toString()}`);
+                if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+
+                const data = await response.json();
+                const tiendas = data.items || [];
+
+                if (!tiendas.length) {
+                    storesSummaryContainer.innerHTML = '<span class="text-xs italic text-gray-400">No hay tiendas disponibles.</span>';
+                    return;
+                }
+
+                storesSummaryContainer.replaceChildren(...tiendas.map((tienda) => {
+                    const seleccionada = tienda.nombre === tiendaSeleccionada;
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = seleccionada
+                        ? "inline-flex items-center gap-2 bg-emerald-800 text-white border border-emerald-800 text-xs font-medium px-3 py-1.5 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                        : "inline-flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-100 text-xs font-medium px-3 py-1.5 rounded-full hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-300";
+                    button.setAttribute("aria-pressed", String(seleccionada));
+                    button.textContent = tienda.nombre;
+
+                    const count = document.createElement("span");
+                    count.className = seleccionada
+                        ? "bg-white/20 text-white px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+                        : "bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full text-[10px] font-bold";
+                    count.textContent = tienda.cantidad_productos;
+                    button.append(count);
+                    button.addEventListener("click", () => filtrarPorTienda(tienda.nombre));
+                    return button;
+                }));
+
+            } catch (error) {
+                console.error("Error cargando tiendas:", error);
+                storesSummaryContainer.innerHTML = '<span class="text-xs italic text-gray-400">No se pudieron cargar las tiendas.</span>';
+            }
+        }
+
+        function filtrarPorTienda(nombreTienda) {
+            tiendaSeleccionada = nombreTienda;
+            const url = new URL(window.location.href);
+
+            if (nombreTienda) {
+                url.searchParams.set("store_name", nombreTienda);
+            } else {
+                url.searchParams.delete("store_name");
+            }
+
+            window.history.replaceState({}, "", url);
+            actualizarContextoCatalogo();
+            cargarTiendasDisponibles();
+            nuevaBusqueda();
+        }
+
+        function actualizarContextoCatalogo() {
+            const activeFilters = [];
+            if (tiendaSeleccionada) activeFilters.push(`Tienda: ${tiendaSeleccionada}`);
+            if (procesoSeleccionado) activeFilters.push(`Proceso: ${procesoSeleccionado}`);
+            if (paisSeleccionado) activeFilters.push(`País: ${paisSeleccionado}`);
+            if (variedadSeleccionada) activeFilters.push(`Variedad: ${variedadSeleccionada}`);
+            if (notasSeleccionadas) activeFilters.push(`Notas: ${notasSeleccionadas}`);
+            if (minPrecioSeleccionado || maxPrecioSeleccionado) {
+                const priceText = [minPrecioSeleccionado ? `$${Number(minPrecioSeleccionado).toLocaleString('es-CL')}` : null, maxPrecioSeleccionado ? `$${Number(maxPrecioSeleccionado).toLocaleString('es-CL')}` : null].filter(Boolean).join(" - ");
+                activeFilters.push(`Precio: ${priceText}`);
+            }
+            document.getElementById("clear-store-filter").classList.toggle("hidden", activeFilters.length === 0);
+            document.getElementById("clear-advanced-filters").classList.toggle("hidden", activeFilters.length === 0);
+            document.getElementById("catalog-title").textContent = activeFilters.length
+                ? `Cafés relacionados · ${activeFilters.join(" · ")}`
+                : "Catálogo Destacado";
+        }
+
+        function limpiarFiltrosCatalogo() {
+            tiendaSeleccionada = "";
+            procesoSeleccionado = "";
+            paisSeleccionado = "";
+            minPrecioSeleccionado = "";
+            maxPrecioSeleccionado = "";
+            variedadSeleccionada = "";
+            notasSeleccionadas = "";
+            const url = new URL(window.location.href);
+            ["store_name", "process", "country", "min_price", "max_price", "variety", "notes", "store", "tienda", "pais_origen", "variedad", "notas_cata", "tasting_notes"].forEach((key) => url.searchParams.delete(key));
+            window.history.replaceState({}, "", url);
+            sincronizarCamposAvanzados();
+            actualizarContextoCatalogo();
+            cargarTiendasDisponibles();
+            nuevaBusqueda();
+        }
+
+        async function cargarUltimaSincronizacion() {
+            const lastSyncLabel = document.getElementById("last-sync-time");
+
+            try {
+                const response = await fetch(`${API_V1_BASE_URL}/sync/last`);
+                if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+
+                const data = await response.json();
+                if (!data.last_sync) {
+                    lastSyncLabel.textContent = "Sin sincronizaciones";
+                    return;
+                }
+
+                lastSyncLabel.textContent = new Date(data.last_sync).toLocaleString("es-CL", {
+                    day: "2-digit", month: "2-digit", year: "numeric",
+                    hour: "2-digit", minute: "2-digit"
+                }) + " hrs";
+            } catch (error) {
+                console.error("Error cargando la última sincronización:", error);
+                lastSyncLabel.textContent = "No disponible";
+            }
+        }
+
+        async function obtenerProductos(append = false) {
+            const query = document.getElementById("search-input").value.trim();
+            const sortBy = document.getElementById("sort-select").value;
+            const gridContainer = document.getElementById("products-grid");
+
+            if (!append) {
+                gridContainer.innerHTML = `
+                    <div class="col-span-full py-16 text-center text-slate-400">
+                        <div class="inline-block animate-spin rounded-full h-7 w-7 border-2 border-sky-400 border-t-transparent mb-3"></div>
+                        <p class="text-xs">Buscando las mejores ofertas...</p>
+                    </div>
+                `;
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    sort_by: sortBy,
+                    limit: limitePorPagina,
+                    only_available: true
+                });
+
+                if (query) params.append("search_query", query);
+                if (tiendaSeleccionada) params.append("store_name", tiendaSeleccionada);
+                if (procesoSeleccionado) params.append("process", procesoSeleccionado);
+                if (paisSeleccionado) params.append("country", paisSeleccionado);
+                if (minPrecioSeleccionado) params.append("min_price", minPrecioSeleccionado);
+                if (maxPrecioSeleccionado) params.append("max_price", maxPrecioSeleccionado);
+                if (variedadSeleccionada) params.append("variety", variedadSeleccionada);
+                if (notasSeleccionadas) params.append("notes", notasSeleccionadas);
+
+                const response = await fetch(`${API_URL}?${params.toString()}`);
+                if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+
+                const result = await response.json();
+                renderizarCatalogo(result.data, result.total_items, append);
+
+            } catch (error) {
+                console.error("Error API:", error);
+                if (!append) {
+                    gridContainer.innerHTML = `
+                        <div class="col-span-full bg-slate-100 border border-slate-200 text-slate-600 p-6 rounded-2xl text-center text-xs">
+                            ❌ No se pudo conectar con la API en <code>${API_BASE_ORIGIN}</code>.
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function trackOutboundClick(tienda, productoNombre, precio, url) {
+            trackEvent('outbound_click', {
+                store_name: tienda,
+                product_name: productoNombre,
+                price: precio,
+                destination_url: url
+            });
+            trackEvent('select_item', {
+                item_name: productoNombre,
+                item_brand: tienda,
+                price: precio
+            });
+        }
+
+        function renderizarCatalogo(productos, totalItems, append) {
+            const gridContainer = document.getElementById("products-grid");
+            const countLabel = document.getElementById("results-count");
+            const btnLoadMore = document.getElementById("btn-load-more");
+
+            totalCargados += productos.length;
+            actualizarContextoCatalogo();
+            countLabel.textContent = `Mostrando ${totalCargados} de ${totalItems} resultados`;
+
+            if (!append && productos.length === 0) {
+                gridContainer.innerHTML = `
+                    <div class="col-span-full bg-white p-12 text-center rounded-2xl border border-slate-200/60 text-slate-400 text-sm">
+                        ☕ No se encontraron cafés que coincidan con la búsqueda.
+                    </div>
+                `;
+                btnLoadMore.classList.add("hidden");
+                return;
+            }
+
+            const htmlTarjetas = productos.map(item => {
+                const varData = item.variante;
+                const esRegalo = varData.precio_clp === 0 || varData.precio_original_clp === 0;
+                const esOferta = varData.en_oferta && !esRegalo;
+                const imagenUrl = item.imagen || "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop";
+
+                return `
+                    <article class="group flex flex-col justify-between overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm transition-all duration-200 hover:border-emerald-200 hover:shadow-md">
+                        
+                        <div>
+                            <div class="relative flex h-48 items-center justify-center overflow-hidden bg-[#F7F6F0] p-4">
+                                <img src="${imagenUrl}" alt="${item.nombre}" class="h-full w-full object-contain drop-shadow-sm transition duration-300 group-hover:scale-105">
+                                
+                                <span class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-slate-700 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
+                                    ${item.tienda}
+                                </span>
+
+                                ${esRegalo ? `
+                                    <span class="absolute top-3 right-3 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-extrabold text-emerald-800 shadow-sm">
+                                        🎁 Regalo / Muestra
+                                    </span>
+                                ` : esOferta ? `
+                                    <span class="absolute top-3 right-3 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-900 shadow-sm">
+                                        -${varData.descuento_porcentaje}% OFF
+                                    </span>
+                                ` : ''}
+                            </div>
+
+                            <div class="p-4 space-y-2">
+                                <h3 class="font-bold text-slate-800 text-sm line-clamp-2 leading-snug group-hover:text-sky-700 transition">
+                                    ${item.nombre}
+                                </h3>
+
+                                <div class="flex items-center gap-1.5 text-[11px] text-slate-400">
+                                    <span class="rounded-md bg-stone-100 px-2 py-0.5 font-medium text-gray-600">
+                                        ${varData.formato_gramos}g &bull; ${varData.opcion}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 pt-0 space-y-3">
+                            <div class="border-t border-slate-100 pt-3 flex justify-between items-end">
+                                <div>
+                                    <p class="text-[10px] uppercase font-bold text-slate-400">Precio / kg</p>
+                                    ${esRegalo ? `
+                                        <p class="text-sm font-bold text-emerald-600">¡Gratis!</p>
+                                    ` : `
+                                        <p class="text-base font-extrabold text-emerald-700">
+                                            $${varData.precio_por_kilo.toLocaleString('es-CL')} <span class="text-[10px] font-normal text-slate-400">/kg</span>
+                                        </p>
+                                    `}
+                                </div>
+
+                                <div class="text-right">
+                                    ${esRegalo ? `
+                                        <span class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
+                                            $0 CLP
+                                        </span>
+                                    ` : `
+                                        ${esOferta ? `<p class="text-[10px] text-slate-400 line-through">$${varData.precio_original_clp.toLocaleString('es-CL')}</p>` : ''}
+                                        <p class="text-sm font-bold text-slate-800">
+                                            $${varData.precio_clp.toLocaleString('es-CL')}
+                                        </p>
+                                    `}
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <a href="product.html?id=${item.id}" class="rounded-xl border border-stone-200 bg-white px-2 py-2.5 text-center text-xs font-semibold text-gray-700 transition hover:bg-stone-50">
+                                    Ver detalle
+                                </a>
+                                <a 
+                                    href="${item.url_detalle}" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    onclick="trackOutboundClick('${item.tienda}', '${item.nombre.replace(/'/g, "\'")}', ${varData.precio_clp}, '${item.url_detalle}')"
+                                    class="rounded-xl border border-sky-100 bg-sky-50 px-2 py-2.5 text-center text-xs font-semibold text-sky-800 transition hover:bg-sky-100"
+                                >
+                                    Ver en tienda ↗
+                                </a>
+                            </div>
+                        </div>
+
+                    </article>
+                `;
+            }).join('');
+
+            if (append) {
+                gridContainer.insertAdjacentHTML("beforeend", htmlTarjetas);
+            } else {
+                gridContainer.innerHTML = htmlTarjetas;
+            }
+
+            if (totalCargados < totalItems) {
+                btnLoadMore.classList.remove("hidden");
+            } else {
+                btnLoadMore.classList.add("hidden");
+            }
+
+        }
+
+    </script>
+</body>
+</html>

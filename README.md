@@ -14,6 +14,9 @@ cafe-sitios/
 ├── requirements.txt
 ├── application.py          # Script principal de escaneo e ingesta
 ├── main.py                 # Servidor de FastAPI
+├── index.html              # Catálogo y acceso a fichas de producto
+├── stores.html             # Listado de tiendas
+├── product.html            # Detalle de producto e historial de precios
 ├── db/                     # Configuración y modelos SQLAlchemy
 ├── scrapper/               # Drivers de extracción (Shopify, etc.)
 ├── domain/                 # Entidades e Interfaces de Dominio (DDD)
@@ -24,12 +27,55 @@ cafe-sitios/
 
 ## Ejecución
 1. Instalar dependencias: `pip install -r requirements.txt`
-2. Ejecutar el scraper: `python application.py`
-3. Iniciar la API: `python -m uvicorn main:app --reload`
-4. Ejecutar test: `python -m unittest discover tests`
+2. Aplicar migraciones: `alembic upgrade head`
+3. Ejecutar el scraper: `python scrapper_application.py`
+4. Iniciar la API: `python -m uvicorn main:app --reload`
+5. Ejecutar test: `python -m unittest discover tests`
+
+### Despliegue del frontend en Vercel
+
+Importe el repositorio en Vercel y configure `frontend-website` como **Root Directory**. Use `npm run build` como comando de build y `dist` como directorio de salida. El build genera `env-config.js` con estas variables de entorno:
+
+- `API_BASE_URL` (obligatoria): URL pública base de la API, sin `/api/v1` al final.
+- `GTM_ID` (opcional): identificador de Google Tag Manager (`GTM-...`).
+- `GA_MEASUREMENT_ID` (opcional): identificador de medición GA4 (`G-...`).
+
+Configure los valores de `API_BASE_URL` y los identificadores de analítica por separado para los entornos Preview/calidad y Production. Los identificadores de analítica pueden omitirse para desactivar esa integración en un entorno. Al ser variables usadas durante el build de un sitio estático, sus valores quedan incluidos en los archivos públicos generados; no use secretos en ellas.
+
+### Versionado de base de datos
+
+El esquema se versiona con Alembic. Al iniciar el scraper, una base heredada sin `alembic_version` se adopta automáticamente si contiene las tablas principales del esquema anterior; si falta la tabla auxiliar `estado_sincronizacion`, se crea antes de registrar el baseline. Luego se aplican las revisiones pendientes. Las bases vacías reciben todas las migraciones. Si se ejecutan migraciones manualmente sobre una base heredada, primero se debe marcar el baseline:
+
+```bash
+alembic stamp 0001_baseline
+alembic upgrade head
+```
+
+En una base vacía basta con ejecutar `alembic upgrade head`. Cada fila de `sincronizaciones` representa una ejecución por tienda y almacena fechas, resultado, detalle de error y conteos de productos agregados, eliminados y actualizados.
+
+Tiendas, productos y variantes registran `fecha_creacion` y `fecha_actualizacion`; la fecha de creación se conserva en las sincronizaciones posteriores y la de actualización cambia cuando se modifica el registro. Los productos conservan además su `id_externo` de la tienda (ID de plataforma o SKU disponible), separado del ID interno de la base de datos, para reconocerlos aunque cambie su URL.
+
+El detalle abre una página propia (`product.html?id=<id>`), conserva el encabezado del catálogo y muestra la descripción HTML saneada, las variantes y un gráfico Chart.js con la evolución diaria del precio por variante. Su barra fija inferior muestra las notas de cata, enlaza al catálogo filtrado por proceso o país de origen e incluye el acceso de compra a la tienda. El endpoint `/api/v1/products/{id}/detail` devuelve el historial y estos atributos.
+
+El scraper consulta las tiendas con `activo = true` en la base de datos y usa sus campos `plataforma` y `url_base`; no crea ni actualiza registros de tienda durante la sincronización. Si una tienda heredada aún tiene `plataforma = 'desconocida'`, prueba los drivers soportados con su `url_base` sin modificar la tienda. Para desactivar o reactivar una tienda comercialmente, cambie su campo `activo`:
+
+```sql
+UPDATE tiendas SET activo = FALSE WHERE id = 1;
+UPDATE tiendas SET activo = TRUE WHERE id = 1;
+```
+
+Los productos que desaparecen de una tienda también se conservan: pasan a `activo = false`, junto con sus variantes e historial, y se reactivan si vuelven a aparecer.
+
+Durante la sincronización se extraen, mediante reglas y etiquetas en español/inglés, notas de cata, proceso, finca, variedad, elevación, cosecha y tipo/duración de fermentación. Las notas se normalizan y relacionan con productos a través de `notas_cata` y `producto_notas_cata`, para encontrar cafés con notas compartidas. Cada dato extraído conserva el fragmento de origen, nivel de confianza y versión de reglas. Si una descripción no aporta un dato, queda desconocido; no se infiere ni se inventa. La respuesta de `/api/v1/products/{id}/detail` incluye estos atributos y sus notas.
+
+La confianza es una señal heurística de extracción etiquetada, no una probabilidad calibrada. Cada sincronización informa en consola la cobertura detectada por atributo para identificar qué campos quedan sin reconocer antes de considerar un modelo de lenguaje.
 
 ## Links de interes
 - Documentación Interactiva (Swagger UI): http://localhost:8000/docs
 - Documentación ReDoc: http://localhost:8000/redoc
 - Healthcheck: http://localhost:8000/
-- Endpoint de Productos más Baratos: http://localhost:8000/api/v1/products/cheapest?sort_by=kilo
+- Endpoint de Productos más Baratos: http://localhost:8000/api/v1/products?sort_by=kilo
+- Catálogo filtrado por proceso y origen: http://localhost:8000/api/v1/products?sort_by=kilo&process=natural&country=Etiop%C3%ADa
+- Listado paginado de tiendas: http://localhost:8000/api/v1/stores?page=1&page_size=10&sort_by=product_count_desc
+- Detalle de producto y variantes: http://localhost:8000/api/v1/products/1/detail
+- Última sincronización: http://localhost:8000/api/v1/sync/last

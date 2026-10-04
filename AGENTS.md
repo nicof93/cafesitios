@@ -1,115 +1,120 @@
-# AGENTS.md - Guía de Contexto para Agentes de IA
+# AGENTS.md - Protocolo de Eficiencia y Contexto para Agentes de IA
 
-Este documento describe la arquitectura, convenciones, comandos canónicos y reglas de negocio del proyecto **Cafe-sitios** para facilitar el trabajo autónomo de agentes de inteligencia artificial y desarrolladores.
-
----
-
-## 1. Visión General del Proyecto
-
-**Cafe-sitios** es una plataforma de agregación, normalización y comparación de precios de café de especialidad en Chile.
-- **Scraper / ETL:** Extrae catálogos y variantes de tiendas de especialidad en distintas plataformas (Shopify y WooCommerce Store API) y almacena el historial de precios.
-- **Base de Datos:** PostgreSQL (local o Supabase) gestionado mediante SQLAlchemy ORM con el driver `psycopg` (psycopg3).
-- **Backend API:** FastAPI estructurado bajo **Domain-Driven Design (DDD)** y Clean Architecture (Nivel 2 de Madurez de Richardson).
+Este documento establece los contratos de datos, la arquitectura y las reglas de ejecucion para **Cafe-sitios**. Todo agente que opere en este repositorio debe cumplir estas directivas para maximizar la autonomia y **minimizar el consumo innecesario de tokens/creditos**.
 
 ---
 
-## 2. Comandos Canónicos de Desarrollo
+## 1. Estrategia de Ahorro de Creditos y Optimizacion de Flujo (CRITICO)
 
-Todos los comandos se deben ejecutar desde la raíz del espacio de trabajo.
+Para evitar consumo desmedido de ventana de contexto y llamadas de herramientas innecesarias:
 
-### Ejecución de Pruebas Unitarias
-```bash
-# Ejecutar toda la suite de pruebas
-python -m unittest discover tests
-
-# Ejecutar en modo detallado (verbose)
-python -m unittest discover tests -v
-
-# Ejecutar una suite específica
-python -m unittest tests/test_woocommerce_driver.py
-python -m unittest tests/test_driver.py
-python -m unittest tests/test_api.py
-python -m unittest tests/test_use_cases.py
-python -m unittest tests/test_domain.py
-```
-
-### Ejecución de la Aplicación
-```bash
-# Ejecutar pipeline de scraping y persistencia en base de datos
-python scrapper_application.py
-
-# Iniciar servidor FastAPI en modo desarrollo
-python -m uvicorn main:app --reload
-```
+1. **Aislamiento de Tareas (Edicion Quirurgica):**
+   * Modifica **unicamente** los archivos directamente involucrados en la solicitud.
+   * NO leas todo el proyecto para resolver un problema puntual. Usa la estructura del mapa para ir directo al archivo.
+2. **Ejecucion de Pruebas Focalizadas:**
+   * **NUNCA** ejecutes la suite completa de pruebas ('discover') salvo que el usuario lo pida o sea un cambio estructural global.
+   * Corre exclusivamente la prueba unitaria del modulo afectado (ej. 'python -m unittest tests/test_woocommerce_driver.py').
+3. **Procesamiento Muestral en Scraping:**
+   * Al depurar o crear drivers de scraping, **NO cargues respuestas JSON o HTML completas en el chat**. Trabaja con fragmentos de muestra o mocks locales en 'tests/'.
+4. **Respeto Estricto de Librerias ('requirements.txt'):**
+   * NO intentes instalar ni sugerir paquetes adicionales (como 'pytest', 'httpx', 'pydantic-settings'). Usa unicamente la pila existente.
+5. **No tocar 'README.md' innecesariamente:**
+   * Modifica 'README.md' unicamente si la tarea cambia explicitamente la instalacion, configuracion, variables de entorno o comandos de ejecucion principales.
 
 ---
 
-## 3. Mapa de Arquitectura y Estructura
+## 2. Vision General y Stack Tecnologico Fijo
 
-El proyecto implementa una arquitectura en capas desacoplada:
+* **Proyecto:** Agregador y comparador de precios de cafe de especialidad en Chile.
+* **Lenguaje:** Python 3.11+ con **Type Hints estrictos** (obligatorios en firmas de funciones/metodos).
+* **Dependencias Fijas ('requirements.txt'):**
+  * 'fastapi >= 0.100.0' | 'uvicorn >= 0.22.0'
+  * 'sqlalchemy >= 2.0.0' (Sintaxis 2.0 con 'select()', no usar '.query()')
+  * 'alembic >= 1.13.0'
+  * 'psycopg[binary] >= 3.1.0' (Driver Psycopg 3 para PostgreSQL)
+  * 'pydantic >= 2.0.0' (Sintaxis Pydantic v2: 'ConfigDict', 'from_attributes', 'Field')
+  * 'requests >= 2.31.0' | 'python-dotenv >= 1.0.0'
+* **Testing:** Modulo nativo 'unittest'.
 
-```
+---
+
+## 3. Mapa de Arquitectura (DDD Simplificado)
+
 cafe-sitios/
-├── domain/                      # Capa de Dominio (Pura, sin dependencias externas)
-│   ├── models.py                # Entidades: CoffeeProduct, Variant
-│   └── repositories.py          # Interfaces/Contratos: ProductRepository
-├── application/                 # Capa de Aplicación (Casos de Uso)
-│   └── get_cheapest_products.py # Use Case: ordenamiento por $/kg o $/unidad
-├── infrastructure/              # Capa de Infraestructura
-│   └── postgres_repository.py   # Implementación del repositorio usando SQLAlchemy
-├── api/                         # Capa de Presentación / Transporte
-│   ├── router.py                # Endpoints FastAPI (/api/v1/products/...)
-│   └── schemas.py               # DTOs y Schemas de validación Pydantic
-├── db/                          # Persistencia Relacional
-│   ├── config.py                # Carga de variables de entorno (.env)
-│   └── database.py              # Modelos ORM (Tienda, Producto, Variante, HistorialPrecio)
-├── scrapper/                    # Drivers de Extracción
-│   ├── shopify_driver.py        # Driver para tiendas Shopify (/products.json)
-│   └── woocommerce_driver.py    # Driver para WooCommerce (/wp-json/wc/store/v1/products)
-├── tests/                       # Suite de pruebas automatizadas
-├── scrapper_application.py      # Entrypoint del scraping general
-├── main.py                      # Entrypoint de la API FastAPI
-└── AGENTS.md                    # Este archivo de instrucciones
-```
+├── domain/                  # Entidades puras y Contratos (CERO dependencias externas)
+│   ├── models.py            # Dataclasses: CoffeeProduct, Variant, Store
+│   └── repositories.py      # Interfaces/ABCs: ProductRepository
+├── application/             # Casos de Uso (Orquestacion sin detalles de infraestructura)
+│   └── get_cheapest_products.py
+├── infrastructure/          # Adaptadores E/S y Persistencia
+│   └── postgres_repository.py # Implementacion SQLAlchemy 2.0 de ProductRepository
+├── api/                     # Capa HTTP (FastAPI)
+│   ├── router.py            # APIRouter (/api/v1/products/...)
+│   └── schemas.py           # DTOs Pydantic v2
+├── db/                      # Configuracion de BD y Modelos ORM
+│   ├── config.py            # Carga de variables (.env)
+│   └── database.py          # Tablas SQLAlchemy (DeclarativeBase)
+├── alembic/                 # Migraciones de base de datos
+├── scrapper/                # Drivers ETL (Shopify JSON / WooCommerce Store API)
+├── tests/                   # Pruebas automatizadas con unittest
+├── scrapper_application.py  # Entrypoint ETL
+├── main.py                  # Entrypoint API
+└── AGENTS.md                # Instrucciones de contexto
 
 ---
 
-## 4. Reglas de Negocio y Normalización de Datos
+## 4. Comandos Canonicos de Desarrollo
 
-Cualquier nuevo driver, modelo o cambio debe cumplir estrictamente estas reglas:
+Todos los comandos se ejecutan desde la raiz del proyecto.
 
-1. **Precios en Pesos Chilenos (CLP):**
-   * `precio_clp` y `precio_original_clp` son siempre números enteros (`int`).
-   * WooCommerce Store API puede incluir `currency_minor_unit`; para CLP es 0, pero si es mayor a 0, se debe dividir entre $10^{\text{minor\_unit}}$.
-2. **Formato en Gramos (`formato_gramos`):**
-   * Siempre es un número entero (`int`).
-   * Patrones aceptados: `250g`, `250-gr`, `1kg`, `1-kilo`, `500 gramos`.
-   * Si no se especifica peso en la variante ni en el producto, el valor por defecto es **250** (formato estándar de café de especialidad en Chile).
-3. **Precio por Kilo (`precio_por_kilo`):**
-   * Cálculo estándar: `round((precio_clp / formato_gramos) * 1000, 2)`.
-   * Si el precio es 0 o formato es 0, debe ser `0.0`.
-4. **Detección de Ofertas:**
-   * `en_oferta`: `True` si `precio_original_clp > precio_clp`, de lo contrario `False`.
-   * `descuento_porcentaje`: entero redondeado del porcentaje de rebaja, o `0`.
-5. **Identificadores Únicos:**
-   * `Producto.url_detalle`: único en la tabla `productos`.
-   * `Variante.id_variante_externo`: string único en la tabla `variantes`.
-6. **Mapeo de Atributos en WooCommerce:**
-   * Los slugs en `variations.attributes` (ej. `250-gr`, `molido-para-espresso`) se deben resolver a nombres legibles usando el diccionario `attributes.terms` del producto (ej. `"250 gr."`, `"molido para espresso"`).
+1. Pruebas unitarias puntuales (Usar SIEMPRE preferentemente):
+   python -m unittest tests/test_woocommerce_driver.py
+   python -m unittest tests/test_driver.py
+   python -m unittest tests/test_api.py
+
+2. Migraciones con Alembic:
+   alembic revision --autogenerate -m \"descripcion\"
+   alembic upgrade head
+
+3. Ejecucion local:
+   python scrapper_application.py          # Correr scraper
+   python -m uvicorn main:app --reload      # Correr API FastAPI
 
 ---
 
-## 5. Gotchas Técnicas y Consideraciones del Entorno
+## 5. Contratos de Datos y Reglas de Negocio Invariantes
 
-1. **Codificación en Windows (CP1252 vs UTF-8):**
-   * Los scripts que imprimen emojis en consola deben configurar `sys.stdout.reconfigure(encoding="utf-8")` si se ejecutan en Windows para evitar `UnicodeEncodeError`.
-2. **Conexión a Base de Datos (Supabase / PostgreSQL):**
-   * La cadena de conexión en `.env` debe usar el formato `postgresql+psycopg://...` o `postgresql://...`.
-   * Si la contraseña contiene caracteres especiales como `#`, debe entrecomillarse en `.env` y si es necesario codificarse como `%23` en la URL.
-   * `DatabaseManager` incluye `pool_pre_ping=True` y `pool_recycle=300` para evitar sockets cerrados por *idle timeout*.
-   * La persistencia se realiza con commits en lotes (cada 20 productos) y caché en memoria de tiendas (`tiendas_cache`) para minimizar la latencia sobre conexiones remotas.
-3. **Drivers:**
-   * Cada clase de driver debe implementar:
-     * `@staticmethod extraer_gramos(texto: Optional[str], default: int = 250) -> int`
-     * `@staticmethod calcular_precio_por_kilo(precio_clp: int, formato_gramos: int) -> float`
-     * `consumir_productos() -> List[Dict[str, Any]]`
+Cualquier nuevo driver, endpoint o caso de uso debe cumplir sin excepcion:
+
+1. Precios (CLP): 'precio_clp' y 'precio_original_clp' son enteros ('int'). Si la fuente incluye 'minor_unit', dividir entre 10^minor_unit.
+2. Gramos ('formato_gramos'): Entero ('int'). Patrones: '250g', '1kg' (-> 1000). Fallback predeterminado = 250.
+3. Precio por Kilo: 'round((precio_clp / formato_gramos) * 1000, 2)'. Si el precio o gramos es <= 0, retorna 0.0.
+4. Ofertas: 'en_oferta = True' si 'precio_original_clp > precio_clp'.
+5. Pydantic v2 Syntax:
+   from pydantic import BaseModel, ConfigDict
+   class ProductSchema(BaseModel):
+       model_config = ConfigDict(from_attributes=True)
+6. Interfaz de Drivers Scraping:
+   class BaseDriver:
+       @staticmethod
+       def extraer_gramos(texto: Optional[str], default: int = 250) -> int: ...
+       @staticmethod
+       def calcular_precio_por_kilo(precio_clp: int, formato_gramos: int) -> float: ...
+       def consumir_productos(self) -> List[Dict[str, Any]]: ...
+
+---
+
+## 6. Gotchas Tecnicas Entorno / BD
+
+* Windows CP1252 Encoding: Si un script o test imprime emojis/caracteres especiales en consola, debe incluir:
+  if sys.platform == 'win32': sys.stdout.reconfigure(encoding='utf-8')
+* Conexion PostgreSQL (Psycopg 3): Usar siempre 'postgresql+psycopg://' en la URL. Contrasenas con caracteres especiales deben codificarse en URL (ej: '#' -> '%23').
+* SQLAlchemy Batching: Las inserciones/actualizaciones masivas de productos en 'postgres_repository.py' se procesan en lotes de 20 a 50 items para evitar idle timeouts con Supabase.
+
+---
+
+## 7. Politica de Git y Commits
+
+1. Commits Bajo Demanda: NO generar commits automaticos salvo que el usuario lo solicite expresamente.
+2. Formato: Conventional Commits en espanol ('feat(scrapper): driver para jumpseller', 'fix(api): corregir filtro de precios').
+3. Proteccion de Ramas: Nunca confirmar directamente sobre 'main' o 'master' si hay cambios remotos pendientes; trabajar en ramas de caracteristicas ('feat/', 'fix/').

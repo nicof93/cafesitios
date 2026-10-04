@@ -72,8 +72,7 @@ class ShopifyDriver:
                 logging.warning(f"[{self.nombre}] Error al conectar a {url}: {e}")
 
         if not data or 'products' not in data:
-            logging.error(f"❌ [{self.nombre}] No se pudo obtener catálogo en ningún endpoint de Shopify.")
-            return []
+            raise RuntimeError(f"No se pudo obtener catálogo en ningún endpoint de Shopify para '{self.nombre}'.")
 
         productos_raw = data.get('products', [])
         productos_normalizados = []
@@ -134,6 +133,7 @@ class ShopifyDriver:
 
             productos_normalizados.append({
                 'tienda': self.nombre,
+                'id_externo': str(prod.get('id') or prod.get('sku')) if prod.get('id') or prod.get('sku') else None,
                 'nombre': titulo_prod,
                 'url_detalle': url_detalle,
                 'imagen': imagen_url,
