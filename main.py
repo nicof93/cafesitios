@@ -7,7 +7,13 @@ from api.stores import router as stores_router
 from api.sync import router as sync_router
 
 # Configuración de documentación OpenAPI según ambiente
-is_production = os.getenv("ENVIRONMENT", "").strip().lower() in ("production", "prod")
+is_render = os.getenv("RENDER", "").strip().lower() == "true"
+is_production = (
+    is_render
+    or os.getenv("ENVIRONMENT", "").strip().lower() in ("production", "prod", "produccion", "producción")
+    or os.getenv("ENV", "").strip().lower() in ("production", "prod", "produccion", "producción")
+    or os.getenv("APP_ENV", "").strip().lower() in ("production", "prod", "produccion", "producción")
+)
 enable_docs_env = os.getenv("ENABLE_DOCS")
 
 if enable_docs_env is not None:
