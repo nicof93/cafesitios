@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f8fafc">
+    <title>Detalle de producto | Cafe-sitios</title>
+    <!-- Variables de ambiente para despliegues (Calidad / Producción / Local) -->
+    <meta name="api-base-url" content="__API_BASE_URL__">
+    <meta name="gtm-id" content="__GTM_ID__">
+    <meta name="ga-measurement-id" content="__GA_MEASUREMENT_ID__">
+
+    <!-- Carga y resolución de configuración de ambiente -->
+    <script src="./env-config.js"></script>
+    <script>
+        (function() {
+            const rawConfig = window.APP_CONFIG || {};
+            const metaApi = document.querySelector('meta[name="api-base-url"]')?.getAttribute("content");
+            const metaGtm = document.querySelector('meta[name="gtm-id"]')?.getAttribute("content");
+            const metaGa = document.querySelector('meta[name="ga-measurement-id"]')?.getAttribute("content");
+
+            function sanitize(val) {
+                if (typeof val === "string" && val.trim() && !val.trim().startsWith("__")) {
+                    return val.trim();
+                }
+                return "";
+            }
+
+            let apiBaseUrl = sanitize(rawConfig.apiBaseUrl) || sanitize(metaApi);
+
+            if (!apiBaseUrl) {
+                const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname) || window.location.protocol === "file:";
+                apiBaseUrl = isLocal ? "http://localhost:8000" : window.location.origin;
+            }
+            apiBaseUrl = apiBaseUrl.replace(/\/+$/, "");
+
+            const gtmId = sanitize(rawConfig.googleTagManagerId) || sanitize(metaGtm);
+            const gaId = sanitize(rawConfig.googleAnalyticsId) || sanitize(metaGa);
+
+            window.APP_CONFIG = Object.freeze({
+                apiBaseUrl: apiBaseUrl,
+                googleTagManagerId: gtmId,
+                googleAnalyticsId: gaId
+            });
+        })();
+    </script>
+    <script src="./analytics.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+    <style>
+        .product-copy h1,
+        .product-copy h2,
+        .product-copy h3,
+        .product-copy h4 {
+            margin: 1.25rem 0 0.5rem;
+            color: #1e293b;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+        .product-copy h1 { font-size: 1.5rem; }
+        .product-copy h2 { font-size: 1.25rem; }
+        .product-copy h3 { font-size: 1.125rem; }
+        .product-copy p { margin: 0.75rem 0; line-height: 1.75; }
+        .product-copy h1,
+        .product-copy h2,
+        .product-copy h3,
+        .product-copy h4 { color: #1f2937; }
+        .product-copy ul,
+        .product-copy ol { margin: 0.75rem 0; padding-left: 1.5rem; }
+        .product-copy ul { list-style: disc; }
+        .product-copy ol { list-style: decimal; }
+        .product-copy li { margin: 0.25rem 0; }
+        .product-copy blockquote {
+            margin: 1rem 0;
+            border-left: 3px solid #047857;
+            padding-left: 1rem;
+            color: #475569;
+        }
+        .product-copy img { max-width: 100%; height: auto; border-radius: 0.75rem; }
+        .product-copy table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+        .product-copy td,
+        .product-copy th { border: 1px solid #e7e5e4; padding: 0.5rem 0.75rem; }
+        .product-copy a { color: #047857; text-decoration: underline; text-underline-offset: 2px; }
+        .chart-wrap { position: relative; height: 320px; }
+        @media (max-width: 640px) {
+            .chart-wrap { height: 250px; }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-[#FCFBF7] text-gray-700 antialiased">
+    <!-- ANALYTICS_NOSCRIPT -->
+    <header class="sticky top-0 z-20 border-b border-stone-200/80 bg-white/95 backdrop-blur">
+        <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-4 sm:flex-row">
+            <div class="flex items-center gap-3">
+                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-sm font-bold text-emerald-700">☕</span>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-gray-900">Cafe-sitios</h1>
+                    <p class="text-xs font-normal text-gray-500">Comparador de café de especialidad en Chile</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3.5 py-1 text-xs text-emerald-800 shadow-sm">
+                <span class="h-2 w-2 animate-pulse rounded-full bg-emerald-400"></span>
+                <span>Última sincronización: <strong id="last-sync-time" class="font-semibold">Cargando...</strong></span>
+            </div>
+        </div>
+    </header>
+
+    <nav aria-label="Breadcrumbs" class="mx-auto max-w-6xl px-4 pb-2 pt-6">
+        <ol class="flex items-center gap-2 text-sm text-gray-500">
+            <li><a href="index.html" class="transition-colors hover:text-gray-900">Inicio</a></li>
+            <li aria-hidden="true">/</li>
+            <li><a href="stores.html" class="transition-colors hover:text-gray-900">Tostadurías</a></li>
+            <li aria-hidden="true">/</li>
+            <li id="breadcrumb-product" aria-current="page" class="truncate font-medium text-gray-900">Producto</li>
+        </ol>
+    </nav>
+
+    <main class="mx-auto max-w-6xl space-y-7 px-4 py-5 pb-36 sm:px-6 sm:py-7 sm:pb-32">
+        <div id="page-status" role="status" aria-live="polite" class="rounded-2xl border border-stone-200 bg-white py-16 text-center text-sm text-gray-500 shadow-sm">
+            <span class="mb-3 inline-block h-6 w-6 animate-spin rounded-full border-2 border-emerald-700 border-t-transparent"></span>
+            <p>Cargando producto...</p>
+        </div>
+
+        <article id="product-page" class="hidden space-y-7">
+            <section aria-labelledby="product-name" class="grid grid-cols-1 items-start gap-8 md:grid-cols-12">
+                <div id="image-wrap" class="relative flex min-h-[340px] items-center justify-center overflow-hidden rounded-2xl border border-stone-200/70 bg-[#F7F6F0] p-8 shadow-sm md:col-span-5 md:min-h-[440px]">
+                    <div id="image-placeholder" class="text-center text-5xl text-emerald-800/30" aria-hidden="true">☕</div>
+                    <img id="product-image" alt="" class="hidden max-h-[380px] w-auto max-w-full object-contain drop-shadow-xl transition-transform duration-300 hover:scale-105">
+                </div>
+                <div class="flex min-w-0 flex-col justify-center space-y-5 md:col-span-7">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <a id="store-name" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800 hover:bg-sky-100"></a>
+                        <span id="updated-at" class="text-xs text-gray-400"></span>
+                    </div>
+                    <h1 id="product-name" class="text-3xl font-extrabold leading-tight text-gray-900 sm:text-4xl"></h1>
+                    <dl id="product-specs" class="grid grid-cols-2 gap-x-4 gap-y-4 rounded-xl border border-gray-200/80 bg-white p-4 text-sm shadow-sm sm:grid-cols-3"></dl>
+                    <section aria-labelledby="tasting-heading" class="space-y-2">
+                        <h2 id="tasting-heading" class="text-xs font-bold uppercase tracking-wider text-gray-400">Notas de cata</h2>
+                        <div id="product-notes" class="flex flex-wrap gap-2"></div>
+                    </section>
+                    <section aria-labelledby="description-heading" class="border-t border-stone-200 pt-4">
+                        <h2 id="description-heading" class="text-xs font-bold uppercase tracking-wider text-gray-500">Descripción de la tienda</h2>
+                        <div id="product-description" class="product-copy mt-2 break-words text-sm text-gray-700"></div>
+                    </section>
+                </div>
+            </section>
+
+            <section aria-labelledby="history-heading" class="space-y-6 rounded-2xl border border-gray-200/80 bg-white p-5 shadow-sm sm:p-6">
+                <div class="flex flex-col gap-4 border-b border-gray-100 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <h2 id="history-heading" class="text-xl font-bold text-gray-900">Evolución del precio</h2>
+                        <p id="chart-caption" class="mt-1 text-xs text-gray-500">Historial diario de la variante seleccionada</p>
+                    </div>
+                    <div class="flex flex-wrap items-end gap-3">
+                        <label for="variant-select" class="grid gap-1 text-xs font-semibold text-gray-600">
+                            Variante
+                            <select id="variant-select" class="min-w-48 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm text-gray-800 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100"></select>
+                        </label>
+                        <div role="group" aria-label="Unidad del gráfico" class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+                            <button id="unit-price" type="button" aria-pressed="true" class="rounded-md px-3 py-1.5 text-xs font-semibold">Por unidad</button>
+                            <button id="kilo-price" type="button" aria-pressed="false" class="rounded-md px-3 py-1.5 text-xs font-semibold">Por kilo</button>
+                        </div>
+                    </div>
+                </div>
+                <dl class="grid grid-cols-1 gap-3 rounded-xl bg-stone-50 p-4 text-center sm:grid-cols-3">
+                    <div>
+                        <dt class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Precio actual</dt>
+                        <dd id="metric-current" class="mt-1 text-lg font-extrabold text-gray-900">--</dd>
+                    </div>
+                    <div>
+                        <dt id="metric-min-label" class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mínimo histórico</dt>
+                        <dd id="metric-minimum" class="mt-1 text-lg font-extrabold text-emerald-700">--</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Precio por kilo</dt>
+                        <dd id="metric-kilo" class="mt-1 text-lg font-extrabold text-gray-900">--</dd>
+                    </div>
+                </dl>
+                <div class="rounded-xl border border-gray-200 bg-gray-50/70 p-3 sm:p-5">
+                    <div class="chart-wrap">
+                        <canvas id="price-chart" role="img" aria-label="Gráfico de evolución de precios por día"></canvas>
+                    </div>
+                    <p id="chart-empty" class="hidden py-12 text-center text-sm text-gray-500">Todavía no hay historial de precios para esta variante.</p>
+                </div>
+            </section>
+
+            <section aria-labelledby="variants-heading" class="mb-10 overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm">
+                <div class="border-b border-gray-100 p-5 sm:p-6">
+                    <h2 id="variants-heading" class="text-xl font-bold text-gray-900">Variantes y precios actuales</h2>
+                    <p class="mt-1 text-xs text-gray-500">Compara formatos y encuentra el mejor valor por kilo</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[38rem] text-left text-sm">
+                        <thead class="border-b border-gray-200/60 bg-gray-50/80 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                            <tr>
+                                <th class="px-4 py-3">Formato</th>
+                                <th class="px-4 py-3">Opción</th>
+                                <th class="px-4 py-3">Precio</th>
+                                <th class="px-4 py-3">Precio/kg</th>
+                                <th class="px-4 py-3">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="variants-body" class="divide-y divide-gray-100 font-medium text-gray-700"></tbody>
+                    </table>
+                </div>
+            </section>
+        </article>
+    </main>
+
+    <footer id="related-bar" class="fixed inset-x-0 bottom-0 z-30 px-3 pb-3">
+        <div class="mx-auto flex max-w-5xl flex-col gap-3 rounded-2xl border border-gray-200 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div class="flex min-w-0 items-center gap-3">
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-stone-200 bg-stone-100 p-1 text-xl text-emerald-800/40" aria-hidden="true">
+                    <img id="sticky-image" alt="" class="hidden h-full w-full object-contain">
+                    <span id="sticky-placeholder">☕</span>
+                </div>
+                <div class="min-w-0">
+                    <h2 id="sticky-product-name" class="truncate text-sm font-bold text-gray-900">Detalle de café</h2>
+                    <p class="truncate text-xs text-gray-500"><span id="sticky-store-name">Cafe-sitios</span><span aria-hidden="true"> · </span><span id="sticky-variant">Selecciona una variante</span></p>
+                </div>
+            </div>
+            <div class="flex shrink-0 items-center gap-3">
+                <span id="sticky-price" class="hidden text-sm font-extrabold text-gray-900 sm:inline">--</span>
+                <a id="store-product-link" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-black">
+                    Comprar en tienda <span aria-hidden="true">↗</span>
+            </a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const API_BASE_ORIGIN = (window.APP_CONFIG && window.APP_CONFIG.apiBaseUrl) ? window.APP_CONFIG.apiBaseUrl : "http://localhost:8000";
+        const API_V1_BASE_URL = `${API_BASE_ORIGIN.replace(/\/+$/, "")}/api/v1`;
+        const API_URL = `${API_V1_BASE_URL}/products`;
+        const currency = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 });
+        const dateLabel = new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", year: "numeric" });
+        const pageStatus = document.getElementById("page-status");
+        const productPage = document.getElementById("product-page");
+        const variantSelect = document.getElementById("variant-select");
+        const chartEmpty = document.getElementById("chart-empty");
+        let productData;
+        let chart;
+        let priceMode = "unit";
+
+        async function loadLastSync() {
+            const label = document.getElementById("last-sync-time");
+            try {
+                const response = await fetch(`${API_V1_BASE_URL}/sync/last`);
+                if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+                const data = await response.json();
+                label.textContent = data.last_sync
+                    ? `${new Date(data.last_sync).toLocaleString("es-CL")} hrs`
+                    : "Sin sincronizaciones";
+            } catch (error) {
+                label.textContent = "No disponible";
+            }
+        }
+
+        function renderSpecifications(product) {
+            const container = document.getElementById("product-specs");
+            const elevation = product.elevacion_min_msnm && product.elevacion_max_msnm
+                ? product.elevacion_min_msnm === product.elevacion_max_msnm
+                    ? `${product.elevacion_min_msnm.toLocaleString("es-CL")} m s. n. m.`
+                    : `${product.elevacion_min_msnm.toLocaleString("es-CL")}–${product.elevacion_max_msnm.toLocaleString("es-CL")} m s. n. m.`
+                : product.elevacion_min_msnm || product.elevacion_max_msnm
+                    ? `${(product.elevacion_min_msnm || product.elevacion_max_msnm).toLocaleString("es-CL")} m s. n. m.`
+                    : null;
+            const fermentation = [
+                product.fermentacion_tipo,
+                product.fermentacion_horas ? `${product.fermentacion_horas} h` : null,
+            ].filter(Boolean).join(" · ");
+            const specifications = [
+                ["País / origen", product.pais_origen, "country"],
+                ["Finca / región", product.finca],
+                ["Altitud", elevation],
+                ["Proceso", product.proceso, "process"],
+                ["Variedad", product.variedad],
+                ["Cosecha", product.cosecha],
+                ["Fermentación", fermentation],
+            ].filter(([, value]) => value);
+
+            container.replaceChildren(...specifications.map(([label, value, parameter]) => {
+                const item = document.createElement("div");
+                const term = document.createElement("dt");
+                term.className = "mb-1 block text-[10px] font-bold uppercase tracking-wider text-gray-400";
+                term.textContent = label;
+                const detail = document.createElement("dd");
+                detail.className = "font-semibold text-gray-800";
+                if (parameter) {
+                    const link = document.createElement("a");
+                    link.href = `index.html?${new URLSearchParams({ [parameter]: value }).toString()}`;
+                    link.className = "text-emerald-800 underline decoration-emerald-200 underline-offset-2 hover:text-emerald-950";
+                    link.textContent = value;
+                    detail.append(link);
+                } else {
+                    detail.textContent = value;
+                }
+                item.append(term, detail);
+                return item;
+            }));
+            container.classList.toggle("hidden", specifications.length === 0);
+        }
+
+        function renderRelatedNotes(notes) {
+            const container = document.getElementById("product-notes");
+            const uniqueNotes = [...new Map(
+                (notes || []).map((note) => [note.clave_normalizada, note])
+            ).values()];
+            container.replaceChildren(...uniqueNotes.map((note) => {
+                const chip = document.createElement("a");
+                chip.href = `index.html?notes=${encodeURIComponent(note.nombre)}`;
+                chip.className = "inline-flex rounded-full border border-amber-200/70 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900 transition-colors hover:bg-amber-100";
+                chip.textContent = note.nombre;
+                chip.title = note.texto_origen;
+                return chip;
+            }));
+            container.parentElement.classList.toggle("hidden", uniqueNotes.length === 0);
+        }
+
+        function money(value) {
+            return `${currency.format(value)} CLP`;
+        }
+
+        function addCell(row, value, className = "px-4 py-3 text-slate-700") {
+            const cell = document.createElement("td");
+            cell.className = className;
+            cell.textContent = value;
+            row.append(cell);
+        }
+
+        function renderVariants(variants) {
+            const body = document.getElementById("variants-body");
+            body.replaceChildren(...variants.map((variant) => {
+                const row = document.createElement("tr");
+                row.className = variant.disponible
+                    ? "transition-colors hover:bg-[#FCFBF7]"
+                    : "bg-gray-50 text-gray-400";
+                addCell(row, `${variant.formato_gramos} g`, "px-4 py-4 font-bold text-gray-900");
+                addCell(row, variant.opcion, "px-4 py-4 text-gray-600");
+
+                const priceCell = document.createElement("td");
+                priceCell.className = "px-4 py-4";
+                const price = document.createElement("span");
+                price.className = "font-bold text-gray-900";
+                price.textContent = money(variant.precio_clp);
+                priceCell.append(price);
+                if (variant.en_oferta) {
+                    const original = document.createElement("span");
+                    original.className = "ml-2 text-xs text-gray-400 line-through";
+                    original.textContent = money(variant.precio_original_clp);
+                    const discount = document.createElement("span");
+                    discount.className = "ml-2 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800";
+                    discount.textContent = `-${variant.descuento_porcentaje}%`;
+                    priceCell.append(original, discount);
+                }
+                row.append(priceCell);
+
+                const kiloCell = document.createElement("td");
+                kiloCell.className = "px-4 py-4";
+                const kiloBadge = document.createElement("span");
+                kiloBadge.className = "inline-block rounded-md border border-emerald-200/70 bg-emerald-50 px-2.5 py-1 text-xs font-extrabold text-emerald-700";
+                kiloBadge.textContent = `${money(variant.precio_por_kilo)}/kg`;
+                kiloCell.append(kiloBadge);
+                row.append(kiloCell);
+
+                const statusCell = document.createElement("td");
+                statusCell.className = "px-4 py-4 text-right";
+                const status = document.createElement("span");
+                status.className = variant.disponible
+                    ? "inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+                    : "inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-500";
+                const statusDot = document.createElement("span");
+                statusDot.className = `h-2 w-2 rounded-full ${variant.disponible ? "bg-emerald-500" : "bg-gray-400"}`;
+                status.append(statusDot, document.createTextNode(variant.disponible ? "Disponible" : "Agotado"));
+                statusCell.append(status);
+                row.append(statusCell);
+                return row;
+            }));
+        }
+
+        function selectedVariant() {
+            return productData.variantes[Number(variantSelect.value)];
+        }
+
+        function updatePriceMode(mode) {
+            priceMode = mode;
+            const unitButton = document.getElementById("unit-price");
+            const kiloButton = document.getElementById("kilo-price");
+            for (const [button, active] of [[unitButton, mode === "unit"], [kiloButton, mode === "kilo"]]) {
+                button.setAttribute("aria-pressed", String(active));
+                button.className = active
+                    ? "rounded-md bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white"
+                    : "rounded-md px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100";
+            }
+            renderChart();
+        }
+
+        function renderChart() {
+            const variant = selectedVariant();
+            if (!variant) return;
+            const metricField = priceMode === "unit" ? "precio_clp" : "precio_por_kilo";
+            const historicalValues = (variant.historial_precios || []).map((point) => point[metricField]);
+            const minimum = historicalValues.length ? Math.min(...historicalValues) : null;
+            document.getElementById("metric-current").textContent = priceMode === "unit"
+                ? money(variant.precio_clp)
+                : `${money(variant.precio_por_kilo)}/kg`;
+            document.getElementById("metric-min-label").textContent = priceMode === "unit" ? "Mínimo histórico" : "Mínimo histórico / kg";
+            document.getElementById("metric-minimum").textContent = minimum === null
+                ? "Sin historial"
+                : priceMode === "unit" ? money(minimum) : `${money(minimum)}/kg`;
+            document.getElementById("metric-kilo").textContent = `${money(variant.precio_por_kilo)}/kg`;
+            document.getElementById("sticky-variant").textContent = `${variant.formato_gramos} g · ${variant.opcion}`;
+            document.getElementById("sticky-price").textContent = money(variant.precio_clp);
+            const dailyHistory = new Map();
+            for (const point of variant.historial_precios || []) {
+                const day = point.fecha_registro.slice(0, 10);
+                dailyHistory.set(day, point);
+            }
+            const points = [...dailyHistory.entries()].sort(([left], [right]) => left.localeCompare(right));
+            const canvas = document.getElementById("price-chart");
+            const chartWrap = canvas.parentElement;
+            const hasHistory = points.length > 0;
+            canvas.classList.toggle("hidden", !hasHistory);
+            chartEmpty.classList.toggle("hidden", hasHistory);
+            if (chart) {
+                chart.destroy();
+                chart = undefined;
+            }
+            if (!hasHistory) return;
+
+            const valueField = priceMode === "unit" ? "precio_clp" : "precio_por_kilo";
+            const suffix = priceMode === "unit" ? " CLP" : " CLP/kg";
+            chart = new Chart(canvas, {
+                type: "line",
+                data: {
+                    labels: points.map(([day]) => dateLabel.format(new Date(`${day}T12:00:00`))),
+                    datasets: [{
+                        label: priceMode === "unit" ? "Precio por unidad" : "Precio por kilo",
+                        data: points.map(([, point]) => point[valueField]),
+                        borderColor: "#047857",
+                        backgroundColor: "rgba(4, 120, 87, 0.10)",
+                        pointBackgroundColor: "#047857",
+                        pointBorderColor: "#ffffff",
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.25,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: "index" },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => `${money(context.raw)}${suffix}`,
+                            },
+                        },
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
+                        },
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: "#e7e5e4" },
+                            ticks: { callback: (value) => currency.format(value) },
+                        },
+                    },
+                },
+            });
+        }
+
+        function renderProduct(product) {
+            productData = product;
+            document.title = `${product.nombre} | Cafe-sitios`;
+            document.getElementById("product-name").textContent = product.nombre;
+            document.getElementById("breadcrumb-product").textContent = product.nombre;
+            document.getElementById("sticky-product-name").textContent = product.nombre;
+            document.getElementById("sticky-store-name").textContent = product.tienda;
+            const storeName = document.getElementById("store-name");
+            storeName.textContent = product.tienda;
+            storeName.href = product.tienda_url;
+            document.getElementById("store-product-link").href = product.url_detalle;
+            renderSpecifications(product);
+            renderRelatedNotes(product.notas_cata);
+            document.getElementById("product-description").innerHTML = product.descripcion || "<p>La tienda no publicó una descripción.</p>";
+
+            if (product.fecha_actualizacion) {
+                document.getElementById("updated-at").textContent = `Información actualizada ${new Date(product.fecha_actualizacion).toLocaleString("es-CL")}`;
+            }
+            if (product.imagen) {
+                const image = document.getElementById("product-image");
+                image.src = product.imagen;
+                image.alt = product.nombre;
+                image.classList.remove("hidden");
+                document.getElementById("image-placeholder").classList.add("hidden");
+                const stickyImage = document.getElementById("sticky-image");
+                stickyImage.src = product.imagen;
+                stickyImage.alt = "";
+                stickyImage.classList.remove("hidden");
+                document.getElementById("sticky-placeholder").classList.add("hidden");
+            }
+
+            variantSelect.replaceChildren(...product.variantes.map((variant, index) => {
+                const option = document.createElement("option");
+                option.value = String(index);
+                option.textContent = `${variant.formato_gramos} g · ${variant.opcion}`;
+                return option;
+            }));
+            renderVariants(product.variantes);
+            productPage.classList.remove("hidden");
+            pageStatus.classList.add("hidden");
+            renderChart();
+        }
+
+        async function loadProduct() {
+            const productId = new URLSearchParams(window.location.search).get("id");
+            if (!productId || !/^\d+$/.test(productId)) {
+                pageStatus.innerHTML = '<p class="font-semibold text-slate-800">Falta un identificador de producto válido.</p>';
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/${productId}/detail`);
+                if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+                renderProduct(await response.json());
+            } catch (error) {
+                console.error("Error cargando el producto:", error);
+                pageStatus.innerHTML = '<p class="font-semibold text-slate-800">No se pudo cargar el producto.</p><p class="mt-2">Vuelve al catálogo e inténtalo nuevamente.</p>';
+            }
+        }
+
+        variantSelect.addEventListener("change", renderChart);
+        document.getElementById("unit-price").addEventListener("click", () => updatePriceMode("unit"));
+        document.getElementById("kilo-price").addEventListener("click", () => updatePriceMode("kilo"));
+        document.addEventListener("DOMContentLoaded", () => {
+            loadLastSync();
+            loadProduct();
+        });
+    </script>
+</body>
+</html>

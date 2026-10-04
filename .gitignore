@@ -6,4 +6,5 @@
 # Entorno virtual y configuraciones locales
 .venv/
 .env
-.github.env
+*.env
+frontend-website/dist/

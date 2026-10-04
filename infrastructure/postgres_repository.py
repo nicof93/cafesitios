@@ -1,10 +1,10 @@
 from typing import List, Literal, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import asc, distinct, func
+from sqlalchemy import asc, distinct, func, or_
 
 from domain.repositories import ICoffeeRepository
 from domain.models import CoffeeProductDomain, VariantDomain
-from db.database import Producto, Variante, Tienda
+from db.database import NotaCata, Producto, ProductoNotaCata, Variante, Tienda
 
 class PostgresCoffeeRepository(ICoffeeRepository):
     def __init__(self, session: Session):
@@ -22,6 +22,8 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         max_price: Optional[int] = None,
         process: Optional[str] = None,
         country: Optional[str] = None,
+        variety: Optional[str] = None,
+        tasting_notes: Optional[str] = None,
     ):
         query = self.session.query(Variante, Producto, Tienda)\
             .join(Producto, Variante.producto_id == Producto.id)\
@@ -37,7 +39,9 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         if process:
             query = query.filter(Producto.proceso.ilike(f"%{process}%"))
         if country:
-            query = query.filter(Producto.pais_origen.ilike(country))
+            query = query.filter(Producto.pais_origen.ilike(f"%{country}%"))
+        if variety:
+            query = query.filter(Producto.variedad.ilike(f"%{variety}%"))
         if min_weight_g is not None:
             query = query.filter(Variante.formato_gramos >= min_weight_g)
         if max_weight_g is not None:
@@ -50,6 +54,19 @@ class PostgresCoffeeRepository(ICoffeeRepository):
             query = query.filter(Variante.precio_clp >= min_price)
         if max_price is not None:
             query = query.filter(Variante.precio_clp <= max_price)
+
+        if tasting_notes:
+            note_filter = f"%{tasting_notes}%"
+            query = (
+                query.join(ProductoNotaCata, ProductoNotaCata.producto_id == Producto.id)
+                .join(NotaCata, NotaCata.id == ProductoNotaCata.nota_id)
+                .filter(
+                    or_(
+                        NotaCata.nombre.ilike(note_filter),
+                        NotaCata.clave_normalizada.ilike(note_filter),
+                    )
+                )
+            )
 
         if sort_by == "kilo":
             query = query.order_by(asc(Variante.precio_por_kilo))
@@ -70,6 +87,8 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         max_price: Optional[int] = None,
         process: Optional[str] = None,
         country: Optional[str] = None,
+        variety: Optional[str] = None,
+        tasting_notes: Optional[str] = None,
     ) -> int:
         query = self._build_base_query(
             sort_by=sort_by,
@@ -82,13 +101,15 @@ class PostgresCoffeeRepository(ICoffeeRepository):
             max_price=max_price,
             process=process,
             country=country,
+            variety=variety,
+            tasting_notes=tasting_notes,
         )
         return query.with_entities(func.count(distinct(Producto.id))).order_by(None).scalar() or 0
 
     def get_cheapest_products(
-        self, 
-        sort_by: Literal["kilo", "unit"] = "kilo", 
-        limit: int = 10, 
+        self,
+        sort_by: Literal["kilo", "unit"] = "kilo",
+        limit: int = 10,
         only_available: bool = True,
         store_name: Optional[str] = None,
         min_weight_g: Optional[int] = None,
@@ -98,6 +119,8 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         max_price: Optional[int] = None,
         process: Optional[str] = None,
         country: Optional[str] = None,
+        variety: Optional[str] = None,
+        tasting_notes: Optional[str] = None,
     ) -> List[CoffeeProductDomain]:
         query = self._build_base_query(
             sort_by=sort_by,
@@ -110,6 +133,8 @@ class PostgresCoffeeRepository(ICoffeeRepository):
             max_price=max_price,
             process=process,
             country=country,
+            variety=variety,
+            tasting_notes=tasting_notes,
         )
 
         precio_orden = Variante.precio_por_kilo if sort_by == "kilo" else Variante.precio_clp

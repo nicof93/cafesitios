@@ -5,18 +5,20 @@ from domain.models import CoffeeProductDomain
 class ICoffeeRepository(ABC):
     @abstractmethod
     def get_cheapest_products(
-        self, 
-        sort_by: Literal["kilo", "unit"] = "kilo", 
-        limit: int = 10, 
+        self,
+        sort_by: Literal["kilo", "unit"] = "kilo",
+        limit: int = 10,
         only_available: bool = True,
         store_name: Optional[str] = None,
         min_weight_g: Optional[int] = None,
         max_weight_g: Optional[int] = None,
         search_query: Optional[str] = None,
         min_price: Optional[int] = None,
-            max_price: Optional[int] = None,
-            process: Optional[str] = None,
-            country: Optional[str] = None,
+        max_price: Optional[int] = None,
+        process: Optional[str] = None,
+        country: Optional[str] = None,
+        variety: Optional[str] = None,
+        tasting_notes: Optional[str] = None,
     ) -> List[CoffeeProductDomain]:
         pass
 
@@ -30,6 +32,10 @@ class ICoffeeRepository(ABC):
         max_weight_g: Optional[int] = None,
         search_query: Optional[str] = None,
         min_price: Optional[int] = None,
-        max_price: Optional[int] = None
+        max_price: Optional[int] = None,
+        process: Optional[str] = None,
+        country: Optional[str] = None,
+        variety: Optional[str] = None,
+        tasting_notes: Optional[str] = None,
     ) -> int:
         pass

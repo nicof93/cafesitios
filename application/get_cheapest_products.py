@@ -7,9 +7,9 @@ class GetCheapestProductsUseCase:
         self.repository = repository
 
     def execute(
-        self, 
-        sort_by: Literal["kilo", "unit"] = "kilo", 
-        limit: int = 10, 
+        self,
+        sort_by: Literal["kilo", "unit"] = "kilo",
+        limit: int = 10,
         only_available: bool = True,
         store_name: Optional[str] = None,
         min_weight_g: Optional[int] = None,
@@ -19,18 +19,22 @@ class GetCheapestProductsUseCase:
         max_price: Optional[int] = None,
         process: Optional[str] = None,
         country: Optional[str] = None,
+        variety: Optional[str] = None,
+        tasting_notes: Optional[str] = None,
     ) -> List[CoffeeProductDomain]:
-        
+
         return self.repository.get_cheapest_products(
-            sort_by=sort_by, 
-            limit=limit, 
+            sort_by=sort_by,
+            limit=limit,
             only_available=only_available,
             store_name=store_name,
             min_weight_g=min_weight_g,
             max_weight_g=max_weight_g,
             search_query=search_query,
             min_price=min_price,
-            max_price=max_price
-            ,process=process,
+            max_price=max_price,
+            process=process,
             country=country,
+            variety=variety,
+            tasting_notes=tasting_notes,
         )

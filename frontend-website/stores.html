@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todas las tiendas | Cafe-sitios</title>
+    <!-- Variables de ambiente para despliegues (Calidad / Producción / Local) -->
+    <meta name="api-base-url" content="__API_BASE_URL__">
+    <meta name="gtm-id" content="__GTM_ID__">
+    <meta name="ga-measurement-id" content="__GA_MEASUREMENT_ID__">
+
+    <!-- Carga y resolución de configuración de ambiente -->
+    <script src="./env-config.js"></script>
+    <script>
+        (function() {
+            const rawConfig = window.APP_CONFIG || {};
+            const metaApi = document.querySelector('meta[name="api-base-url"]')?.getAttribute("content");
+            const metaGtm = document.querySelector('meta[name="gtm-id"]')?.getAttribute("content");
+            const metaGa = document.querySelector('meta[name="ga-measurement-id"]')?.getAttribute("content");
+
+            function sanitize(val) {
+                if (typeof val === "string" && val.trim() && !val.trim().startsWith("__")) {
+                    return val.trim();
+                }
+                return "";
+            }
+
+            let apiBaseUrl = sanitize(rawConfig.apiBaseUrl) || sanitize(metaApi);
+
+            if (!apiBaseUrl) {
+                const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname) || window.location.protocol === "file:";
+                apiBaseUrl = isLocal ? "http://localhost:8000" : window.location.origin;
+            }
+            apiBaseUrl = apiBaseUrl.replace(/\/+$/, "");
+
+            const gtmId = sanitize(rawConfig.googleTagManagerId) || sanitize(metaGtm);
+            const gaId = sanitize(rawConfig.googleAnalyticsId) || sanitize(metaGa);
+
+            window.APP_CONFIG = Object.freeze({
+                apiBaseUrl: apiBaseUrl,
+                googleTagManagerId: gtmId,
+                googleAnalyticsId: gaId
+            });
+        })();
+    </script>
+    <script src="./analytics.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-[#FCFBF7] text-gray-700 antialiased">
+    <!-- ANALYTICS_NOSCRIPT -->
+    <header class="sticky top-0 z-50 border-b border-stone-200/80 bg-white/95 backdrop-blur">
+        <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-gray-900">Tostadurías</h1>
+                <p class="text-xs text-gray-500">Cafés de especialidad disponibles</p>
+            </div>
+            <a href="index.html" class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-black"><span aria-hidden="true">←</span> Catálogo</a>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        <nav aria-label="Breadcrumbs" class="mb-7">
+            <ol class="flex items-center gap-2 text-sm text-gray-500">
+                <li><a href="index.html" class="transition-colors hover:text-gray-900">Inicio</a></li>
+                <li aria-hidden="true">/</li>
+                <li aria-current="page" class="font-medium text-gray-900">Tostadurías</li>
+            </ol>
+        </nav>
+
+        <section aria-labelledby="stores-heading">
+            <div class="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-stone-200 pb-4">
+                <div>
+                    <h2 id="stores-heading" class="text-2xl font-extrabold tracking-tight text-gray-900">Explora las tiendas</h2>
+                    <p class="mt-1 text-sm text-gray-500">Encuentra cafés por tostaduría y compara su catálogo.</p>
+                </div>
+                <span id="stores-meta" class="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">Cargando...</span>
+            </div>
+
+            <div id="stores-list" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
+        </section>
+    </main>
+
+    <footer class="mt-12 border-t border-stone-200 bg-white py-6 text-center text-xs text-gray-400">
+        <p>Cafe-sitios &copy; 2026 · Comparador de café de especialidad</p>
+    </footer>
+
+    <script>
+        const API_BASE_ORIGIN = (window.APP_CONFIG && window.APP_CONFIG.apiBaseUrl) ? window.APP_CONFIG.apiBaseUrl : "http://localhost:8000";
+        const STORES_API_URL = `${API_BASE_ORIGIN.replace(/\/+$/, "")}/api/v1/stores`;
+        const STORES_PAGE_SIZE = 100;
+
+        async function obtenerPaginaTiendas(page) {
+            const params = new URLSearchParams({
+                page,
+                page_size: STORES_PAGE_SIZE,
+                sort_by: "name_asc"
+            });
+
+            const response = await fetch(`${STORES_API_URL}?${params.toString()}`);
+            if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+            return response.json();
+        }
+
+        async function cargarTodasLasTiendas() {
+            const storesList = document.getElementById("stores-list");
+            const storesMeta = document.getElementById("stores-meta");
+
+            try {
+                const primeraPagina = await obtenerPaginaTiendas(1);
+                const paginasRestantes = Array.from(
+                    { length: Math.max(primeraPagina.total_pages - 1, 0) },
+                    (_, index) => obtenerPaginaTiendas(index + 2)
+                );
+                const paginas = await Promise.all(paginasRestantes);
+                const tiendas = [primeraPagina, ...paginas].flatMap((pagina) => pagina.items || []);
+
+                storesMeta.textContent = `${primeraPagina.total_items} tiendas`;
+
+                if (!tiendas.length) {
+                    storesList.innerHTML = '<div class="col-span-full rounded-2xl border border-stone-200 bg-white p-8 text-center text-gray-500 shadow-sm">No hay tiendas disponibles.</div>';
+                    return;
+                }
+
+                storesList.replaceChildren(...tiendas.map((tienda) => {
+                    const storeLink = document.createElement("a");
+                    storeLink.href = `index.html?store_name=${encodeURIComponent(tienda.nombre)}`;
+                    storeLink.className = "group rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-300";
+
+                    const row = document.createElement("div");
+                    row.className = "flex min-h-16 items-center justify-between gap-3";
+
+                    const details = document.createElement("div");
+                    const name = document.createElement("h3");
+                    name.className = "text-sm font-bold text-gray-900 transition-colors group-hover:text-emerald-800";
+                    name.textContent = tienda.nombre;
+                    const description = document.createElement("p");
+                    description.className = "mt-1 text-xs text-gray-500";
+                    description.textContent = "Ver productos disponibles";
+                    details.append(name, description);
+
+                    const count = document.createElement("span");
+                    count.className = "shrink-0 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800";
+                    count.textContent = tienda.cantidad_productos;
+
+                    row.append(details, count);
+                    storeLink.append(row);
+                    return storeLink;
+                }));
+            } catch (error) {
+                console.error("Error cargando tiendas:", error);
+                storesMeta.textContent = "No disponible";
+                storesList.innerHTML = '<div class="col-span-full rounded-2xl border border-stone-200 bg-white p-8 text-center text-gray-500 shadow-sm">No se pudo cargar la lista de tiendas.</div>';
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", cargarTodasLasTiendas);
+    </script>
+</body>
+</html>

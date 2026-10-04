@@ -32,6 +32,16 @@ cafe-sitios/
 4. Iniciar la API: `python -m uvicorn main:app --reload`
 5. Ejecutar test: `python -m unittest discover tests`
 
+### Despliegue del frontend en Vercel
+
+Importe el repositorio en Vercel y configure `frontend-website` como **Root Directory**. Use `npm run build` como comando de build y `dist` como directorio de salida. El build genera `env-config.js` con estas variables de entorno:
+
+- `API_BASE_URL` (obligatoria): URL pública base de la API, sin `/api/v1` al final.
+- `GTM_ID` (opcional): identificador de Google Tag Manager (`GTM-...`).
+- `GA_MEASUREMENT_ID` (opcional): identificador de medición GA4 (`G-...`).
+
+Configure los valores de `API_BASE_URL` y los identificadores de analítica por separado para los entornos Preview/calidad y Production. Los identificadores de analítica pueden omitirse para desactivar esa integración en un entorno. Al ser variables usadas durante el build de un sitio estático, sus valores quedan incluidos en los archivos públicos generados; no use secretos en ellas.
+
 ### Versionado de base de datos
 
 El esquema se versiona con Alembic. Al iniciar el scraper, una base heredada sin `alembic_version` se adopta automáticamente si contiene las tablas principales del esquema anterior; si falta la tabla auxiliar `estado_sincronizacion`, se crea antes de registrar el baseline. Luego se aplican las revisiones pendientes. Las bases vacías reciben todas las migraciones. Si se ejecutan migraciones manualmente sobre una base heredada, primero se debe marcar el baseline:
@@ -64,8 +74,8 @@ La confianza es una señal heurística de extracción etiquetada, no una probabi
 - Documentación Interactiva (Swagger UI): http://localhost:8000/docs
 - Documentación ReDoc: http://localhost:8000/redoc
 - Healthcheck: http://localhost:8000/
-- Endpoint de Productos más Baratos: http://localhost:8000/api/v1/products/cheapest?sort_by=kilo
-- Catálogo filtrado por proceso y origen: http://localhost:8000/api/v1/products/cheapest?sort_by=kilo&process=natural&country=Etiop%C3%ADa
+- Endpoint de Productos más Baratos: http://localhost:8000/api/v1/products?sort_by=kilo
+- Catálogo filtrado por proceso y origen: http://localhost:8000/api/v1/products?sort_by=kilo&process=natural&country=Etiop%C3%ADa
 - Listado paginado de tiendas: http://localhost:8000/api/v1/stores?page=1&page_size=10&sort_by=product_count_desc
 - Detalle de producto y variantes: http://localhost:8000/api/v1/products/1/detail
 - Última sincronización: http://localhost:8000/api/v1/sync/last

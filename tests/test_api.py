@@ -259,6 +259,25 @@ class TestAPI(unittest.TestCase):
         finally:
             api.router.PostgresCoffeeRepository = original_repo
 
+    def test_api_route_accepts_advanced_catalog_filters(self):
+        import api.router
+        original_repo = api.router.PostgresCoffeeRepository
+        api.router.PostgresCoffeeRepository = MockCoffeeRepositoryForAPI
+        try:
+            response = client.get(
+                "/api/v1/products/cheapest?min_price=15000&max_price=30000&country=Etiop%C3%ADa"
+                "&variety=Caturra&store_name=Singular&notes=floral"
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(api.router.PostgresCoffeeRepository.last_filters["min_price"], 15000)
+            self.assertEqual(api.router.PostgresCoffeeRepository.last_filters["max_price"], 30000)
+            self.assertEqual(api.router.PostgresCoffeeRepository.last_filters["country"], "Etiopía")
+            self.assertEqual(api.router.PostgresCoffeeRepository.last_filters["variety"], "Caturra")
+            self.assertEqual(api.router.PostgresCoffeeRepository.last_filters["store_name"], "Singular")
+            self.assertEqual(api.router.PostgresCoffeeRepository.last_filters["tasting_notes"], "floral")
+        finally:
+            api.router.PostgresCoffeeRepository = original_repo
+
     def test_stores_summary_endpoint(self):
         response = client.get("/api/v1/stores?page=1&page_size=10&sort_by=product_count_desc")
         self.assertEqual(response.status_code, 200)
@@ -267,10 +286,85 @@ class TestAPI(unittest.TestCase):
         self.assertIn("total_items", data)
         self.assertTrue(isinstance(data["items"], list))
 
-    def test_last_sync_endpoint_without_record(self):
-        response = client.get("/api/v1/sync/last")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"last_sync": None})
+    def test_get_products_renamed_endpoint(self):
+        import api.router
+        original_repo = api.router.PostgresCoffeeRepository
+        api.router.PostgresCoffeeRepository = MockCoffeeRepositoryForAPI
+        try:
+            response = client.get("/api/v1/products?limit=5&process=natural&country=Etiop%C3%ADa")
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertIn("data", data)
+            self.assertEqual(data["total_items"], 2)
+            self.assertEqual(api.router.PostgresCoffeeRepository.last_filters["process"], "natural")
+            self.assertEqual(api.router.PostgresCoffeeRepository.last_filters["country"], "Etiopía")
+        finally:
+            api.router.PostgresCoffeeRepository = original_repo
+
+    def test_docs_and_redoc_disabled_in_production(self):
+        import os
+        import importlib
+        import main
+
+        old_env = os.environ.get("ENVIRONMENT")
+        old_docs = os.environ.get("ENABLE_DOCS")
+        try:
+            os.environ["ENVIRONMENT"] = "production"
+            os.environ.pop("ENABLE_DOCS", None)
+            importlib.reload(main)
+            self.assertIsNone(main.app.docs_url)
+            self.assertIsNone(main.app.redoc_url)
+            self.assertIsNone(main.app.openapi_url)
+        finally:
+            if old_env is not None:
+                os.environ["ENVIRONMENT"] = old_env
+            else:
+                os.environ.pop("ENVIRONMENT", None)
+            if old_docs is not None:
+                os.environ["ENABLE_DOCS"] = old_docs
+            else:
+                os.environ.pop("ENABLE_DOCS", None)
+            importlib.reload(main)
+
+    def test_cors_allowed_origins_from_env(self):
+        import os
+        import importlib
+        import main
+
+        old_origins = os.environ.get("ALLOWED_ORIGINS")
+        try:
+            os.environ["ALLOWED_ORIGINS"] = "https://cafesitios.onrender.com, https://mi-frontend.vercel.app"
+            importlib.reload(main)
+            prod_client = TestClient(main.app)
+
+            # Solicitud con origen no permitido (ej. localhost)
+            res_blocked = prod_client.options(
+                "/api/v1/products",
+                headers={
+                    "Origin": "http://localhost:3000",
+                    "Access-Control-Request-Method": "GET"
+                }
+            )
+            self.assertNotIn("access-control-allow-origin", res_blocked.headers)
+
+            # Solicitud con origen permitido
+            res_allowed = prod_client.options(
+                "/api/v1/products",
+                headers={
+                    "Origin": "https://cafesitios.onrender.com",
+                    "Access-Control-Request-Method": "GET"
+                }
+            )
+            self.assertEqual(
+                res_allowed.headers.get("access-control-allow-origin"),
+                "https://cafesitios.onrender.com"
+            )
+        finally:
+            if old_origins is not None:
+                os.environ["ALLOWED_ORIGINS"] = old_origins
+            else:
+                os.environ.pop("ALLOWED_ORIGINS", None)
+            importlib.reload(main)
 
 if __name__ == "__main__":
     unittest.main()

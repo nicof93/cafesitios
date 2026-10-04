@@ -1,0 +1,13 @@
+# Dependencias y builds
+node_modules/
+.astro/
+dist/
+__pycache__/
+.venv/
+*.env
+
+# Archivos pesados de scraping
+*.csv
+*.json
+*.html
+logs/
