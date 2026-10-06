@@ -1,6 +1,7 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from api.products import router as products_router
 from api.stores import router as stores_router
@@ -57,6 +58,49 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+proxy_secret = os.getenv("PROXY_SECRET", "").strip()
+
+
+@app.middleware("http")
+async def verify_proxy_origin(request: Request, call_next):
+    # En desarrollo local o rutas esenciales de healthcheck (/), permitir libremente
+    if request.url.path == "/" or not is_production:
+        return await call_next(request)
+
+    # 1. Si se configuró PROXY_SECRET, validar la firma
+    if proxy_secret:
+        incoming_secret = request.headers.get("x-proxy-secret", "").strip()
+        if incoming_secret == proxy_secret:
+            return await call_next(request)
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Acceso no autorizado. Firma de proxy inválida."}
+        )
+
+    # 2. Detección de peticiones a través del proxy de Vercel o de dominios autorizados
+    vercel_id = request.headers.get("x-vercel-id")
+    forwarded_host = request.headers.get("x-forwarded-host", "")
+    origin = request.headers.get("origin", "")
+
+    is_from_vercel = bool(vercel_id) or ("vercel.app" in forwarded_host)
+
+    allowed_origin_match = False
+    if allow_origins:
+        allowed_origin_match = any(
+            origin.startswith(allowed.rstrip("/")) or forwarded_host == allowed.split("://")[-1].rstrip("/")
+            for allowed in allow_origins
+        )
+
+    if is_from_vercel or allowed_origin_match:
+        return await call_next(request)
+
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN,
+        content={
+            "detail": "Acceso directo a la API no permitido. Las solicitudes deben originarse a través del frontend oficial."
+        }
+    )
 
 app.include_router(products_router)
 app.include_router(stores_router)
