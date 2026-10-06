@@ -1,0 +1,9 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://cafesitios.onrender.com/api/:path*"
+    }
+  ]
+}

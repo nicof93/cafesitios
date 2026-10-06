@@ -4,10 +4,12 @@ const path = require("node:path");
 const sourceDirectory = __dirname;
 const outputDirectory = path.join(sourceDirectory, "dist");
 
-function requiredApiBaseUrl() {
+function resolveApiBaseUrl() {
     const value = process.env.API_BASE_URL?.trim();
-    if (!value) {
-        throw new Error("API_BASE_URL must be set to the public API origin before building.");
+    // Si no está definido, o si apunta directamente a Render (que ahora se proxia via vercel.json),
+    // dejamos apiBaseUrl vacío ("") para que el navegador use el mismo dominio de Vercel y evite problemas de CORS.
+    if (!value || value.includes("onrender.com") || process.env.USE_API_PROXY === "true") {
+        return "";
     }
 
     let url;
@@ -33,15 +35,16 @@ function optionalAnalyticsId(environmentVariable, pattern, label) {
 }
 
 const config = {
-    apiBaseUrl: requiredApiBaseUrl(),
+    apiBaseUrl: resolveApiBaseUrl(),
     googleTagManagerId: optionalAnalyticsId("GTM_ID", /^GTM-[A-Z0-9]+$/, "Google Tag Manager"),
     googleAnalyticsId: optionalAnalyticsId("GA_MEASUREMENT_ID", /^G-[A-Z0-9]+$/, "Google Analytics 4"),
 };
 
 fs.mkdirSync(outputDirectory, { recursive: true });
 
-for (const fileName of ["index.html", "product.html", "stores.html", "analytics.js"]) {
+for (const fileName of ["index.html", "product.html", "stores.html", "analytics.js", "vercel.json"]) {
     const sourcePath = path.join(sourceDirectory, fileName);
+    if (!fs.existsSync(sourcePath)) continue;
     const outputPath = path.join(outputDirectory, fileName);
     let contents = fs.readFileSync(sourcePath, "utf8");
 
