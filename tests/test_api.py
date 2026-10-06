@@ -366,5 +366,71 @@ class TestAPI(unittest.TestCase):
                 os.environ.pop("ALLOWED_ORIGINS", None)
             importlib.reload(main)
 
+    def test_proxy_middleware_enforces_origin_in_production(self):
+        import os
+        import importlib
+        import main
+
+        old_render = os.environ.get("RENDER")
+        old_secret = os.environ.get("PROXY_SECRET")
+        try:
+            os.environ["RENDER"] = "true"
+            os.environ.pop("PROXY_SECRET", None)
+            importlib.reload(main)
+            main.app.dependency_overrides[get_db_session] = mock_get_db_session_override
+            prod_client = TestClient(main.app)
+
+            # Healthcheck siempre permitido
+            res_health = prod_client.get("/")
+            self.assertEqual(res_health.status_code, 200)
+
+            # Solicitud directa sin cabeceras de proxy debe ser 403 Forbidden
+            res_direct = prod_client.get("/api/v1/sync/last")
+            self.assertEqual(res_direct.status_code, 403)
+            self.assertIn("Acceso directo a la API no permitido", res_direct.json()["detail"])
+
+            # Solicitud con cabecera de proxy de Vercel debe ser permitida
+            res_vercel = prod_client.get(
+                "/api/v1/sync/last",
+                headers={"x-vercel-id": "fra1::iad1::test"}
+            )
+            self.assertEqual(res_vercel.status_code, 200)
+
+            # Solicitud con forwarded host de vercel
+            res_forwarded = prod_client.get(
+                "/api/v1/sync/last",
+                headers={"x-forwarded-host": "cafesitios-app.vercel.app"}
+            )
+            self.assertEqual(res_forwarded.status_code, 200)
+
+            # Prueba con PROXY_SECRET
+            os.environ["PROXY_SECRET"] = "clave-super-secreta"
+            importlib.reload(main)
+            main.app.dependency_overrides[get_db_session] = mock_get_db_session_override
+            secret_client = TestClient(main.app)
+
+            res_bad_secret = secret_client.get(
+                "/api/v1/sync/last",
+                headers={"x-proxy-secret": "clave-incorrecta"}
+            )
+            self.assertEqual(res_bad_secret.status_code, 403)
+
+            res_good_secret = secret_client.get(
+                "/api/v1/sync/last",
+                headers={"x-proxy-secret": "clave-super-secreta"}
+            )
+            self.assertEqual(res_good_secret.status_code, 200)
+        finally:
+            if old_render is not None:
+                os.environ["RENDER"] = old_render
+            else:
+                os.environ.pop("RENDER", None)
+            if old_secret is not None:
+                os.environ["PROXY_SECRET"] = old_secret
+            else:
+                os.environ.pop("PROXY_SECRET", None)
+            importlib.reload(main)
+            main.app.dependency_overrides[get_db_session] = mock_get_db_session_override
+
 if __name__ == "__main__":
     unittest.main()
