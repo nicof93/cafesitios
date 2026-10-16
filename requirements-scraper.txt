@@ -1,0 +1,4 @@
+# Dependencias específicas para el pipeline de extracción NLP/ML (Scraping en GitHub Actions)
+onnxruntime>=1.16.0
+gliner>=0.1.10
+
