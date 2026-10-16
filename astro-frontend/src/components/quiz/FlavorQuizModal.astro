@@ -1,0 +1,211 @@
+---
+---
+
+<!-- CU-07: QUIZ DE SABOR -->
+<dialog 
+  id="quiz-dialog"
+  class="fixed inset-0 z-50 m-auto w-[92%] max-w-xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-stone-200 backdrop:bg-stone-950/60 backdrop:backdrop-blur-sm"
+>
+  <div class="flex items-center justify-between pb-4 border-b border-stone-200">
+    <div class="flex items-center gap-2">
+      <span class="text-xl">🎯</span>
+      <div>
+        <h3 class="text-base font-bold text-slate-900">Quiz de Sabor</h3>
+        <p class="text-xs text-slate-500">Encuentra tu café ideal según tu método y preferencias</p>
+      </div>
+    </div>
+    <button 
+      type="button" 
+      id="btn-close-quiz-dialog"
+      class="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg"
+    >
+      ✕
+    </button>
+  </div>
+
+  <!-- FORMULARIO DE PASOS -->
+  <div id="quiz-step-view" class="mt-6 space-y-6">
+    <!-- 1. MÉTODO -->
+    <div>
+      <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">1. ¿Cómo preparas tu café?</label>
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <button type="button" class="quiz-btn p-3 rounded-xl border border-stone-200 text-left hover:border-emerald-600 transition" data-step="metodo" data-val="espresso">☕ Espresso / Cafetera</button>
+        <button type="button" class="quiz-btn p-3 rounded-xl border border-stone-200 text-left hover:border-emerald-600 transition" data-step="metodo" data-val="filtrado">💧 Filtrado (V60 / Chemex)</button>
+        <button type="button" class="quiz-btn p-3 rounded-xl border border-stone-200 text-left hover:border-emerald-600 transition" data-step="metodo" data-val="prensa">🫖 Prensa Francesa / Moka</button>
+        <button type="button" class="quiz-btn p-3 rounded-xl border border-stone-200 text-left hover:border-emerald-600 transition" data-step="metodo" data-val="cold_brew">🧊 Cold Brew / Hielo</button>
+      </div>
+    </div>
+
+    <!-- 2. PERFIL -->
+    <div>
+      <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">2. ¿Qué notas aromáticas prefieres?</label>
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <button type="button" class="quiz-btn p-3 rounded-xl border border-stone-200 text-left hover:border-emerald-600 transition" data-step="perfil" data-val="frutal_floral">🌸 Frutal y Floral</button>
+        <button type="button" class="quiz-btn p-3 rounded-xl border border-stone-200 text-left hover:border-emerald-600 transition" data-step="perfil" data-val="chocolate_nueces">🍫 Chocolate y Frutos Secos</button>
+        <button type="button" class="quiz-btn p-3 rounded-xl border border-stone-200 text-left hover:border-emerald-600 transition" data-step="perfil" data-val="citrico_balanceado">🍋 Cítrico y Balanceado</button>
+        <button type="button" class="quiz-btn p-3 rounded-xl border border-stone-200 text-left hover:border-emerald-600 transition" data-step="perfil" data-val="especiado_intenso">🪵 Especiado e Intenso</button>
+      </div>
+    </div>
+
+    <!-- 3. ACIDEZ -->
+    <div>
+      <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">3. ¿Nivel de acidez preferido?</label>
+      <div class="grid grid-cols-3 gap-2 text-xs">
+        <button type="button" class="quiz-btn p-3 rounded-xl border border-stone-200 text-center hover:border-emerald-600 transition" data-step="acidez" data-val="baja">Baja</button>
+        <button type="button" class="quiz-btn p-3 rounded-xl border border-stone-200 text-center hover:border-emerald-600 transition" data-step="acidez" data-val="media">Media</button>
+        <button type="button" class="quiz-btn p-3 rounded-xl border border-stone-200 text-center hover:border-emerald-600 transition" data-step="acidez" data-val="alta">Alta brillante</button>
+      </div>
+    </div>
+
+    <div class="pt-2">
+      <button 
+        type="button" 
+        id="btn-submit-quiz"
+        class="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-semibold py-3 px-6 rounded-xl text-sm transition"
+      >
+        Ver Cafés Recomendados ✨
+      </button>
+    </div>
+  </div>
+
+  <!-- RESULTADOS DEL QUIZ -->
+  <div id="quiz-result-view" class="hidden mt-6 space-y-4">
+    <div class="flex items-center justify-between">
+      <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-800">Tus Recomendaciones</h4>
+      <button type="button" id="btn-restart-quiz" class="text-xs text-slate-500 hover:text-slate-800">Repetir Quiz</button>
+    </div>
+    <div id="quiz-result-container" class="space-y-3"></div>
+  </div>
+</dialog>
+
+<script>
+  import { GetRecommendationsUseCase } from '../../core/application/GetRecommendations';
+  import { AnalyticsTracker } from '../../core/infrastructure/analytics/AnalyticsTracker';
+  import type { BrewMethod, SensoryProfile, AcidityPreference } from '../../core/domain/models/Recommendation';
+
+  const recUseCase = new GetRecommendationsUseCase();
+  const dialog = document.getElementById('quiz-dialog') as HTMLDialogElement | null;
+  const closeBtn = document.getElementById('btn-close-quiz-dialog');
+  const submitBtn = document.getElementById('btn-submit-quiz') as HTMLButtonElement | null;
+  const restartBtn = document.getElementById('btn-restart-quiz');
+  const stepView = document.getElementById('quiz-step-view');
+  const resultView = document.getElementById('quiz-result-view');
+  const resultContainer = document.getElementById('quiz-result-container');
+
+  const answers: {
+    metodo?: BrewMethod;
+    perfil?: SensoryProfile;
+    acidez?: AcidityPreference;
+  } = {};
+
+  // Abrir desde botón de Header, Hero de la Landing Page, data attributes o CustomEvent
+  function openQuizDialog() {
+    resetQuiz();
+    if (dialog && !dialog.open) {
+      dialog.showModal();
+    }
+  }
+
+  document.getElementById('btn-open-quiz')?.addEventListener('click', openQuizDialog);
+  document.getElementById('hero-quiz-trigger')?.addEventListener('click', openQuizDialog);
+  document.querySelectorAll('[data-open-quiz]').forEach(btn => {
+    btn.addEventListener('click', openQuizDialog);
+  });
+  window.addEventListener('cafesitios:open-quiz', openQuizDialog);
+
+  closeBtn?.addEventListener('click', () => dialog?.close());
+  dialog?.addEventListener('click', (e) => {
+    if (e.target === dialog) dialog.close();
+  });
+
+  // Manejo de selección
+  document.querySelectorAll('.quiz-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const step = btn.getAttribute('data-step') as 'metodo' | 'perfil' | 'acidez';
+      const val = btn.getAttribute('data-val');
+      if (!step || !val) return;
+
+      answers[step] = val as any;
+
+      document.querySelectorAll(`.quiz-btn[data-step="${step}"]`).forEach(b => {
+        b.classList.remove('border-emerald-600', 'bg-emerald-50', 'text-emerald-900', 'font-bold');
+        b.classList.add('border-stone-200');
+      });
+
+      btn.classList.add('border-emerald-600', 'bg-emerald-50', 'text-emerald-900', 'font-bold');
+      btn.classList.remove('border-stone-200');
+    });
+  });
+
+  submitBtn?.addEventListener('click', async () => {
+    if (!answers.metodo || !answers.perfil || !answers.acidez) {
+      alert('Por favor selecciona una opción en cada pregunta.');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Calculando afinidad...';
+
+    try {
+      const recommendations = await recUseCase.execute({
+        metodo: answers.metodo,
+        perfil: answers.perfil,
+        acidez: answers.acidez
+      });
+
+      stepView?.classList.add('hidden');
+      resultView?.classList.remove('hidden');
+
+      if (!resultContainer) return;
+
+      if (recommendations.length === 0) {
+        resultContainer.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No encontramos cafés con ese perfil exacto en este momento.</p>';
+      } else {
+        resultContainer.innerHTML = recommendations.map((rec, idx) => `
+          <div class="flex items-center gap-3 p-3 rounded-2xl border border-stone-200 bg-white hover:border-emerald-200 transition">
+            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs">${idx + 1}</span>
+            <img src="${rec.imagen || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100'}" alt="${rec.nombre}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100';" class="w-12 h-12 object-contain bg-[#F7F6F0] rounded-xl p-1">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-bold text-slate-500">${rec.tienda}</span>
+                <span class="bg-emerald-50 text-emerald-700 text-[10px] font-extrabold px-1.5 py-0.5 rounded-full">${Math.round(rec.match_score * 100)}% Match</span>
+              </div>
+              <h5 class="text-xs font-bold text-slate-900 truncate">${rec.nombre}</h5>
+              <p class="text-[11px] text-emerald-700 font-extrabold">$${(rec.variante?.precio_clp || 0).toLocaleString('es-CL')} <span class="text-slate-400 font-normal">($${(rec.variante?.precio_por_kilo || 0).toLocaleString('es-CL')}/kg)</span></p>
+            </div>
+            <a href="/product/${rec.id}" class="rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 text-slate-700 font-bold text-xs px-3 py-2 transition">
+              Ver
+            </a>
+          </div>
+        `).join('');
+      }
+
+      AnalyticsTracker.trackQuizCompleted(
+        answers.metodo,
+        answers.perfil,
+        answers.acidez,
+        recommendations[0]?.id
+      );
+    } catch {
+      alert('Error al calcular recomendaciones.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Ver Cafés Recomendados ✨';
+    }
+  });
+
+  function resetQuiz() {
+    delete answers.metodo;
+    delete answers.perfil;
+    delete answers.acidez;
+    document.querySelectorAll('.quiz-btn').forEach(btn => {
+      btn.classList.remove('border-emerald-600', 'bg-emerald-50', 'text-emerald-900', 'font-bold');
+      btn.classList.add('border-stone-200');
+    });
+    stepView?.classList.remove('hidden');
+    resultView?.classList.add('hidden');
+  }
+
+  restartBtn?.addEventListener('click', resetQuiz);
+</script>
+

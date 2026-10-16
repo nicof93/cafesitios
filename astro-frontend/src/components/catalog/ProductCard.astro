@@ -1,0 +1,210 @@
+---
+import type { CoffeeProduct } from '../../core/domain/models/CoffeeProduct';
+
+interface Props {
+  product: CoffeeProduct;
+}
+
+const { product } = Astro.props;
+const bestVariant = product.getBestVariant(true) || product.getBestVariant(false);
+const esRegalo = bestVariant ? bestVariant.isFree() : false;
+const esOferta = bestVariant ? bestVariant.en_oferta && !esRegalo : false;
+const precioKilo = bestVariant?.precio_por_kilo || 0;
+const precioClp = bestVariant?.precio_clp || 0;
+const precioOriginalClp = bestVariant?.precio_original_clp || 0;
+const formatoGramos = bestVariant?.formato_gramos || 250;
+const opcion = bestVariant?.opcion || 'Grano';
+const esEstimado = bestVariant?.es_estimado || false;
+---
+
+<article 
+  class="product-clickable-card group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-3.5 shadow-2xs transition-all duration-200 hover:border-emerald-300 hover:shadow-md cursor-pointer"
+  data-product-url={`/product/${product.id}`}
+>
+  <div>
+    <!-- CONTENEDOR DE IMAGEN CON ALTO CONTRASTE (NEUTRO SUAVE) -->
+    <div class="relative flex h-52 items-center justify-center overflow-hidden rounded-xl bg-[#F4F3ED] p-4 transition-colors group-hover:bg-[#EFECE3]">
+      <img 
+        src={product.imagen} 
+        alt={product.nombre} 
+        loading="lazy"
+        decoding="async"
+        referrerpolicy="no-referrer"
+        onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop';"
+        class="h-full w-full object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105"
+      />
+      
+      <!-- PILL TIENDA -->
+      <span class="absolute top-3 left-3 bg-white/95 backdrop-blur-xs text-stone-700 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-2xs border border-stone-200/50">
+        {product.tienda}
+      </span>
+
+      <!-- BADGE OFERTA / REGALO -->
+      {esRegalo ? (
+        <span class="absolute top-3 right-3 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-800 shadow-2xs">
+          🎁 Muestra Gratis
+        </span>
+      ) : esOferta ? (
+        <span class="absolute top-3 right-3 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-900 shadow-2xs">
+          -{bestVariant?.descuento_porcentaje}% OFF
+        </span>
+      ) : null}
+    </div>
+
+    <!-- METADATOS Y TÍTULO -->
+    <div class="pt-3.5 space-y-2">
+      <!-- TAGS RÁPIDOS DE ORIGEN Y PROCESO -->
+      <div class="flex flex-wrap items-center gap-1.5 text-[10px] font-medium text-stone-500">
+        <span class="rounded bg-stone-100 px-1.5 py-0.5 text-stone-700">
+          {formatoGramos}g &bull; {opcion}
+        </span>
+        {product.origen && (
+          <span class="rounded bg-stone-100/70 px-1.5 py-0.5 text-stone-600">
+            🌍 {product.origen}
+          </span>
+        )}
+        {product.proceso && (
+          <span class="rounded bg-stone-100/70 px-1.5 py-0.5 text-stone-600">
+            {product.proceso}
+          </span>
+        )}
+      </div>
+
+      <!-- TÍTULO PRINCIPAL (ENLACE ACCESIBLE) -->
+      <h3 class="font-bold text-stone-900 text-sm leading-snug line-clamp-2 group-hover:text-emerald-800 transition">
+        <a href={`/product/${product.id}`} class="focus:outline-none focus-visible:underline">
+          {product.nombre}
+        </a>
+      </h3>
+
+      <!-- NOTAS DE CATA SUTILES -->
+      {product.notas_cata && product.notas_cata.length > 0 && (
+        <p class="text-[11px] text-stone-500 truncate" title={product.notas_cata.join(', ')}>
+          <span class="font-semibold text-stone-400">Notas:</span> {product.notas_cata.slice(0, 3).join(', ')}
+        </p>
+      )}
+    </div>
+  </div>
+
+  <!-- SECCIÓN DE PRECIOS Y ACCIONES -->
+  <div class="mt-4 pt-3 border-t border-stone-100 space-y-3">
+    
+    <!-- JERARQUÍA DE PRECIOS: PRECIO DEL EMPAQUE COMO PROTAGONISTA PRINCIPAL -->
+    <div class="flex items-end justify-between gap-2">
+      <!-- PRECIO PRINCIPAL: FORMATO / BOLSA -->
+      <div>
+        <span class="block text-[10px] uppercase font-bold tracking-wider text-stone-400">
+          Precio Formato ({formatoGramos}g)
+        </span>
+        {esRegalo ? (
+          <span class="inline-block px-2.5 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 font-extrabold text-sm">
+            ¡Muestra Gratis!
+          </span>
+        ) : (
+          <div class="flex items-baseline gap-1.5">
+            <span class="text-lg font-extrabold text-stone-900 tracking-tight">
+              ${precioClp.toLocaleString('es-CL')}
+            </span>
+            <span class="text-[11px] font-semibold text-stone-500">CLP</span>
+            {esOferta && (
+              <span class="text-[10px] text-stone-400 line-through">
+                ${precioOriginalClp.toLocaleString('es-CL')}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <!-- PRECIO SECUNDARIO: REFERENCIAL POR KILO ($/KG) -->
+      <div class="text-right">
+        <span class="block text-[9px] uppercase font-bold tracking-wider text-stone-400">
+          Ref. $/kg
+        </span>
+        {esRegalo ? (
+          <span class="text-[11px] font-medium text-emerald-700">$0/kg</span>
+        ) : (
+          <div class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-stone-100/90 border border-stone-200/60 text-stone-600">
+            <span class="text-xs font-bold text-stone-700">
+              ${precioKilo.toLocaleString('es-CL')}
+            </span>
+            <span class="text-[9px] font-medium text-stone-400">/kg</span>
+            {esEstimado && (
+              <span 
+                class="ml-0.5 rounded bg-amber-100 text-amber-800 px-0.5 text-[7px] font-bold uppercase tracking-wider" 
+                title="Gramaje estimado por defecto (250g)"
+              >
+                Est.
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+
+    <!-- ACCIÓN SECUNDARIA: CONTROL COMPARADOR CON EVENT.STOPPROPAGATION -->
+    <div class="flex items-center justify-between text-xs pt-0.5">
+      <label 
+        class="inline-flex items-center gap-1.5 cursor-pointer text-stone-500 hover:text-stone-800 select-none py-1 px-0.5"
+        onclick="event.stopPropagation();"
+      >
+        <input 
+          type="checkbox" 
+          class="compare-cb h-3.5 w-3.5 rounded border-stone-300 text-emerald-700 focus:ring-emerald-500"
+          data-id={product.id}
+          data-name={product.nombre}
+        />
+        <span class="text-[11px] font-medium">+ Comparar</span>
+      </label>
+      
+      <span class="text-[10px] text-stone-400">
+        {product.variantes.length > 1 ? `${product.variantes.length} formatos` : '1 formato'}
+      </span>
+    </div>
+
+    <!-- BOTÓN DE CONVERSIÓN DIRECTA "COMPRAR EN TIENDA" -->
+    <a 
+      href={product.url_detalle} 
+      target="_blank" 
+      rel="noopener noreferrer"
+      data-track-outbound="true"
+      data-store={product.tienda}
+      data-product-name={product.nombre}
+      data-price={precioClp}
+      onclick="event.stopPropagation();"
+      class="inline-flex items-center justify-center gap-1.5 w-full rounded-xl bg-stone-900 hover:bg-emerald-800 text-white font-semibold text-xs py-2.5 px-3 transition-colors duration-150 shadow-2xs"
+    >
+      <span>Comprar en tienda</span>
+      <span aria-hidden="true">↗</span>
+    </a>
+
+  </div>
+</article>
+
+<script>
+  // Delegación de clic para el patrón "Clickable Card" completo
+  document.querySelectorAll('.product-clickable-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      // Evitar conflicto si el usuario hace clic en controles secundarios interactivos
+      const target = e.target as HTMLElement;
+      if (target.closest('a, button, input, label')) {
+        return;
+      }
+      const url = card.getAttribute('data-product-url');
+      if (url) {
+        window.location.href = url;
+      }
+    });
+  });
+
+  // Manejo del checkbox de comparación
+  document.querySelectorAll('.compare-cb').forEach(input => {
+    input.addEventListener('change', (e) => {
+      const target = e.target as HTMLInputElement;
+      const id = target.getAttribute('data-id');
+      const name = target.getAttribute('data-name');
+      window.dispatchEvent(new CustomEvent('cafesitios:toggle-compare', {
+        detail: { id, name, checked: target.checked }
+      }));
+    });
+  });
+</script>

@@ -1,0 +1,137 @@
+---
+import Header from '../components/common/Header.astro';
+import Footer from '../components/common/Footer.astro';
+import CompareBarAndModal from '../components/compare/CompareBarAndModal.astro';
+import FlavorQuizModal from '../components/quiz/FlavorQuizModal.astro';
+import FeedbackWidget from '../components/feedback/FeedbackWidget.astro';
+import Analytics from '@vercel/analytics/astro';
+import { Environment } from '../core/infrastructure/config/Environment';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  canonicalUrl?: string;
+  jsonLd?: Record<string, any> | Array<Record<string, any>>;
+  lastSync?: string;
+}
+
+const {
+  title = "Cafesitios | Comparador de Café de Especialidad en Chile - Precio por Kilo $/kg",
+  description = "Compara precios por kilo, orígenes, procesos y tiendas de café de especialidad en Chile. Encuentra siempre la opción más conveniente.",
+  ogImage = "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=1200&auto=format&fit=crop",
+  canonicalUrl,
+  jsonLd,
+  lastSync
+} = Astro.props;
+
+const gtmId = Environment.getGtmId();
+const gaId = Environment.getGaMeasurementId();
+const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'https://cafesitios.cl').href;
+---
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#fcfbf7">
+  <meta name="robots" content="index, follow">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <link rel="canonical" href={canonical}>
+
+  <!-- Open Graph / Redes Sociales -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content={canonical}>
+  <meta property="og:title" content={title}>
+  <meta property="og:description" content={description}>
+  <meta property="og:image" content={ogImage}>
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content={title}>
+  <meta name="twitter:description" content={description}>
+  <meta name="twitter:image" content={ogImage}>
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
+
+  <!-- DATOS ESTRUCTURADOS (Schema.org / JSON-LD) -->
+  {jsonLd && (
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  )}
+
+  <!-- GOOGLE TAG MANAGER -->
+  {gtmId && (
+    <script is:inline define:vars={{ gtmId }}>
+      (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+      new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+      j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+      'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+      })(window,document,'script','dataLayer',gtmId);
+    </script>
+  )}
+
+  <!-- GOOGLE ANALYTICS (GA4) -->
+  {gaId && (
+    <>
+      <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}></script>
+      <script is:inline define:vars={{ gaId }}>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', gaId);
+      </script>
+    </>
+  )}
+
+  <!-- Slot para scripts/estilos adicionales en páginas específicas -->
+  <slot name="head" />
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+  {gtmId && (
+    <noscript>
+      <iframe src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`} height="0" width="0" style="display:none;visibility:hidden"></iframe>
+    </noscript>
+  )}
+
+  <Header lastSync={lastSync} />
+
+  <main class="w-[92%] max-w-7xl mx-auto px-2 py-6 flex-1">
+    <slot />
+  </main>
+
+  <Footer />
+
+  <!-- COMPONENTES GLOBALES INTERACTIVOS -->
+  <CompareBarAndModal />
+  <FlavorQuizModal />
+  <FeedbackWidget />
+
+  <!-- SCRIPTS GLOBALES CLIENTE -->
+  <script>
+    import { AnalyticsTracker } from '../core/infrastructure/analytics/AnalyticsTracker';
+
+    // Manejador global de clics en "Ver en tienda" para telemetría
+    document.addEventListener('click', (e) => {
+      const target = (e.target as HTMLElement).closest('[data-track-outbound]') as HTMLElement | null;
+      if (!target) return;
+
+      const store = target.getAttribute('data-store') || '';
+      const name = target.getAttribute('data-product-name') || '';
+      const price = Number(target.getAttribute('data-price') || '0');
+      const url = target.getAttribute('href') || '';
+
+      AnalyticsTracker.trackOutboundClick(store, name, price, url);
+      AnalyticsTracker.trackSelectItem(name, store, price);
+    });
+  </script>
+
+  <!-- VERCEL WEB ANALYTICS -->
+  <Analytics />
+</body>
+</html>
+

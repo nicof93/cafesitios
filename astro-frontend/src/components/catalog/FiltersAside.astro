@@ -1,0 +1,327 @@
+---
+import type { Store } from '../../core/domain/models/Store';
+
+interface Props {
+  stores?: Store[];
+  selectedStore?: string;
+  initialSearch?: string;
+  initialSort?: string;
+  initialMinPrice?: string;
+  initialMaxPrice?: string;
+  initialCountry?: string;
+  initialProcess?: string;
+  initialVariety?: string;
+  initialNotes?: string;
+  initialCategory?: string;
+}
+
+const {
+  stores = [],
+  selectedStore = '',
+  initialSearch = '',
+  initialSort = 'kilo',
+  initialMinPrice = '',
+  initialMaxPrice = '',
+  initialCountry = '',
+  initialProcess = '',
+  initialVariety = '',
+  initialNotes = '',
+  initialCategory = 'cafe',
+} = Astro.props;
+
+const sortedStores = [...stores].sort((a, b) => 
+  a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+);
+
+const hasActiveFilters = Boolean(
+  initialSearch || 
+  selectedStore || 
+  initialCountry || 
+  initialProcess || 
+  initialVariety || 
+  initialNotes || 
+  initialMinPrice || 
+  initialMaxPrice ||
+  (initialCategory && initialCategory !== 'cafe') ||
+  (initialSort && initialSort !== 'kilo')
+);
+---
+
+<aside class="space-y-6">
+  <section class="bg-white rounded-2xl border border-stone-200/80 p-5 shadow-2xs space-y-5">
+    
+    <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-stone-500">Filtros</span>
+        {hasActiveFilters && (
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-600"></span>
+        )}
+      </div>
+      {hasActiveFilters && (
+        <a 
+          href="/catalog" 
+          class="text-xs font-medium text-emerald-700 hover:text-emerald-900 transition hover:underline"
+        >
+          Limpiar todo
+        </a>
+      )}
+    </div>
+
+    <form id="filters-form" method="GET" action="/catalog" class="space-y-5">
+      
+      <!-- BUSCADOR SEMÁNTICO (CU-01 / RN-01) -->
+      <div>
+        <label for="catalog-search-input" class="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
+          Buscar café o nota
+        </label>
+        <div class="relative">
+          <input 
+            type="text" 
+            name="q"
+            id="catalog-search-input" 
+            value={initialSearch}
+            placeholder="Ej. Geisha, Bourbon, Frutal..." 
+            class="w-full bg-stone-50/80 border border-stone-200 rounded-lg pl-8 pr-3 py-2 text-xs text-stone-800 placeholder-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition"
+          />
+          <span class="absolute left-2.5 top-2 text-stone-400 text-xs pointer-events-none" aria-hidden="true">
+            🔍
+          </span>
+        </div>
+      </div>
+
+      <!-- SELECTOR DE CATEGORÍA -->
+      <div>
+        <label for="catalog-category-select" class="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
+          Categoría
+        </label>
+        <select 
+          name="category"
+          id="catalog-category-select" 
+          class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-3 py-2 text-xs font-medium text-stone-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition"
+        >
+          <option value="cafe" selected={initialCategory === 'cafe'}>☕ Solo Café de Especialidad</option>
+          <option value="no_cafe" selected={initialCategory === 'no_cafe'}>🎁 Ropa, Cajas y Accesorios</option>
+          <option value="todos" selected={initialCategory === 'todos'}>🌐 Todo el Catálogo</option>
+        </select>
+      </div>
+
+      <!-- SELECTOR DE ORDENAMIENTO -->
+      <div>
+        <label for="catalog-sort-select" class="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
+          Ordenar Por
+        </label>
+        <select 
+          name="sort_by"
+          id="catalog-sort-select" 
+          class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-3 py-2 text-xs font-medium text-stone-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition"
+        >
+          <option value="unit" selected={initialSort === 'unit'}>🏷️ Menor precio por Bolsa/Formato</option>
+          <option value="kilo" selected={initialSort === 'kilo'}>🌱 Menor $/kg (Más conveniente)</option>
+          <option value="created_desc" selected={initialSort === 'created_desc'}>✨ Novedades / Recientes</option>
+        </select>
+      </div>
+
+      <!-- FILTRO DE TIENDAS (CHECKBOXES / RADIOS LIMPIOS) -->
+      {sortedStores.length > 0 && (
+        <div class="border-t border-stone-100 pt-3">
+          <span class="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-2">
+            Tostadurías y Tiendas
+          </span>
+          <div class="max-h-48 overflow-y-auto space-y-1.5 pr-1 text-xs">
+            <label class="flex items-center justify-between text-stone-600 hover:text-stone-900 cursor-pointer select-none py-0.5 group">
+              <div class="flex items-center gap-2">
+                <input 
+                  type="radio" 
+                  name="store_name" 
+                  value="" 
+                  checked={!selectedStore}
+                  class="h-3.5 w-3.5 text-emerald-700 border-stone-300 focus:ring-emerald-500"
+                />
+                <span class="font-medium text-stone-700">Todos</span>
+              </div>
+            </label>
+            {sortedStores.map(store => {
+              const isSelected = selectedStore === store.nombre;
+              return (
+                <label class="flex items-center justify-between text-stone-600 hover:text-stone-900 cursor-pointer select-none py-0.5 group">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <input 
+                      type="radio" 
+                      name="store_name" 
+                      value={store.nombre}
+                      checked={isSelected}
+                      class="h-3.5 w-3.5 text-emerald-700 border-stone-300 focus:ring-emerald-500"
+                    />
+                    <span class={`truncate ${isSelected ? 'font-bold text-emerald-800' : ''}`}>
+                      {store.nombre}
+                    </span>
+                  </div>
+                  <span class="text-[10px] font-semibold text-stone-400 group-hover:text-stone-600 flex-shrink-0 ml-1">
+                    {store.cantidad_productos}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <!-- FILTROS AVANZADOS / FACETAS DESPLEGABLES -->
+      <div class="border-t border-stone-100 pt-3">
+        <button 
+          id="btn-toggle-adv-filters" 
+          type="button" 
+          class="flex w-full items-center justify-between text-xs font-semibold text-stone-700 hover:text-emerald-800 transition py-1"
+        >
+          <span class="flex items-center gap-1.5">
+            <span>⚙️</span>
+            <span>Origen, Proceso y Precios</span>
+          </span>
+          <span id="adv-arrow" class="text-stone-400 text-[10px] transition-transform">▼</span>
+        </button>
+
+        <div id="adv-filters-drawer" class="hidden mt-3 space-y-3 pt-2 border-t border-stone-100/60">
+          <!-- PAÍS DE ORIGEN -->
+          <div>
+            <label for="input-country" class="block text-[10px] font-bold uppercase text-stone-400 mb-1">
+              País de Origen
+            </label>
+            <input 
+              type="text" 
+              name="country" 
+              id="input-country"
+              value={initialCountry} 
+              placeholder="Ej. Etiopía, Colombia, Kenia..." 
+              class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
+            />
+          </div>
+
+          <!-- PROCESO -->
+          <div>
+            <label for="input-process" class="block text-[10px] font-bold uppercase text-stone-400 mb-1">
+              Proceso
+            </label>
+            <input 
+              type="text" 
+              name="process" 
+              id="input-process"
+              value={initialProcess} 
+              placeholder="Lavado, Natural, Anaeróbico..." 
+              class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
+            />
+          </div>
+
+          <!-- VARIEDAD -->
+          <div>
+            <label for="input-variety" class="block text-[10px] font-bold uppercase text-stone-400 mb-1">
+              Variedad Botánica
+            </label>
+            <input 
+              type="text" 
+              name="variety" 
+              id="input-variety"
+              value={initialVariety} 
+              placeholder="Caturra, Bourbon, Geisha..." 
+              class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
+            />
+          </div>
+
+          <!-- NOTAS DE CATA -->
+          <div>
+            <label for="input-notes" class="block text-[10px] font-bold uppercase text-stone-400 mb-1">
+              Notas Sensoriales
+            </label>
+            <input 
+              type="text" 
+              name="notes" 
+              id="input-notes"
+              value={initialNotes} 
+              placeholder="Ej. chocolate, jazmín, cítrico..." 
+              class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
+            />
+          </div>
+
+          <!-- RANGO DE PRECIO -->
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label for="input-min-price" class="block text-[10px] font-bold uppercase text-stone-400 mb-1">
+                Min ($)
+              </label>
+              <input 
+                type="number" 
+                name="min_price" 
+                id="input-min-price"
+                value={initialMinPrice} 
+                placeholder="10000" 
+                class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-800"
+              />
+            </div>
+            <div>
+              <label for="input-max-price" class="block text-[10px] font-bold uppercase text-stone-400 mb-1">
+                Max ($)
+              </label>
+              <input 
+                type="number" 
+                name="max_price" 
+                id="input-max-price"
+                value={initialMaxPrice} 
+                placeholder="35000" 
+                class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-800"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTÓN DE APLICAR FILTROS -->
+      <button 
+        type="submit" 
+        class="w-full bg-stone-900 hover:bg-emerald-900 text-white font-semibold py-2.5 px-4 rounded-xl text-xs transition duration-150 shadow-sm"
+      >
+        Aplicar Filtros
+      </button>
+
+    </form>
+  </section>
+</aside>
+
+<script>
+  import { AnalyticsTracker } from '../../core/infrastructure/analytics/AnalyticsTracker';
+
+  const toggleBtn = document.getElementById('btn-toggle-adv-filters');
+  const drawer = document.getElementById('adv-filters-drawer');
+  const arrow = document.getElementById('adv-arrow');
+  const form = document.getElementById('filters-form') as HTMLFormElement | null;
+  const searchInput = document.getElementById('catalog-search-input') as HTMLInputElement | null;
+  const sortSelect = document.getElementById('catalog-sort-select') as HTMLSelectElement | null;
+
+  toggleBtn?.addEventListener('click', () => {
+    const isHidden = drawer?.classList.toggle('hidden');
+    if (arrow) {
+      arrow.textContent = isHidden ? '▼' : '▲';
+    }
+  });
+
+  // Si hay valores avanzados ya ingresados, abrir el acordeón automáticamente
+  const hasAdvParams = Boolean(
+    (document.getElementById('input-country') as HTMLInputElement)?.value ||
+    (document.getElementById('input-process') as HTMLInputElement)?.value ||
+    (document.getElementById('input-variety') as HTMLInputElement)?.value ||
+    (document.getElementById('input-notes') as HTMLInputElement)?.value ||
+    (document.getElementById('input-min-price') as HTMLInputElement)?.value ||
+    (document.getElementById('input-max-price') as HTMLInputElement)?.value
+  );
+
+  if (hasAdvParams && drawer) {
+    drawer.classList.remove('hidden');
+    if (arrow) arrow.textContent = '▲';
+  }
+
+  form?.addEventListener('submit', () => {
+    const query = searchInput?.value.trim() || '';
+    const sortBy = sortSelect?.value || 'kilo';
+    if (query) {
+      AnalyticsTracker.trackSearch(query, sortBy);
+    }
+  });
+</script>

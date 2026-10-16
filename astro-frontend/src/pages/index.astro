@@ -1,0 +1,584 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ProductCard from '../components/catalog/ProductCard.astro';
+import { GetCatalogUseCase } from '../core/application/GetCatalog';
+import { GetStoresUseCase } from '../core/application/GetStores';
+import { HttpClient } from '../core/infrastructure/api/HttpClient';
+
+const catalogUseCase = new GetCatalogUseCase();
+const storesUseCase = new GetStoresUseCase();
+const http = new HttpClient();
+
+let featuredProducts: any[] = [];
+let totalProducts = 0;
+let totalStores = 0;
+let lastSyncTime = 'Al día';
+
+try {
+  const [catalogRes, storesRes, syncRes] = await Promise.allSettled([
+    catalogUseCase.execute({ limit: 18, sortBy: 'kilo', category: 'cafe' }),
+    storesUseCase.execute({ pageSize: 50, sortBy: 'product_count_desc' }),
+    http.get<{ last_sync?: string }>('/api/v1/sync/last')
+  ]);
+
+  if (catalogRes.status === 'fulfilled') {
+    featuredProducts = catalogRes.value.items;
+    totalProducts = catalogRes.value.total;
+  }
+  if (storesRes.status === 'fulfilled') {
+    totalStores = storesRes.value.length;
+  }
+  if (syncRes.status === 'fulfilled' && syncRes.value.last_sync) {
+    lastSyncTime = new Date(syncRes.value.last_sync).toLocaleString('es-CL', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    }) + ' hrs';
+  }
+} catch (error) {
+  console.error('Error cargando datos para la Landing Page:', error);
+}
+
+// Imagen default e información de respaldo ante errores del catálogo
+const DEFAULT_HERO_IMAGE = 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800&auto=format&fit=crop';
+
+const fallbackHeroProduct = {
+  id: 0,
+  nombre: 'Geisha Finca La Esperanza',
+  tienda: 'Tostaduría de Especialidad',
+  origen: 'Colombia • Huila',
+  proceso: 'Lavado',
+  notas_cata: ['Jazmín', 'Miel', 'Cítrico'],
+  imagen: DEFAULT_HERO_IMAGE,
+  formato_gramos: 250,
+  precio_clp: 11000,
+  precio_por_kilo: 44000,
+  url_detalle: '/catalog?q=Geisha'
+};
+
+let heroFeaturedProduct = fallbackHeroProduct;
+
+if (featuredProducts && featuredProducts.length > 0) {
+  // Selección pseudoaleatoria de un café real del catálogo
+  const randomIndex = Math.floor(Math.random() * featuredProducts.length);
+  const picked = featuredProducts[randomIndex];
+  const bestVariant = picked?.getBestVariant ? picked.getBestVariant() : picked?.variantes?.[0];
+
+  if (picked) {
+    const notas = (picked.notas_cata && picked.notas_cata.length > 0)
+      ? picked.notas_cata.slice(0, 3)
+      : ['Equilibrado', 'Aromático'];
+
+    const imagenValida = (picked.imagen && typeof picked.imagen === 'string' && picked.imagen.trim().startsWith('http'))
+      ? picked.imagen.trim()
+      : DEFAULT_HERO_IMAGE;
+
+    heroFeaturedProduct = {
+      id: picked.id,
+      nombre: picked.nombre || fallbackHeroProduct.nombre,
+      tienda: picked.tienda || fallbackHeroProduct.tienda,
+      origen: picked.origen || 'Origen de Especialidad',
+      proceso: picked.proceso || 'Arábica',
+      notas_cata: notas,
+      imagen: imagenValida,
+      formato_gramos: bestVariant?.formato_gramos || 250,
+      precio_clp: bestVariant?.precio_clp || 10000,
+      precio_por_kilo: bestVariant?.precio_por_kilo || 40000,
+      url_detalle: picked.id ? `/product/${picked.id}` : '/catalog'
+    };
+  }
+}
+
+// Datos estructurados JSON-LD (Schema.org) para la Home / Landing Page
+const jsonLdHome = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://cafesitios.cl/#organization",
+      "name": "Cafesitios",
+      "url": "https://cafesitios.cl",
+      "description": "Comparador de precios por kilo, origen y proceso de café de especialidad en Chile.",
+      "logo": "https://cafesitios.cl/favicon.svg"
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://cafesitios.cl/#website",
+      "url": "https://cafesitios.cl",
+      "name": "Cafesitios",
+      "publisher": { "@id": "https://cafesitios.cl/#organization" },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://cafesitios.cl/catalog?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+  ]
+};
+---
+
+<BaseLayout 
+  title="Cafesitios | El Primer Comparador de Café de Especialidad en Chile - Precio por Kilo $/kg"
+  description="Encuentra el café de especialidad perfecto al mejor precio por kilo. Comparamos tostadurías chilenas, procesos, orígenes y formatos en tiempo real."
+  canonicalUrl="https://cafesitios.cl/"
+  jsonLd={jsonLdHome}
+  lastSync={lastSyncTime}
+>
+  <div class="space-y-16 sm:space-y-24 py-4">
+
+    <!-- ===================================================================== -->
+    <!-- 1. HERO SECTION PRINCIPAL DE ALTO IMPACTO -->
+    <!-- ===================================================================== -->
+    <section class="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#FAF8F2] via-white to-[#F5F2E9] border border-stone-200/90 shadow-sm p-6 sm:p-12 lg:p-16">
+      
+      <!-- Fondo decorativo abstracto con granos de café estilizados -->
+      <div class="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-emerald-100/40 blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-amber-100/40 blur-3xl pointer-events-none"></div>
+
+      <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+        
+        <!-- Columna de Texto y Llamados a la Acción -->
+        <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
+          
+          <!-- Badge de Construcción / Beta Pública -->
+          <div class="inline-flex items-center gap-2 rounded-full bg-amber-50 border border-amber-200/80 px-3.5 py-1 text-xs font-semibold text-amber-900 shadow-2xs">
+            <span class="flex h-2 w-2 rounded-full bg-amber-500 animate-ping"></span>
+            <span>🚧 Plataforma en Construcción • <strong>Beta Abierta con Catálogo en Vivo</strong></span>
+          </div>
+
+          <!-- H1 Principal Optimizado para SEO -->
+          <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black text-stone-900 tracking-tight leading-[1.1]">
+            El café de especialidad, <span class="text-emerald-800 underline decoration-emerald-300 decoration-wavy decoration-2">transparente</span>.
+          </h1>
+
+          <!-- Bajada de Valor Clara -->
+          <p class="text-base sm:text-lg text-stone-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-normal">
+            Comparamos en tiempo real el <strong class="text-stone-900 font-semibold">Precio por Kilo ($/kg)</strong>, orígenes botánicos, notas de cata y procesos de las mejores tostadurías de especialidad. Compra siempre informado.
+          </p>
+
+          <!-- Botones de Acción Inmediata -->
+          <div class="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
+            <a 
+              href="/catalog" 
+              class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-2xl bg-stone-900 hover:bg-emerald-900 text-white font-bold text-sm sm:text-base px-7 py-4 transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5"
+            >
+              <span>Explorar Catálogo Beta</span>
+              <span class="text-emerald-400">☕ →</span>
+            </a>
+
+            <a 
+              href="/stores" 
+              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-white hover:bg-stone-100 text-stone-800 font-semibold text-sm sm:text-base px-6 py-4 transition-all duration-200 border border-stone-200 shadow-2xs"
+            >
+              <span>Ver Mapa de Tiendas</span>
+              <span>📍</span>
+            </a>
+
+            <button 
+              type="button" 
+              id="hero-quiz-trigger"
+              data-open-quiz
+              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-semibold text-sm sm:text-base px-5 py-4 transition border border-emerald-200/70"
+            >
+              <span>Quiz de Sabor</span>
+              <span>✨</span>
+            </button>
+          </div>
+
+          <!-- Micro-Trust Bar -->
+          <div class="pt-3 flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs font-medium text-stone-500">
+            <span class="flex items-center gap-1.5">
+              <svg class="h-4 w-4 text-emerald-700" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              {totalProducts > 0 ? `+${totalProducts}` : '300+'} Cafés analizados
+            </span>
+            <span class="flex items-center gap-1.5">
+              <svg class="h-4 w-4 text-emerald-700" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              {totalStores > 0 ? `${totalStores}+` : '15+'} Tostadurías locales
+            </span>
+            <span class="flex items-center gap-1.5">
+              <svg class="h-4 w-4 text-emerald-700" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              100% Independiente y Gratis
+            </span>
+          </div>
+
+        </div>
+
+        <!-- Columna Visual Mockup / Card Hero (LCP Optimizado - Dinámico Aleatorio) -->
+        <div class="lg:col-span-5 relative">
+          <div class="relative mx-auto max-w-sm rounded-3xl bg-white p-5 shadow-xl border border-stone-200/90 space-y-4">
+            
+            <div class="relative h-60 w-full overflow-hidden rounded-2xl bg-stone-100 flex items-center justify-center">
+              <img 
+                src={heroFeaturedProduct.imagen} 
+                alt={`${heroFeaturedProduct.nombre} de ${heroFeaturedProduct.tienda}`} 
+                width="400"
+                height="300"
+                loading="eager"
+                fetchpriority="high"
+                class="h-full w-full object-cover"
+                referrerpolicy="no-referrer"
+                onerror={`this.onerror=null; this.src='${DEFAULT_HERO_IMAGE}';`}
+              />
+              <span class="absolute top-3 left-3 bg-white/95 backdrop-blur-xs text-stone-800 text-xs font-bold px-3 py-1 rounded-full shadow-2xs border border-stone-200 max-w-[180px] truncate" title={heroFeaturedProduct.tienda}>
+                {heroFeaturedProduct.tienda}
+              </span>
+              <span class="absolute bottom-3 right-3 bg-emerald-800 text-white text-xs font-black px-3 py-1 rounded-full shadow-md">
+                ${heroFeaturedProduct.precio_por_kilo.toLocaleString('es-CL')} /kg
+              </span>
+            </div>
+
+            <div class="space-y-2">
+              <div class="flex items-center justify-between text-xs text-stone-500 font-medium">
+                <span class="truncate max-w-[180px]">{heroFeaturedProduct.origen}</span>
+                <span class="rounded bg-stone-100 px-2 py-0.5 font-bold text-stone-700">{heroFeaturedProduct.proceso}</span>
+              </div>
+              <h2 class="text-base font-bold text-stone-900 truncate" title={heroFeaturedProduct.nombre}>
+                {heroFeaturedProduct.nombre}
+              </h2>
+              <div class="flex flex-wrap gap-1 text-[11px]">
+                {heroFeaturedProduct.notas_cata.map((nota, i) => (
+                  <span class={`rounded-md px-2 py-0.5 font-medium ${
+                    i === 0 ? 'bg-emerald-50 text-emerald-800' :
+                    i === 1 ? 'bg-amber-50 text-amber-800' :
+                    'bg-stone-100 text-stone-700'
+                  }`}>
+                    {nota}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-stone-100 flex items-center justify-between">
+              <div>
+                <span class="block text-[10px] uppercase font-bold text-stone-400">
+                  Precio Bolsa ({heroFeaturedProduct.formato_gramos}g)
+                </span>
+                <span class="text-lg font-black text-stone-900">
+                  ${heroFeaturedProduct.precio_clp.toLocaleString('es-CL')} <small class="text-xs font-semibold text-stone-500">CLP</small>
+                </span>
+              </div>
+              <a 
+                href={heroFeaturedProduct.url_detalle} 
+                class="rounded-xl bg-stone-900 hover:bg-emerald-900 text-white text-xs font-bold px-4 py-2.5 transition"
+              >
+                Ver Detalle →
+              </a>
+            </div>
+
+          </div>
+
+          <!-- Pastilla flotante con beneficio -->
+          <div class="hidden sm:flex absolute -bottom-5 -left-6 items-center gap-3 rounded-2xl bg-white p-3.5 shadow-lg border border-stone-200/80 max-w-xs animate-bounce" style="animation-duration: 4s;">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 text-lg font-bold">
+              💡
+            </div>
+            <p class="text-xs font-medium text-stone-700 leading-snug">
+              Un café de <strong>${heroFeaturedProduct.precio_clp.toLocaleString('es-CL')} ({heroFeaturedProduct.formato_gramos}g)</strong> equivale a <strong>${heroFeaturedProduct.precio_por_kilo.toLocaleString('es-CL')}/kg</strong>. ¡Compara antes de comprar!
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================================== -->
+    <!-- 2. EXPLORA POR FAMILIA DE SABOR (Rueda SCA Interactiva) -->
+    <!-- ===================================================================== -->
+    <section class="space-y-8">
+      
+      <div class="text-center max-w-2xl mx-auto space-y-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">Sensorial & Botánico</span>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-stone-900 tracking-tight">
+          ¿Qué perfil de taza buscas hoy?
+        </h2>
+        <p class="text-xs sm:text-sm text-stone-500">
+          Haz clic en cualquier familia organoléptica para ver todos los cafés disponibles en Chile con esas notas.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        
+        <!-- Tarjeta Frutos Rojos -->
+        <a 
+          href="/catalog?notes=frutos+rojos" 
+          class="group rounded-3xl p-6 bg-gradient-to-br from-rose-50/60 to-white border border-rose-200/60 shadow-2xs hover:shadow-md hover:border-rose-300 transition-all duration-200 flex flex-col justify-between"
+        >
+          <div class="space-y-3">
+            <span class="text-3xl">🍓</span>
+            <h3 class="text-lg font-bold text-stone-900 group-hover:text-rose-700 transition">
+              Frutos Rojos & Silvestres
+            </h3>
+            <p class="text-xs text-stone-500 leading-relaxed">
+              Frutilla, frambuesa, mora, arándano y cereza madura. Acidez jugosa y perfiles vibrantes.
+            </p>
+          </div>
+          <span class="mt-5 text-xs font-bold text-rose-700 flex items-center gap-1 group-hover:translate-x-1 transition">
+            Ver cafés frutales →
+          </span>
+        </a>
+
+        <!-- Tarjeta Cítricos -->
+        <a 
+          href="/catalog?notes=citrico" 
+          class="group rounded-3xl p-6 bg-gradient-to-br from-amber-50/60 to-white border border-amber-200/60 shadow-2xs hover:shadow-md hover:border-amber-300 transition-all duration-200 flex flex-col justify-between"
+        >
+          <div class="space-y-3">
+            <span class="text-3xl">🍋</span>
+            <h3 class="text-lg font-bold text-stone-900 group-hover:text-amber-800 transition">
+              Cítricos & Refrescantes
+            </h3>
+            <p class="text-xs text-stone-500 leading-relaxed">
+              Limón dulce, naranja, bergamota, pomelo y manzana verde. Claridad y brillo en taza.
+            </p>
+          </div>
+          <span class="mt-5 text-xs font-bold text-amber-800 flex items-center gap-1 group-hover:translate-x-1 transition">
+            Ver cafés cítricos →
+          </span>
+        </a>
+
+        <!-- Tarjeta Chocolate & Dulce -->
+        <a 
+          href="/catalog?notes=chocolate" 
+          class="group rounded-3xl p-6 bg-gradient-to-br from-amber-950/5 to-white border border-stone-200/80 shadow-2xs hover:shadow-md hover:border-stone-300 transition-all duration-200 flex flex-col justify-between"
+        >
+          <div class="space-y-3">
+            <span class="text-3xl">🍫</span>
+            <h3 class="text-lg font-bold text-stone-900 group-hover:text-emerald-900 transition">
+              Chocolate & Dulce
+            </h3>
+            <p class="text-xs text-stone-500 leading-relaxed">
+              Cacao amargo, caramelo, panela, vainilla y toffee. Gran cuerpo, ideal para espresso o prensa francesa.
+            </p>
+          </div>
+          <span class="mt-5 text-xs font-bold text-stone-800 flex items-center gap-1 group-hover:translate-x-1 transition">
+            Ver cafés achocolatados →
+          </span>
+        </a>
+
+        <!-- Tarjeta Florales -->
+        <a 
+          href="/catalog?notes=floral" 
+          class="group rounded-3xl p-6 bg-gradient-to-br from-emerald-50/60 to-white border border-emerald-200/60 shadow-2xs hover:shadow-md hover:border-emerald-300 transition-all duration-200 flex flex-col justify-between"
+        >
+          <div class="space-y-3">
+            <span class="text-3xl">🌸</span>
+            <h3 class="text-lg font-bold text-stone-900 group-hover:text-emerald-800 transition">
+              Florales & Complejos
+            </h3>
+            <p class="text-xs text-stone-500 leading-relaxed">
+              Jazmín, flor blanca, azahar y té negro. Variedades selectas como Geisha o lotes etíopes.
+            </p>
+          </div>
+          <span class="mt-5 text-xs font-bold text-emerald-800 flex items-center gap-1 group-hover:translate-x-1 transition">
+            Ver cafés florales →
+          </span>
+        </a>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================================== -->
+    <!-- 3. MUESTRA SELECTA DEL CATÁLOGO EN VIVO -->
+    <!-- ===================================================================== -->
+    {featuredProducts.length > 0 && (
+      <section class="space-y-6">
+        
+        <div class="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-3">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">Catálogo en Vivo</span>
+            <h2 class="text-2xl font-extrabold text-stone-900 tracking-tight">
+              Cafés recién indexados por tostaduría
+            </h2>
+            <p class="text-xs sm:text-sm text-stone-500">
+              Datos actualizados diariamente para comparar precios por kilo oficiales y estimados.
+            </p>
+          </div>
+
+          <a 
+            href="/catalog" 
+            class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/70 px-4 py-2 rounded-xl transition"
+          >
+            <span>Ver los {totalProducts} cafés disponibles</span>
+            <span>→</span>
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {featuredProducts.map(product => (
+            <ProductCard product={product} />
+          ))}
+        </div>
+
+        <div class="pt-4 text-center">
+          <a 
+            href="/catalog" 
+            class="inline-flex items-center gap-2 rounded-2xl bg-stone-900 hover:bg-emerald-900 text-white font-bold text-sm px-8 py-3.5 transition shadow-sm"
+          >
+            <span>Ir al Catálogo Completo con Filtros Avanzados</span>
+            <span>☕</span>
+          </a>
+        </div>
+
+      </section>
+    )}
+
+
+    <!-- ===================================================================== -->
+    <!-- 4. ESTADO DEL PROYECTO / ROADMAP "EN CONSTRUCCIÓN" -->
+    <!-- ===================================================================== -->
+    <section class="rounded-3xl bg-stone-900 text-white p-8 sm:p-12 space-y-8 relative overflow-hidden shadow-md">
+      
+      <div class="relative z-10 max-w-3xl space-y-3">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-900/60 border border-emerald-400/30 px-3 py-1 text-[11px] font-bold text-emerald-300">
+          ⚙️ Transparencia de Desarrollo
+        </span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
+          Estamos construyendo la herramienta que los amantes del café de especialidad necesitaban
+        </h2>
+        <p class="text-sm text-stone-300 leading-relaxed font-normal">
+          Cafesitios nació como un proyecto independiente para resolver la falta de claridad en precios y formatos entre tostadurías. Conoce el estado de avance:
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 relative z-10">
+        
+        <!-- Feature 1 -->
+        <div class="rounded-2xl bg-stone-850 border border-stone-800 p-5 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-lg">🤖</span>
+            <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">100% Operativo</span>
+          </div>
+          <h3 class="font-bold text-white text-sm">Pipeline Cascada de Scraping</h3>
+          <p class="text-xs text-stone-400 leading-snug">
+            Extracción nocturna sin costo con RegEx y GLiNER, normalizando notas SCA y $/kg exacto.
+          </p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="rounded-2xl bg-stone-850 border border-stone-800 p-5 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-lg">🔎</span>
+            <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">100% Operativo</span>
+          </div>
+          <h3 class="font-bold text-white text-sm">Catálogo & Filtros Facetados</h3>
+          <p class="text-xs text-stone-400 leading-snug">
+            Búsqueda por país, variedad, proceso, rango de precios y scroll infinito sin recargar la página.
+          </p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="rounded-2xl bg-stone-850 border border-stone-800 p-5 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-lg">📍</span>
+            <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">En Pruebas</span>
+          </div>
+          <h3 class="font-bold text-white text-sm">Mapa de Tostadurías</h3>
+          <p class="text-xs text-stone-400 leading-snug">
+            Directorio geolocalizado en Leaflet.js para encontrar cafeterías y tostadores de especialidad cerca de ti.
+          </p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="rounded-2xl bg-stone-850 border border-stone-800 p-5 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-lg">✨</span>
+            <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">Beta Activa</span>
+          </div>
+          <h3 class="font-bold text-white text-sm">Quiz de Perfil de Sabor</h3>
+          <p class="text-xs text-stone-400 leading-snug">
+            Recomendador inteligente que sugiere granos según tu método de preparación y preferencias de acidez.
+          </p>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="rounded-2xl bg-stone-850 border border-stone-800 p-5 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-lg">📖</span>
+            <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">Página Nueva</span>
+          </div>
+          <h3 class="font-bold text-white text-sm">Bitácora de Recetas</h3>
+          <p class="text-xs text-stone-400 leading-snug">
+            Guarda tus recetas de molienda, agua, tiempos y la planilla de catación Q-Grader SCA directamente en tu equipo.
+          </p>
+          <a href="/bitacora" class="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 font-bold pt-1 transition">
+            <span>Abrir Bitácora Barista</span>
+            <span>→</span>
+          </a>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="rounded-2xl bg-stone-850 border border-stone-800 p-5 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-lg">🔔</span>
+            <span class="rounded-full bg-amber-950 text-amber-400 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold">Próximamente</span>
+          </div>
+          <h3 class="font-bold text-white text-sm">Alertas de Ofertas & Stock</h3>
+          <p class="text-xs text-stone-400 leading-snug">
+            Notificaciones por correo cuando baje el precio de tus granos favoritos o vuelvan a estar en stock.
+          </p>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================================== -->
+    <!-- 5. PRE-REGISTRO / FEEDBACK DIRECTO -->
+    <!-- ===================================================================== -->
+    <section class="rounded-3xl bg-white border border-stone-200/90 p-8 sm:p-12 text-center max-w-3xl mx-auto space-y-5 shadow-2xs">
+      <span class="text-4xl">💌</span>
+      <h2 class="text-2xl font-extrabold text-stone-900 tracking-tight">
+        ¿Eres tostador o amante del café? Ayúdanos a mejorar
+      </h2>
+      <p class="text-xs sm:text-sm text-stone-500 max-w-lg mx-auto leading-relaxed">
+        Si tienes una tostaduría que quieres incluir o deseas sugerir una funcionalidad, usa nuestro botón de feedback en la esquina inferior o explora el catálogo ahora mismo.
+      </p>
+
+      <div class="pt-2 flex flex-wrap items-center justify-center gap-3">
+        <a 
+          href="/catalog" 
+          class="inline-flex items-center gap-2 rounded-2xl bg-stone-900 hover:bg-emerald-900 text-white font-bold text-sm px-6 py-3.5 transition shadow-2xs"
+        >
+          <span>Ir al Catálogo de Cafés</span>
+          <span>☕ →</span>
+        </a>
+
+        <button 
+          type="button" 
+          id="btn-footer-feedback-trigger"
+          class="inline-flex items-center gap-2 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold text-sm px-6 py-3.5 transition"
+        >
+          <span>Dejar una sugerencia</span>
+          <span>💬</span>
+        </button>
+      </div>
+    </section>
+
+  </div>
+</BaseLayout>
+
+<script>
+  // Event listeners para los botones de la Landing Page
+  const quizTrigger = document.getElementById('hero-quiz-trigger');
+  if (quizTrigger) {
+    quizTrigger.addEventListener('click', () => {
+      // Notifica mediante CustomEvent y además activa el botón de la barra de navegación
+      window.dispatchEvent(new CustomEvent('cafesitios:open-quiz'));
+      const headerQuizBtn = document.getElementById('btn-open-quiz');
+      if (headerQuizBtn) headerQuizBtn.click();
+    });
+  }
+
+  const feedbackTrigger = document.getElementById('btn-footer-feedback-trigger');
+  if (feedbackTrigger) {
+    feedbackTrigger.addEventListener('click', () => {
+      const fbBtn = document.getElementById('btn-open-feedback');
+      if (fbBtn) fbBtn.click();
+    });
+  }
+</script>

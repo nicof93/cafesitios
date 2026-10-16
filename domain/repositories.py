@@ -8,6 +8,7 @@ class ICoffeeRepository(ABC):
         self,
         sort_by: Literal["kilo", "unit"] = "kilo",
         limit: int = 10,
+        offset: int = 0,
         only_available: bool = True,
         store_name: Optional[str] = None,
         min_weight_g: Optional[int] = None,
@@ -19,6 +20,9 @@ class ICoffeeRepository(ABC):
         country: Optional[str] = None,
         variety: Optional[str] = None,
         tasting_notes: Optional[str] = None,
+        min_price_kilo: Optional[int] = None,
+        max_price_kilo: Optional[int] = None,
+        category: Optional[str] = "cafe",
     ) -> List[CoffeeProductDomain]:
         pass
 
@@ -37,5 +41,12 @@ class ICoffeeRepository(ABC):
         country: Optional[str] = None,
         variety: Optional[str] = None,
         tasting_notes: Optional[str] = None,
+        min_price_kilo: Optional[int] = None,
+        max_price_kilo: Optional[int] = None,
+        category: Optional[str] = "cafe",
     ) -> int:
+        pass
+
+    @abstractmethod
+    def find_matching_products(self, product_id: int) -> List[CoffeeProductDomain]:
         pass

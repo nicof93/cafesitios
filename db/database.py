@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 from sqlalchemy import (
     create_engine, Column, Integer, String, Text, Boolean,
-    Numeric, DateTime, ForeignKey, UniqueConstraint, inspect, text, Float, JSON
+    Numeric, DateTime, ForeignKey, UniqueConstraint, inspect, text, Float, JSON, ARRAY
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
@@ -31,6 +31,9 @@ class Tienda(Base):
     url_base = Column(String(255), nullable=False)
     plataforma = Column(String(50), nullable=False, default='desconocida', server_default='desconocida')
     activo = Column(Boolean, nullable=False, default=True, server_default='true')
+    latitud = Column(Numeric(10, 8), nullable=True)
+    longitud = Column(Numeric(11, 8), nullable=True)
+    comuna = Column(String(100), nullable=True)
     fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
     fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
     productos = relationship("Producto", back_populates="tienda", cascade="all, delete-orphan")
@@ -55,6 +58,7 @@ class Producto(Base):
     imagen = Column(Text, nullable=True)
     descripcion = Column(Text, nullable=True)
     proceso = Column(Text, nullable=True)
+    tueste = Column(String(50), nullable=True)
     finca = Column(String(255), nullable=True)
     variedad = Column(String(255), nullable=True)
     pais_origen = Column(String(255), nullable=True)
@@ -92,6 +96,7 @@ class Variante(Base):
     en_oferta = Column(Boolean, default=False)
     descuento_porcentaje = Column(Integer, default=0)
     precio_por_kilo = Column(Numeric(10, 2), nullable=False)
+    es_estimado = Column(Boolean, nullable=False, default=True, server_default='true')
     disponible = Column(Boolean, default=True)
     fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
     fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
@@ -128,6 +133,85 @@ class Sincronizacion(Base):
     productos_eliminados = Column(Integer, nullable=False, default=0, server_default='0')
     productos_actualizados = Column(Integer, nullable=False, default=0, server_default='0')
     tienda = relationship("Tienda", back_populates="sincronizaciones")
+
+class Receta(Base):
+    __tablename__ = 'recetas'
+    id = Column(Integer, primary_key=True)
+    dispositivo_uuid = Column(String(64), nullable=False, index=True)
+    producto_id = Column(Integer, ForeignKey('productos.id', ondelete='SET NULL'), nullable=True)
+    nombre_receta = Column(String(150), nullable=False)
+    metodo = Column(String(100), nullable=False)
+    dosis_cafe_g = Column(Numeric(5, 2), nullable=False)
+    agua_ml = Column(Numeric(6, 2), nullable=False)
+    ratio = Column(String(20), nullable=True)
+    molino_usado = Column(String(100), nullable=True)
+    grosor_molienda = Column(String(50), nullable=True)
+    temperatura_c = Column(Integer, nullable=True)
+    tiempo_total_s = Column(Integer, nullable=True)
+    calificacion_1_10 = Column(Integer, nullable=True)
+    reintentar = Column(Boolean, default=True, server_default='true')
+    notas_catado = Column(Text, nullable=True)
+    catacion_sca = Column(JSON, nullable=True)
+    puntuacion_sca_total = Column(Numeric(5, 2), nullable=True)
+    fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
+    producto = relationship("Producto")
+
+class SugerenciaFeedback(Base):
+    __tablename__ = 'sugerencias_feedback'
+    id = Column(Integer, primary_key=True)
+    categoria = Column(String(50), nullable=False)
+    mensaje = Column(Text, nullable=False)
+    contacto_opcional = Column(String(150), nullable=True)
+    ip_hash = Column(String(64), nullable=False)
+    fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
+
+class InteraccionClic(Base):
+    __tablename__ = 'interacciones_clics'
+    id = Column(Integer, primary_key=True)
+    producto_id = Column(Integer, ForeignKey('productos.id', ondelete='SET NULL'), nullable=True)
+    variante_id = Column(Integer, ForeignKey('variantes.id', ondelete='SET NULL'), nullable=True)
+    tipo_evento = Column(String(50), nullable=False)
+    ip_hash = Column(String(64), nullable=False)
+    metadata_evento = Column(JSON, nullable=True)
+    fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
+
+class HistorialBusqueda(Base):
+    __tablename__ = 'historial_busquedas'
+    id = Column(Integer, primary_key=True)
+    termino_busqueda = Column(String(255), nullable=False)
+    resultados_encontrados = Column(Integer, nullable=False, default=0, server_default='0')
+    fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
+
+class Cafe(Base):
+    __tablename__ = 'cafes'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(255), nullable=False)
+    origen = Column(String(255), nullable=True)
+    finca_productor = Column(String(255), nullable=True)
+    variedad = Column(String(255), nullable=True)
+    proceso = Column(String(255), nullable=True)
+    lote = Column(String(100), nullable=True)
+    notas_cata = Column(ARRAY(String).with_variant(JSON, 'sqlite'), nullable=True)
+    notas_normalizadas = Column(ARRAY(String).with_variant(JSON, 'sqlite'), nullable=True)
+    hash_descripcion = Column(String(32), nullable=True, index=True)
+    fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
+    fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
+    ofertas = relationship("OfertaTienda", back_populates="cafe", cascade="all, delete-orphan")
+
+class OfertaTienda(Base):
+    __tablename__ = 'ofertas_tienda'
+    id = Column(Integer, primary_key=True)
+    cafe_id = Column(Integer, ForeignKey('cafes.id', ondelete='CASCADE'), nullable=False)
+    tienda_id = Column(Integer, ForeignKey('tiendas.id', ondelete='CASCADE'), nullable=False)
+    precio_actual = Column(Integer, nullable=False)
+    formato_gramos = Column(Integer, nullable=False)
+    precio_por_kilo = Column(Numeric(10, 2), nullable=False)
+    es_estimado = Column(Boolean, nullable=False, default=True, server_default='true')
+    link_detalle = Column(String(500), unique=True, nullable=False)
+    disponible = Column(Boolean, nullable=False, default=True, server_default='true')
+    ultima_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
+    cafe = relationship("Cafe", back_populates="ofertas")
+    tienda = relationship("Tienda")
 
 class DatabaseManager:
     def __init__(self, db_url: str = None):
@@ -352,7 +436,7 @@ class DatabaseManager:
                     'caracteristicas_fuente': fuentes,
                 }
                 for field in (
-                    'proceso', 'finca', 'variedad', 'pais_origen', 'elevacion_min_msnm',
+                    'proceso', 'tueste', 'finca', 'variedad', 'pais_origen', 'elevacion_min_msnm',
                     'elevacion_max_msnm', 'cosecha', 'fermentacion_tipo',
                     'fermentacion_horas',
                 ):
@@ -378,7 +462,7 @@ class DatabaseManager:
                             if getattr(producto_existente, campo) != row[campo]:
                                 cambios[campo] = row[campo]
                         for campo in (
-                            'proceso', 'finca', 'variedad', 'pais_origen', 'elevacion_min_msnm',
+                            'proceso', 'tueste', 'finca', 'variedad', 'pais_origen', 'elevacion_min_msnm',
                             'elevacion_max_msnm', 'cosecha', 'fermentacion_tipo',
                             'fermentacion_horas',
                         ):
@@ -503,6 +587,7 @@ class DatabaseManager:
                             'en_oferta': var_data['en_oferta'],
                             'descuento_porcentaje': var_data['descuento_porcentaje'],
                             'precio_por_kilo': var_data['precio_por_kilo'],
+                            'es_estimado': var_data.get('es_estimado', True),
                             'disponible': var_data['disponible'],
                             'fecha_creacion': fecha_actual,
                             'fecha_actualizacion': fecha_actual,
@@ -529,7 +614,7 @@ class DatabaseManager:
                             for campo in (
                                 'producto_id', 'opcion', 'formato_gramos', 'precio_clp',
                                 'precio_original_clp', 'en_oferta', 'descuento_porcentaje',
-                                'precio_por_kilo', 'disponible',
+                                'precio_por_kilo', 'es_estimado', 'disponible',
                             ):
                                 if getattr(variante_existente, campo) != row[campo]:
                                     cambios[campo] = row[campo]
@@ -604,3 +689,128 @@ class DatabaseManager:
             raise
         finally:
             session.close()
+
+    def guardar_cafes_cascada(
+        self,
+        catalogo_cascada: List[Dict[str, Any]],
+        tienda_id: int,
+        batch_size: int = 30,
+    ) -> Dict[str, int]:
+        """
+        Persiste los cafés y ofertas normalizados por el pipeline en cascada
+        con procesamiento por lotes (20-50 items) para PostgreSQL / Supabase.
+        """
+        session = self.SessionLocal()
+        fecha_actual = _utcnow()
+        cafes_agregados = 0
+        cafes_actualizados = 0
+        ofertas_guardadas = 0
+
+        try:
+            for i in range(0, len(catalogo_cascada), batch_size):
+                lote = catalogo_cascada[i:i + batch_size]
+                for item in lote:
+                    # 1. Obtener o crear Café
+                    nombre = item.get("nombre", "").strip()
+                    origen = item.get("origen")
+                    hash_desc = item.get("hash_descripcion")
+
+                    cafe = None
+                    if hash_desc:
+                        cafe = session.query(Cafe).filter(Cafe.hash_descripcion == hash_desc).first()
+                    if not cafe:
+                        cafe = session.query(Cafe).filter(
+                            Cafe.nombre == nombre,
+                            Cafe.origen == origen,
+                        ).first()
+
+                    if not cafe:
+                        cafe = Cafe(
+                            nombre=nombre,
+                            origen=origen,
+                            finca_productor=item.get("finca_productor"),
+                            variedad=item.get("variedad"),
+                            proceso=item.get("proceso"),
+                            lote=item.get("lote"),
+                            notas_cata=item.get("notas_cata", []),
+                            notas_normalizadas=item.get("notas_normalizadas", []),
+                            hash_descripcion=hash_desc,
+                            fecha_creacion=fecha_actual,
+                            fecha_actualizacion=fecha_actual,
+                        )
+                        session.add(cafe)
+                        session.flush()
+                        cafes_agregados += 1
+                    else:
+                        # Actualizar atributos si cambiaron o se enriquecieron
+                        cambiado = False
+                        for attr in ["finca_productor", "variedad", "proceso", "lote"]:
+                            val = item.get(attr)
+                            if val and getattr(cafe, attr) != val:
+                                setattr(cafe, attr, val)
+                                cambiado = True
+                        if item.get("notas_cata") and cafe.notas_cata != item.get("notas_cata"):
+                            cafe.notas_cata = item.get("notas_cata")
+                            cambiado = True
+                        if item.get("notas_normalizadas") and cafe.notas_normalizadas != item.get("notas_normalizadas"):
+                            cafe.notas_normalizadas = item.get("notas_normalizadas")
+                            cambiado = True
+                        if hash_desc and cafe.hash_descripcion != hash_desc:
+                            cafe.hash_descripcion = hash_desc
+                            cambiado = True
+                        if cambiado:
+                            cafe.fecha_actualizacion = fecha_actual
+                            cafes_actualizados += 1
+
+                    # 2. Guardar Ofertas de Tienda vinculadas al Café
+                    ofertas = item.get("ofertas", [])
+                    for of in ofertas:
+                        link = of.get("link_detalle")
+                        if not link:
+                            continue
+
+                        oferta = session.query(OfertaTienda).filter(
+                            OfertaTienda.link_detalle == link
+                        ).first()
+
+                        if not oferta:
+                            oferta = OfertaTienda(
+                                cafe_id=cafe.id,
+                                tienda_id=tienda_id,
+                                precio_actual=of.get("precio_actual", 0),
+                                formato_gramos=of.get("formato_gramos", 250),
+                                precio_por_kilo=of.get("precio_por_kilo", 0.0),
+                                es_estimado=of.get("es_estimado", True),
+                                link_detalle=link,
+                                disponible=of.get("disponible", True),
+                                ultima_actualizacion=fecha_actual,
+                            )
+                            session.add(oferta)
+                        else:
+                            oferta.cafe_id = cafe.id
+                            oferta.precio_actual = of.get("precio_actual", oferta.precio_actual)
+                            oferta.formato_gramos = of.get("formato_gramos", oferta.formato_gramos)
+                            oferta.precio_por_kilo = of.get("precio_por_kilo", oferta.precio_por_kilo)
+                            oferta.es_estimado = of.get("es_estimado", oferta.es_estimado)
+                            oferta.disponible = of.get("disponible", oferta.disponible)
+                            oferta.ultima_actualizacion = fecha_actual
+
+                        ofertas_guardadas += 1
+
+                session.commit()
+
+            return {
+                "cafes_agregados": cafes_agregados,
+                "cafes_actualizados": cafes_actualizados,
+                "ofertas_guardadas": ofertas_guardadas,
+            }
+        except Exception as e:
+            try:
+                session.rollback()
+            except Exception:
+                pass
+            logging.error(f"❌ Error al persistir lote en cascada: {e}")
+            raise
+        finally:
+            session.close()
+

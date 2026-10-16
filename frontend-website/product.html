@@ -184,6 +184,22 @@
                 </div>
             </section>
 
+            <!-- CU-04: Comparador de Disponibilidad ("Comprar con...") -->
+            <section id="store-matches-section" class="hidden rounded-2xl border border-emerald-200/80 bg-emerald-50/50 p-5 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-950 flex items-center gap-2">
+                        <span>🔄</span> Disponibilidad en otras tiendas (Mismo grano de café)
+                    </h2>
+                    <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-100/70 px-2.5 py-0.5 rounded-full">
+                        Regla RN-04
+                    </span>
+                </div>
+                <p class="text-xs text-emerald-800/80 mb-4">
+                    Detectado por coincidencia de origen, finca y proceso botánico.
+                </p>
+                <div id="store-matches-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+            </section>
+
             <section aria-labelledby="variants-heading" class="mb-10 overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm">
                 <div class="border-b border-gray-100 p-5 sm:p-6">
                     <h2 id="variants-heading" class="text-xl font-bold text-gray-900">Variantes y precios actuales</h2>
@@ -361,6 +377,13 @@
                 kiloBadge.className = "inline-block rounded-md border border-emerald-200/70 bg-emerald-50 px-2.5 py-1 text-xs font-extrabold text-emerald-700";
                 kiloBadge.textContent = `${money(variant.precio_por_kilo)}/kg`;
                 kiloCell.append(kiloBadge);
+                if (variant.es_estimado) {
+                    const estBadge = document.createElement("span");
+                    estBadge.className = "ml-1.5 inline-block rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-800";
+                    estBadge.title = "Gramaje no especificado por el tostador; calculado con fallback de 250g";
+                    estBadge.textContent = "Estimado";
+                    kiloCell.append(estBadge);
+                }
                 row.append(kiloCell);
 
                 const statusCell = document.createElement("td");
@@ -517,6 +540,104 @@
             productPage.classList.remove("hidden");
             pageStatus.classList.add("hidden");
             renderChart();
+
+            // CU-10: Guardar en historial de vistos recientemente
+            saveToRecentlyViewed(product);
+
+            // CU-04: Buscar disponibilidad en otras tiendas
+            loadStoreMatches(product.id);
+        }
+
+        function saveToRecentlyViewed(product) {
+            try {
+                const KEY = "cafesitios_vistos_recientemente_v1";
+                const raw = localStorage.getItem(KEY);
+                let list = raw ? JSON.parse(raw) : [];
+                list = list.filter(item => item.id !== product.id);
+                list.unshift({
+                    id: product.id,
+                    nombre: product.nombre,
+                    tienda: product.tienda,
+                    imagen: product.imagen,
+                    url: window.location.href,
+                    fecha: new Date().toISOString()
+                });
+                localStorage.setItem(KEY, JSON.stringify(list.slice(0, 10)));
+            } catch (e) {
+                console.error("Error guardando historial reciente:", e);
+            }
+        }
+
+        async function loadStoreMatches(productId) {
+            const container = document.getElementById("store-matches-container");
+            const section = document.getElementById("store-matches-section");
+            try {
+                const response = await fetch(`${API_URL}/${productId}/matches`);
+                if (!response.ok) return;
+                const data = await response.json();
+                const matches = data.coincidencias || [];
+                if (!matches.length) {
+                    section.classList.add("hidden");
+                    return;
+                }
+
+                container.replaceChildren(...matches.map(m => {
+                    const card = document.createElement("div");
+                    card.className = "flex flex-col justify-between rounded-xl border border-emerald-200 bg-white p-4 shadow-sm";
+                    
+                    const diffText = m.diferencia_precio_clp < 0
+                        ? `<span class="text-emerald-700 font-bold">$${Math.abs(m.diferencia_precio_clp).toLocaleString('es-CL')} más barato</span>`
+                        : m.diferencia_precio_clp > 0
+                            ? `<span class="text-slate-500">+$${m.diferencia_precio_clp.toLocaleString('es-CL')}</span>`
+                            : `<span class="text-slate-500">Mismo precio</span>`;
+
+                    card.innerHTML = `
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-xs font-bold text-slate-800">${m.tienda}</span>
+                                <span class="text-[11px]">${diffText}</span>
+                            </div>
+                            <p class="text-xs text-slate-600 line-clamp-1 mb-2">${m.nombre}</p>
+                            <div class="flex justify-between items-baseline text-xs mb-3">
+                                <span class="font-bold text-emerald-800 text-sm">$${m.precio_clp.toLocaleString('es-CL')}</span>
+                                <span class="text-slate-400 text-[11px]">$${m.precio_por_kilo.toLocaleString('es-CL')}/kg &bull; ${m.formato_gramos}g</span>
+                            </div>
+                        </div>
+                        <a href="${m.url_detalle}" target="_blank" rel="noopener noreferrer"
+                           class="inline-flex items-center justify-center gap-1.5 w-full rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white font-medium py-2 px-3 text-xs transition">
+                            Comprar con ${m.tienda} ↗
+                        </a>
+                    `;
+
+                    const link = card.querySelector("a");
+                    link.addEventListener("click", () => {
+                        if (window.CafesitiosAnalytics) {
+                            window.CafesitiosAnalytics.trackCompareWithStore(
+                                productId,
+                                productData ? productData.tienda : "",
+                                m.tienda,
+                                m.diferencia_precio_clp
+                            );
+                            window.CafesitiosAnalytics.trackOutboundClick(
+                                m.tienda,
+                                m.nombre,
+                                m.formato_gramos,
+                                m.precio_clp,
+                                m.precio_por_kilo,
+                                m.id,
+                                null
+                            );
+                        }
+                    });
+
+                    return card;
+                }));
+
+                section.classList.remove("hidden");
+            } catch (e) {
+                console.error("Error cargando coincidencias de tiendas:", e);
+                section.classList.add("hidden");
+            }
         }
 
         async function loadProduct() {
@@ -534,6 +655,22 @@
                 pageStatus.innerHTML = '<p class="font-semibold text-slate-800">No se pudo cargar el producto.</p><p class="mt-2">Vuelve al catálogo e inténtalo nuevamente.</p>';
             }
         }
+
+        // Telemetría al hacer click en el botón de compra principal
+        document.getElementById("store-product-link").addEventListener("click", () => {
+            if (productData && window.CafesitiosAnalytics) {
+                const variant = productData.variantes && productData.variantes[Number(variantSelect.value || 0)];
+                window.CafesitiosAnalytics.trackOutboundClick(
+                    productData.tienda,
+                    productData.nombre,
+                    variant ? variant.formato_gramos : 250,
+                    variant ? variant.precio_clp : 0,
+                    variant ? variant.precio_por_kilo : 0,
+                    productData.id,
+                    variant ? variant.id_externo : null
+                );
+            }
+        });
 
         variantSelect.addEventListener("change", renderChart);
         document.getElementById("unit-price").addEventListener("click", () => updatePriceMode("unit"));

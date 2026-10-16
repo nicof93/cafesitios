@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #FCFBF7;
+    color: #374151;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Estilos de contenido enriquecido para descripciones de café */
+.product-copy h1,
+.product-copy h2,
+.product-copy h3,
+.product-copy h4 {
+  margin: 1.25rem 0 0.5rem;
+  color: #1f2937;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.product-copy h1 { font-size: 1.5rem; }
+.product-copy h2 { font-size: 1.25rem; }
+.product-copy h3 { font-size: 1.125rem; }
+.product-copy p { margin: 0.75rem 0; line-height: 1.75; }
+.product-copy ul,
+.product-copy ol { margin: 0.75rem 0; padding-left: 1.5rem; }
+.product-copy ul { list-style: disc; }
+.product-copy ol { list-style: decimal; }
+.product-copy li { margin: 0.25rem 0; }
+.product-copy blockquote {
+  margin: 1rem 0;
+  border-left: 3px solid #047857;
+  padding-left: 1rem;
+  color: #475569;
+}
+.product-copy img { max-width: 100%; height: auto; border-radius: 0.75rem; }
+.product-copy table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+.product-copy td,
+.product-copy th { border: 1px solid #e7e5e4; padding: 0.5rem 0.75rem; }
+.product-copy a { color: #047857; text-decoration: underline; text-underline-offset: 2px; }
+

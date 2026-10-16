@@ -13,8 +13,17 @@ from api.schemas import (
     PaginatedProductsResponse,
     ProductDetailResponse,
     VariantResponse,
+    CompareResponse,
+    CompareProductItem,
+    CompareVariantItem,
+    ProductMatchesResponse,
+    ProductMatchItem,
+    RecommendationResponse,
+    RecommendationItem,
 )
 from application.get_cheapest_products import GetCheapestProductsUseCase
+from application.compare_products import CompareProductsUseCase
+from application.recommend_products import RecommendProductsUseCase
 from db.database import Producto, ProductoNotaCata, Tienda, Variante
 from infrastructure.postgres_repository import PostgresCoffeeRepository
 
@@ -133,6 +142,114 @@ class _DescriptionSanitizer(HTMLParser):
 
 
 @router.get(
+    "/compare",
+    response_model=CompareResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Comparativa directa side-by-side de productos (CU-03)",
+    description="Permite comparar hasta 4 productos deduplicando variantes por gramaje (RN-03)."
+)
+def compare_products(
+    ids: str = Query(..., description="IDs de productos separados por coma (ej. '1,2,3')"),
+    db_session: Session = Depends(get_db_session)
+) -> CompareResponse:
+    try:
+        product_ids = [int(i.strip()) for i in ids.split(",") if i.strip().isdigit()]
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Parámetro 'ids' inválido. Debe contener IDs numéricos separados por comas."
+        )
+
+    if not product_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debe proporcionar al menos un ID de producto."
+        )
+
+    use_case = CompareProductsUseCase(session=db_session)
+    items = use_case.execute(product_ids)
+
+    return CompareResponse(
+        productos=[
+            CompareProductItem(
+                id=item.id,
+                nombre=item.nombre,
+                tienda=item.tienda,
+                tienda_url=item.tienda_url,
+                url_detalle=item.url_detalle,
+                imagen=item.imagen,
+                proceso=item.proceso,
+                pais_origen=item.pais_origen,
+                finca=item.finca,
+                variedad=item.variedad,
+                notas_cata=item.notas_cata,
+                variantes_por_gramaje=[
+                    CompareVariantItem(
+                        id_externo=v.id_externo,
+                        formato_gramos=v.formato_gramos,
+                        opcion_resumida=v.opcion_resumida,
+                        precio_clp=v.precio_clp,
+                        precio_original_clp=v.precio_original_clp,
+                        precio_por_kilo=v.precio_por_kilo,
+                        en_oferta=v.en_oferta,
+                        descuento_porcentaje=v.descuento_porcentaje,
+                        es_estimado=v.es_estimado,
+                        disponible=v.disponible,
+                    )
+                    for v in item.variantes_por_gramaje
+                ],
+            )
+            for item in items
+        ]
+    )
+
+
+@router.get(
+    "/recommend",
+    response_model=RecommendationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Recomendador interactivo por perfil de taza / Quiz (CU-07)",
+    description="Calcula afinidad de cafés según método de extracción, perfil de sabor y tueste."
+)
+def recommend_products(
+    metodo: Optional[str] = Query(None, description="Método (Espresso, Filtro/Goteo, Prensa Francesa, Italiana/Moka)"),
+    perfil_sabor: Optional[str] = Query(None, description="Perfil de sabor (Frutal/Cítrico, Achocolatado/Nuez, Floral, Balanceado)"),
+    tueste: Optional[str] = Query(None, description="Nivel de tueste (Claro, Medio, Oscuro)"),
+    limit: int = Query(6, ge=1, le=20, description="Cantidad máxima de recomendaciones"),
+    db_session: Session = Depends(get_db_session)
+) -> RecommendationResponse:
+    use_case = RecommendProductsUseCase(session=db_session)
+    results = use_case.execute(
+        metodo=metodo,
+        perfil_sabor=perfil_sabor,
+        tueste=tueste,
+        limit=limit,
+    )
+    return RecommendationResponse(
+        recomendaciones=[
+            RecommendationItem(
+                id=r.id,
+                nombre=r.nombre,
+                tienda=r.tienda,
+                url_detalle=r.url_detalle,
+                imagen=r.imagen,
+                proceso=r.proceso,
+                pais_origen=r.pais_origen,
+                variedad=r.variedad,
+                tueste=r.tueste,
+                precio_clp=r.precio_clp,
+                precio_por_kilo=r.precio_por_kilo,
+                es_estimado=r.es_estimado,
+                disponible=r.disponible,
+                puntaje_coincidencia=r.puntaje_coincidencia,
+                motivo_recomendacion=r.motivo_recomendacion,
+            )
+            for r in results
+        ]
+    )
+
+
+@router.get(
     "/{product_id}/detail",
     response_model=ProductDetailResponse,
     status_code=status.HTTP_200_OK,
@@ -161,19 +278,132 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
             detail="Producto no encontrado"
         )
 
+    caract = product.caracteristicas_fuente or {}
+    puntuacion_sca = caract.get("puntuacion_sca") if isinstance(caract, dict) else None
+    escala_agtron = caract.get("escala_agtron") if isinstance(caract, dict) else None
+
+    if puntuacion_sca is None:
+        match_sca = re.search(
+            r"\b([89]\d(?:\.\d{1,2})?)\s*(?:puntos|pts|ptos|sca)\b|\bsca\s*[:|–—-]?\s*([89]\d(?:\.\d{1,2})?)\b",
+            f"{product.nombre} {product.descripcion or ''}",
+            re.IGNORECASE,
+        )
+        if match_sca:
+            try:
+                score_f = float(match_sca.group(1) or match_sca.group(2))
+                if 80.0 <= score_f <= 99.5:
+                    puntuacion_sca = round(score_f, 2)
+            except (ValueError, TypeError):
+                pass
+
+    if escala_agtron is None:
+        match_agtron = re.search(
+            r"agtron\s*[:|–—-]?\s*(?:#\s*)?(\d{2,3})",
+            f"{product.tueste or ''} {product.descripcion or ''}",
+            re.IGNORECASE,
+        )
+        if match_agtron:
+            try:
+                escala_agtron = int(match_agtron.group(1))
+            except (ValueError, TypeError):
+                pass
+
+    texto_completo = f"{product.nombre} {product.descripcion or ''}"
+    pais_origen = product.pais_origen
+    if not pais_origen:
+        for pais, pat in [
+            ("Colombia", r"\bcolombia(?:no)?\b"),
+            ("Etiopía", r"\b(?:etiop[ií]a|ethiopia)\b"),
+            ("Brasil", r"\b(?:brasil|brazil)\b"),
+            ("Guatemala", r"\bguatemala\b"),
+            ("Kenia", r"\b(?:kenia|kenya)\b"),
+            ("Costa Rica", r"\bcosta\s+rica\b"),
+            ("Panamá", r"\b(?:panam[aá]|panama)\b"),
+            ("Perú", r"\b(?:per[uú]|peru)\b"),
+            ("Honduras", r"\bhonduras\b"),
+            ("El Salvador", r"\bel\s+salvador\b"),
+            ("Nicaragua", r"\bnicaragua\b"),
+            ("Ruanda", r"\b(?:ruanda|rwanda)\b"),
+            ("Burundi", r"\bburundi\b"),
+            ("Ecuador", r"\becuador\b"),
+            ("México", r"\b(?:m[eé]xico|mexico)\b"),
+            ("Bolivia", r"\bbolivia\b"),
+            ("Indonesia", r"\bindonesia\b"),
+        ]:
+            if re.search(pat, texto_completo, re.I):
+                pais_origen = pais
+                break
+
+    proceso = product.proceso
+    if not proceso:
+        for proc, pat in [
+            ("Natural Anaeróbico", r"\b(?:natural\s+anaer[oó]bico|anaer[oó]bico\s+natural)\b"),
+            ("Anaeróbico", r"\banaer[oó]bic[oa]\b"),
+            ("Maceración Carbónica", r"\bmaceraci[oó]n\s+carb[oó]nica\b"),
+            ("Doble Fermentación", r"\bdoble\s+fermentaci[oó]n\b"),
+            ("Honey", r"\b(?:yellow|red|black|white)?\s*honey\b"),
+            ("Lavado", r"\b(?:lavado|washed)\b"),
+            ("Natural", r"\bnatural\b"),
+        ]:
+            if re.search(pat, texto_completo, re.I):
+                proceso = proc
+                break
+
+    variedad = product.variedad
+    if not variedad:
+        for var, pat in [
+            ("Sidra", r"\bsidra\b"),
+            ("Geisha", r"\b(?:geisha|gesha)\b"),
+            ("Pink Bourbon", r"\b(?:pink\s+bourbon|bourbon\s+rosado)\b"),
+            ("Bourbon", r"\bbourbon\b"),
+            ("Caturra", r"\bcaturra\b"),
+            ("Castillo", r"\bcastillo\b"),
+            ("Pacamara", r"\bpacamara\b"),
+            ("Typica", r"\btypica\b"),
+            ("Catuaí", r"\bcatua[ií]\b"),
+            ("Tabi", r"\btabi\b"),
+            ("SL28", r"\bsl\s*28\b"),
+            ("SL34", r"\bsl\s*34\b"),
+            ("Wush Wush", r"\bwush\s*wush\b"),
+            ("Sudan Rume", r"\bsudan\s*rume\b"),
+            ("Chiroso", r"\bchiroso\b"),
+            ("Maragogipe", r"\bmaragogipe\b"),
+            ("Java", r"\bjava\b"),
+            ("Laurina", r"\blaurina\b"),
+        ]:
+            if re.search(pat, texto_completo, re.I):
+                variedad = var
+                break
+
+    finca = product.finca
+    if not finca:
+        m_finca = re.search(r'\b(?:finca|hacienda)\s+([A-Za-zÀ-ÿ0-9\s]+?)(?:[-–—·•,\n]|$)', texto_completo, re.I)
+        if m_finca:
+            f_cand = m_finca.group(1).strip()
+            if 2 <= len(f_cand) <= 40:
+                finca = f_cand.title()
+        elif re.search(r'\bel\s+vergel\b', texto_completo, re.I):
+            finca = "El Vergel"
+
+    tienda_nombre = (product.tienda.nombre or '').replace(')', '').strip()
+
     return {
         "id": product.id,
-        "tienda": product.tienda.nombre,
+        "tienda": tienda_nombre,
         "tienda_url": product.tienda.url_base,
         "nombre": product.nombre,
         "descripcion": _DescriptionSanitizer().get_html(product.descripcion),
         "url_detalle": product.url_detalle,
         "imagen": product.imagen,
         "fecha_actualizacion": product.fecha_actualizacion,
-        "proceso": product.proceso,
-        "pais_origen": product.pais_origen,
-        "finca": product.finca,
-        "variedad": product.variedad,
+        "proceso": proceso,
+        "tueste": product.tueste,
+        "puntuacion_sca": puntuacion_sca,
+        "escala_agtron": escala_agtron,
+        "pais_origen": pais_origen,
+        "origen": pais_origen,
+        "finca": finca,
+        "variedad": variedad,
         "elevacion_min_msnm": product.elevacion_min_msnm,
         "elevacion_max_msnm": product.elevacion_max_msnm,
         "cosecha": product.cosecha,
@@ -200,6 +430,7 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
                 "en_oferta": variant.en_oferta,
                 "descuento_porcentaje": variant.descuento_porcentaje,
                 "precio_por_kilo": float(variant.precio_por_kilo),
+                "es_estimado": bool(getattr(variant, 'es_estimado', True)),
                 "disponible": variant.disponible,
                 "fecha_actualizacion": variant.fecha_actualizacion,
                 "historial_precios": [
@@ -217,6 +448,60 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
             for variant in product.variantes
         ],
     }
+
+
+@router.get(
+    "/{product_id}/matches",
+    response_model=ProductMatchesResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Comparador de disponibilidad 'Comprar con...' (CU-04)",
+    description="Busca si el mismo grano se comercializa en otras tiendas bajo identidad estricta (RN-04)."
+)
+def get_product_matches(product_id: int, db_session: Session = Depends(get_db_session)) -> ProductMatchesResponse:
+    origin_prod = (
+        db_session.query(Producto)
+        .options(selectinload(Producto.variantes))
+        .filter(Producto.id == product_id, Producto.activo.is_(True))
+        .first()
+    )
+    if origin_prod is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Producto no encontrado"
+        )
+
+    origin_cheapest = min(origin_prod.variantes, key=lambda v: (not v.disponible, v.precio_por_kilo)) if origin_prod.variantes else None
+    origin_price = origin_cheapest.precio_clp if origin_cheapest else 0
+    origin_kilo = float(origin_cheapest.precio_por_kilo) if origin_cheapest else 0.0
+
+    repo = PostgresCoffeeRepository(session=db_session)
+    matches = repo.find_matching_products(product_id)
+
+    coincidencias = []
+    for m in matches:
+        var = m.variante_mas_barata
+        diff_precio = var.precio_clp - origin_price
+        diff_kilo = var.precio_por_kilo - origin_kilo
+        coincidencias.append(
+            ProductMatchItem(
+                id=m.id,
+                tienda=m.tienda,
+                nombre=m.nombre,
+                url_detalle=m.url_detalle,
+                imagen=m.imagen,
+                precio_clp=var.precio_clp,
+                precio_por_kilo=var.precio_por_kilo,
+                formato_gramos=var.formato_gramos,
+                diferencia_precio_clp=diff_precio,
+                diferencia_kilo_clp=round(diff_kilo, 2),
+                es_mas_barato=(diff_kilo < 0),
+            )
+        )
+
+    return ProductMatchesResponse(
+        producto_origen_id=product_id,
+        coincidencias=coincidencias
+    )
 
 
 @router.get(
@@ -244,6 +529,8 @@ def get_cheapest_coffee_products(
         description="Criterio de ordenamiento: 'kilo' ($/kg) o 'unit' (precio unitario en CLP)"
     ),
     limit: int = Query(10, ge=1, le=50, description="Cantidad de productos a retornar (1-50)"),
+    offset: int = Query(0, ge=0, description="Desplazamiento / paginación para scroll infinito (offset)"),
+    category: Optional[str] = Query("cafe", description="Filtrar por categoría: 'cafe' (predeterminado), 'no_cafe', o 'todos'"),
     only_available: bool = Query(True, description="Filtrar solo productos que tengan stock disponible"),
     store_name: Optional[str] = Query(None, description="Filtrar por nombre de tienda (ej. 'Singular')"),
     store: Optional[str] = Query(None, description="Alias de tienda (ej. 'Singular')"),
@@ -253,6 +540,8 @@ def get_cheapest_coffee_products(
     search_query: Optional[str] = Query(None, description="Búsqueda por texto en el nombre del café (ej. 'Geisha')"),
     min_price: Optional[int] = Query(None, ge=0, description="Precio unitario mínimo en CLP"),
     max_price: Optional[int] = Query(None, ge=0, description="Precio unitario máximo en CLP"),
+    min_price_kilo: Optional[int] = Query(None, ge=0, description="Precio por kilo mínimo en CLP"),
+    max_price_kilo: Optional[int] = Query(None, ge=0, description="Precio por kilo máximo en CLP"),
     process: Optional[str] = Query(None, min_length=1, max_length=255, description="Filtrar por proceso de beneficio"),
     country: Optional[str] = Query(None, min_length=1, max_length=255, description="Filtrar por país de origen"),
     pais_origen: Optional[str] = Query(None, min_length=1, max_length=255, description="Alias en español para país de origen"),
@@ -272,6 +561,7 @@ def get_cheapest_coffee_products(
             variety = variedad
         if notes is None:
             notes = notas_cata or tasting_notes
+        categoria_filtro = None if category in ("todos", "all", "") else category
 
         import api.router
         repo_cls = getattr(api.router, "PostgresCoffeeRepository", PostgresCoffeeRepository)
@@ -281,6 +571,7 @@ def get_cheapest_coffee_products(
         productos_dominio = use_case.execute(
             sort_by=sort_by,
             limit=limit,
+            offset=offset,
             only_available=only_available,
             store_name=store_name,
             min_weight_g=min_weight_g,
@@ -292,6 +583,9 @@ def get_cheapest_coffee_products(
             country=country,
             variety=variety,
             tasting_notes=notes,
+            min_price_kilo=min_price_kilo,
+            max_price_kilo=max_price_kilo,
+            category=categoria_filtro,
         )
 
         total_items = len(productos_dominio)
@@ -309,6 +603,9 @@ def get_cheapest_coffee_products(
                 country=country,
                 variety=variety,
                 tasting_notes=notes,
+                min_price_kilo=min_price_kilo,
+                max_price_kilo=max_price_kilo,
+                category=categoria_filtro,
             )
 
         items_dto = [
@@ -318,6 +615,7 @@ def get_cheapest_coffee_products(
                 nombre=prod.nombre,
                 url_detalle=prod.url_detalle,
                 imagen=prod.imagen,
+                categoria=getattr(prod, 'categoria', 'cafe'),
                 variante=VariantResponse(
                     id_externo=prod.variante_mas_barata.id_externo,
                     opcion=prod.variante_mas_barata.opcion,
@@ -327,7 +625,8 @@ def get_cheapest_coffee_products(
                     en_oferta=prod.variante_mas_barata.en_oferta,
                     descuento_porcentaje=prod.variante_mas_barata.descuento_porcentaje,
                     precio_por_kilo=prod.variante_mas_barata.precio_por_kilo,
-                    disponible=prod.variante_mas_barata.disponible
+                    disponible=prod.variante_mas_barata.disponible,
+                    es_estimado=prod.variante_mas_barata.es_estimado,
                 )
             ) for prod in productos_dominio
         ]
@@ -339,6 +638,7 @@ def get_cheapest_coffee_products(
         )
 
     except Exception as e:
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error interno al procesar la consulta: {str(e)}"

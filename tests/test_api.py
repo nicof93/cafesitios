@@ -231,7 +231,8 @@ class TestAPI(unittest.TestCase):
             summary = get_stores_summary(1, 10, "name_asc", session)
 
             self.assertEqual(summary["total_items"], 1)
-            self.assertEqual(summary["items"], [{"nombre": "Activa", "cantidad_productos": 1}])
+            self.assertEqual(summary["items"][0]["nombre"], "Activa")
+            self.assertEqual(summary["items"][0]["cantidad_productos"], 1)
         finally:
             session.close()
             engine.dispose()
