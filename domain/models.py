@@ -12,6 +12,7 @@ class VariantDomain:
     descuento_porcentaje: int
     precio_por_kilo: float
     disponible: bool
+    es_estimado: bool = True
 
 @dataclass
 class CoffeeProductDomain:
@@ -22,3 +23,5 @@ class CoffeeProductDomain:
     imagen: Optional[str]
     descripcion: Optional[str]
     variante_mas_barata: VariantDomain
+    categoria: str = 'cafe'
+

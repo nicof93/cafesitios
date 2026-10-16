@@ -10,6 +10,7 @@ class GetCheapestProductsUseCase:
         self,
         sort_by: Literal["kilo", "unit"] = "kilo",
         limit: int = 10,
+        offset: int = 0,
         only_available: bool = True,
         store_name: Optional[str] = None,
         min_weight_g: Optional[int] = None,
@@ -21,11 +22,15 @@ class GetCheapestProductsUseCase:
         country: Optional[str] = None,
         variety: Optional[str] = None,
         tasting_notes: Optional[str] = None,
+        min_price_kilo: Optional[int] = None,
+        max_price_kilo: Optional[int] = None,
+        category: Optional[str] = "cafe",
     ) -> List[CoffeeProductDomain]:
 
         return self.repository.get_cheapest_products(
             sort_by=sort_by,
             limit=limit,
+            offset=offset,
             only_available=only_available,
             store_name=store_name,
             min_weight_g=min_weight_g,
@@ -37,4 +42,8 @@ class GetCheapestProductsUseCase:
             country=country,
             variety=variety,
             tasting_notes=tasting_notes,
+            min_price_kilo=min_price_kilo,
+            max_price_kilo=max_price_kilo,
+            category=category,
         )
+

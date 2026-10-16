@@ -1,0 +1,292 @@
+---
+import type { CoffeeProduct } from '../../core/domain/models/CoffeeProduct';
+
+interface Props {
+  product: CoffeeProduct;
+}
+
+const { product } = Astro.props;
+
+// Algoritmo de ponderación sensorial según notas de cata, proceso y tueste (Escala 1-10)
+const notesText = (product.notas_cata || []).join(' ').toLowerCase();
+const processText = (product.proceso || '').toLowerCase();
+const roastText = (product.tueste || '').toLowerCase();
+
+let dulzura = 6;
+let acidez = 6;
+let frutosRojos = 5;
+let floral = 5;
+let cuerpo = 6;
+let frutosSecos = 5;
+
+// Influencia del Proceso
+if (processText.includes('lavado') || processText.includes('washed')) {
+  acidez += 2;
+  floral += 1;
+  cuerpo -= 1;
+} else if (processText.includes('natural')) {
+  frutosRojos += 3;
+  dulzura += 2;
+  cuerpo += 1;
+  acidez -= 1;
+} else if (processText.includes('honey')) {
+  dulzura += 3;
+  frutosRojos += 1;
+  cuerpo += 1;
+} else if (processText.includes('anaerob') || processText.includes('maceracion')) {
+  dulzura += 3;
+  frutosRojos += 3;
+  cuerpo += 2;
+}
+
+// Influencia del Tueste
+if (roastText.includes('claro') || roastText.includes('light')) {
+  acidez += 2;
+  floral += 2;
+  cuerpo -= 1;
+} else if (roastText.includes('oscuro') || roastText.includes('dark')) {
+  cuerpo += 3;
+  frutosSecos += 2;
+  acidez -= 2;
+}
+
+// Descriptores detectados
+if (/(caramel|panela|miel|toffee|vainill|dulce|chancaca|azucar)/i.test(notesText)) dulzura += 2;
+if (/(limon|citric|naranja|pomelo|manzana|acidez|lima|bergamota)/i.test(notesText)) acidez += 3;
+if (/(frutilla|fresa|frambuesa|mora|arandano|cereza|berry|uva|ciruela)/i.test(notesText)) frutosRojos += 3;
+if (/(jazmin|floral|flores|azahar|te negro|rosa|lavanda)/i.test(notesText)) floral += 3;
+if (/(almendra|nuez|avellana|mani|cacao|chocolate|castana)/i.test(notesText)) {
+  frutosSecos += 2;
+  cuerpo += 1;
+}
+
+const clamp = (val: number) => Math.min(10, Math.max(2, val));
+
+const scores = {
+  dulzura: clamp(dulzura),
+  acidez: clamp(acidez),
+  frutosRojos: clamp(frutosRojos),
+  floral: clamp(floral),
+  cuerpo: clamp(cuerpo),
+  frutosSecos: clamp(frutosSecos),
+};
+
+// Determinar recomendación de método de preparación
+let metodoSugerido = 'Versátil (Filtro o Espresso)';
+let metodoIcono = '☕';
+let caracteristicaPrincipal = 'Equilibrado';
+
+if (scores.acidez >= 8 || scores.floral >= 8) {
+  metodoSugerido = 'Filtrados manuales (V60, Chemex, Origami o Aeropress)';
+  metodoIcono = '🧪';
+  caracteristicaPrincipal = 'Perfil brillante, floral y aromático';
+} else if (scores.cuerpo >= 8 || scores.dulzura >= 8) {
+  metodoSugerido = 'Espresso, Moka Italiana o Prensa Francesa';
+  metodoIcono = '⚡';
+  caracteristicaPrincipal = 'Perfil dulce, cremoso y con gran cuerpo';
+}
+---
+
+<section class="bg-white p-6 sm:p-8 rounded-3xl border border-stone-200/80 shadow-2xs space-y-6">
+  
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-4">
+    <div>
+      <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">Análisis Organoléptico</span>
+      <h2 class="text-base sm:text-lg font-extrabold text-stone-900 tracking-tight flex items-center gap-2">
+        <span>🧭</span> Perfil Sensorial en Coordenadas Polares
+      </h2>
+      <p class="text-xs text-stone-400">
+        Mapeo de intensidades (escala 1 a 10) derivado de notas de cata, proceso ({product.proceso || 'Tradicional'}) y variedad.
+      </p>
+    </div>
+
+    <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800 self-start sm:self-center">
+      <span>Rueda SCA</span>
+    </span>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+    
+    <!-- COLUMNA 1: GRÁFICO DE COORDENADAS POLARES (CHART.JS) -->
+    <div class="lg:col-span-7 flex flex-col items-center justify-center">
+      <div class="relative w-full max-w-[380px] h-[320px] sm:h-[350px]">
+        <canvas 
+          id="sensory-polar-chart"
+          data-dulzura={scores.dulzura}
+          data-acidez={scores.acidez}
+          data-frutos-rojos={scores.frutosRojos}
+          data-floral={scores.floral}
+          data-cuerpo={scores.cuerpo}
+          data-frutos-secos={scores.frutosSecos}
+        ></canvas>
+      </div>
+    </div>
+
+    <!-- COLUMNA 2: DESGLOSE Y RECOMENDACIÓN DE PREPARACIÓN -->
+    <div class="lg:col-span-5 space-y-5">
+      
+      <!-- TARJETA DE RECOMENDACIÓN DE MÉTODO -->
+      <div class="bg-gradient-to-br from-stone-50 to-emerald-50/40 p-4 sm:p-5 rounded-2xl border border-stone-200/80 space-y-2.5">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">{metodoIcono}</span>
+          <div>
+            <span class="block text-[10px] uppercase font-bold text-stone-400 tracking-wider">Método de Extracción Recomendado</span>
+            <h3 class="text-sm font-bold text-stone-900">{metodoSugerido}</h3>
+          </div>
+        </div>
+        <p class="text-xs text-stone-600 leading-relaxed font-normal">
+          {caracteristicaPrincipal}. Resalta los atributos de {product.origen || 'este café'} extrayendo la mayor claridad de taza.
+        </p>
+      </div>
+
+      <!-- DESGLOSE DE EJES SENSORIALES (VALORES NUMÉRICOS) -->
+      <div class="space-y-2">
+        <span class="block text-[11px] font-bold uppercase tracking-wider text-stone-400">
+          Intensidad por Dimensión (1-10)
+        </span>
+        
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          
+          <div class="flex items-center justify-between p-2 rounded-xl bg-stone-50 border border-stone-100">
+            <span class="flex items-center gap-1.5 font-medium text-stone-700">
+              <span class="h-2 w-2 rounded-full bg-amber-500"></span> Dulzura
+            </span>
+            <strong class="text-stone-900 font-extrabold">{scores.dulzura}/10</strong>
+          </div>
+
+          <div class="flex items-center justify-between p-2 rounded-xl bg-stone-50 border border-stone-100">
+            <span class="flex items-center gap-1.5 font-medium text-stone-700">
+              <span class="h-2 w-2 rounded-full bg-yellow-400"></span> Acidez
+            </span>
+            <strong class="text-stone-900 font-extrabold">{scores.acidez}/10</strong>
+          </div>
+
+          <div class="flex items-center justify-between p-2 rounded-xl bg-stone-50 border border-stone-100">
+            <span class="flex items-center gap-1.5 font-medium text-stone-700">
+              <span class="h-2 w-2 rounded-full bg-rose-500"></span> Frutos Rojos
+            </span>
+            <strong class="text-stone-900 font-extrabold">{scores.frutosRojos}/10</strong>
+          </div>
+
+          <div class="flex items-center justify-between p-2 rounded-xl bg-stone-50 border border-stone-100">
+            <span class="flex items-center gap-1.5 font-medium text-stone-700">
+              <span class="h-2 w-2 rounded-full bg-purple-500"></span> Floral
+            </span>
+            <strong class="text-stone-900 font-extrabold">{scores.floral}/10</strong>
+          </div>
+
+          <div class="flex items-center justify-between p-2 rounded-xl bg-stone-50 border border-stone-100">
+            <span class="flex items-center gap-1.5 font-medium text-stone-700">
+              <span class="h-2 w-2 rounded-full bg-amber-900"></span> Cuerpo
+            </span>
+            <strong class="text-stone-900 font-extrabold">{scores.cuerpo}/10</strong>
+          </div>
+
+          <div class="flex items-center justify-between p-2 rounded-xl bg-stone-50 border border-stone-100">
+            <span class="flex items-center gap-1.5 font-medium text-stone-700">
+              <span class="h-2 w-2 rounded-full bg-emerald-600"></span> Frutos Secos
+            </span>
+            <strong class="text-stone-900 font-extrabold">{scores.frutosSecos}/10</strong>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+<script>
+  import Chart from 'chart.js/auto';
+
+  const polarCanvas = document.getElementById('sensory-polar-chart') as HTMLCanvasElement | null;
+
+  if (polarCanvas) {
+    const d = Number(polarCanvas.getAttribute('data-dulzura') || '6');
+    const a = Number(polarCanvas.getAttribute('data-acidez') || '6');
+    const fr = Number(polarCanvas.getAttribute('data-frutos-rojos') || '5');
+    const fl = Number(polarCanvas.getAttribute('data-floral') || '5');
+    const c = Number(polarCanvas.getAttribute('data-cuerpo') || '6');
+    const fs = Number(polarCanvas.getAttribute('data-frutos-secos') || '5');
+
+    new Chart(polarCanvas, {
+      type: 'polarArea',
+      data: {
+        labels: [
+          'Dulzura',
+          'Acidez Cítrica',
+          'Frutos Rojos',
+          'Floral',
+          'Cuerpo / Textura',
+          'Frutos Secos & Cacao'
+        ],
+        datasets: [{
+          label: 'Intensidad',
+          data: [d, a, fr, fl, c, fs],
+          backgroundColor: [
+            'rgba(245, 158, 11, 0.72)', // Dulzura (Ámbar)
+            'rgba(234, 179, 8, 0.72)',  // Acidez (Amarillo limón)
+            'rgba(244, 63, 94, 0.72)',  // Frutos Rojos (Rosa / Frambuesa)
+            'rgba(168, 85, 247, 0.72)', // Floral (Púrpura / Lavanda)
+            'rgba(120, 53, 15, 0.72)',  // Cuerpo (Nogal / Tostado)
+            'rgba(16, 185, 129, 0.72)'  // Frutos Secos (Esmeralda)
+          ],
+          borderColor: '#ffffff',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+          animateRotate: true,
+          animateScale: true,
+          duration: 900
+        },
+        scales: {
+          r: {
+            min: 0,
+            max: 10,
+            ticks: {
+              stepSize: 2,
+              display: false
+            },
+            grid: {
+              color: 'rgba(231, 229, 228, 0.6)'
+            },
+            angleLines: {
+              color: 'rgba(231, 229, 228, 0.8)'
+            },
+            pointLabels: {
+              display: true,
+              centerPointLabels: true,
+              font: {
+                size: 10,
+                weight: 'bold'
+              },
+              color: '#44403c'
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: '#1c1917',
+            titleFont: { size: 12, weight: 'bold' },
+            bodyFont: { size: 11 },
+            padding: 10,
+            cornerRadius: 10,
+            callbacks: {
+              label: (context) => ` ${context.label}: ${context.raw} / 10`
+            }
+          }
+        }
+      }
+    });
+  }
+</script>
+

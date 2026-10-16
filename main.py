@@ -6,6 +6,9 @@ from fastapi.responses import JSONResponse
 from api.products import router as products_router
 from api.stores import router as stores_router
 from api.sync import router as sync_router
+from api.recipes import router as recipes_router
+from api.feedback import router as feedback_router
+from api.telemetry import router as telemetry_router
 
 # Configuración de documentación OpenAPI según ambiente
 is_render = os.getenv("RENDER", "").strip().lower() == "true"
@@ -105,6 +108,9 @@ async def verify_proxy_origin(request: Request, call_next):
 app.include_router(products_router)
 app.include_router(stores_router)
 app.include_router(sync_router)
+app.include_router(recipes_router)
+app.include_router(feedback_router)
+app.include_router(telemetry_router)
 
 
 @app.get("/", tags=["Healthcheck"])

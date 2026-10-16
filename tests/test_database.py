@@ -297,15 +297,32 @@ class TestDatabaseManager(unittest.TestCase):
                     ).scalar_one()
 
                 self.assertEqual(store_name, 'Tienda existente')
-                self.assertEqual(revision, '0007_product_country')
-                self.assertIn('sincronizaciones', inspect(db.engine).get_table_names())
-                self.assertIn('estado_sincronizacion', inspect(db.engine).get_table_names())
+                self.assertEqual(revision, '0008_mvp_core_features')
+                table_names = set(inspect(db.engine).get_table_names())
+                self.assertIn('sincronizaciones', table_names)
+                self.assertIn('estado_sincronizacion', table_names)
+                self.assertIn('recetas', table_names)
+                self.assertIn('sugerencias_feedback', table_names)
+                self.assertIn('interacciones_clics', table_names)
+                self.assertIn('historial_busquedas', table_names)
                 product_columns = {
                     column['name']: str(column['type']).upper()
                     for column in inspect(db.engine).get_columns('productos')
                 }
                 self.assertEqual(product_columns['proceso'], 'TEXT')
                 self.assertEqual(product_columns['fermentacion_tipo'], 'TEXT')
+                variante_columns = {
+                    column['name']
+                    for column in inspect(db.engine).get_columns('variantes')
+                }
+                self.assertIn('es_estimado', variante_columns)
+                tienda_columns = {
+                    column['name']
+                    for column in inspect(db.engine).get_columns('tiendas')
+                }
+                self.assertIn('latitud', tienda_columns)
+                self.assertIn('longitud', tienda_columns)
+                self.assertIn('comuna', tienda_columns)
             finally:
                 db.engine.dispose()
 

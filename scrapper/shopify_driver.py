@@ -2,7 +2,13 @@ import re
 import logging
 import requests
 from urllib.parse import urlparse
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
+
 from typing import List, Dict, Any, Optional
+from core.normalizer import calcular_precio_kilo
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
@@ -29,6 +35,108 @@ class ShopifyDriver:
     @staticmethod
     def calcular_precio_por_kilo(precio_clp: int, formato_gramos: int) -> float:
         return calcular_precio_por_kilo(precio_clp, formato_gramos)
+
+    @staticmethod
+    def extraer_ficha_tecnica_texto(texto: Optional[str]) -> Dict[str, Any]:
+        """
+        Extrae atributos organolépticos (tueste, perfil, notas_cata, proceso) desde texto plano o HTML.
+        Sanitiza saltos de línea, espacios en blanco y normaliza notas en una lista de cadenas limpias.
+        """
+        ficha: Dict[str, Any] = {
+            'tueste': None,
+            'perfil': None,
+            'notas_cata': [],
+            'proceso': None,
+        }
+        if not texto:
+            return ficha
+
+        if BeautifulSoup is not None:
+            soup = BeautifulSoup(str(texto), 'html.parser')
+            for tag in soup(['script', 'style', 'noscript', 'header', 'footer', 'nav']):
+                tag.decompose()
+            texto_limpio = soup.get_text(separator='\n')
+        else:
+            texto_sin_scripts = re.sub(
+                r'<(?:script|style|noscript|header|footer|nav)[^>]*>.*?</(?:script|style|noscript|header|footer|nav)>',
+                '',
+                str(texto),
+                flags=re.DOTALL | re.IGNORECASE
+            )
+            texto_limpio = re.sub(r'<[^>]+>', '\n', texto_sin_scripts)
+
+        # 1. Tueste / Tostado: r'(?:TOSTADO|TUESTE)\s*[:\*\-]?\s*([A-Za-z\s]+)'
+        m_tueste = re.search(
+            r'(?:TOSTADO|TUESTE)[\s:\*\-]*\b([A-Za-zÀ-ÿ\s]+)',
+            texto_limpio,
+            re.IGNORECASE
+        )
+        if m_tueste:
+            raw_tueste = m_tueste.group(1).strip().splitlines()[0].strip()
+            if raw_tueste:
+                ficha['tueste'] = raw_tueste.capitalize()
+
+        # 2. Perfil: r'PERFIL\s*[:\*\-]?\s*([A-Za-z,\s]+)' (permite conectores y barras)
+        m_perfil = re.search(
+            r'PERFIL[\s:\*\-]*\b([A-Za-zÀ-ÿ0-9,\s/–-]+)',
+            texto_limpio,
+            re.IGNORECASE
+        )
+        if m_perfil:
+            raw_perfil = m_perfil.group(1).strip().splitlines()[0].strip()
+            if raw_perfil:
+                ficha['perfil'] = raw_perfil
+
+        # 3. Notas de Cata: r'NOTAS\s*[:\*\-]?\s*([^\n\.<]+)'
+        m_notas = re.search(
+            r'(?:NOTAS(?:\s*DE\s*CATA)?|DESCRIPTORES)[\s:\*\-]*([^\n\.<]+)',
+            texto_limpio,
+            re.IGNORECASE
+        )
+        if m_notas:
+            raw_notas = m_notas.group(1).strip()
+            tokens = re.split(r'[,;/•]|\s+(?:y|and|&)\s+', raw_notas, flags=re.IGNORECASE)
+            limpias = [t.strip(' .*-') for t in tokens if len(t.strip(' .*-')) > 1]
+            ficha['notas_cata'] = limpias
+
+        # 4. Proceso: r'PROCESO\s*[:\*\-]?\s*([A-Za-z\s]+)'
+        m_proceso = re.search(
+            r'PROCESO[\s:\*\-]*\b([A-Za-zÀ-ÿ\s]+)',
+            texto_limpio,
+            re.IGNORECASE
+        )
+        if m_proceso:
+            raw_proceso = m_proceso.group(1).strip().splitlines()[0].strip()
+            if raw_proceso:
+                ficha['proceso'] = raw_proceso.capitalize()
+
+        return ficha
+
+    def extraer_ficha_tecnica_html(self, url_detalle: str) -> Dict[str, Any]:
+        """
+        Fallback a HTML: Solicita url_detalle usando requests.get con User-Agent de navegador y timeout de 10s.
+        En caso de código HTTP != 200 o excepción/timeout, captura con logging.warning y retorna {}.
+        """
+        if not url_detalle:
+            return {}
+
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+
+        try:
+            response = requests.get(url_detalle, headers=headers, timeout=10)
+            if response.status_code != 200:
+                logging.warning(
+                    f"[{self.nombre}] Error HTTP {response.status_code} al obtener ficha técnica HTML de {url_detalle}"
+                )
+                return {}
+            return self.extraer_ficha_tecnica_texto(response.text)
+        except Exception as e:
+            logging.warning(
+                f"[{self.nombre}] Excepción al obtener ficha técnica HTML de {url_detalle}: {e}"
+            )
+            return {}
 
     def __init__(self, nombre: str, url_base: str, shopify_default: bool = True):
         self.nombre = nombre
@@ -109,15 +217,30 @@ class ShopifyDriver:
                     else 0
                 )
 
+                gramos_extraidos = extraer_gramos(titulo_var) or extraer_gramos(titulo_prod)
                 gramos_shopify = var.get('grams')
-                gramos = (
-                    (int(gramos_shopify) if gramos_shopify and int(gramos_shopify) > 0 else None)
-                    or extraer_gramos(titulo_var)
-                    or extraer_gramos(titulo_prod)
-                    or 250
-                )
+                gramos_valido = None
+                if gramos_shopify and isinstance(gramos_shopify, (int, float, str)):
+                    try:
+                        g_sh = int(float(gramos_shopify))
+                        if g_sh in (100, 125, 150, 200, 250, 300, 340, 350, 400, 454, 500, 1000):
+                            gramos_valido = g_sh
+                    except (ValueError, TypeError):
+                        pass
 
-                precio_por_kilo = round((precio_clp / gramos) * 1000, 2) if gramos > 0 else 0
+                if gramos_extraidos:
+                    gramos = gramos_extraidos
+                    es_estimado_gramos = False
+                elif gramos_valido:
+                    gramos = gramos_valido
+                    es_estimado_gramos = False
+                else:
+                    gramos = 250
+                    es_estimado_gramos = True
+
+                unit_price = var.get('unit_price')
+                precio_por_kilo, _ = calcular_precio_kilo(precio_clp, gramos, unit_price=unit_price)
+                es_estimado = es_estimado_gramos and (unit_price is None or float(unit_price) <= 0)
 
                 variantes_normalizadas.append({
                     'id_variante_externo': str(var.get('id')),
@@ -128,8 +251,44 @@ class ShopifyDriver:
                     'en_oferta': en_oferta,
                     'descuento_porcentaje': descuento_pct,
                     'precio_por_kilo': precio_por_kilo,
+                    'es_estimado': es_estimado,
                     'disponible': var.get('available', True)
                 })
+
+            # Detección Condicional de Fallback (Triggers)
+            descripcion_raw = prod.get('body_html') or ''
+            # Evaluar si el texto carece de palabras clave patrón como: NOTAS, PERFIL, TUESTE, TOSTADO, PROCESO o DESCRIPTORES
+            tiene_atributos_clave = bool(re.search(
+                r'(?:NOTAS(?:\s*DE\s*CATA)?|PERFIL|TUESTE|TOSTADO|PROCESO|DESCRIPTORES)\s*[:\*\-]',
+                descripcion_raw,
+                re.IGNORECASE
+            ))
+
+            ficha_tecnica: Dict[str, Any] = {}
+            if not tiene_atributos_clave and url_detalle and url_detalle != base_site:
+                logging.info(f"[{self.nombre}] Faltan atributos clave en JSON para '{titulo_prod}'. Activando fallback HTML...")
+                ficha_tecnica = self.extraer_ficha_tecnica_html(url_detalle)
+            else:
+                ficha_tecnica = self.extraer_ficha_tecnica_texto(descripcion_raw)
+
+            tueste = ficha_tecnica.get('tueste')
+            perfil = ficha_tecnica.get('perfil')
+            notas_cata = ficha_tecnica.get('notas_cata', [])
+            proceso = ficha_tecnica.get('proceso')
+
+            descripcion_final = descripcion_raw
+            lineas_adicionales = []
+            if tueste and not re.search(r'\b(?:tueste|tostado)\b', descripcion_final, re.IGNORECASE):
+                lineas_adicionales.append(f"TUESTE: {tueste}")
+            if perfil and not re.search(r'\bperfil\b', descripcion_final, re.IGNORECASE):
+                lineas_adicionales.append(f"PERFIL: {perfil}")
+            if notas_cata and not re.search(r'\bnotas\b', descripcion_final, re.IGNORECASE):
+                lineas_adicionales.append(f"NOTAS: {', '.join(notas_cata)}")
+            if proceso and not re.search(r'\bproceso\b', descripcion_final, re.IGNORECASE):
+                lineas_adicionales.append(f"PROCESO: {proceso}")
+
+            if lineas_adicionales:
+                descripcion_final = (descripcion_final + ("\n" if descripcion_final else "") + "\n".join(lineas_adicionales)).strip()
 
             productos_normalizados.append({
                 'tienda': self.nombre,
@@ -137,7 +296,11 @@ class ShopifyDriver:
                 'nombre': titulo_prod,
                 'url_detalle': url_detalle,
                 'imagen': imagen_url,
-                'descripcion': prod.get('body_html', ''),
+                'descripcion': descripcion_final,
+                'tueste': tueste,
+                'perfil': perfil,
+                'notas_cata': notas_cata,
+                'proceso': proceso,
                 'variantes': variantes_normalizadas
             })
 

@@ -1,0 +1,143 @@
+---
+---
+
+<!-- CU-11: BOTÓN FLOTANTE DE FEEDBACK Y DIALOG -->
+<button 
+  id="btn-open-feedback" 
+  type="button" 
+  class="fixed bottom-6 right-6 z-40 bg-stone-900/90 hover:bg-emerald-800 text-white py-2.5 px-4 rounded-full shadow-lg flex items-center gap-2 text-xs font-semibold backdrop-blur-xs border border-stone-700/60 transition-all duration-200 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" 
+  title="Danos tu sugerencia o reporta un problema"
+>
+  <span aria-hidden="true">☕</span>
+  <span class="tracking-tight">Pensamos en los amantes del café</span>
+</button>
+
+<dialog 
+  id="feedback-dialog"
+  class="fixed inset-0 z-50 m-auto w-[92%] max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-stone-200 backdrop:bg-stone-950/60 backdrop:backdrop-blur-sm"
+>
+  <div class="flex items-center justify-between pb-3 border-b border-stone-100">
+    <div class="flex items-center gap-2">
+      <span class="text-base">💡</span>
+      <h3 class="text-sm font-bold text-stone-900">Tu opinión nos ayuda a mejorar</h3>
+    </div>
+    <button 
+      type="button" 
+      id="btn-close-feedback-dialog"
+      class="text-stone-400 hover:text-stone-700 text-lg font-bold p-1 rounded-lg"
+    >
+      ✕
+    </button>
+  </div>
+
+  <form id="feedback-form-element" class="mt-4 space-y-3">
+    <!-- HONEYPOT (Anti-bot silencioso) -->
+    <input type="text" id="feedback-honeypot" name="hp_field" class="hidden" tabindex="-1" autocomplete="off">
+
+    <div>
+      <label for="fb-select-cat" class="block text-xs font-bold text-stone-500 mb-1">Categoría</label>
+      <select id="fb-select-cat" required class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+        <option value="reportar_precio">Reportar precio incorrecto</option>
+        <option value="tienda_faltante">Sugerir tienda o tostador faltante</option>
+        <option value="sugerencia_ui">Sugerencia de funcionalidad / interfaz</option>
+        <option value="otro">Otro comentario</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="fb-textarea-msg" class="block text-xs font-bold text-stone-500 mb-1">Comentario o sugerencia</label>
+      <textarea 
+        id="fb-textarea-msg" 
+        required 
+        minlength="5" 
+        maxlength="1000" 
+        rows="4" 
+        placeholder="Cuéntanos en detalle qué encontraste..." 
+        class="w-full bg-stone-50 border border-stone-200 rounded-xl p-3 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+      ></textarea>
+    </div>
+
+    <div id="fb-status-alert" class="hidden p-2.5 rounded-xl text-xs font-medium"></div>
+
+    <div class="pt-2 flex justify-end gap-2">
+      <button 
+        type="button" 
+        id="btn-cancel-feedback"
+        class="text-xs text-stone-500 px-3 py-2 rounded-xl hover:bg-stone-100 transition"
+      >
+        Cancelar
+      </button>
+      <button 
+        type="submit" 
+        id="fb-submit-button"
+        class="bg-emerald-800 hover:bg-emerald-900 text-white font-semibold text-xs px-4 py-2 rounded-xl transition"
+      >
+        Enviar sugerencia
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+  import { SubmitFeedbackUseCase } from '../../core/application/SubmitFeedback';
+  import { AnalyticsTracker } from '../../core/infrastructure/analytics/AnalyticsTracker';
+  import type { FeedbackCategory } from '../../core/domain/models/Feedback';
+
+  const feedbackUseCase = new SubmitFeedbackUseCase();
+  const openBtn = document.getElementById('btn-open-feedback');
+  const dialog = document.getElementById('feedback-dialog') as HTMLDialogElement | null;
+  const closeBtn = document.getElementById('btn-close-feedback-dialog');
+  const cancelBtn = document.getElementById('btn-cancel-feedback');
+  const form = document.getElementById('feedback-form-element') as HTMLFormElement | null;
+  const alertBox = document.getElementById('fb-status-alert');
+  const submitBtn = document.getElementById('fb-submit-button') as HTMLButtonElement | null;
+
+  openBtn?.addEventListener('click', () => {
+    alertBox?.classList.add('hidden');
+    form?.reset();
+    dialog?.showModal();
+  });
+
+  closeBtn?.addEventListener('click', () => dialog?.close());
+  cancelBtn?.addEventListener('click', () => dialog?.close());
+  dialog?.addEventListener('click', (e) => {
+    if (e.target === dialog) dialog.close();
+  });
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const hp = (document.getElementById('feedback-honeypot') as HTMLInputElement).value;
+    if (hp) {
+      dialog?.close();
+      return;
+    }
+
+    const categoria = (document.getElementById('fb-select-cat') as HTMLSelectElement).value as FeedbackCategory;
+    const mensaje = (document.getElementById('fb-textarea-msg') as HTMLTextAreaElement).value.trim();
+
+    if (!submitBtn || !alertBox) return;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Enviando...';
+
+    try {
+      const res = await feedbackUseCase.execute({ categoria, mensaje });
+      alertBox.className = 'p-2.5 rounded-xl text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 block';
+      alertBox.textContent = res.message;
+      form.reset();
+      AnalyticsTracker.trackFeedbackSubmitted(categoria);
+      setTimeout(() => dialog?.close(), 2000);
+    } catch (err: any) {
+      if (err.status === 429 || err.code === 'RATE_LIMIT') {
+        alertBox.className = 'p-2.5 rounded-xl text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200 block';
+        alertBox.textContent = 'Has alcanzado el límite de 2 sugerencias por hora. ¡Gracias por participar!';
+      } else {
+        alertBox.className = 'p-2.5 rounded-xl text-xs font-medium bg-red-50 text-red-800 border border-red-200 block';
+        alertBox.textContent = 'Hubo un error al enviar tu sugerencia. Intenta más tarde.';
+      }
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Enviar sugerencia';
+    }
+  });
+</script>

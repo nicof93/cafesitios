@@ -1,0 +1,493 @@
+---
+import type { CoffeeProduct } from '../../core/domain/models/CoffeeProduct';
+import { 
+  SCA_FLAVOR_WHEEL_DATA, 
+  matchProductNotesToWheel, 
+  sanitizeNote 
+} from '../../core/domain/flavorWheel';
+
+interface Props {
+  product: CoffeeProduct;
+}
+
+const { product } = Astro.props;
+
+// Normalizar notas del café a strings limpios
+const productNotes: string[] = (product.notas_cata || []).map(n => {
+  if (typeof n === 'string') return n.trim();
+  if (n && typeof n === 'object') {
+    return String((n as any).nombre || (n as any).clave_normalizada || '').trim();
+  }
+  return String(n).trim();
+}).filter(Boolean);
+
+// Emparejar notas del café contra la Rueda SCA
+const { wheelFamilies, activeFamilies, unmatchedNotes } = matchProductNotesToWheel(productNotes);
+
+// Ponderación para el Gráfico de Coordenadas Polares (Escala 1-10)
+const notesText = productNotes.join(' ').toLowerCase();
+const processText = (product.proceso || '').toLowerCase();
+const roastText = (product.tueste || '').toLowerCase();
+
+let dulzura = 6;
+let acidez = 6;
+let frutosRojos = 5;
+let floral = 5;
+let cuerpo = 6;
+let frutosSecos = 5;
+
+// Influencia del Proceso
+if (processText.includes('lavado') || processText.includes('washed')) {
+  acidez += 2;
+  floral += 1;
+  cuerpo -= 1;
+} else if (processText.includes('natural')) {
+  frutosRojos += 3;
+  dulzura += 2;
+  cuerpo += 1;
+  acidez -= 1;
+} else if (processText.includes('honey')) {
+  dulzura += 3;
+  frutosRojos += 1;
+  cuerpo += 1;
+} else if (processText.includes('anaerob') || processText.includes('maceracion')) {
+  dulzura += 3;
+  frutosRojos += 3;
+  cuerpo += 2;
+}
+
+// Influencia del Tueste
+if (roastText.includes('claro') || roastText.includes('light')) {
+  acidez += 2;
+  floral += 2;
+  cuerpo -= 1;
+} else if (roastText.includes('oscuro') || roastText.includes('dark')) {
+  cuerpo += 3;
+  frutosSecos += 2;
+  acidez -= 2;
+}
+
+// Descriptores detectados
+if (/(caramel|panela|miel|toffee|vainill|dulce|chancaca|azucar)/i.test(notesText)) dulzura += 2;
+if (/(limon|citric|naranja|pomelo|manzana|acidez|lima|bergamota)/i.test(notesText)) acidez += 3;
+if (/(frutilla|fresa|frambuesa|mora|arandano|cereza|berry|berries|uva|ciruela)/i.test(notesText)) frutosRojos += 3;
+if (/(jazmin|floral|flores|azahar|te negro|rosa|lavanda)/i.test(notesText)) floral += 3;
+if (/(almendra|nuez|avellana|mani|cacao|chocolate|castana)/i.test(notesText)) {
+  frutosSecos += 2;
+  cuerpo += 1;
+}
+
+const clamp = (val: number) => Math.min(10, Math.max(2, val));
+
+const scores = {
+  dulzura: clamp(dulzura),
+  acidez: clamp(acidez),
+  frutosRojos: clamp(frutosRojos),
+  floral: clamp(floral),
+  cuerpo: clamp(cuerpo),
+  frutosSecos: clamp(frutosSecos),
+};
+
+// Generación geométrica SVG para el Gráfico Polar de 6 Ejes
+const polarCenter = 160;
+const polarMaxRadius = 120;
+const polarAxes = [
+  { name: 'Dulzura', value: scores.dulzura, angle: -90, color: '#F59E0B' },
+  { name: 'Acidez', value: scores.acidez, angle: -30, color: '#EAB308' },
+  { name: 'Frutos Rojos', value: scores.frutosRojos, angle: 30, color: '#E11D48' },
+  { name: 'Floral', value: scores.floral, angle: 90, color: '#8B5CF6' },
+  { name: 'Cuerpo', value: scores.cuerpo, angle: 150, color: '#78350F' },
+  { name: 'Frutos Secos', value: scores.frutosSecos, angle: 210, color: '#059669' },
+];
+
+function getPolarCoord(angleDeg: number, val: number) {
+  const rad = (angleDeg * Math.PI) / 180;
+  const r = (val / 10) * polarMaxRadius;
+  return {
+    x: polarCenter + r * Math.cos(rad),
+    y: polarCenter + r * Math.sin(rad),
+  };
+}
+
+const polarPolygonPoints = polarAxes
+  .map(axis => {
+    const pt = getPolarCoord(axis.angle, axis.value);
+    return `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
+  })
+  .join(' ');
+
+// Métodos recomendados según perfil
+let metodoSugerido = 'Versátil (Filtro o Espresso)';
+let metodoIcono = '☕';
+let caracteristicaPrincipal = 'Equilibrado y balanceado';
+
+if (scores.acidez >= 8 || scores.floral >= 8) {
+  metodoSugerido = 'Filtrados manuales (V60, Chemex, Origami o Aeropress)';
+  metodoIcono = '🧪';
+  caracteristicaPrincipal = 'Perfil brillante, floral y aromático';
+} else if (scores.cuerpo >= 8 || scores.dulzura >= 8) {
+  metodoSugerido = 'Espresso, Moka Italiana o Prensa Francesa';
+  metodoIcono = '⚡';
+  caracteristicaPrincipal = 'Perfil dulce, achocolatado y con gran cuerpo';
+}
+---
+
+<section class="bg-white p-6 sm:p-8 rounded-3xl border border-stone-200/80 shadow-2xs space-y-8" id="sensory-profile-section">
+  
+  <!-- CABECERA SENSORIAL CON TABS -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-100 pb-5">
+    <div class="space-y-1">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+          Laboratorio Sensorial SCA
+        </span>
+        <span class="text-xs text-stone-400">
+          • {productNotes.length} notas analizadas
+        </span>
+      </div>
+      <h2 class="text-lg sm:text-xl font-extrabold text-stone-900 tracking-tight flex items-center gap-2">
+        <span>🧭</span> Rueda de Sabores y Perfil de Coordenadas Polares
+      </h2>
+      <p class="text-xs text-stone-500 max-w-2xl">
+        Visualiza el perfil organoléptico homologado según la Rueda de Sabores de la Specialty Coffee Association (SCA). Las notas y familias activas en este café se resaltan en colores vivos.
+      </p>
+    </div>
+
+    <!-- BOTONES SELECTORES DE VISTA (RUEDA SCA vs COORDENADAS POLARES) -->
+    <div class="inline-flex rounded-2xl border border-stone-200 bg-stone-100/80 p-1 text-xs font-semibold self-start md:self-auto">
+      <button 
+        id="btn-view-polar" 
+        type="button"
+        class="flex items-center gap-1.5 rounded-xl bg-white shadow-2xs px-3.5 py-2 text-emerald-800 font-bold transition"
+      >
+        <span>🕸️</span> Coordenadas Polares (Radar)
+      </button>
+      <button 
+        id="btn-view-wheel" 
+        type="button"
+        class="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-stone-500 hover:text-stone-800 transition font-medium"
+      >
+        <span>🎡</span> Rueda de Sabores SCA
+      </button>
+    </div>
+  </div>
+
+  <!-- VISTA 1: RUEDA DE SABORES DE ESPECIALIDAD (SCA FLAVOR WHEEL) -->
+  <div id="view-flavor-wheel" class="space-y-8 hidden">
+    
+    <!-- RESUMEN DE MACRO-FAMILIAS ACTIVAS -->
+    <div class="flex flex-wrap items-center gap-2.5">
+      <span class="text-xs font-bold text-stone-400 uppercase tracking-wider mr-1">Familias activas:</span>
+      {wheelFamilies.map(wf => {
+        const isActive = wf.activeNotesCount > 0;
+        return (
+          <span 
+            class={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border transition-all ${
+              isActive 
+                ? 'shadow-xs scale-105' 
+                : 'opacity-40 grayscale-[40%]'
+            }`}
+            style={{
+              backgroundColor: isActive ? wf.family.colorFondo : '#F5F5F4',
+              borderColor: isActive ? wf.family.color : '#E7E5E4',
+              color: isActive ? wf.family.colorTexto : '#78716C'
+            }}
+          >
+            <span>{wf.family.icono}</span>
+            <span>{wf.family.nombre}</span>
+            <span class="ml-0.5 rounded-full px-1.5 py-0.2 text-[10px]" style={{
+              backgroundColor: isActive ? wf.family.color : '#D6D3D1',
+              color: '#FFFFFF'
+            }}>
+              {wf.activeNotesCount}
+            </span>
+          </span>
+        );
+      })}
+    </div>
+
+    <!-- RUEDA CIRCULAR VISUAL DE SABORES (GRID DE 5 MACRO-FAMILIAS CON NOTAS RESALTADAS) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      {wheelFamilies.map(wf => {
+        const isActive = wf.activeNotesCount > 0;
+        return (
+          <div 
+            class={`flex flex-col justify-between rounded-2xl p-4 border transition-all duration-200 ${
+              isActive 
+                ? 'bg-white shadow-sm ring-2' 
+                : 'bg-stone-50/60 border-stone-200/60 opacity-60'
+            }`}
+            style={{
+              borderColor: isActive ? wf.family.color : undefined,
+              ringColor: isActive ? `${wf.family.color}33` : undefined
+            }}
+          >
+            <!-- CABECERA DE FAMILIA -->
+            <div class="border-b pb-3 mb-3" style={{ borderColor: `${wf.family.color}25` }}>
+              <div class="flex items-center justify-between">
+                <span class="text-xl">{wf.family.icono}</span>
+                {isActive && (
+                  <span 
+                    class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full"
+                    style={{
+                      backgroundColor: wf.family.color,
+                      color: '#FFFFFF'
+                    }}
+                  >
+                    {wf.activeNotesCount} {wf.activeNotesCount === 1 ? 'nota' : 'notas'}
+                  </span>
+                )}
+              </div>
+              <h3 
+                class="font-extrabold text-sm mt-1.5"
+                style={{ color: isActive ? wf.family.colorTexto : '#44403C' }}
+              >
+                {wf.family.nombre}
+              </h3>
+            </div>
+
+            <!-- LISTA DE DESCRIPTORES CANÓNICOS DE LA FAMILIA -->
+            <div class="flex flex-wrap gap-1.5 content-start flex-1">
+              {wf.notes.map(note => (
+                <span 
+                  class={`text-[11px] font-semibold px-2 py-1 rounded-lg border transition-all inline-flex items-center gap-1 ${
+                    note.isActive 
+                      ? 'shadow-xs font-bold' 
+                      : 'border-transparent text-stone-400 bg-stone-100/80 hover:bg-stone-200/50'
+                  }`}
+                  style={note.isActive ? {
+                    backgroundColor: wf.family.colorFondo,
+                    borderColor: wf.family.color,
+                    color: wf.family.colorTexto
+                  } : {}}
+                  title={note.isActive ? `Nota detectada en ${product.nombre}` : `Descriptor canónico de ${wf.family.nombre}`}
+                >
+                  {note.isActive && <span class="text-[9px]">★</span>}
+                  <span>{note.name}</span>
+                </span>
+              ))}
+            </div>
+
+            {/* PIE DE TARJETA SI ESTÁ ACTIVA */}
+            {isActive && (
+              <div class="mt-3 pt-2 text-[10px] font-bold text-right" style={{ color: wf.family.colorTexto }}>
+                ✓ Presente en taza
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+
+    <!-- NOTAS ESPECÍFICAS DETECTADAS FUERA DEL MAPA ESTRICTO (SI HUBIESE) -->
+    {unmatchedNotes.length > 0 && (
+      <div class="bg-amber-50/60 p-4 rounded-2xl border border-amber-200/70 space-y-1">
+        <span class="text-[10px] uppercase font-bold tracking-wider text-amber-800">
+          Otros descriptores reportados por el tostador:
+        </span>
+        <div class="flex flex-wrap gap-1.5 pt-1">
+          {unmatchedNotes.map(n => (
+            <span class="text-xs bg-white text-stone-700 font-medium px-2.5 py-1 rounded-lg border border-amber-200 shadow-2xs">
+              ☕ {n}
+            </span>
+          ))}
+        </div>
+      </div>
+    )}
+
+  </div>
+
+  <!-- VISTA 2: GRÁFICO DE COORDENADAS POLARES (RADAR SENSORIAL 6 EJES) -->
+  <div id="view-polar-chart" class="block space-y-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      
+      <!-- COLUMNA 1: GRÁFICO RADIAL VECTORIAL SVG NATIVO (100% FIABLE, SIN RETRASO) -->
+      <div class="lg:col-span-6 flex flex-col items-center justify-center bg-stone-50/50 rounded-2xl p-4 sm:p-6 border border-stone-100">
+        <div class="relative w-full max-w-[340px] aspect-square">
+          <svg 
+            viewBox="0 0 320 320" 
+            class="w-full h-full drop-shadow-sm select-none"
+            role="img"
+            aria-label="Gráfico de coordenadas polares para perfil de café"
+          >
+            <!-- Círculos concéntricos de referencia (Escala 2, 4, 6, 8, 10) -->
+            {[2, 4, 6, 8, 10].map(level => {
+              const r = (level / 10) * polarMaxRadius;
+              return (
+                <circle 
+                  cx={polarCenter} 
+                  cy={polarCenter} 
+                  r={r} 
+                  fill="none" 
+                  stroke={level === 10 ? '#D6D3D1' : '#E7E5E4'} 
+                  stroke-dasharray={level === 10 ? 'none' : '3 3'}
+                  stroke-width={level === 10 ? '1.5' : '1'}
+                />
+              );
+            })}
+
+            <!-- Ejes radiales desde el centro a cada dimensión -->
+            {polarAxes.map(axis => {
+              const edge = getPolarCoord(axis.angle, 10);
+              return (
+                <line 
+                  x1={polarCenter} 
+                  y1={polarCenter} 
+                  x2={edge.x} 
+                  y2={edge.y} 
+                  stroke="#E7E5E4" 
+                  stroke-width="1.2"
+                />
+              );
+            })}
+
+            <!-- Polígono relleno de coordenadas del café -->
+            <polygon 
+              points={polarPolygonPoints} 
+              fill="rgba(16, 185, 129, 0.25)" 
+              stroke="#047857" 
+              stroke-width="2.5" 
+              stroke-linejoin="round"
+            />
+
+            <!-- Puntos destacados en cada vértice -->
+            {polarAxes.map(axis => {
+              const pt = getPolarCoord(axis.angle, axis.value);
+              return (
+                <g>
+                  <circle 
+                    cx={pt.x} 
+                    cy={pt.y} 
+                    r="5" 
+                    fill={axis.color} 
+                    stroke="#FFFFFF" 
+                    stroke-width="2" 
+                    class="drop-shadow-xs"
+                  />
+                  <text 
+                    x={pt.x} 
+                    y={pt.y - 8} 
+                    text-anchor="middle" 
+                    font-size="10" 
+                    font-weight="bold" 
+                    fill="#1C1917"
+                  >
+                    {axis.value}
+                  </text>
+                </g>
+              );
+            })}
+
+            <!-- Etiquetas de los 6 Ejes -->
+            {polarAxes.map(axis => {
+              const labelPos = getPolarCoord(axis.angle, 12.2);
+              return (
+                <text 
+                  x={labelPos.x} 
+                  y={labelPos.y + 4} 
+                  text-anchor="middle" 
+                  font-size="11" 
+                  font-weight="bold" 
+                  fill="#44403C"
+                >
+                  {axis.name}
+                </text>
+              );
+            })}
+          </svg>
+        </div>
+        <p class="text-[11px] text-stone-400 mt-2">
+          Coordenadas normalizadas de 1 (suave) a 10 (intenso)
+        </p>
+      </div>
+
+      <!-- COLUMNA 2: INTENSIDADES NUMÉRICAS Y RECOMENDACIÓN -->
+      <div class="lg:col-span-6 space-y-4">
+        
+        <!-- RECOMENDACIÓN DE MÉTODO -->
+        <div class="bg-gradient-to-br from-emerald-50/70 to-stone-50 p-5 rounded-2xl border border-emerald-200/60 space-y-2">
+          <div class="flex items-center gap-2.5">
+            <span class="text-2xl">{metodoIcono}</span>
+            <div>
+              <span class="block text-[10px] uppercase font-bold text-stone-400 tracking-wider">Método de Extracción Recomendado</span>
+              <h3 class="text-sm font-bold text-stone-900">{metodoSugerido}</h3>
+            </div>
+          </div>
+          <p class="text-xs text-stone-600 leading-relaxed font-normal">
+            {caracteristicaPrincipal}. Diseñado para extraer el máximo potencial organoléptico de este perfil.
+          </p>
+        </div>
+
+        <!-- LISTADO DE INTENSIDADES POR EJE -->
+        <div class="space-y-2">
+          <span class="block text-[11px] font-bold uppercase tracking-wider text-stone-400">
+            Intensidad de Atributos Organolépticos
+          </span>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            {polarAxes.map(axis => (
+              <div class="flex items-center justify-between p-2.5 rounded-xl bg-stone-50 border border-stone-100">
+                <span class="flex items-center gap-2 font-medium text-stone-700">
+                  <span class="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: axis.color }}></span>
+                  <span>{axis.name}</span>
+                </span>
+                <span class="font-extrabold text-stone-900">
+                  {axis.value} <span class="text-[10px] text-stone-400 font-normal">/10</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PIE INFORMATIVO SCA -->
+  <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-stone-100 text-[11px] text-stone-400">
+    <div class="flex items-center gap-2">
+      <span>📖</span>
+      <span>Basado en el estándar de cata de la <strong>Specialty Coffee Association (SCA)</strong> y World Coffee Research.</span>
+    </div>
+    <div class="flex items-center gap-3 font-semibold text-emerald-800">
+      <span>Variedad: {product.variedad || 'Arábica'}</span>
+      <span>•</span>
+      <span>Proceso: {product.proceso || 'Tradicional'}</span>
+    </div>
+  </div>
+
+</section>
+
+<script>
+  // Manejador del toggle entre Rueda de Sabores y Coordenadas Polares
+  const btnWheel = document.getElementById('btn-view-wheel');
+  const btnPolar = document.getElementById('btn-view-polar');
+  const viewWheel = document.getElementById('view-flavor-wheel');
+  const viewPolar = document.getElementById('view-polar-chart');
+
+  function setView(view: 'wheel' | 'polar') {
+    if (!btnWheel || !btnPolar || !viewWheel || !viewPolar) return;
+
+    if (view === 'wheel') {
+      viewWheel.classList.remove('hidden');
+      viewWheel.classList.add('block');
+      viewPolar.classList.remove('block');
+      viewPolar.classList.add('hidden');
+
+      btnWheel.className = 'flex items-center gap-1.5 rounded-xl bg-white shadow-2xs px-3.5 py-2 text-emerald-800 font-bold transition';
+      btnPolar.className = 'flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-stone-500 hover:text-stone-800 transition font-medium';
+    } else {
+      viewPolar.classList.remove('hidden');
+      viewPolar.classList.add('block');
+      viewWheel.classList.remove('block');
+      viewWheel.classList.add('hidden');
+
+      btnPolar.className = 'flex items-center gap-1.5 rounded-xl bg-white shadow-2xs px-3.5 py-2 text-emerald-800 font-bold transition';
+      btnWheel.className = 'flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-stone-500 hover:text-stone-800 transition font-medium';
+    }
+  }
+
+  btnWheel?.addEventListener('click', () => setView('wheel'));
+  btnPolar?.addEventListener('click', () => setView('polar'));
+</script>
+

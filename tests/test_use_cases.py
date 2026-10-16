@@ -50,8 +50,9 @@ class MockCoffeeRepository(ICoffeeRepository):
         only_available: bool = True, store_name: Optional[str] = None,
         min_weight_g: Optional[int] = None, max_weight_g: Optional[int] = None,
         search_query: Optional[str] = None, min_price: Optional[int] = None,
-            max_price: Optional[int] = None, process: Optional[str] = None,
-            country: Optional[str] = None
+        max_price: Optional[int] = None, process: Optional[str] = None,
+        country: Optional[str] = None, variety: Optional[str] = None,
+        tasting_notes: Optional[str] = None, **kwargs
     ) -> List[CoffeeProductDomain]:
         prods = list(self.sample_products)
         if search_query:
@@ -66,12 +67,17 @@ class MockCoffeeRepository(ICoffeeRepository):
         self, sort_by: Literal["kilo", "unit"] = "kilo", only_available: bool = True,
         store_name: Optional[str] = None, min_weight_g: Optional[int] = None,
         max_weight_g: Optional[int] = None, search_query: Optional[str] = None,
-        min_price: Optional[int] = None, max_price: Optional[int] = None
+        min_price: Optional[int] = None, max_price: Optional[int] = None,
+        process: Optional[str] = None, country: Optional[str] = None,
+        variety: Optional[str] = None, tasting_notes: Optional[str] = None, **kwargs
     ) -> int:
         prods = list(self.sample_products)
         if search_query:
             prods = [p for p in prods if search_query.lower() in p.nombre.lower()]
         return len(prods)
+
+    def find_matching_products(self, product_id: int) -> List[CoffeeProductDomain]:
+        return [p for p in self.sample_products if p.id != product_id]
 
 class TestUseCases(unittest.TestCase):
     def test_use_case_sort_by_kilo(self):

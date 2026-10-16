@@ -118,3 +118,32 @@ Cualquier nuevo driver, endpoint o caso de uso debe cumplir sin excepcion:
 1. Commits Bajo Demanda: NO generar commits automaticos salvo que el usuario lo solicite expresamente.
 2. Formato: Conventional Commits en espanol ('feat(scrapper): driver para jumpseller', 'fix(api): corregir filtro de precios').
 3. Proteccion de Ramas: Nunca confirmar directamente sobre 'main' o 'master' si hay cambios remotos pendientes; trabajar en ramas de caracteristicas ('feat/', 'fix/').
+
+---
+
+## 8. Protocolo Estricto de SEO y Buenas Practicas Frontend (OBLIGATORIO)
+
+Toda modificacion en el frontend (`astro-frontend/`) debe cumplir sin excepcion las siguientes directivas de SEO y Core Web Vitals:
+
+1. **Metaetiquetas y URLs Canonicas:**
+   * Cada pagina debe tener un `<title>` descriptivo y unico con patron: `[Tema Principal] | Cafesitios - [Propuesta de Valor]`.
+   * Meta descripcion (`<meta name="description">`) concisa, persuasiva y de entre 130 y 160 caracteres.
+   * Enlace canonico explicito `<link rel="canonical" href="...">` para evitar penalizacion por contenido duplicado generado por query params de filtros.
+   * Etiquetas Open Graph (`og:title`, `og:description`, `og:image`, `og:url`, `og:type`) y Twitter Card (`twitter:card: "summary_large_image"`).
+2. **Semantica HTML y Jerarquia de Encabezados:**
+   * Exactamente un unico `<h1>` semantico por vista que sintetice la palabra clave principal (ej. "Comparador de Cafe de Especialidad en Chile").
+   * Jerarquia sin saltos arbitrarios: `h1` -> `h2` -> `h3`.
+   * Estructura semantica obligatoria: `<header>`, `<main>`, `<section>`, `<article>`, `<aside>`, `<footer>`.
+3. **Core Web Vitals y Manejo de Imagenes (LCP / CLS):**
+   * Toda etiqueta `<img>` debe tener atributo `alt` informativo en espanol (no decorativo vacio salvo que sea un icono puramente ornamental con `aria-hidden="true"`).
+   * Definir dimensiones explicitas (`width`, `height`) o clases Tailwind de aspecto (`aspect-square`, `aspect-[4/3]`) para evitar cambios bruscos de diseno (CLS = 0).
+   * La imagen principal de portada (Hero / LCP) debe llevar `loading="eager"` y `fetchpriority="high"`.
+   * Todas las demas imagenes (grillas de catalogo, tarjetas de tiendas) deben usar `loading="lazy"`.
+4. **Datos Estructurados (Schema.org / JSON-LD):**
+   * Incorporar scripts `<script type="application/ld+json">` en el `<head>`:
+     - Home / Landing: `WebSite` con `potentialAction` (SearchAction) y `Organization`.
+     - Detalle de Producto: `Product` con `Offer` (precio en CLP, disponibilidad) y `Brand`.
+     - Tiendas: `LocalBusiness` / `Store` con coordenadas y comuna.
+5. **Arquitectura de Islas Astro y Rendimiento:**
+   * Priorizar componentes estáticos `.astro`.
+   * En componentes interactivos con estado cliente (React), usar preferentemente `client:visible` o `client:idle`, reservando `client:load` unicamente para componentes de interaccion critica above-the-fold.
