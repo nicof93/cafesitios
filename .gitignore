@@ -8,3 +8,6 @@
 .env
 *.env
 frontend-website/dist/
+astro-frontend/dist/
+astro-frontend/.vercel/
+.vercel/
