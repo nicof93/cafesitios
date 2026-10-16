@@ -297,7 +297,7 @@ class TestDatabaseManager(unittest.TestCase):
                     ).scalar_one()
 
                 self.assertEqual(store_name, 'Tienda existente')
-                self.assertEqual(revision, '0008_mvp_core_features')
+                self.assertEqual(revision, '0010_widen_tueste_column')
                 table_names = set(inspect(db.engine).get_table_names())
                 self.assertIn('sincronizaciones', table_names)
                 self.assertIn('estado_sincronizacion', table_names)

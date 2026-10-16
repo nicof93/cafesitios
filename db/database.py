@@ -58,7 +58,7 @@ class Producto(Base):
     imagen = Column(Text, nullable=True)
     descripcion = Column(Text, nullable=True)
     proceso = Column(Text, nullable=True)
-    tueste = Column(String(50), nullable=True)
+    tueste = Column(String(255), nullable=True)
     finca = Column(String(255), nullable=True)
     variedad = Column(String(255), nullable=True)
     pais_origen = Column(String(255), nullable=True)
@@ -441,7 +441,12 @@ class DatabaseManager:
                     'fermentacion_horas',
                 ):
                     if caracteristicas.get(field) is not None:
-                        producto_mapping[field] = caracteristicas[field]
+                        val = caracteristicas[field]
+                        if field in ('tueste', 'finca', 'variedad', 'pais_origen') and isinstance(val, str):
+                            val = val[:250]
+                        elif field == 'cosecha' and isinstance(val, str):
+                            val = val[:100]
+                        producto_mapping[field] = val
                 productos_a_insertar.append(producto_mapping)
                 total_productos += 1
 
@@ -466,8 +471,14 @@ class DatabaseManager:
                             'elevacion_max_msnm', 'cosecha', 'fermentacion_tipo',
                             'fermentacion_horas',
                         ):
-                            if campo in row and getattr(producto_existente, campo) != row[campo]:
-                                cambios[campo] = row[campo]
+                            if campo in row:
+                                val = row[campo]
+                                if campo in ('tueste', 'finca', 'variedad', 'pais_origen') and isinstance(val, str):
+                                    val = val[:250]
+                                elif campo == 'cosecha' and isinstance(val, str):
+                                    val = val[:100]
+                                if getattr(producto_existente, campo) != val:
+                                    cambios[campo] = val
                         if row['id_externo'] and producto_existente.id_externo != row['id_externo']:
                             cambios['id_externo'] = row['id_externo']
                         fuentes_actuales = producto_existente.caracteristicas_fuente or {}

@@ -72,9 +72,10 @@ class ShopifyDriver:
             re.IGNORECASE
         )
         if m_tueste:
-            raw_tueste = m_tueste.group(1).strip().splitlines()[0].strip()
+            lines = m_tueste.group(1).strip().splitlines()
+            raw_tueste = lines[0].strip() if lines else ""
             if raw_tueste:
-                ficha['tueste'] = raw_tueste.capitalize()
+                ficha['tueste'] = raw_tueste[:50].capitalize()
 
         # 2. Perfil: r'PERFIL\s*[:\*\-]?\s*([A-Za-z,\s]+)' (permite conectores y barras)
         m_perfil = re.search(
@@ -83,9 +84,10 @@ class ShopifyDriver:
             re.IGNORECASE
         )
         if m_perfil:
-            raw_perfil = m_perfil.group(1).strip().splitlines()[0].strip()
+            lines = m_perfil.group(1).strip().splitlines()
+            raw_perfil = lines[0].strip() if lines else ""
             if raw_perfil:
-                ficha['perfil'] = raw_perfil
+                ficha['perfil'] = raw_perfil[:100]
 
         # 3. Notas de Cata: r'NOTAS\s*[:\*\-]?\s*([^\n\.<]+)'
         m_notas = re.search(
@@ -106,15 +108,16 @@ class ShopifyDriver:
             re.IGNORECASE
         )
         if m_proceso:
-            raw_proceso = m_proceso.group(1).strip().splitlines()[0].strip()
+            lines = m_proceso.group(1).strip().splitlines()
+            raw_proceso = lines[0].strip() if lines else ""
             if raw_proceso:
-                ficha['proceso'] = raw_proceso.capitalize()
+                ficha['proceso'] = raw_proceso[:100].capitalize()
 
         return ficha
 
     def extraer_ficha_tecnica_html(self, url_detalle: str) -> Dict[str, Any]:
         """
-        Fallback a HTML: Solicita url_detalle usando requests.get con User-Agent de navegador y timeout de 10s.
+        Fallback a HTML: Solicita url_detalle usando requests.get con User-Agent de navegador y timeout de 5s.
         En caso de código HTTP != 200 o excepción/timeout, captura con logging.warning y retorna {}.
         """
         if not url_detalle:
@@ -125,7 +128,7 @@ class ShopifyDriver:
         }
 
         try:
-            response = requests.get(url_detalle, headers=headers, timeout=10)
+            response = requests.get(url_detalle, headers=headers, timeout=5)
             if response.status_code != 200:
                 logging.warning(
                     f"[{self.nombre}] Error HTTP {response.status_code} al obtener ficha técnica HTML de {url_detalle}"
@@ -169,7 +172,7 @@ class ShopifyDriver:
 
         for url in urls_a_probar:
             try:
-                response = requests.get(url, headers=headers, timeout=15)
+                response = requests.get(url, headers=headers, timeout=10)
                 if response.status_code == 200:
                     data = response.json()
                     url_exitosa = url
@@ -184,6 +187,13 @@ class ShopifyDriver:
 
         productos_raw = data.get('products', [])
         productos_normalizados = []
+
+        NON_COFFEE_KEYWORDS = (
+            'taller', 'curso', 'taza', 'mug', 'vaso', 'polera', 'gorro', 'tote bag',
+            'prensa francesa', 'aeropress', 'chemex', 'v60', 'kalita', 'filtro de papel',
+            'molinillo', 'molino', 'cafetera', 'gift card', 'tarjeta de regalo', 'balanza',
+            'hervidor', 'amigo secreto'
+        )
 
         for prod in productos_raw:
             titulo_prod = prod.get('title', '').strip()
@@ -264,8 +274,10 @@ class ShopifyDriver:
                 re.IGNORECASE
             ))
 
+            es_accesorio = any(k in titulo_prod.lower() for k in NON_COFFEE_KEYWORDS)
+
             ficha_tecnica: Dict[str, Any] = {}
-            if not tiene_atributos_clave and url_detalle and url_detalle != base_site:
+            if not tiene_atributos_clave and not es_accesorio and url_detalle and url_detalle != base_site:
                 logging.info(f"[{self.nombre}] Faltan atributos clave en JSON para '{titulo_prod}'. Activando fallback HTML...")
                 ficha_tecnica = self.extraer_ficha_tecnica_html(url_detalle)
             else:
