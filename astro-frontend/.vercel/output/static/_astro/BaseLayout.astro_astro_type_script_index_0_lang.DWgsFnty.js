@@ -1,1 +1,0 @@
-import{A as c}from"./AnalyticsTracker.FmDP4B-W.js";document.addEventListener("click",o=>{const t=o.target.closest("[data-track-outbound]");if(!t)return;const e=t.getAttribute("data-store")||"",r=t.getAttribute("data-product-name")||"",a=Number(t.getAttribute("data-price")||"0"),n=t.getAttribute("href")||"";c.trackOutboundClick(e,r,a,n),c.trackSelectItem(r,e,a)});
