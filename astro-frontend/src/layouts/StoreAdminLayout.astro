@@ -1,0 +1,133 @@
+---
+import { Environment } from '../core/infrastructure/config/Environment';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  activeNav?: 'dashboard' | 'productos' | 'auditoria';
+}
+
+const { title = "Panel de Tostaduría | Cafesitios Admin", activeNav = "dashboard" } = Astro.props;
+const apiBase = Environment.getApiBaseUrl();
+---
+
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-stone-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{title}</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
+</head>
+<body class="h-full flex flex-col text-stone-900 antialiased font-sans" data-api-base={apiBase}>
+  <!-- HEADER ADMINISTRATIVO AISLADO -->
+  <header class="sticky top-0 z-40 bg-stone-900 border-b border-stone-800 text-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo y Nombre de Tienda -->
+        <div class="flex items-center gap-3">
+          <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-600 text-white font-bold text-lg shadow-sm">
+            ☕
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-black tracking-wider uppercase text-emerald-400">Portal Tostadurías</span>
+              <span class="rounded bg-stone-800 px-2 py-0.5 text-[10px] font-bold text-stone-300" id="header-store-badge">Cargando tienda...</span>
+            </div>
+            <div class="text-xs text-stone-400 font-mono hidden sm:block" id="header-store-url">Panel de Administración Multi-Inquilino</div>
+          </div>
+        </div>
+
+        <!-- Navegación Principal -->
+        <nav class="hidden md:flex items-center gap-1 text-xs font-semibold">
+          <a
+            href="/admin-tienda/dashboard"
+            class={`px-3 py-2 rounded-lg transition ${activeNav === 'dashboard' ? 'bg-emerald-700 text-white font-bold' : 'text-stone-300 hover:text-white hover:bg-stone-800'}`}
+          >
+            📊 Dashboard
+          </a>
+          <a
+            href="/admin-tienda/productos"
+            class={`px-3 py-2 rounded-lg transition ${activeNav === 'productos' ? 'bg-emerald-700 text-white font-bold' : 'text-stone-300 hover:text-white hover:bg-stone-800'}`}
+          >
+            📦 Mis Productos
+          </a>
+          <a
+            href="/admin-tienda/auditoria"
+            class={`px-3 py-2 rounded-lg transition ${activeNav === 'auditoria' ? 'bg-emerald-700 text-white font-bold' : 'text-stone-300 hover:text-white hover:bg-stone-800'}`}
+          >
+            🛡️ Auditoría
+          </a>
+        </nav>
+
+        <!-- Usuario y Cerrar Sesión -->
+        <div class="flex items-center gap-3">
+          <div class="text-right hidden sm:block">
+            <span class="block text-xs font-bold text-stone-200" id="header-user-email">admin@tostaduria.cl</span>
+            <span class="block text-[10px] text-emerald-400 font-semibold" id="header-user-role">STORE_ADMIN</span>
+          </div>
+          <button
+            type="button"
+            id="btn-logout"
+            class="rounded-xl border border-stone-700 bg-stone-800 hover:bg-stone-700 px-3 py-1.5 text-xs font-bold text-stone-200 hover:text-white transition shadow-xs"
+            title="Cerrar sesión"
+          >
+            🚪 Salir
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navegación Móvil -->
+    <div class="md:hidden border-t border-stone-800 bg-stone-900/90 px-4 py-2 flex items-center justify-around text-xs font-semibold">
+      <a href="/admin-tienda/dashboard" class={activeNav === 'dashboard' ? 'text-emerald-400 font-bold' : 'text-stone-400'}>📊 Dashboard</a>
+      <a href="/admin-tienda/productos" class={activeNav === 'productos' ? 'text-emerald-400 font-bold' : 'text-stone-400'}>📦 Productos</a>
+      <a href="/admin-tienda/auditoria" class={activeNav === 'auditoria' ? 'text-emerald-400 font-bold' : 'text-stone-400'}>🛡️ Auditoría</a>
+    </div>
+  </header>
+
+  <!-- CONTENIDO DE LA PÁGINA -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <slot />
+  </main>
+
+  <!-- SCRIPT BASE DE SESIÓN E INTERCEPTOR HTTP -->
+  <script is:inline>
+    (function initStoreAdminSession() {
+      const token = localStorage.getItem('store_admin_token');
+      const isLoginPage = window.location.pathname.includes('/login');
+
+      if (!token && !isLoginPage) {
+        window.location.replace('/admin-tienda/login');
+        return;
+      }
+
+      // Cargar perfil en header
+      const rawProfile = localStorage.getItem('store_admin_profile');
+      if (rawProfile) {
+        try {
+          const profile = JSON.parse(rawProfile);
+          const badge = document.getElementById('header-store-badge');
+          const urlEl = document.getElementById('header-store-url');
+          const emailEl = document.getElementById('header-user-email');
+          const roleEl = document.getElementById('header-user-role');
+          if (badge) badge.textContent = profile.tienda_nombre || 'Mi Tostaduría';
+          if (urlEl) urlEl.textContent = profile.tienda_url || 'Catálogo Oficial';
+          if (emailEl) emailEl.textContent = profile.usuario_id || 'Administrador';
+          if (roleEl) roleEl.textContent = profile.rol || 'STORE_ADMIN';
+        } catch (_) {}
+      }
+
+      // Cerrar sesión
+      document.getElementById('btn-logout')?.addEventListener('click', () => {
+        if (confirm('¿Deseas cerrar la sesión del portal de tostadurías?')) {
+          localStorage.removeItem('store_admin_token');
+          localStorage.removeItem('store_admin_profile');
+          window.location.replace('/admin-tienda/login');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
