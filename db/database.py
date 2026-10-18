@@ -1,9 +1,10 @@
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import List, Dict, Any
 from sqlalchemy import (
     create_engine, Column, Integer, String, Text, Boolean,
-    Numeric, DateTime, ForeignKey, UniqueConstraint, inspect, text, Float, JSON, ARRAY
+    Numeric, DateTime, ForeignKey, UniqueConstraint, Index, inspect, text, Float, JSON, ARRAY
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
@@ -31,6 +32,7 @@ class Tienda(Base):
     url_base = Column(String(255), nullable=False)
     plataforma = Column(String(50), nullable=False, default='desconocida', server_default='desconocida')
     activo = Column(Boolean, nullable=False, default=True, server_default='true')
+    direccion = Column(String(255), nullable=True)
     latitud = Column(Numeric(10, 8), nullable=True)
     longitud = Column(Numeric(11, 8), nullable=True)
     comuna = Column(String(100), nullable=True)
@@ -38,6 +40,24 @@ class Tienda(Base):
     fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
     productos = relationship("Producto", back_populates="tienda", cascade="all, delete-orphan")
     sincronizaciones = relationship("Sincronizacion", back_populates="tienda", cascade="all, delete-orphan")
+    sucursales = relationship("SucursalTienda", back_populates="tienda", cascade="all, delete-orphan")
+
+
+class SucursalTienda(Base):
+    __tablename__ = 'sucursales_tienda'
+    id = Column(Integer, primary_key=True)
+    tienda_id = Column(Integer, ForeignKey('tiendas.id', ondelete='CASCADE'), nullable=False, index=True)
+    nombre = Column(String(150), nullable=False)
+    direccion = Column(String(255), nullable=True)
+    comuna = Column(String(100), nullable=True)
+    region = Column(String(100), nullable=True)
+    latitud = Column(Numeric(10, 8), nullable=True)
+    longitud = Column(Numeric(11, 8), nullable=True)
+    activo = Column(Boolean, nullable=False, default=True, server_default='true')
+    fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
+    fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
+    tienda = relationship("Tienda", back_populates="sucursales")
+
 
 class NotaCata(Base):
     __tablename__ = 'notas_cata'
@@ -48,11 +68,17 @@ class NotaCata(Base):
 
 class Producto(Base):
     __tablename__ = 'productos'
-    __table_args__ = (UniqueConstraint('tienda_id', 'id_externo', name='uq_producto_tienda_id_externo'),)
+    __table_args__ = (
+        UniqueConstraint('tienda_id', 'id_externo', name='uq_producto_tienda_id_externo'),
+        Index('idx_productos_tienda_id', 'tienda_id'),
+        Index('idx_productos_activo_oculto_cat', 'activo', 'oculto_catalogo', 'categoria'),
+    )
     id = Column(Integer, primary_key=True)
     tienda_id = Column(Integer, ForeignKey('tiendas.id'), nullable=False)
     id_externo = Column(String(255), nullable=True)
     activo = Column(Boolean, nullable=False, default=True, server_default='true')
+    oculto_catalogo = Column(Boolean, nullable=False, default=False, server_default='false')
+    categoria = Column(String(30), nullable=False, default='cafe', server_default='cafe', index=True)
     nombre = Column(String(255), nullable=False)
     url_detalle = Column(String(500), unique=True, nullable=False)
     imagen = Column(Text, nullable=True)
@@ -86,6 +112,11 @@ class ProductoNotaCata(Base):
 
 class Variante(Base):
     __tablename__ = 'variantes'
+    __table_args__ = (
+        Index('idx_variantes_producto_id', 'producto_id'),
+        Index('idx_variantes_disponible_kilo', 'disponible', 'precio_por_kilo'),
+        Index('idx_variantes_disponible_precio', 'disponible', 'precio_clp'),
+    )
     id = Column(Integer, primary_key=True)
     producto_id = Column(Integer, ForeignKey('productos.id'), nullable=False)
     id_variante_externo = Column(String(100), unique=True, nullable=False)
@@ -105,6 +136,10 @@ class Variante(Base):
 
 class HistorialPrecio(Base):
     __tablename__ = 'historial_precios'
+    __table_args__ = (
+        Index('idx_historial_precios_variante_id', 'variante_id'),
+        Index('idx_historial_precios_var_fecha', 'variante_id', 'fecha_registro'),
+    )
     id = Column(Integer, primary_key=True)
     variante_id = Column(Integer, ForeignKey('variantes.id'), nullable=False)
     precio_clp = Column(Integer, nullable=False)
@@ -133,6 +168,17 @@ class Sincronizacion(Base):
     productos_eliminados = Column(Integer, nullable=False, default=0, server_default='0')
     productos_actualizados = Column(Integer, nullable=False, default=0, server_default='0')
     tienda = relationship("Tienda", back_populates="sincronizaciones")
+
+class SincronizacionLog(Base):
+    __tablename__ = 'sincronizaciones_log'
+    id = Column(Integer, primary_key=True)
+    fecha_ejecucion = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    estado = Column(String(20), nullable=False, default='OK', server_default='OK')
+    productos_nuevos = Column(Integer, nullable=False, default=0, server_default='0')
+    productos_actualizados = Column(Integer, nullable=False, default=0, server_default='0')
+    productos_con_cambio_precio = Column(Integer, nullable=False, default=0, server_default='0')
+    duracion_segundos = Column(Numeric(10, 2), nullable=False, default=0, server_default='0')
+    mensaje_error = Column(Text, nullable=True)
 
 class Receta(Base):
     __tablename__ = 'recetas'
@@ -213,15 +259,45 @@ class OfertaTienda(Base):
     cafe = relationship("Cafe", back_populates="ofertas")
     tienda = relationship("Tienda")
 
+
+class UsuarioTienda(Base):
+    __tablename__ = 'usuarios_tienda'
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    usuario_id = Column(String(36), nullable=False, index=True)
+    tienda_id = Column(Integer, ForeignKey('tiendas.id', ondelete='CASCADE'), nullable=False, index=True)
+    rol = Column(String(50), nullable=False, default='STORE_ADMIN', server_default='STORE_ADMIN')
+    creado_en = Column(DateTime, nullable=False, default=_utcnow)
+    tienda = relationship("Tienda")
+    __table_args__ = (
+        UniqueConstraint('usuario_id', 'tienda_id', name='uq_usuario_tienda'),
+    )
+
+
+class AuditoriaAccionesTienda(Base):
+    __tablename__ = 'auditoria_acciones_tienda'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tienda_id = Column(Integer, ForeignKey('tiendas.id', ondelete='CASCADE'), nullable=False, index=True)
+    usuario_id = Column(String(36), nullable=False, index=True)
+    accion = Column(String(50), nullable=False)
+    entidad = Column(String(50), nullable=False)
+    entidad_id = Column(Integer, nullable=True)
+    valores_previos = Column(JSON, nullable=True)
+    valores_nuevos = Column(JSON, nullable=True)
+    ip_origen = Column(String(45), nullable=True)
+    fecha_registro = Column(DateTime, nullable=False, default=_utcnow, index=True)
+    tienda = relationship("Tienda")
+
+
 class DatabaseManager:
     def __init__(self, db_url: str = None):
         url_final = db_url or settings.database_url
+        connect_args = {} if str(url_final).startswith("sqlite") else {"prepare_threshold": None}
         self.engine = create_engine(
             url_final,
             echo=False,
             pool_pre_ping=True,
             pool_recycle=300,
-            connect_args={"prepare_threshold": None}
+            connect_args=connect_args,
         )
         self.SessionLocal = sessionmaker(bind=self.engine)
 
@@ -282,6 +358,59 @@ class DatabaseManager:
                 }
                 for tienda in tiendas
             ]
+        finally:
+            session.close()
+
+    def obtener_tienda_por_id(self, tienda_id: int) -> Optional[Dict[str, Any]]:
+        session = self.SessionLocal()
+        try:
+            tienda = session.query(Tienda).filter(Tienda.id == tienda_id).first()
+            if not tienda:
+                return None
+            return {
+                'id': tienda.id,
+                'nombre': tienda.nombre,
+                'url_base': tienda.url_base,
+                'plataforma': tienda.plataforma,
+                'activo': bool(tienda.activo),
+            }
+        finally:
+            session.close()
+
+    def listar_tiendas_no_sincronizadas(self) -> List[Dict[str, Any]]:
+        session = self.SessionLocal()
+        try:
+            tiendas_activas = (
+                session.query(Tienda)
+                .filter(Tienda.activo.is_(True))
+                .order_by(Tienda.nombre.asc())
+                .all()
+            )
+            unsynced = []
+            for t in tiendas_activas:
+                prod_count = (
+                    session.query(func.count(Producto.id))
+                    .filter(Producto.tienda_id == t.id, Producto.activo.is_(True))
+                    .scalar()
+                    or 0
+                )
+                has_successful_sync = (
+                    session.query(Sincronizacion.id)
+                    .filter(
+                        Sincronizacion.tienda_id == t.id,
+                        Sincronizacion.resultado == 'exitoso',
+                    )
+                    .first()
+                    is not None
+                )
+                if prod_count == 0 or not has_successful_sync:
+                    unsynced.append({
+                        'id': t.id,
+                        'nombre': t.nombre,
+                        'url_base': t.url_base,
+                        'plataforma': t.plataforma,
+                    })
+            return unsynced
         finally:
             session.close()
 
@@ -347,6 +476,48 @@ class DatabaseManager:
         finally:
             session.close()
 
+    def refrescar_vistas_materializadas(self):
+        """Refresca concurrentemente las vistas materializadas en PostgreSQL."""
+        if getattr(self.engine, 'dialect', None) and self.engine.dialect.name == 'postgresql':
+            with self.engine.connect() as conn:
+                try:
+                    conn.execution_options(isolation_level="AUTOCOMMIT").execute(
+                        text("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_variaciones_precio;")
+                    )
+                    logging.info("⚡ Vista materializada mv_variaciones_precio refrescada exitosamente.")
+                except Exception as e:
+                    logging.warning(f"No se pudo refrescar mv_variaciones_precio concurrentemente: {e}")
+
+    def registrar_sincronizacion_log(
+        self,
+        estado: str = "OK",
+        productos_nuevos: int = 0,
+        productos_actualizados: int = 0,
+        productos_con_cambio_precio: int = 0,
+        duracion_segundos: float = 0.0,
+        mensaje_error: str = None,
+    ) -> int:
+        session = self.SessionLocal()
+        try:
+            estado_norm = "OK" if str(estado).upper() in ("OK", "EXITOSO", "SUCCESS") else "ERROR"
+            log_entry = SincronizacionLog(
+                fecha_ejecucion=datetime.now(timezone.utc),
+                estado=estado_norm,
+                productos_nuevos=int(productos_nuevos or 0),
+                productos_actualizados=int(productos_actualizados or 0),
+                productos_con_cambio_precio=int(productos_con_cambio_precio or 0),
+                duracion_segundos=round(float(duracion_segundos or 0.0), 2),
+                mensaje_error=mensaje_error,
+            )
+            session.add(log_entry)
+            session.commit()
+            return log_entry.id
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
     @staticmethod
     def _bulk_insert_batch(session, model, mappings):
         if not mappings:
@@ -403,30 +574,55 @@ class DatabaseManager:
             productos_agregados = 0
             productos_actualizados = 0
             productos_eliminados = 0
-            productos_existentes = session.query(Producto).filter(
-                Producto.tienda_id == tienda.id
-            ).all()
+            productos_existentes = [
+                prod for prod in session.query(Producto).filter(
+                    Producto.tienda_id == tienda.id
+                ).all()
+                if getattr(prod, 'tienda_id', tienda.id) == tienda.id
+            ]
             productos_por_id_externo = {
                 prod.id_externo: prod for prod in productos_existentes if prod.id_externo
             }
             productos_por_url = {prod.url_detalle: prod for prod in productos_existentes}
 
+            urls_catalogo_set = {
+                prod_data['url_detalle']
+                for prod_data in catalogo
+                if prod_data.get('url_detalle')
+            }
+            productos_globales_por_url = {
+                prod.url_detalle: prod
+                for prod in session.query(Producto).filter(
+                    Producto.url_detalle.in_(list(urls_catalogo_set))
+                ).all()
+                if getattr(prod, 'url_detalle', None) in urls_catalogo_set
+            } if urls_catalogo_set else {}
+
             unique_product_keys = set()
+            seen_urls = set()
             for prod_data in catalogo:
                 url_detalle = prod_data['url_detalle']
                 id_externo = prod_data.get('id_externo') or prod_data.get('sku')
                 id_externo = str(id_externo) if id_externo is not None else None
                 clave_producto = ('id_externo', id_externo) if id_externo else ('url', url_detalle)
-                if clave_producto in unique_product_keys:
+                if clave_producto in unique_product_keys or url_detalle in seen_urls:
                     continue
                 unique_product_keys.add(clave_producto)
+                seen_urls.add(url_detalle)
                 caracteristicas = prod_data.get('caracteristicas_cafe') or {}
-                fuentes = caracteristicas.get('fuentes') or {}
+                fuentes = dict(caracteristicas.get('fuentes') or {})
+                if caracteristicas.get('resumen_corto'):
+                    fuentes['resumen_corto'] = caracteristicas['resumen_corto']
+                elif prod_data.get('descripcion_resumida'):
+                    fuentes['resumen_corto'] = prod_data['descripcion_resumida']
 
+                from domain.search_normalizer import classify_product_category
+                categoria_calc = classify_product_category(prod_data['nombre'])
                 producto_mapping = {
                     'tienda_id': tienda.id,
                     'id_externo': id_externo,
                     'activo': True,
+                    'categoria': categoria_calc,
                     'nombre': prod_data['nombre'],
                     'url_detalle': url_detalle,
                     'imagen': prod_data['imagen'],
@@ -456,15 +652,24 @@ class DatabaseManager:
 
                 for row in productos_a_insertar:
                     url_detalle = row['url_detalle']
-                    producto_existente = (
+                    prod_por_id_ext = (
                         productos_por_id_externo.get(row['id_externo']) if row['id_externo'] else None
-                    ) or productos_por_url.get(url_detalle)
+                    )
+                    prod_por_url = (
+                        productos_por_url.get(url_detalle)
+                        or productos_globales_por_url.get(url_detalle)
+                    )
+                    if prod_por_url is not None and (prod_por_id_ext is None or prod_por_url.id != prod_por_id_ext.id):
+                        producto_existente = prod_por_url
+                    else:
+                        producto_existente = prod_por_id_ext or prod_por_url
+
                     if producto_existente is not None:
                         productos_actualizados += 1
                         productos_encontrados_ids.add(producto_existente.id)
                         cambios = {'id': producto_existente.id}
-                        for campo in ('tienda_id', 'nombre', 'url_detalle', 'imagen', 'descripcion', 'activo'):
-                            if getattr(producto_existente, campo) != row[campo]:
+                        for campo in ('tienda_id', 'nombre', 'url_detalle', 'imagen', 'descripcion', 'activo', 'categoria'):
+                            if getattr(producto_existente, campo, None) != row[campo]:
                                 cambios[campo] = row[campo]
                         for campo in (
                             'proceso', 'tueste', 'finca', 'variedad', 'pais_origen', 'elevacion_min_msnm',
@@ -480,7 +685,9 @@ class DatabaseManager:
                                 if getattr(producto_existente, campo) != val:
                                     cambios[campo] = val
                         if row['id_externo'] and producto_existente.id_externo != row['id_externo']:
-                            cambios['id_externo'] = row['id_externo']
+                            conflicto_ext = productos_por_id_externo.get(row['id_externo'])
+                            if conflicto_ext is None or conflicto_ext.id == producto_existente.id:
+                                cambios['id_externo'] = row['id_externo']
                         fuentes_actuales = producto_existente.caracteristicas_fuente or {}
                         fuentes_nuevas = {**fuentes_actuales, **row['caracteristicas_fuente']}
                         if fuentes_nuevas != fuentes_actuales:

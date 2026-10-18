@@ -37,14 +37,16 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         query = self.session.query(Variante, Producto, Tienda)\
             .join(Producto, Variante.producto_id == Producto.id)\
             .join(Tienda, Producto.tienda_id == Tienda.id)\
-            .filter(Producto.activo.is_(True), Tienda.activo.is_(True))
+            .filter(
+                Producto.activo.is_(True),
+                Producto.oculto_catalogo.is_(False),
+                Tienda.activo.is_(True),
+            )
 
         if category == "cafe":
-            non_coffee_clauses = [Producto.nombre.ilike(f"%{kw}%") for kw in NON_COFFEE_KEYWORDS_SQL]
-            query = query.filter(not_(or_(*non_coffee_clauses)))
+            query = query.filter(Producto.categoria == "cafe")
         elif category in ("no_cafe", "otros", "merch"):
-            non_coffee_clauses = [Producto.nombre.ilike(f"%{kw}%") for kw in NON_COFFEE_KEYWORDS_SQL]
-            query = query.filter(or_(*non_coffee_clauses))
+            query = query.filter(Producto.categoria != "cafe")
 
         if only_available:
             query = query.filter(Variante.disponible == True)
