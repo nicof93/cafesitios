@@ -16,12 +16,24 @@ export interface RecommendationItem {
   tienda: string;
   url_detalle: string;
   imagen?: string;
-  match_score: number;
+  proceso?: string;
+  pais_origen?: string;
+  variedad?: string;
+  tueste?: string;
+  precio_clp?: number;
+  precio_por_kilo?: number;
+  formato_gramos?: number;
+  match_score?: number;
+  puntaje_coincidencia?: number;
+  motivo_recomendacion?: string;
   reasons?: string[];
+  notas_cata?: string[];
   variante?: {
     precio_clp: number;
     precio_por_kilo: number;
     formato_gramos: number;
+    disponible?: boolean;
+    es_estimado?: boolean;
   };
 }
 

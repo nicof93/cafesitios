@@ -8,6 +8,11 @@
     color: #374151;
     -webkit-font-smoothing: antialiased;
   }
+
+  /* Prevenir que cualquier diálogo se muestre en primer plano si no está abierto */
+  dialog:not([open]) {
+    display: none !important;
+  }
 }
 
 /* Estilos de contenido enriquecido para descripciones de café */

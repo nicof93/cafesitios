@@ -2,11 +2,12 @@ import math
 from typing import Any, Dict, List, Literal, Optional
 from fastapi import APIRouter, Depends, Header, Query, status
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import distinct, func
+from sqlalchemy import distinct, func, not_, or_
 from sqlalchemy.orm import Session
 
 from api.dependencies import get_db_session
-from db.database import Producto, Tienda, Variante
+from db.database import Producto, SucursalTienda, Tienda, Variante
+from domain.search_normalizer import NON_COFFEE_KEYWORDS_SQL
 
 router = APIRouter(prefix="/api/v1/stores", tags=["Tiendas"])
 
@@ -41,17 +42,47 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     return round(r * c, 2)
 
 
+from urllib.parse import urlparse
+
+def extract_official_website(url: Optional[str]) -> Optional[str]:
+    """Extrae el sitio web oficial cortado estrictamente en el dominio raíz (protocolo + host, sin rutas)."""
+    if not url or not str(url).strip():
+        return None
+    raw = str(url).strip()
+    if not raw.startswith(("http://", "https://")):
+        raw = f"https://{raw}"
+    parsed = urlparse(raw)
+    if not parsed.netloc:
+        return None
+    return f"{parsed.scheme.lower()}://{parsed.netloc.lower()}"
+
+
+class StoreBranchPublicItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    nombre: str
+    direccion: Optional[str] = None
+    comuna: Optional[str] = None
+    region: Optional[str] = None
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
+
+
 class StoreSummaryItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     nombre: str
     url_base: Optional[str] = None
+    url_catalogo: Optional[str] = None
     url_web: Optional[str] = None
+    sitio_oficial: Optional[str] = None
+    plataforma: Optional[str] = None
+    direccion: Optional[str] = None
     cantidad_productos: int
     comuna: Optional[str] = None
     latitud: Optional[float] = None
     longitud: Optional[float] = None
     distancia_km: Optional[float] = None
-
+    sucursales: List[StoreBranchPublicItem] = []
 
 
 class StoresSummaryResponse(BaseModel):
@@ -113,6 +144,8 @@ def get_stores_summary(
             user_lat, user_lon = COMUNA_COORDINATES[target_loc]
             ref_name = target_loc.title()
 
+    non_coffee_clauses = [Producto.nombre.ilike(f"%{kw}%") for kw in NON_COFFEE_KEYWORDS_SQL]
+
     query = (
         db_session.query(
             Tienda.nombre.label("nombre"),
@@ -127,6 +160,8 @@ def get_stores_summary(
         .filter(
             Tienda.activo.is_(True),
             Producto.activo.is_(True),
+            Producto.oculto_catalogo.is_(False),
+            not_(or_(*non_coffee_clauses)),
             Variante.disponible == True,
         )
         .group_by(Tienda.id, Tienda.nombre, Tienda.url_base, Tienda.comuna, Tienda.latitud, Tienda.longitud)
@@ -142,17 +177,45 @@ def get_stores_summary(
 
     all_rows = query.all()
 
+    # Cargar sucursales activas si la sesión lo soporta
+    sucursales_por_nombre: Dict[str, List[Dict[str, Any]]] = {}
+    try:
+        branch_rows = (
+            db_session.query(SucursalTienda, Tienda.nombre)
+            .join(Tienda, SucursalTienda.tienda_id == Tienda.id)
+            .filter(SucursalTienda.activo.is_(True), Tienda.activo.is_(True))
+            .all()
+        )
+        for br, store_name in branch_rows:
+            if not hasattr(br, "nombre") or not isinstance(store_name, str):
+                continue
+            sucursales_por_nombre.setdefault(store_name, []).append({
+                "id": br.id,
+                "nombre": br.nombre,
+                "direccion": br.direccion,
+                "comuna": br.comuna,
+                "region": br.region,
+                "latitud": float(br.latitud) if br.latitud is not None else None,
+                "longitud": float(br.longitud) if br.longitud is not None else None,
+            })
+    except Exception:
+        pass
+
     items = []
     for row in all_rows:
         dist_km = None
         if user_lat is not None and user_lon is not None and row.latitud is not None and row.longitud is not None:
             dist_km = haversine_distance(user_lat, user_lon, float(row.latitud), float(row.longitud))
 
-        item_dict = {
+        official_site = extract_official_website(row.url_base)
+        item_dict: Dict[str, Any] = {
             "nombre": row.nombre,
             "url_base": row.url_base,
-            "url_web": row.url_base,
+            "url_catalogo": row.url_base,
+            "url_web": official_site,
+            "sitio_oficial": official_site,
             "cantidad_productos": row.cantidad_productos,
+            "sucursales": sucursales_por_nombre.get(row.nombre, []),
         }
         if row.comuna:
             item_dict["comuna"] = row.comuna
@@ -181,3 +244,4 @@ def get_stores_summary(
         "total_pages": total_pages,
         "ubicacion_referencia": ref_name,
     }
+

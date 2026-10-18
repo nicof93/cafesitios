@@ -11,6 +11,9 @@ export interface RecipeProps {
   catacion_sca?: Record<string, number>;
   puntuacion_sca_total?: number;
   fecha: string;
+  producto_id?: number | string;
+  producto_url?: string;
+  tienda?: string;
 }
 
 export class Recipe {
@@ -26,6 +29,9 @@ export class Recipe {
   readonly catacion_sca?: Record<string, number>;
   readonly puntuacion_sca_total?: number;
   readonly fecha: string;
+  readonly producto_id?: number | string;
+  readonly producto_url?: string;
+  readonly tienda?: string;
 
   constructor(props: RecipeProps) {
     this.id = props.id || `rec-${Date.now()}`;
@@ -40,6 +46,9 @@ export class Recipe {
     this.catacion_sca = props.catacion_sca;
     this.puntuacion_sca_total = props.puntuacion_sca_total;
     this.fecha = props.fecha || new Date().toISOString();
+    this.producto_id = props.producto_id;
+    this.producto_url = props.producto_url;
+    this.tienda = props.tienda;
   }
 
   getRatio(): string {

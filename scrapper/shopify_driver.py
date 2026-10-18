@@ -150,7 +150,7 @@ class ShopifyDriver:
         parsed = urlparse(url)
         return f"{parsed.scheme}://{parsed.netloc}"
 
-    def consumir_productos(self) -> List[Dict[str, Any]]:
+    def consumir_productos(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
@@ -158,7 +158,20 @@ class ShopifyDriver:
         logging.info(f"Escaneando tienda '{self.nombre}' en {self.url_base}...")
 
         base_site = self._obtener_base_site(self.url_base)
-        urls_a_probar = [self.url_base]
+        parsed_base = urlparse(self.url_base)
+        path_clean = parsed_base.path.rstrip('/')
+
+        urls_a_probar: List[str] = []
+        if path_clean.lower().endswith('.json'):
+            urls_a_probar.append(self.url_base)
+
+        m_col = re.search(r'/collections/([^/]+?)(?:\.json)?$', path_clean, re.IGNORECASE)
+        if m_col and m_col.group(1).lower() != 'products':
+            col_slug = m_col.group(1)
+            col_products_url = f"{base_site}/collections/{col_slug}/products.json"
+            if col_products_url not in urls_a_probar:
+                urls_a_probar.append(col_products_url)
+
         fallback_all = f"{base_site}/collections/all/products.json"
         fallback_root = f"{base_site}/products.json"
 
@@ -166,6 +179,19 @@ class ShopifyDriver:
             urls_a_probar.append(fallback_all)
         if fallback_root not in urls_a_probar:
             urls_a_probar.append(fallback_root)
+        if self.url_base not in urls_a_probar:
+            urls_a_probar.append(self.url_base)
+
+        if (
+            self.nombre.strip().lower() in ('apricot', 'apricat', 'apricat coffee', 'apricot coffee')
+            and 'wp-json' not in self.url_base.lower()
+        ):
+            for apricat_url in (
+                'https://apricatcoffee.com/collections/all/products.json',
+                'https://apricatcoffee.com/products.json',
+            ):
+                if apricat_url not in urls_a_probar:
+                    urls_a_probar.append(apricat_url)
 
         data = None
         url_exitosa = None
@@ -174,16 +200,32 @@ class ShopifyDriver:
             try:
                 response = requests.get(url, headers=headers, timeout=10)
                 if response.status_code == 200:
-                    data = response.json()
-                    url_exitosa = url
-                    break
+                    candidate = response.json()
+                    if isinstance(candidate, dict) and isinstance(candidate.get('products'), list):
+                        if candidate['products']:
+                            data = candidate
+                            url_exitosa = url
+                            break
+                        if data is None:
+                            data = candidate
+                            url_exitosa = url
+                        logging.warning(f"[{self.nombre}] Catálogo vacío en {url}. Probando fallback...")
+                    elif isinstance(candidate, dict) and isinstance(candidate.get('product'), dict):
+                        data = {'products': [candidate['product']]}
+                        url_exitosa = url
+                        break
+                    else:
+                        logging.warning(f"[{self.nombre}] Respuesta JSON sin clave 'products' en {url}. Probando fallback...")
                 else:
                     logging.warning(f"[{self.nombre}] Respuesta HTTP {response.status_code} en {url}. Probando fallback...")
             except Exception as e:
                 logging.warning(f"[{self.nombre}] Error al conectar a {url}: {e}")
 
-        if not data or 'products' not in data:
+        if not isinstance(data, dict) or 'products' not in data:
             raise RuntimeError(f"No se pudo obtener catálogo en ningún endpoint de Shopify para '{self.nombre}'.")
+
+        if url_exitosa:
+            base_site = self._obtener_base_site(url_exitosa)
 
         productos_raw = data.get('products', [])
         productos_normalizados = []
@@ -315,6 +357,9 @@ class ShopifyDriver:
                 'proceso': proceso,
                 'variantes': variantes_normalizadas
             })
+
+            if limit is not None and len(productos_normalizados) >= limit:
+                break
 
         logging.info(f"✅ [{self.nombre}] {len(productos_normalizados)} productos obtenidos desde {url_exitosa}.")
         return productos_normalizados

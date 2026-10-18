@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import FlavorWheel from '../../components/product/FlavorWheel.astro';
+import CompareBarAndModal from '../../components/compare/CompareBarAndModal.astro';
 import { GetProductDetailUseCase } from '../../core/application/GetProductDetail';
 import type { CoffeeProduct } from '../../core/domain/models/CoffeeProduct';
 
@@ -72,6 +73,29 @@ product.variantes.forEach(v => {
 });
 
 const groupedVariants = Array.from(groupedVariantsMap.values()).sort((a, b) => a.precio_por_kilo - b.precio_por_kilo);
+
+// Resumen extremadamente corto del café para pie de foto
+const captionText = product.descripcion_resumida 
+  || product.resumen_corto
+  || (() => {
+      const pais = product.origen;
+      const proc = product.proceso;
+      const notas = product.notas_cata;
+      let notasStr = '';
+      if (notas && notas.length > 0) {
+        const top = notas.slice(0, 3).map(n => n.toLowerCase());
+        if (top.length === 1) notasStr = top[0];
+        else if (top.length === 2) notasStr = `${top[0]} y ${top[1]}`;
+        else notasStr = `${top[0]}, ${top[1]} y ${top[2]}`;
+      }
+      if (pais && proc && notasStr) return `Café de ${pais} (${proc}), con notas a ${notasStr}.`;
+      if (pais && notasStr) return `Café de ${pais} con perfil dulce y notas a ${notasStr}.`;
+      if (proc && notasStr) return `Café proceso ${proc} con notas distintivas a ${notasStr}.`;
+      if (notasStr) return `Perfil sensorial aromático con notas a ${notasStr}.`;
+      if (pais && proc) return `Café de especialidad origen ${pais}, proceso ${proc}.`;
+      if (pais) return `Café de especialidad origen ${pais} con tueste artesanal fresco.`;
+      return 'Café de especialidad seleccionado con tueste fresco.';
+    })();
 ---
 
 <BaseLayout 
@@ -96,27 +120,35 @@ const groupedVariants = Array.from(groupedVariantsMap.values()).sort((a, b) => a
     <!-- HERO DE PRODUCTO EN DOS COLUMNAS -->
     <section class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start bg-white p-6 sm:p-8 rounded-3xl border border-stone-200/80 shadow-2xs">
       
-      <!-- COLUMNA IZQUIERDA: MARCO DE IMAGEN DESTACADO -->
-      <div class="lg:col-span-5 relative flex items-center justify-center bg-[#F4F3ED] rounded-2xl p-6 sm:p-10 border border-stone-100 min-h-[380px] group overflow-hidden">
-        <img 
-          src={product.imagen} 
-          alt={product.nombre} 
-          referrerpolicy="no-referrer"
-          onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop';"
-          class="max-h-[340px] w-auto object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105"
-        />
-        
-        <!-- PILL TIENDA Y BADGES SUPERIORES -->
-        <span class="absolute top-4 left-4 bg-white/95 backdrop-blur-xs text-stone-800 text-xs font-bold px-3 py-1 rounded-full shadow-2xs border border-stone-200/60">
-          {product.tienda}
-        </span>
-
-        {product.puntuacion_sca && (
-          <span class="absolute top-4 right-4 bg-amber-500/90 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-2xs">
-            ★ {product.puntuacion_sca} SCA
+      <!-- COLUMNA IZQUIERDA: MARCO DE IMAGEN DESTACADO Y PIE DE FOTO -->
+      <figure class="lg:col-span-5 flex flex-col items-center w-full">
+        <div class="relative w-full flex items-center justify-center bg-[#F4F3ED] rounded-2xl p-6 sm:p-10 border border-stone-100 min-h-[380px] group overflow-hidden">
+          <img 
+            src={product.imagen || '/images/producto-referencial.jpg'} 
+            alt={product.nombre} 
+            referrerpolicy="no-referrer"
+            onerror="this.onerror=null; this.src='/images/producto-referencial.jpg';"
+            class="max-h-[340px] w-auto object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105"
+          />
+          
+          <!-- PILL TIENDA Y BADGES SUPERIORES -->
+          <span class="absolute top-4 left-4 bg-white/95 backdrop-blur-xs text-stone-800 text-xs font-bold px-3 py-1 rounded-full shadow-2xs border border-stone-200/60">
+            {product.tienda}
           </span>
+
+          {product.puntuacion_sca && (
+            <span class="absolute top-4 right-4 bg-amber-500/90 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-2xs">
+              ★ {product.puntuacion_sca} SCA
+            </span>
+          )}
+        </div>
+
+        {captionText && (
+          <figcaption class="mt-3 text-center text-xs text-stone-600 italic max-w-sm px-3 leading-relaxed bg-stone-50/80 border border-stone-200/60 rounded-xl py-2 w-full shadow-2xs">
+            "{captionText}"
+          </figcaption>
         )}
-      </div>
+      </figure>
 
       <!-- COLUMNA DERECHA: PANEL DE ESPECIFICACIONES Y CONVERSIÓN -->
       <div class="lg:col-span-7 flex flex-col justify-between space-y-6">
@@ -343,6 +375,56 @@ const groupedVariants = Array.from(groupedVariantsMap.values()).sort((a, b) => a
             <span aria-hidden="true">↗</span>
           </a>
 
+          <!-- ACCIONES SECUNDARIAS: COMPARAR CON Y FAVORITO -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <button
+              type="button"
+              id="btn-detail-compare"
+              class="flex items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-stone-800 font-bold text-xs py-2.5 px-4 shadow-2xs transition"
+              data-id={product.id}
+              data-name={product.nombre}
+            >
+              <span>⚖️</span>
+              <span>Comparar con...</span>
+            </button>
+
+            <button
+              type="button"
+              id="btn-detail-favorite"
+              class="flex items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white hover:bg-rose-50 hover:border-rose-200 text-stone-800 font-bold text-xs py-2.5 px-4 shadow-2xs transition"
+              data-id={product.id}
+              data-name={product.nombre}
+              data-store={product.tienda}
+              data-price={currentPrice}
+              data-price-kilo={currentPriceKilo}
+              data-image={product.imagen || ''}
+              data-url={`/product/${product.id}`}
+            >
+              <span id="detail-fav-icon">♡</span>
+              <span id="detail-fav-label">Guardar en Favoritos</span>
+            </button>
+          </div>
+
+          <!-- ENLACES DE LA TIENDA: SITIO OFICIAL Y CATÁLOGO FILTRADO -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between text-xs pt-3 border-t border-stone-100 gap-2">
+            <a 
+              href={`/catalog?tienda=${encodeURIComponent(product.tienda)}`}
+              class="text-emerald-800 font-bold hover:underline"
+            >
+              ← Ver catálogo completo de {product.tienda}
+            </a>
+            {((product as any).tienda_sitio_oficial || (product as any).sitio_oficial || product.tienda_url) && (
+              <a 
+                href={(product as any).tienda_sitio_oficial || (product as any).sitio_oficial || product.tienda_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-stone-400 hover:text-stone-600 transition truncate max-w-[240px]"
+              >
+                Sitio oficial de la tostaduría ↗
+              </a>
+            )}
+          </div>
+
         </div>
 
       </div>
@@ -499,10 +581,10 @@ const groupedVariants = Array.from(groupedVariantsMap.values()).sort((a, b) => a
                 class="group flex items-center gap-3.5 p-3.5 rounded-2xl border border-stone-200/80 hover:border-emerald-300 hover:shadow-xs transition bg-white"
               >
                 <img 
-                  src={m.imagen} 
+                  src={m.imagen || '/images/producto-referencial.jpg'} 
                   alt={m.nombre} 
                   referrerpolicy="no-referrer"
-                  onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop';"
+                  onerror="this.onerror=null; this.src='/images/producto-referencial.jpg';"
                   class="w-16 h-16 object-contain bg-[#F4F3ED] rounded-xl p-1.5 flex-shrink-0 group-hover:scale-105 transition-transform"
                 />
                 <div class="min-w-0 flex-1">
@@ -534,10 +616,10 @@ const groupedVariants = Array.from(groupedVariantsMap.values()).sort((a, b) => a
   >
     <div class="flex items-center gap-3 min-w-0">
       <img 
-        src={product.imagen} 
+        src={product.imagen || '/images/producto-referencial.jpg'} 
         alt={product.nombre} 
         referrerpolicy="no-referrer"
-        onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop';"
+        onerror="this.onerror=null; this.src='/images/producto-referencial.jpg';"
         class="h-10 w-10 object-contain bg-[#F4F3ED] rounded-lg p-0.5 flex-shrink-0 hidden sm:block"
       />
       <div class="min-w-0">
@@ -567,6 +649,9 @@ const groupedVariants = Array.from(groupedVariantsMap.values()).sort((a, b) => a
       </a>
     </div>
   </aside>
+
+  <!-- CU-03: MODAL Y SELECTOR DE COMPARACIÓN -->
+  <CompareBarAndModal />
 </BaseLayout>
 
 <script is:inline define:vars={{ variantsJson, product }}>
@@ -775,4 +860,66 @@ const groupedVariants = Array.from(groupedVariantsMap.values()).sort((a, b) => a
 
   // Inicializar renderizado del gráfico
   renderSvgChart();
+
+  // Acción "Comparar con..." fijando el café actual como producto base
+  const btnCompare = document.getElementById('btn-detail-compare');
+  btnCompare?.addEventListener('click', () => {
+    const id = btnCompare.getAttribute('data-id');
+    const name = btnCompare.getAttribute('data-name');
+    window.dispatchEvent(new CustomEvent('cafesitios:open-compare-selector', {
+      detail: { id: Number(id), name },
+    }));
+  });
+
+  // Acción "Guardar en Favoritos"
+  import { FavoritesAdapter } from '../../core/infrastructure/storage/FavoritesAdapter';
+
+  const btnFav = document.getElementById('btn-detail-favorite');
+  const favIcon = document.getElementById('detail-fav-icon');
+  const favLabel = document.getElementById('detail-fav-label');
+
+  if (btnFav && favIcon && favLabel) {
+    const cafeId = btnFav.getAttribute('data-id');
+    if (cafeId && FavoritesAdapter.isFavorite(cafeId)) {
+      favIcon.textContent = '♥';
+      favIcon.classList.add('text-rose-600');
+      favLabel.textContent = 'Guardado en Favoritos';
+      btnFav.classList.add('border-rose-300', 'bg-rose-50/70', 'text-rose-900');
+    }
+
+    btnFav.addEventListener('click', () => {
+      const id = btnFav.getAttribute('data-id');
+      const name = btnFav.getAttribute('data-name') || '';
+      const store = btnFav.getAttribute('data-store') || '';
+      const price = Number(btnFav.getAttribute('data-price')) || 0;
+      const priceKilo = Number(btnFav.getAttribute('data-price-kilo')) || 0;
+      const image = btnFav.getAttribute('data-image') || undefined;
+      const url = btnFav.getAttribute('data-url') || undefined;
+
+      if (!id) return;
+
+      const isAdded = FavoritesAdapter.toggleFavorite({
+        cafe_id: id,
+        nombre: name,
+        tienda: store,
+        precio_clp: price,
+        ultimo_precio_guardado: price,
+        ultimo_precio_kilo_guardado: priceKilo,
+        imagen: image,
+        url_detalle: url,
+      } as any);
+
+      if (isAdded) {
+        favIcon.textContent = '♥';
+        favIcon.classList.add('text-rose-600');
+        favLabel.textContent = 'Guardado en Favoritos';
+        btnFav.classList.add('border-rose-300', 'bg-rose-50/70', 'text-rose-900');
+      } else {
+        favIcon.textContent = '♡';
+        favIcon.classList.remove('text-rose-600');
+        favLabel.textContent = 'Guardar en Favoritos';
+        btnFav.classList.remove('border-rose-300', 'bg-rose-50/70', 'text-rose-900');
+      }
+    });
+  }
 </script>

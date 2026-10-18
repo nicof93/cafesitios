@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import ProductCard from '../components/catalog/ProductCard.astro';
 import FiltersAside from '../components/catalog/FiltersAside.astro';
 import RecentlyViewed from '../components/catalog/RecentlyViewed.astro';
+import FavoritesAlertsBanner from '../components/catalog/FavoritesAlertsBanner.astro';
 import { GetCatalogUseCase } from '../core/application/GetCatalog';
 import { GetStoresUseCase } from '../core/application/GetStores';
 import { HttpClient } from '../core/infrastructure/api/HttpClient';
@@ -12,13 +13,14 @@ const url = new URL(Astro.request.url);
 const searchQuery = url.searchParams.get('q') || url.searchParams.get('search_query') || '';
 const sortBy = (url.searchParams.get('sort_by') as 'kilo' | 'unit' | 'created_desc') || 'kilo';
 const category = url.searchParams.get('category') || 'cafe';
-const storeName = url.searchParams.get('store_name') || '';
+const storeName = url.searchParams.get('store_name') || url.searchParams.get('tienda') || url.searchParams.get('store') || '';
 const process = url.searchParams.get('process') || '';
 const country = url.searchParams.get('country') || '';
 const variety = url.searchParams.get('variety') || '';
 const notes = url.searchParams.get('notes') || '';
 const minPrice = url.searchParams.get('min_price') ? Number(url.searchParams.get('min_price')) : undefined;
 const maxPrice = url.searchParams.get('max_price') ? Number(url.searchParams.get('max_price')) : undefined;
+const isOfertas = url.searchParams.get('ofertas') === 'true' || url.searchParams.get('on_sale') === 'true';
 
 const catalogUseCase = new GetCatalogUseCase();
 const storesUseCase = new GetStoresUseCase();
@@ -28,10 +30,11 @@ let items: any[] = [];
 let totalItems = 0;
 let stores: any[] = [];
 let lastSyncTime = 'Al día';
+let hasNoCafeProducts = false;
 
 try {
   // Carga concurrente en servidor para velocidad máxima de SSR
-  const [catalogRes, storesRes, syncRes] = await Promise.allSettled([
+  const [catalogRes, storesRes, syncRes, weeklyRes, noCafeRes] = await Promise.allSettled([
     catalogUseCase.execute({
       searchQuery,
       sortBy: sortBy === 'created_desc' ? 'kilo' : sortBy,
@@ -43,11 +46,13 @@ try {
       notes,
       minPrice,
       maxPrice,
-      limit: 18,
+      limit: isOfertas ? 50 : 18,
       offset: 0
     }),
     storesUseCase.execute({ pageSize: 50, sortBy: 'name_asc' }),
-    http.get<{ last_sync?: string }>('/api/v1/sync/last')
+    http.get<{ last_sync?: string }>('/api/v1/sync/last'),
+    isOfertas ? http.get<{ ofertas: any[]; total: number }>('/api/v1/products/ofertas-semana?limit=50&dias=7') : Promise.resolve(null),
+    catalogUseCase.execute({ category: 'no_cafe', limit: 1 })
   ]);
 
   if (catalogRes.status === 'fulfilled') {
@@ -63,6 +68,23 @@ try {
       hour: '2-digit', minute: '2-digit'
     }) + ' hrs';
   }
+
+  hasNoCafeProducts = noCafeRes.status === 'fulfilled' && (noCafeRes.value?.total > 0);
+
+  // Si se activó el filtro de ofertas, priorizar y aislar las caídas verificadas
+  if (isOfertas) {
+    if (weeklyRes.status === 'fulfilled' && weeklyRes.value?.ofertas?.length) {
+      const weeklyIds = new Set(weeklyRes.value.ofertas.map((o: any) => Number(o.producto_id)));
+      const filtered = items.filter(p => weeklyIds.has(Number(p.id)) || p.variante?.en_oferta);
+      if (filtered.length > 0) {
+        items = filtered;
+        totalItems = filtered.length;
+      }
+    } else {
+      items = items.filter(p => p.variante?.en_oferta);
+      totalItems = items.length;
+    }
+  }
 } catch (error) {
   console.error('Error cargando catálogo en SSR:', error);
 }
@@ -74,6 +96,7 @@ interface ActiveFilter {
 }
 
 const activeFilters: ActiveFilter[] = [];
+if (isOfertas) activeFilters.push({ label: '🔥 Ofertas de la Semana', paramKey: 'ofertas' });
 if (searchQuery) activeFilters.push({ label: `"${searchQuery}"`, paramKey: 'q' });
 if (category && category !== 'cafe') {
   activeFilters.push({ 
@@ -141,6 +164,7 @@ const jsonLdCatalog = {
         initialProcess={process}
         initialVariety={variety}
         initialNotes={notes}
+        hasNoCafeProducts={hasNoCafeProducts}
       />
       <RecentlyViewed />
     </div>
@@ -173,21 +197,38 @@ const jsonLdCatalog = {
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-sm font-bold text-stone-900">
-              {category === 'no_cafe' ? '🎁 Ropa, Cajas y Accesorios' : activeFilters.length > 0 ? 'Cafés Filtrados' : 'Catálogo de Especialidad'}
+              {isOfertas ? '🔥 Mayores Bajas de Precio de la Semana' : category === 'no_cafe' ? '🎁 Ropa, Cajas y Accesorios' : activeFilters.length > 0 ? 'Cafés Filtrados' : 'Catálogo de Especialidad'}
             </h2>
             <p class="text-xs text-stone-400">
               Mostrando <strong id="catalog-count-current" class="text-stone-700 font-semibold">{items.length}</strong> de <span id="catalog-count-total">{totalItems}</span> productos
             </p>
           </div>
 
-          {activeFilters.length > 0 && (
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Chip / Botón de filtro rápido de Ofertas de la Semana -->
             <a 
-              href="/catalog" 
-              class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 hover:text-emerald-950 bg-emerald-50/70 border border-emerald-100 px-3 py-1.5 rounded-xl transition"
+              href={isOfertas ? "/catalog" : "/catalog?ofertas=true"}
+              class={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition shadow-2xs ${
+                isOfertas 
+                  ? "bg-rose-600 text-white hover:bg-rose-700" 
+                  : "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+              }`}
+              title="Filtrar cafés con caídas verificadas de precio en los últimos 7 días"
             >
-              <span>✕</span> Limpiar filtros
+              <span>🔥</span>
+              <span>Ofertas de la Semana</span>
+              {isOfertas ? <span>✕</span> : <span class="text-[10px] bg-rose-200/80 text-rose-900 px-1.5 py-0.2 rounded-full">Activar</span>}
             </a>
-          )}
+
+            {activeFilters.length > 0 && (
+              <a 
+                href="/catalog" 
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 hover:text-emerald-950 bg-emerald-50/70 border border-emerald-100 px-3 py-1.5 rounded-xl transition"
+              >
+                <span>✕</span> Limpiar filtros
+              </a>
+            )}
+          </div>
         </div>
 
         <!-- TAGS DE FILTROS ACTIVOS -->
@@ -201,6 +242,9 @@ const jsonLdCatalog = {
           </div>
         )}
       </div>
+
+      <!-- NOVEDADES DE FAVORITOS Y ALERTAS DE VARIACIÓN DE PRECIO -->
+      <FavoritesAlertsBanner />
 
       <!-- GRILLA DE PRODUCTOS RESPONSIVE CON SCROLL INFINITO -->
       {items.length === 0 ? (
@@ -348,14 +392,14 @@ const jsonLdCatalog = {
           <div>
             <div class="relative flex h-52 items-center justify-center overflow-hidden rounded-xl bg-[#F4F3ED] p-4 transition-colors group-hover:bg-[#EFECE3]">
               <img 
-                src="${imagen}" 
+                src="${imagen || '/images/producto-referencial.jpg'}" 
                 alt="Café ${prod.nombre} - ${prod.tienda}" 
                 width="280"
                 height="208"
                 loading="lazy"
                 decoding="async"
                 referrerpolicy="no-referrer"
-                onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop';"
+                onerror="this.onerror=null; this.src='/images/producto-referencial.jpg';"
                 class="h-full w-full object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105 aspect-[4/3]"
               />
               <span class="absolute top-3 left-3 bg-white/95 backdrop-blur-xs text-stone-700 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-2xs border border-stone-200/50">

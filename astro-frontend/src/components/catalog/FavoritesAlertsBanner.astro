@@ -1,0 +1,243 @@
+---
+// Componente de novedades de favoritos y alertas de variación de precio (Local-First)
+---
+
+<div id="favorites-alerts-container" class="hidden mb-8 space-y-4">
+  <!-- Banner de Variación de Precio -->
+  <div id="favorites-price-drop-alert" class="hidden rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 via-emerald-100/50 to-teal-50 p-4 sm:p-5 shadow-xs">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white text-lg shadow-xs">
+          📉
+        </span>
+        <div>
+          <h3 class="text-sm font-extrabold text-emerald-950 flex items-center gap-2">
+            <span>¡Alerta de Ahorro en tus Favoritos!</span>
+            <span id="price-drop-count-badge" class="rounded-full bg-emerald-200 px-2 py-0.5 text-[11px] font-bold text-emerald-900">
+              0 cafés bajaron
+            </span>
+          </h3>
+          <p id="price-drop-summary-text" class="text-xs text-emerald-800">
+            Detectamos que uno o más cafés guardados en tus favoritos tienen un precio menor al registrado inicialmente.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          id="btn-filter-only-favorites"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-800 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-900 transition"
+        >
+          <span>♥</span>
+          <span>Ver sólo mis favoritos</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sección de Cafés Favoritos Guardados -->
+  <div class="rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-5 shadow-2xs">
+    <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+      <div class="flex items-center gap-2">
+        <span class="text-rose-600 text-base">♥</span>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-stone-800">
+          Mis Cafés Favoritos Guardados
+        </h3>
+        <span id="favorites-total-count" class="rounded-full bg-rose-50 text-rose-700 px-2 py-0.5 text-[10px] font-extrabold border border-rose-200">
+          0
+        </span>
+      </div>
+
+      <button
+        type="button"
+        id="btn-clear-favorites-filter"
+        class="hidden text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 hover:underline"
+      >
+        Mostrar todo el catálogo
+      </button>
+    </div>
+
+    <div id="favorites-items-row" class="mt-3 flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+      <!-- Inyectado dinámicamente por script -->
+    </div>
+  </div>
+</div>
+
+<script>
+  import { FavoritesAdapter } from '../../core/infrastructure/storage/FavoritesAdapter';
+
+  function renderFavoritesBanner() {
+    const container = document.getElementById('favorites-alerts-container');
+    const priceDropAlert = document.getElementById('favorites-price-drop-alert');
+    const itemsRow = document.getElementById('favorites-items-row');
+    const totalCount = document.getElementById('favorites-total-count');
+    const priceDropBadge = document.getElementById('price-drop-count-badge');
+    const priceDropText = document.getElementById('price-drop-summary-text');
+
+    const favorites = FavoritesAdapter.getFavorites();
+
+    if (!favorites.length) {
+      container?.classList.add('hidden');
+      return;
+    }
+
+    container?.classList.remove('hidden');
+    if (totalCount) totalCount.textContent = String(favorites.length);
+
+    // Cotejar con tarjetas de productos presentes en el DOM actual
+    const cards = document.querySelectorAll('.product-clickable-card');
+    const domProducts: any[] = [];
+    cards.forEach((card) => {
+      const cb = card.querySelector('.compare-cb');
+      const id = cb?.getAttribute('data-id');
+      const priceEl = card.querySelector('[data-price]');
+      const price = priceEl?.getAttribute('data-price');
+      if (id) {
+        domProducts.push({
+          id: Number(id),
+          precio_clp: price ? Number(price) : undefined,
+          disponible: true,
+        });
+      }
+    });
+
+    const evaluated = FavoritesAdapter.evaluateVariations(domProducts);
+    const drops = evaluated.filter((f) => f.tipo_variacion === 'BAJO');
+    const increases = evaluated.filter((f) => f.tipo_variacion === 'SUBIO');
+
+    if (drops.length > 0) {
+      priceDropAlert?.classList.remove('hidden');
+      if (priceDropBadge) priceDropBadge.textContent = `${drops.length} café${drops.length > 1 ? 's' : ''} bajó de precio`;
+      const firstDrop = drops[0];
+      if (priceDropText && firstDrop.diferencia_precio) {
+        priceDropText.textContent = `"${firstDrop.nombre}" bajó $${Math.abs(firstDrop.diferencia_precio).toLocaleString('es-CL')} CLP (-${firstDrop.porcentaje_variacion}%).`;
+      }
+    } else {
+      priceDropAlert?.classList.add('hidden');
+    }
+
+    if (itemsRow) {
+      itemsRow.innerHTML = evaluated.map((fav) => {
+        let variationBadge = '';
+        if (fav.tipo_variacion === 'BAJO') {
+          variationBadge = `<span class="rounded bg-emerald-100 text-emerald-800 px-1.5 py-0.5 text-[9px] font-extrabold">📉 Bajó $${Math.abs(fav.diferencia_precio || 0).toLocaleString('es-CL')}</span>`;
+        } else if (fav.tipo_variacion === 'SUBIO') {
+          variationBadge = `<span class="rounded bg-rose-100 text-rose-800 px-1.5 py-0.5 text-[9px] font-extrabold">📈 Subió $${(fav.diferencia_precio || 0).toLocaleString('es-CL')}</span>`;
+        }
+
+        return `
+          <div class="flex shrink-0 items-center gap-2.5 rounded-xl border border-stone-200 bg-stone-50/70 p-2 text-xs hover:border-emerald-300 transition max-w-[260px]">
+            ${fav.imagen ? `<img src="${fav.imagen}" alt="${fav.nombre}" class="h-10 w-10 shrink-0 rounded-lg object-cover border border-stone-200 bg-white" />` : '<div class="h-10 w-10 shrink-0 rounded-lg bg-stone-200 flex items-center justify-center">☕</div>'}
+            <div class="overflow-hidden space-y-0.5">
+              <a href="/product/${fav.cafe_id}" class="block truncate font-bold text-stone-900 hover:text-emerald-800">
+                ${fav.nombre}
+              </a>
+              <div class="flex items-center gap-1.5 text-[10px] text-stone-500">
+                <span class="font-semibold text-emerald-900">$${(fav.precio_actual || fav.ultimo_precio_guardado).toLocaleString('es-CL')}</span>
+                <span>•</span>
+                <span class="truncate">${fav.tienda}</span>
+              </div>
+              ${variationBadge}
+            </div>
+            <button
+              type="button"
+              class="btn-remove-fav-quick ml-auto text-stone-400 hover:text-rose-600 p-1 text-sm font-bold"
+              data-id="${fav.cafe_id}"
+              title="Quitar de favoritos"
+            >
+              ✕
+            </button>
+          </div>
+        `;
+      }).join('');
+
+      itemsRow.querySelectorAll('.btn-remove-fav-quick').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = btn.getAttribute('data-id');
+          if (id) {
+            FavoritesAdapter.removeFavorite(id);
+            renderFavoritesBanner();
+          }
+        });
+      });
+    }
+
+    // Priorizar y resaltar tarjetas de favoritos en la grilla
+    highlightAndPrioritizeFavorites(favorites);
+  }
+
+  function highlightAndPrioritizeFavorites(favorites: any[]) {
+    const favIds = new Set(favorites.map((f) => String(f.cafe_id)));
+    const grid = document.getElementById('catalog-products-grid') || document.querySelector('.products-grid');
+    if (!grid) return;
+
+    const cards = Array.from(grid.querySelectorAll('.product-clickable-card')) as HTMLElement[];
+    cards.forEach((card) => {
+      const cb = card.querySelector('.compare-cb');
+      const id = cb?.getAttribute('data-id');
+      const isFav = id && favIds.has(String(id));
+
+      const heartBtn = card.querySelector('.btn-card-favorite');
+      if (heartBtn) {
+        if (isFav) {
+          heartBtn.innerHTML = '♥';
+          heartBtn.classList.add('text-rose-600');
+          heartBtn.classList.remove('text-stone-400');
+        } else {
+          heartBtn.innerHTML = '♡';
+          heartBtn.classList.remove('text-rose-600');
+          heartBtn.classList.add('text-stone-400');
+        }
+      }
+
+      if (isFav) {
+        card.setAttribute('data-is-favorite', 'true');
+        card.classList.add('ring-2', 'ring-rose-200/80');
+      } else {
+        card.removeAttribute('data-is-favorite');
+        card.classList.remove('ring-2', 'ring-rose-200/80');
+      }
+    });
+
+    // Reordenar tarjetas: favoritos primero
+    const favCards = cards.filter((c) => c.getAttribute('data-is-favorite') === 'true');
+    const otherCards = cards.filter((c) => c.getAttribute('data-is-favorite') !== 'true');
+    if (favCards.length > 0) {
+      favCards.forEach((c) => grid.prepend(c));
+    }
+  }
+
+  // Filtrar solo favoritos en el catálogo
+  document.getElementById('btn-filter-only-favorites')?.addEventListener('click', () => {
+    const cards = document.querySelectorAll('.product-clickable-card') as NodeListOf<HTMLElement>;
+    cards.forEach((card) => {
+      if (card.getAttribute('data-is-favorite') === 'true') {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+    document.getElementById('btn-clear-favorites-filter')?.classList.remove('hidden');
+  });
+
+  document.getElementById('btn-clear-favorites-filter')?.addEventListener('click', () => {
+    const cards = document.querySelectorAll('.product-clickable-card') as NodeListOf<HTMLElement>;
+    cards.forEach((card) => {
+      card.style.display = '';
+    });
+    document.getElementById('btn-clear-favorites-filter')?.classList.add('hidden');
+  });
+
+  window.addEventListener('cafesitios:favorites-updated', () => {
+    renderFavoritesBanner();
+  });
+
+  // Render inicial al cargar el DOM
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderFavoritesBanner);
+  } else {
+    renderFavoritesBanner();
+  }
+</script>

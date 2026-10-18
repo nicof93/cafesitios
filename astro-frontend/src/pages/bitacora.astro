@@ -192,17 +192,29 @@ const jsonLdBitacora = {
       <div class="space-y-4">
         <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">1. Datos del Café & Método</span>
         
-        <div>
-          <label for="input-rec-cafe" class="block text-xs font-bold text-stone-700 mb-1">
-            Nombre del Café o Lote <span class="text-rose-500">*</span>
-          </label>
+        <div class="relative">
+          <div class="flex items-center justify-between mb-1">
+            <label for="input-rec-cafe" class="block text-xs font-bold text-stone-700">
+              Nombre del Café o Lote <span class="text-rose-500">*</span>
+            </label>
+            <span class="text-[10px] text-emerald-800 font-semibold cursor-pointer hover:underline" id="btn-show-coffee-suggestions">
+              💡 Ver sugerencias
+            </span>
+          </div>
           <input 
             id="input-rec-cafe" 
             type="text" 
             required 
+            autocomplete="off"
             placeholder="Ej. Geisha Lavado Finca La Esperanza" 
             class="w-full bg-white border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition"
           >
+          <!-- Dropdown inteligente de sugerencias de cafés (Catálogo y Usados Recientemente) -->
+          <div 
+            id="coffee-suggestions-dropdown" 
+            class="hidden absolute left-0 right-0 top-full mt-1.5 z-50 max-h-64 overflow-y-auto bg-white rounded-2xl border border-stone-200 shadow-xl p-2 space-y-1.5 backdrop-blur-md"
+          >
+          </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -410,6 +422,7 @@ const jsonLdBitacora = {
 
         <button 
           type="submit" 
+          id="drawer-submit-btn"
           class="rounded-xl bg-stone-900 hover:bg-emerald-900 text-white text-xs font-bold px-6 py-2.5 transition shadow-sm hover:shadow"
         >
           Guardar Receta en Bitácora ☕
@@ -422,13 +435,25 @@ const jsonLdBitacora = {
 
 <script>
   import { ManageRecipesUseCase } from '../core/application/ManageRecipes';
+  import { LocalStorageAdapter } from '../core/infrastructure/storage/LocalStorageAdapter';
   import { AnalyticsTracker } from '../core/infrastructure/analytics/AnalyticsTracker';
+  import { HttpClient } from '../core/infrastructure/api/HttpClient';
 
   const recipesUseCase = new ManageRecipesUseCase();
+  const http = new HttpClient();
+
+  // Estado de edición
+  let editingRecipeId: string | null = null;
+  let currentEditingDate: string | null = null;
+  let currentProductId: number | string | null = null;
+  let currentProductUrl: string | null = null;
+  let currentProductStore: string | null = null;
 
   // Elementos DOM
   const drawerContainer = document.getElementById('recipe-slide-drawer');
   const drawerBackdrop = document.getElementById('recipe-drawer-backdrop');
+  const drawerTitle = document.getElementById('drawer-title');
+  const drawerSubmitBtn = document.getElementById('drawer-submit-btn');
   const btnOpenDrawer = document.getElementById('btn-open-drawer');
   const btnEmptyCreate = document.getElementById('btn-empty-create');
   const btnCloseDrawer = document.getElementById('btn-close-drawer');
@@ -440,12 +465,16 @@ const jsonLdBitacora = {
   const recipesGrid = document.getElementById('recipes-grid');
   const counterText = document.getElementById('recipes-counter-text');
 
+  const coffeeInput = document.getElementById('input-rec-cafe') as HTMLInputElement | null;
+  const coffeeDropdown = document.getElementById('coffee-suggestions-dropdown');
+  const btnShowSuggestions = document.getElementById('btn-show-coffee-suggestions');
+
   const inputGramosCafe = document.getElementById('input-rec-gramos-cafe') as HTMLInputElement | null;
   const inputGramosAgua = document.getElementById('input-rec-gramos-agua') as HTMLInputElement | null;
   const previewRatio = document.getElementById('preview-ratio');
   const labelScaTotal = document.getElementById('label-sca-total');
 
-  // Control del Drawer Deslizable (Slide-Over estilo macOS/Apple)
+  // Control del Drawer Deslizable
   function openDrawer() {
     drawerBackdrop?.classList.remove('opacity-0', 'pointer-events-none');
     drawerBackdrop?.classList.add('opacity-100', 'pointer-events-auto');
@@ -454,7 +483,7 @@ const jsonLdBitacora = {
     drawerContainer?.classList.add('translate-x-0');
 
     document.body.classList.add('overflow-hidden');
-    (document.getElementById('input-rec-cafe') as HTMLInputElement)?.focus();
+    coffeeInput?.focus();
   }
 
   function closeDrawer() {
@@ -465,17 +494,108 @@ const jsonLdBitacora = {
     drawerContainer?.classList.add('translate-x-full');
 
     document.body.classList.remove('overflow-hidden');
+    closeSuggestions();
   }
 
-  btnOpenDrawer?.addEventListener('click', openDrawer);
-  btnEmptyCreate?.addEventListener('click', openDrawer);
+  function resetDrawerForm() {
+    editingRecipeId = null;
+    currentEditingDate = null;
+    currentProductId = null;
+    currentProductUrl = null;
+    currentProductStore = null;
+    form?.reset();
+    if (inputGramosCafe) inputGramosCafe.value = '15';
+    if (inputGramosAgua) inputGramosAgua.value = '250';
+    const calif = document.getElementById('select-rec-calificacion') as HTMLSelectElement | null;
+    if (calif) calif.value = '5';
+    if (labelScaTotal) labelScaTotal.textContent = 'Sin calificar';
+    if (drawerTitle) drawerTitle.textContent = 'Registrar Nueva Receta';
+    if (drawerSubmitBtn) drawerSubmitBtn.textContent = 'Guardar Receta en Bitácora ☕';
+    closeSuggestions();
+    updateRatio();
+  }
+
+  function populateDrawerForm(recipe: any, isDuplicate: boolean = false) {
+    currentProductId = recipe.producto_id || null;
+    currentProductUrl = recipe.producto_url || null;
+    currentProductStore = recipe.tienda || null;
+
+    if (isDuplicate) {
+      editingRecipeId = null;
+      currentEditingDate = null;
+      if (drawerTitle) drawerTitle.textContent = 'Duplicar Receta';
+      if (drawerSubmitBtn) drawerSubmitBtn.textContent = 'Guardar Copia en Bitácora ☕';
+    } else {
+      editingRecipeId = recipe.id;
+      currentEditingDate = recipe.fecha || null;
+      if (drawerTitle) drawerTitle.textContent = 'Editar Receta';
+      if (drawerSubmitBtn) drawerSubmitBtn.textContent = 'Actualizar Receta ☕';
+    }
+
+    if (coffeeInput) {
+      coffeeInput.value = isDuplicate ? `${recipe.cafe} (Copia)` : recipe.cafe;
+    }
+    const selectMetodo = document.getElementById('select-rec-metodo') as HTMLSelectElement | null;
+    if (selectMetodo) selectMetodo.value = recipe.metodo || 'V60';
+
+    if (inputGramosCafe) inputGramosCafe.value = String(recipe.gramos_cafe || 15);
+    if (inputGramosAgua) inputGramosAgua.value = String(recipe.gramos_agua || 250);
+
+    const moliendaInp = document.getElementById('input-rec-molienda') as HTMLInputElement | null;
+    if (moliendaInp) moliendaInp.value = recipe.molienda || '';
+
+    const tiempoInp = document.getElementById('input-rec-tiempo') as HTMLInputElement | null;
+    if (tiempoInp) tiempoInp.value = recipe.tiempo || '';
+
+    const calif = document.getElementById('select-rec-calificacion') as HTMLSelectElement | null;
+    if (calif) calif.value = String(recipe.calificacion || 5);
+
+    const notasTxt = document.getElementById('textarea-rec-notas') as HTMLTextAreaElement | null;
+    if (notasTxt) notasTxt.value = recipe.notas || '';
+
+    const sca = recipe.catacion_sca || {};
+    const scaMapping: Record<string, string> = {
+      fragancia_aroma: 'input-sca-aroma',
+      sabor: 'input-sca-sabor',
+      retrogusto: 'input-sca-retrogusto',
+      acidez: 'input-sca-acidez',
+      cuerpo: 'input-sca-cuerpo',
+      balance: 'input-sca-balance',
+      uniformidad: 'input-sca-uniformidad',
+      taza_limpia: 'input-sca-taza-limpia',
+      dulzor: 'input-sca-dulzor',
+      puntaje_global: 'input-sca-global'
+    };
+
+    for (const [key, elementId] of Object.entries(scaMapping)) {
+      const el = document.getElementById(elementId) as HTMLInputElement | null;
+      if (el) el.value = sca[key] !== undefined ? String(sca[key]) : '';
+    }
+
+    calculateScaTotal();
+    updateRatio();
+    openDrawer();
+  }
+
+  btnOpenDrawer?.addEventListener('click', () => {
+    resetDrawerForm();
+    openDrawer();
+  });
+  btnEmptyCreate?.addEventListener('click', () => {
+    resetDrawerForm();
+    openDrawer();
+  });
   btnCloseDrawer?.addEventListener('click', closeDrawer);
   btnCancelDrawer?.addEventListener('click', closeDrawer);
   drawerBackdrop?.addEventListener('click', closeDrawer);
 
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !drawerContainer?.classList.contains('translate-x-full')) {
-      closeDrawer();
+    if (e.key === 'Escape') {
+      if (coffeeDropdown && !coffeeDropdown.classList.contains('hidden')) {
+        closeSuggestions();
+      } else if (!drawerContainer?.classList.contains('translate-x-full')) {
+        closeDrawer();
+      }
     }
   });
 
@@ -522,7 +642,156 @@ const jsonLdBitacora = {
     inp.addEventListener('input', calculateScaTotal);
   });
 
-  // Renderizado de Recetas
+  // =======================================================================
+  // AUTOCOMPLETE Y SUGERENCIAS DE CAFÉ (Catálogo en vivo + Usados recientemente)
+  // =======================================================================
+  let searchDebounceTimeout: any = null;
+
+  function closeSuggestions() {
+    if (coffeeDropdown) {
+      coffeeDropdown.classList.add('hidden');
+      coffeeDropdown.innerHTML = '';
+    }
+  }
+
+  function getRecentlyUsedCoffees(): string[] {
+    const set = new Set<string>();
+    recipesUseCase.getLocalRecipes().forEach(r => {
+      if (r.cafe && r.cafe.trim()) set.add(r.cafe.trim());
+    });
+    LocalStorageAdapter.getRecentlyViewed().forEach(p => {
+      if (p.nombre && p.nombre.trim()) set.add(`${p.nombre} (${p.tienda})`);
+    });
+    return Array.from(set).slice(0, 6);
+  }
+
+  async function renderSuggestions(query: string = '') {
+    if (!coffeeDropdown) return;
+    const q = query.trim().toLowerCase();
+
+    // 1. Recientes
+    const recent = getRecentlyUsedCoffees().filter(c => !q || c.toLowerCase().includes(q));
+
+    // 2. Catálogo live si hay al menos 2 caracteres
+    let catalogItems: any[] = [];
+    if (q.length >= 2) {
+      try {
+        const res = await http.get<{ data?: any[]; items?: any[] }>(`/api/v1/products?limit=8&search_query=${encodeURIComponent(q)}`);
+        catalogItems = res?.data || res?.items || [];
+      } catch {
+        catalogItems = [];
+      }
+    }
+
+    if (recent.length === 0 && catalogItems.length === 0) {
+      if (q.length >= 2) {
+        coffeeDropdown.innerHTML = `<div class="p-2 text-xs text-stone-400 italic text-center">No se encontraron cafés para "${q}"</div>`;
+        coffeeDropdown.classList.remove('hidden');
+      } else {
+        closeSuggestions();
+      }
+      return;
+    }
+
+    let html = '';
+
+    if (recent.length > 0) {
+      html += `
+        <div class="px-2 pt-1 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-stone-400 flex items-center gap-1">
+          <span>🕒</span>
+          <span>Usados recientemente / Vistos</span>
+        </div>
+      `;
+      recent.forEach(name => {
+        html += `
+          <button 
+            type="button" 
+            class="suggestion-item w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-emerald-50 hover:text-emerald-950 transition text-xs font-medium text-stone-700 flex items-center justify-between"
+            data-coffee-value="${name.replace(/"/g, '&quot;')}"
+          >
+            <span class="truncate">${name}</span>
+            <span class="text-[10px] text-stone-400 shrink-0 ml-2">Seleccionar</span>
+          </button>
+        `;
+      });
+    }
+
+    if (catalogItems.length > 0) {
+      html += `
+        <div class="px-2 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1 border-t border-stone-100">
+          <span>☕</span>
+          <span>Catálogo Cafesitios</span>
+        </div>
+      `;
+      catalogItems.forEach(item => {
+        const fullName = `${item.nombre} (${item.tienda})`;
+        const precio = item.variante?.precio_clp || item.precio_clp ? `$${(item.variante?.precio_clp || item.precio_clp).toLocaleString('es-CL')}` : '';
+        html += `
+          <button 
+            type="button" 
+            class="suggestion-item w-full text-left px-2.5 py-2 rounded-xl hover:bg-emerald-50 transition text-xs flex items-center justify-between gap-2"
+            data-coffee-value="${fullName.replace(/"/g, '&quot;')}"
+            data-product-id="${item.id}"
+            data-product-url="${(item.url_detalle || '').replace(/"/g, '&quot;')}"
+            data-product-store="${(item.tienda || '').replace(/"/g, '&quot;')}"
+          >
+            <div class="min-w-0">
+              <span class="font-bold text-stone-900 block truncate">${item.nombre}</span>
+              <span class="text-[10px] text-stone-500">${item.tienda} ${item.origen ? `• ${item.origen}` : ''}</span>
+            </div>
+            ${precio ? `<span class="text-[10px] font-extrabold text-emerald-800 shrink-0">${precio}</span>` : ''}
+          </button>
+        `;
+      });
+    }
+
+    coffeeDropdown.innerHTML = html;
+    coffeeDropdown.classList.remove('hidden');
+
+    coffeeDropdown.querySelectorAll('.suggestion-item').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const val = btn.getAttribute('data-coffee-value');
+        const prodId = btn.getAttribute('data-product-id');
+        const prodUrl = btn.getAttribute('data-product-url');
+        const prodStore = btn.getAttribute('data-product-store');
+        if (val && coffeeInput) {
+          coffeeInput.value = val;
+          currentProductId = prodId ? (isNaN(Number(prodId)) ? prodId : Number(prodId)) : null;
+          currentProductUrl = prodUrl || null;
+          currentProductStore = prodStore || null;
+        }
+        closeSuggestions();
+      });
+    });
+  }
+
+  coffeeInput?.addEventListener('input', () => {
+    clearTimeout(searchDebounceTimeout);
+    searchDebounceTimeout = setTimeout(() => {
+      renderSuggestions(coffeeInput.value);
+    }, 250);
+  });
+
+  coffeeInput?.addEventListener('focus', () => {
+    if (!coffeeInput.value) {
+      renderSuggestions('');
+    }
+  });
+
+  btnShowSuggestions?.addEventListener('click', () => {
+    renderSuggestions(coffeeInput?.value || '');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!coffeeDropdown?.contains(e.target as Node) && e.target !== coffeeInput && e.target !== btnShowSuggestions) {
+      closeSuggestions();
+    }
+  });
+
+  // =======================================================================
+  // RENDERIZADO DE RECETAS CON ACCIONES: EDITAR, DUPLICAR Y ELIMINAR
+  // =======================================================================
   function renderRecipes() {
     const recipes = recipesUseCase.getLocalRecipes();
 
@@ -567,6 +836,30 @@ const jsonLdBitacora = {
               </span>
             </div>
 
+            <!-- Acceso al Catálogo Propio y Tienda Origen -->
+            <div class="flex flex-wrap items-center gap-2 pt-0.5 pb-0.5">
+              <a 
+                href="${r.producto_id ? `/product/${r.producto_id}` : `/catalog?q=${encodeURIComponent(r.cafe)}`}" 
+                class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100/90 border border-emerald-200/60 px-2.5 py-1 rounded-xl transition shadow-2xs"
+                title="Ver café en el catálogo propio de Cafesitios"
+              >
+                <span>☕</span>
+                <span>Ver en Catálogo</span>
+              </a>
+              ${r.producto_url ? `
+                <a 
+                  href="${r.producto_url}" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  class="inline-flex items-center gap-1 text-[11px] font-medium text-stone-500 hover:text-stone-800 hover:underline px-1.5 py-0.5 transition"
+                  title="Saltar a la tienda de origen (${r.tienda || 'Tostaduría'})"
+                >
+                  <span>Tienda origen</span>
+                  <span class="text-[10px]">↗</span>
+                </a>
+              ` : ''}
+            </div>
+
             <!-- Badge SCA si existe -->
             ${r.puntuacion_sca_total ? `
               <div class="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs font-black text-amber-900 shadow-2xs">
@@ -608,23 +901,69 @@ const jsonLdBitacora = {
             ` : ''}
           </div>
 
-          <!-- Footer con Fecha y Borrar -->
+          <!-- Footer con Fecha y Acciones (Duplicar, Editar, Borrar) -->
           <div class="pt-3 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-400">
             <span>📅 ${formattedDate}</span>
-            <button 
-              type="button" 
-              class="btn-delete-recipe text-stone-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition"
-              data-recipe-id="${r.id}"
-              title="Eliminar receta de la bitácora"
-            >
-              🗑️
-            </button>
+            <div class="flex items-center gap-1">
+              <button 
+                type="button" 
+                class="btn-duplicate-recipe text-stone-500 hover:text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded-lg transition font-semibold flex items-center gap-1"
+                data-recipe-id="${r.id}"
+                title="Duplicar esta receta como base para una nueva preparación"
+              >
+                <span>📋</span>
+                <span class="text-[10px]">Duplicar</span>
+              </button>
+              <button 
+                type="button" 
+                class="btn-edit-recipe text-stone-500 hover:text-sky-700 hover:bg-sky-50 px-2 py-1 rounded-lg transition font-semibold flex items-center gap-1"
+                data-recipe-id="${r.id}"
+                title="Editar los parámetros de esta receta"
+              >
+                <span>✏️</span>
+                <span class="text-[10px]">Editar</span>
+              </button>
+              <button 
+                type="button" 
+                class="btn-delete-recipe text-stone-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition"
+                data-recipe-id="${r.id}"
+                title="Eliminar receta de la bitácora"
+              >
+                🗑️
+              </button>
+            </div>
           </div>
         </article>
       `;
     }).join('');
 
-    // Listeners de eliminar receta
+    // Listener de Duplicar
+    document.querySelectorAll('.btn-duplicate-recipe').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-recipe-id');
+        if (!id) return;
+        const currentRecipes = recipesUseCase.getLocalRecipes();
+        const found = currentRecipes.find(r => r.id === id);
+        if (found) {
+          populateDrawerForm(found, true);
+        }
+      });
+    });
+
+    // Listener de Editar
+    document.querySelectorAll('.btn-edit-recipe').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-recipe-id');
+        if (!id) return;
+        const currentRecipes = recipesUseCase.getLocalRecipes();
+        const found = currentRecipes.find(r => r.id === id);
+        if (found) {
+          populateDrawerForm(found, false);
+        }
+      });
+    });
+
+    // Listener de Eliminar
     document.querySelectorAll('.btn-delete-recipe').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-recipe-id');
@@ -637,7 +976,7 @@ const jsonLdBitacora = {
     });
   }
 
-  // Envío del Formulario
+  // Envío del Formulario (Creación o Actualización)
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
     const cafe = (document.getElementById('input-rec-cafe') as HTMLInputElement).value.trim();
@@ -675,8 +1014,11 @@ const jsonLdBitacora = {
 
     const puntuacionScaTotal = calculateScaTotal();
 
+    const targetId = editingRecipeId || `rec-${Date.now()}`;
+    const targetDate = currentEditingDate || new Date().toISOString();
+
     recipesUseCase.saveLocalRecipe({
-      id: `rec-${Date.now()}`,
+      id: targetId,
       cafe,
       metodo,
       gramos_cafe: gramosCafe,
@@ -687,12 +1029,13 @@ const jsonLdBitacora = {
       notas,
       catacion_sca: Object.keys(catacionSca).length > 0 ? catacionSca : undefined,
       puntuacion_sca_total: puntuacionScaTotal || undefined,
-      fecha: new Date().toISOString()
+      fecha: targetDate,
+      producto_id: currentProductId || undefined,
+      producto_url: currentProductUrl || undefined,
+      tienda: currentProductStore || undefined
     });
 
-    form.reset();
-    if (labelScaTotal) labelScaTotal.textContent = 'Sin calificar';
-    updateRatio();
+    resetDrawerForm();
     closeDrawer();
     renderRecipes();
 

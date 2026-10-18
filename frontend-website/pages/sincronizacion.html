@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Sincronización y Analítica | Cafesitios - Monitoreo de Precios en Chile</title>
+    <meta name="description" content="Consulta el estado de sincronización en tiempo real, variaciones de precio, nuevos cafés de especialidad y analítica de mercado por kilo ($/kg) en Chile.">
+    <link rel="canonical" href="https://cafesitios.cl/sincronizaciones">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://cafesitios.cl/sincronizaciones">
+    <meta property="og:title" content="Reporte de Sincronización y Analítica | Cafesitios - Monitoreo de Precios en Chile">
+    <meta property="og:description" content="Consulta el estado de sincronización en tiempo real, variaciones de precio, nuevos cafés de especialidad y analítica de mercado por kilo ($/kg) en Chile.">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=1200&auto=format&fit=crop">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Reporte de Sincronización y Analítica | Cafesitios - Monitoreo de Precios en Chile">
+    <meta name="twitter:description" content="Consulta el estado de sincronización en tiempo real, variaciones de precio, nuevos cafés de especialidad y analítica de mercado por kilo ($/kg) en Chile.">
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=1200&auto=format&fit=crop">
+
+    <!-- Variables de ambiente -->
+    <meta name="api-base-url" content="__API_BASE_URL__">
+    <meta name="gtm-id" content="__GTM_ID__">
+    <meta name="ga-measurement-id" content="__GA_MEASUREMENT_ID__">
+
+    <!-- Datos estructurados Schema.org -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "Reporte de Sincronización y Analítica | Cafesitios",
+      "description": "Estado de sincronización de catálogos, variaciones de precios y analítica de mercado de café de especialidad en Chile.",
+      "url": "https://cafesitios.cl/sincronizaciones",
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": "Cafesitios",
+        "url": "https://cafesitios.cl"
+      }
+    }
+    </script>
+
+    <!-- Configuración de ambiente -->
+    <script src="../env-config.js" onerror="this.onerror=null;this.src='/env-config.js';"></script>
+    <script>
+        (function() {
+            const rawConfig = window.APP_CONFIG || {};
+            const metaApi = document.querySelector('meta[name="api-base-url"]')?.getAttribute("content");
+            const metaGtm = document.querySelector('meta[name="gtm-id"]')?.getAttribute("content");
+            const metaGa = document.querySelector('meta[name="ga-measurement-id"]')?.getAttribute("content");
+
+            function sanitize(val) {
+                if (typeof val === "string" && val.trim() && !val.trim().startsWith("__")) {
+                    return val.trim();
+                }
+                return "";
+            }
+
+            let apiBaseUrl = sanitize(rawConfig.apiBaseUrl) || sanitize(metaApi);
+            if (!apiBaseUrl) {
+                const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname) || window.location.protocol === "file:";
+                apiBaseUrl = isLocal ? "http://localhost:8000" : window.location.origin;
+            }
+            apiBaseUrl = apiBaseUrl.replace(/\/+$/, "");
+
+            const gtmId = sanitize(rawConfig.googleTagManagerId) || sanitize(metaGtm);
+            const gaId = sanitize(rawConfig.googleAnalyticsId) || sanitize(metaGa);
+
+            window.APP_CONFIG = Object.freeze({
+                apiBaseUrl: apiBaseUrl,
+                googleTagManagerId: gtmId,
+                googleAnalyticsId: gaId
+            });
+        })();
+    </script>
+    <script src="../analytics.js" onerror="this.onerror=null;this.src='/analytics.js';"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* Patrón responsive-table con sticky headers y container queries */
+        .table-wrapper {
+            overflow: auto;
+            max-inline-size: 100%;
+            max-block-size: min(560px, 80vh);
+            container-type: inline-size;
+        }
+
+        .sync-data-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            --label-1: "Producto";
+            --label-2: "Tienda";
+            --label-3: "Formato";
+            --label-4: "Precio Anterior";
+            --label-5: "Precio Actual";
+            --label-6: "Variación ($/kg y total)";
+        }
+
+        .sync-history-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            --label-1: "Corrida";
+            --label-2: "Fecha";
+            --label-3: "Hora";
+            --label-4: "Duración";
+            --label-5: "Estado";
+            --label-6: "Conteos (Nuevos / Act. / Cambios)";
+        }
+
+        .sync-data-table thead,
+        .sync-history-table thead {
+            position: sticky;
+            inset-block-start: 0;
+            z-index: 1;
+        }
+
+        .sync-data-table tbody th,
+        .sync-history-table tbody th {
+            position: sticky;
+            inset-inline-start: 0;
+            background: #ffffff;
+        }
+
+        @container (width < 600px) {
+            .sync-data-table,
+            .sync-data-table thead,
+            .sync-data-table tbody,
+            .sync-data-table tr,
+            .sync-data-table th,
+            .sync-data-table td,
+            .sync-history-table,
+            .sync-history-table thead,
+            .sync-history-table tbody,
+            .sync-history-table tr,
+            .sync-history-table th,
+            .sync-history-table td {
+                display: block;
+            }
+
+            .sync-data-table thead,
+            .sync-history-table thead {
+                display: none;
+            }
+
+            .sync-data-table tbody tr,
+            .sync-history-table tbody tr {
+                margin-block-end: 1rem;
+                border: 1px solid #e7e5e4;
+                border-radius: 0.75rem;
+                overflow: hidden;
+                background: #ffffff;
+            }
+
+            .sync-data-table tbody th,
+            .sync-history-table tbody th {
+                position: sticky;
+                inset-block-start: 0;
+                z-index: 2;
+                background: #f5f5f4;
+                border-bottom: 1px solid #e7e5e4;
+            }
+
+            .sync-data-table td,
+            .sync-history-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 0.75rem;
+                text-align: right;
+            }
+
+            .sync-data-table td:nth-child(2)::before,
+            .sync-history-table td:nth-child(2)::before {
+                content: var(--label-2) ": " / var(--label-2);
+                font-weight: 600;
+                color: #57534e;
+                text-align: left;
+            }
+            .sync-data-table td:nth-child(3)::before,
+            .sync-history-table td:nth-child(3)::before {
+                content: var(--label-3) ": " / var(--label-3);
+                font-weight: 600;
+                color: #57534e;
+                text-align: left;
+            }
+            .sync-data-table td:nth-child(4)::before,
+            .sync-history-table td:nth-child(4)::before {
+                content: var(--label-4) ": " / var(--label-4);
+                font-weight: 600;
+                color: #57534e;
+                text-align: left;
+            }
+            .sync-data-table td:nth-child(5)::before,
+            .sync-history-table td:nth-child(5)::before {
+                content: var(--label-5) ": " / var(--label-5);
+                font-weight: 600;
+                color: #57534e;
+                text-align: left;
+            }
+            .sync-data-table td:nth-child(6)::before,
+            .sync-history-table td:nth-child(6)::before {
+                content: var(--label-6) ": " / var(--label-6);
+                font-weight: 600;
+                color: #57534e;
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-[#FCFBF7] text-stone-700 antialiased flex flex-col justify-between">
+    <!-- ANALYTICS_NOSCRIPT -->
+
+    <!-- HEADER GLOBAL -->
+    <header class="sticky top-0 z-50 border-b border-stone-200/80 bg-white/95 backdrop-blur">
+        <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-6">
+            <a href="../index.html" class="flex items-center gap-3 group focus:outline-none">
+                <span class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-sm" aria-hidden="true">☕</span>
+                <div>
+                    <span class="text-lg font-bold tracking-tight text-stone-900 group-hover:text-emerald-800 transition">Cafe-sitios</span>
+                    <p class="text-xs text-stone-500">Comparador de café de especialidad en Chile</p>
+                </div>
+            </a>
+
+            <nav aria-label="Navegación principal" class="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                <a href="../index.html" class="rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-stone-700 hover:bg-stone-50 transition">
+                    ← Catálogo
+                </a>
+                <a href="../stores.html" class="rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-stone-700 hover:bg-stone-50 transition">
+                    🏪 Tiendas
+                </a>
+                <a href="./sincronizacion.html" aria-current="page" class="rounded-xl bg-emerald-800 px-3.5 py-2 text-white shadow-sm">
+                    📊 Sincronización y Analítica
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 space-y-8">
+        <!-- BREADCRUMBS -->
+        <nav aria-label="Breadcrumbs">
+            <ol class="flex items-center gap-2 text-xs text-stone-500">
+                <li><a href="../index.html" class="hover:text-stone-900 transition">Inicio</a></li>
+                <li aria-hidden="true">/</li>
+                <li aria-current="page" class="font-semibold text-stone-900">Reporte de Sincronización y Analítica</li>
+            </ol>
+        </nav>
+
+        <!-- CABECERA DE ESTADO Y TIMESTAMP -->
+        <section aria-labelledby="page-main-heading" class="rounded-3xl border border-stone-200/90 bg-white p-6 sm:p-8 shadow-sm">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div class="space-y-2">
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <span id="sync-status-badge" class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1 text-xs font-bold text-emerald-800">
+                            <span id="sync-status-dot" class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span id="sync-status-text">Sincronizado</span>
+                        </span>
+                        <span id="global-variation-pill" class="inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-semibold text-stone-600">
+                            Variación global: 0.0%
+                        </span>
+                    </div>
+                    <h1 id="page-main-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-stone-900">
+                        Reporte de Sincronización y Analítica de Café de Especialidad
+                    </h1>
+                    <p class="text-sm text-stone-500 max-w-3xl">
+                        Auditoría automatizada de precios, detección de nuevos lotes e inteligencia de mercado por kilo ($/kg) en tostadurías chilenas.
+                    </p>
+                </div>
+
+                <div class="rounded-2xl border border-stone-200/80 bg-[#FCFBF7] px-5 py-4 lg:text-right shrink-0">
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-stone-400">Última corrida exitosa</p>
+                    <p id="sync-timestamp-display" class="mt-1 text-sm sm:text-base font-bold text-stone-900">
+                        Cargando fecha de sincronización...
+                    </p>
+                    <button type="button" id="btn-refresh-report" class="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition">
+                        <span aria-hidden="true">↻</span> Actualizar reporte
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TARJETAS RESUMEN (KPI CARDS) -->
+        <section aria-labelledby="kpi-section-heading">
+            <h2 id="kpi-section-heading" class="sr-only">Métricas clave de la última sincronización</h2>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <!-- KPI 1: Productos Nuevos -->
+                <article
+                    data-target-tab="novedades"
+                    class="kpi-interactive-card cursor-pointer rounded-2xl border border-stone-200/90 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-wider text-stone-400">Productos Nuevos</p>
+                            <p id="kpi-nuevos-count" class="mt-2 text-3xl font-extrabold text-stone-900">0</p>
+                        </div>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-lg" aria-hidden="true">🆕</span>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between text-xs">
+                        <span id="kpi-nuevos-breakdown" class="font-medium text-sky-800 bg-sky-50 border border-sky-100 rounded-full px-2.5 py-0.5">
+                            Ver desglose de novedades →
+                        </span>
+                    </div>
+                </article>
+
+                <!-- KPI 2: Bajadas de Precio -->
+                <article
+                    data-target-tab="variaciones"
+                    data-filter-type="BAJO"
+                    class="kpi-interactive-card cursor-pointer rounded-2xl border border-stone-200/90 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-wider text-stone-400">Bajadas de Precio</p>
+                            <p id="kpi-bajadas-count" class="mt-2 text-3xl font-extrabold text-emerald-700">0</p>
+                        </div>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-lg" aria-hidden="true">📉</span>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between text-xs">
+                        <span id="kpi-bajadas-ahorro" class="font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-0.5">
+                            Ahorro: $0 CLP (0%)
+                        </span>
+                    </div>
+                </article>
+
+                <!-- KPI 3: Subidas de Precio -->
+                <article
+                    data-target-tab="variaciones"
+                    data-filter-type="SUBIO"
+                    class="kpi-interactive-card cursor-pointer rounded-2xl border border-stone-200/90 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-rose-300 hover:shadow-md"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-wider text-stone-400">Subidas de Precio</p>
+                            <p id="kpi-subidas-count" class="mt-2 text-3xl font-extrabold text-rose-700">0</p>
+                        </div>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-lg" aria-hidden="true">📈</span>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between text-xs">
+                        <span id="kpi-subidas-alerta" class="font-semibold text-rose-800 bg-rose-50 border border-rose-200 rounded-full px-2.5 py-0.5">
+                            Sin alertas de alza
+                        </span>
+                    </div>
+                </article>
+
+                <!-- KPI 4: Total Ofertas Monitoreadas -->
+                <article
+                    data-target-tab="historial"
+                    class="kpi-interactive-card cursor-pointer rounded-2xl border border-stone-200/90 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-stone-300 hover:shadow-md"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-wider text-stone-400">Total Ofertas Monitoreadas</p>
+                            <p id="kpi-ofertas-count" class="mt-2 text-3xl font-extrabold text-stone-900">0</p>
+                        </div>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-lg" aria-hidden="true">☕</span>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between text-xs">
+                        <span id="kpi-productos-total" class="font-medium text-stone-600 bg-stone-100 rounded-full px-2.5 py-0.5">
+                            0 productos activos
+                        </span>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- LAYOUT PRINCIPAL: TABLAS DETALLADAS + BLOQUE ANALÍTICO DE MERCADO -->
+        <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-8 items-start">
+            <!-- SECCIÓN DE TABLAS DETALLADAS CON TABS -->
+            <section aria-labelledby="details-tabs-heading" class="rounded-3xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-stone-200 pb-4">
+                    <div>
+                        <h2 id="details-tabs-heading" class="text-lg font-extrabold text-stone-900">Detalle de Auditoría de Catálogo</h2>
+                        <p class="text-xs text-stone-500">Explora las variaciones de precio, lotes nuevos y el registro histórico de corridas.</p>
+                    </div>
+
+                    <!-- TABS NAVIGATION -->
+                    <div role="tablist" aria-label="Secciones del reporte de sincronización" class="inline-flex flex-wrap rounded-2xl bg-stone-100 p-1 gap-1">
+                        <button
+                            type="button"
+                            role="tab"
+                            id="tab-btn-variaciones"
+                            aria-selected="true"
+                            aria-controls="panel-variaciones"
+                            data-tab="variaciones"
+                            class="sync-tab-btn rounded-xl bg-white px-3.5 py-2 text-xs font-bold text-stone-900 shadow-xs transition"
+                        >
+                            Variaciones de Precio <span id="badge-count-variaciones" class="ml-1 rounded-full bg-stone-200 px-1.5 py-0.5 text-[10px]">0</span>
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            id="tab-btn-novedades"
+                            aria-selected="false"
+                            aria-controls="panel-novedades"
+                            data-tab="novedades"
+                            class="sync-tab-btn rounded-xl px-3.5 py-2 text-xs font-bold text-stone-600 hover:text-stone-900 transition"
+                        >
+                            Novedades <span id="badge-count-novedades" class="ml-1 rounded-full bg-stone-200 px-1.5 py-0.5 text-[10px]">0</span>
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            id="tab-btn-historial"
+                            aria-selected="false"
+                            aria-controls="panel-historial"
+                            data-tab="historial"
+                            class="sync-tab-btn rounded-xl px-3.5 py-2 text-xs font-bold text-stone-600 hover:text-stone-900 transition"
+                        >
+                            Historial <span id="badge-count-historial" class="ml-1 rounded-full bg-stone-200 px-1.5 py-0.5 text-[10px]">0</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PANEL 1: VARIACIONES DE PRECIO -->
+                <div id="panel-variaciones" role="tabpanel" aria-labelledby="tab-btn-variaciones" class="mt-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="inline-flex rounded-xl border border-stone-200 bg-stone-50 p-1 gap-1" role="group" aria-label="Filtrar por tipo de cambio">
+                            <button type="button" data-change-filter="ALL" class="filter-change-btn rounded-lg bg-stone-900 px-3 py-1 text-xs font-semibold text-white">
+                                Todos
+                            </button>
+                            <button type="button" data-change-filter="BAJO" class="filter-change-btn rounded-lg px-3 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-50">
+                                📉 Solo Bajas
+                            </button>
+                            <button type="button" data-change-filter="SUBIO" class="filter-change-btn rounded-lg px-3 py-1 text-xs font-semibold text-rose-800 hover:bg-rose-50">
+                                📈 Solo Alzas
+                            </button>
+                        </div>
+
+                        <div class="relative w-full sm:w-64">
+                            <input
+                                type="search"
+                                id="search-price-changes"
+                                placeholder="Filtrar por café o tienda..."
+                                aria-label="Filtrar variaciones de precio por café o tienda"
+                                class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-1.5 text-xs text-stone-700 placeholder-stone-400 focus:bg-white focus:border-emerald-600 focus:outline-none"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="table-wrapper rounded-2xl border border-stone-200/80">
+                        <table class="sync-data-table text-left text-xs">
+                            <thead class="bg-stone-100/95 text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                                <tr>
+                                    <th scope="col" class="px-4 py-3">Producto</th>
+                                    <th scope="col" class="px-4 py-3">Tienda</th>
+                                    <th scope="col" class="px-4 py-3">Formato</th>
+                                    <th scope="col" class="px-4 py-3 text-right">Precio Anterior</th>
+                                    <th scope="col" class="px-4 py-3 text-right">Precio Actual</th>
+                                    <th scope="col" class="px-4 py-3 text-right">Variación ($/kg y total)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="price-changes-tbody" class="divide-y divide-stone-200/70">
+                                <tr>
+                                    <td colspan="6" class="px-4 py-8 text-center text-stone-400">Cargando variaciones de precio...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- PANEL 2: NOVEDADES -->
+                <div id="panel-novedades" role="tabpanel" aria-labelledby="tab-btn-novedades" class="hidden mt-5 space-y-4">
+                    <div id="new-products-grid" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div class="col-span-full rounded-2xl border border-stone-200 bg-stone-50 p-8 text-center text-xs text-stone-400">
+                            Cargando productos nuevos...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANEL 3: HISTORIAL DE SINCRONIZACIONES -->
+                <div id="panel-historial" role="tabpanel" aria-labelledby="tab-btn-historial" class="hidden mt-5 space-y-4">
+                    <div class="table-wrapper rounded-2xl border border-stone-200/80">
+                        <table class="sync-history-table text-left text-xs">
+                            <thead class="bg-stone-100/95 text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                                <tr>
+                                    <th scope="col" class="px-4 py-3">Corrida</th>
+                                    <th scope="col" class="px-4 py-3">Fecha</th>
+                                    <th scope="col" class="px-4 py-3">Hora</th>
+                                    <th scope="col" class="px-4 py-3">Duración</th>
+                                    <th scope="col" class="px-4 py-3">Estado</th>
+                                    <th scope="col" class="px-4 py-3 text-right">Resultado (Nuevos / Act. / Cambios)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sync-history-tbody" class="divide-y divide-stone-200/70">
+                                <tr>
+                                    <td colspan="6" class="px-4 py-8 text-center text-stone-400">Cargando historial de sincronizaciones...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2 text-xs text-stone-500">
+                        <span id="history-pagination-info">Página 1 de 1</span>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="btn-history-prev" disabled class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 font-semibold text-stone-600 disabled:opacity-40 hover:bg-stone-50">
+                                ← Anterior
+                            </button>
+                            <button type="button" id="btn-history-next" disabled class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 font-semibold text-stone-600 disabled:opacity-40 hover:bg-stone-50">
+                                Siguiente →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- BLOQUE ANALÍTICO ADICIONAL (MERCADO) -->
+            <aside aria-labelledby="market-analytics-heading" class="space-y-6">
+                <section class="rounded-3xl border border-stone-200/90 bg-white p-6 shadow-sm space-y-5">
+                    <div>
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Inteligencia de Mercado</span>
+                        <h2 id="market-analytics-heading" class="mt-0.5 text-lg font-extrabold text-stone-900">
+                            Referencia de Precios ($/kg)
+                        </h2>
+                    </div>
+
+                    <div class="rounded-2xl bg-emerald-950 p-5 text-white">
+                        <p class="text-xs font-medium text-emerald-200">Precio Promedio General por Kilo</p>
+                        <p id="market-avg-kilo" class="mt-1 text-3xl font-extrabold tracking-tight">$0 / kg</p>
+                        <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-emerald-800/80 pt-3 text-[11px] text-emerald-100">
+                            <span id="market-min-kilo">Mín: $0/kg</span>
+                            <span id="market-max-kilo">Máx: $0/kg</span>
+                            <span id="market-avg-bag">Bolsa prom: $0</span>
+                        </div>
+                    </div>
+
+                    <!-- Tienda con mejor descuento promedio -->
+                    <div class="rounded-2xl border border-amber-200/80 bg-amber-50/60 p-4">
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-amber-800">🏆 Tienda con Mejor Descuento Promedio</p>
+                        <p id="market-best-discount-store" class="mt-1 text-base font-extrabold text-stone-900">Sin ofertas activas</p>
+                        <p id="market-best-discount-meta" class="mt-0.5 text-xs text-stone-600">Descuento promedio: 0%</p>
+                    </div>
+
+                    <!-- Tiendas más competitivas -->
+                    <div class="space-y-2.5">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-stone-400">Tiendas más competitivas ($/kg)</h3>
+                        <div id="market-competitive-stores" class="space-y-2">
+                            <p class="text-xs text-stone-400">Cargando ranking de tiendas...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- DISTRIBUCIÓN POR PROCESO Y TUESTE -->
+                <section aria-labelledby="distribution-heading" class="rounded-3xl border border-stone-200/90 bg-white p-6 shadow-sm space-y-5">
+                    <h2 id="distribution-heading" class="text-base font-extrabold text-stone-900">
+                        Distribución por Proceso y Tueste
+                    </h2>
+
+                    <div class="space-y-2.5">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-stone-400">Por Proceso de Beneficio</h3>
+                        <div id="market-process-distribution" class="space-y-2.5">
+                            <p class="text-xs text-stone-400">Cargando procesos...</p>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-stone-200 pt-4 space-y-2.5">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-stone-400">Por Nivel de Tueste</h3>
+                        <div id="market-roast-distribution" class="space-y-2.5">
+                            <p class="text-xs text-stone-400">Cargando niveles de tueste...</p>
+                        </div>
+                    </div>
+                </section>
+            </aside>
+        </div>
+    </main>
+
+    <footer class="mt-12 border-t border-stone-200 bg-white py-6 text-center text-xs text-stone-400">
+        <p>Cafe-sitios &copy; 2026 &bull; Comparador y auditoría de precios de café de especialidad en Chile</p>
+    </footer>
+
+    <script>
+        (function() {
+            const API_BASE = ((window.APP_CONFIG && window.APP_CONFIG.apiBaseUrl) ? window.APP_CONFIG.apiBaseUrl : "http://localhost:8000").replace(/\/+$/, "");
+            const clpFormatter = new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
+
+            const state = {
+                cambiosPrecio: [],
+                productosNuevos: [],
+                changeFilter: "ALL",
+                searchQuery: "",
+                historyPage: 1,
+                historyPageSize: 10,
+                historyTotalPages: 1,
+                telemetrySent: false
+            };
+
+            function formatCLP(value) {
+                return clpFormatter.format(Math.round(Number(value) || 0));
+            }
+
+            function formatReadableSpanishDate(isoString) {
+                if (!isoString) return "Sin sincronizaciones registradas";
+                const date = new Date(isoString);
+                if (Number.isNaN(date.getTime())) return String(isoString);
+                const months = [
+                    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+                ];
+                const day = String(date.getDate()).padStart(2, "0");
+                const month = months[date.getMonth()];
+                const year = date.getFullYear();
+                const hours = String(date.getHours()).padStart(2, "0");
+                const minutes = String(date.getMinutes()).padStart(2, "0");
+                return `${day} de ${month} de ${year} - ${hours}:${minutes} hrs`;
+            }
+
+            function pushSyncTelemetry(fechaSync) {
+                if (state.telemetrySent) return;
+                state.telemetrySent = true;
+                window.dataLayer = window.dataLayer || [];
+                window.dataLayer.push({
+                    event: "ver_reporte_sincronizacion",
+                    fecha_sync: fechaSync || new Date().toISOString()
+                });
+            }
+
+            function activateTab(tabName) {
+                const tabs = ["variaciones", "novedades", "historial"];
+                for (const name of tabs) {
+                    const btn = document.getElementById(`tab-btn-${name}`);
+                    const panel = document.getElementById(`panel-${name}`);
+                    const isActive = name === tabName;
+                    if (btn) {
+                        btn.setAttribute("aria-selected", isActive ? "true" : "false");
+                        btn.className = isActive
+                            ? "sync-tab-btn rounded-xl bg-white px-3.5 py-2 text-xs font-bold text-stone-900 shadow-xs transition"
+                            : "sync-tab-btn rounded-xl px-3.5 py-2 text-xs font-bold text-stone-600 hover:text-stone-900 transition";
+                    }
+                    if (panel) {
+                        panel.classList.toggle("hidden", !isActive);
+                    }
+                }
+            }
+
+            function renderPriceChangesTable() {
+                const tbody = document.getElementById("price-changes-tbody");
+                if (!tbody) return;
+
+                const query = state.searchQuery.trim().toLowerCase();
+                const filtered = state.cambiosPrecio.filter((item) => {
+                    if (state.changeFilter !== "ALL" && item.tipo_cambio !== state.changeFilter) {
+                        return false;
+                    }
+                    if (query) {
+                        const haystack = `${item.nombre || ""} ${item.tienda || ""}`.toLowerCase();
+                        return haystack.includes(query);
+                    }
+                    return true;
+                });
+
+                if (!filtered.length) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="px-4 py-8 text-center text-xs text-stone-400">
+                                No se registraron variaciones de precio para los filtros seleccionados.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = filtered.map((item) => {
+                    const isDrop = item.tipo_cambio === "BAJO";
+                    const rowTone = isDrop
+                        ? "bg-emerald-50/40 hover:bg-emerald-50/80"
+                        : "bg-rose-50/40 hover:bg-rose-50/80";
+                    const badgeTone = isDrop
+                        ? "border-emerald-200 bg-emerald-100/90 text-emerald-900"
+                        : "border-rose-200 bg-rose-100/90 text-rose-900";
+                    const sign = item.diferencia_clp > 0 ? "+" : "";
+                    const pctSign = item.porcentaje_variacion > 0 ? "+" : "";
+                    const kiloSign = item.diferencia_kilo_clp > 0 ? "+" : "";
+                    const icon = isDrop ? "📉" : "📈";
+
+                    return `
+                        <tr class="${rowTone} transition">
+                            <th scope="row" class="px-4 py-3 font-bold text-stone-900">
+                                <a href="${item.url_detalle || '#'}" target="_blank" rel="noopener noreferrer" class="hover:text-emerald-800 hover:underline">
+                                    ${item.nombre}
+                                </a>
+                            </th>
+                            <td class="px-4 py-3 text-stone-600 font-medium">${item.tienda}</td>
+                            <td class="px-4 py-3 text-stone-500">${item.formato || (item.formato_gramos + 'g')}</td>
+                            <td class="px-4 py-3 text-right text-stone-400 line-through">${formatCLP(item.precio_anterior)}</td>
+                            <td class="px-4 py-3 text-right font-bold text-stone-900">${formatCLP(item.precio_nuevo)}</td>
+                            <td class="px-4 py-3 text-right">
+                                <div class="inline-flex flex-col items-end gap-0.5">
+                                    <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${badgeTone}">
+                                        <span aria-hidden="true">${icon}</span>
+                                        <span>${sign}${formatCLP(item.diferencia_clp)} (${pctSign}${item.porcentaje_variacion}%)</span>
+                                    </span>
+                                    <span class="text-[10px] text-stone-500">
+                                        ${kiloSign}${formatCLP(item.diferencia_kilo_clp)}/kg (Actual: ${formatCLP(item.precio_kilo_nuevo)}/kg)
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join("");
+            }
+
+            function renderNewProducts() {
+                const grid = document.getElementById("new-products-grid");
+                if (!grid) return;
+
+                if (!state.productosNuevos.length) {
+                    grid.innerHTML = `
+                        <div class="col-span-full rounded-2xl border border-stone-200 bg-stone-50 p-8 text-center text-xs text-stone-400">
+                            No se detectaron productos nuevos en la última corrida de sincronización.
+                        </div>
+                    `;
+                    return;
+                }
+
+                grid.innerHTML = state.productosNuevos.map((prod) => `
+                    <article class="flex flex-col justify-between rounded-2xl border border-stone-200/90 bg-[#FCFBF7] p-4 shadow-2xs transition hover:border-emerald-300">
+                        <div>
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-800">${prod.tienda}</span>
+                                <span class="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[10px] font-bold text-sky-900">
+                                    🆕 Nuevo
+                                </span>
+                            </div>
+                            <h3 class="mt-1.5 text-sm font-bold text-stone-900">
+                                <a href="${prod.url_detalle || '#'}" target="_blank" rel="noopener noreferrer" class="hover:text-emerald-800 hover:underline">
+                                    ${prod.nombre}
+                                </a>
+                            </h3>
+                            <div class="mt-2 flex flex-wrap gap-1.5 text-[11px] text-stone-600">
+                                ${prod.origen ? `<span class="rounded-md bg-white border border-stone-200 px-2 py-0.5">🌍 ${prod.origen}</span>` : ""}
+                                ${prod.proceso ? `<span class="rounded-md bg-white border border-stone-200 px-2 py-0.5">⚙️ ${prod.proceso}</span>` : ""}
+                                ${prod.tueste ? `<span class="rounded-md bg-white border border-stone-200 px-2 py-0.5">🔥 ${prod.tueste}</span>` : ""}
+                                <span class="rounded-md bg-white border border-stone-200 px-2 py-0.5">⚖️ ${prod.formato || (prod.formato_gramos + 'g')}</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-baseline justify-between border-t border-stone-200/70 pt-3">
+                            <div>
+                                <span class="text-xs text-stone-400">Precio bolsa:</span>
+                                <span class="ml-1 text-sm font-extrabold text-stone-900">${formatCLP(prod.precio_clp)}</span>
+                            </div>
+                            <span class="text-xs font-bold text-emerald-800">${formatCLP(prod.precio_por_kilo)} / kg</span>
+                        </div>
+                    </article>
+                `).join("");
+            }
+
+            async function loadCurrentSummary() {
+                try {
+                    const response = await fetch(`${API_BASE}/api/sincronizaciones/resumen-actual`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+
+                    const fechaSync = data.fecha_ultima_sincronizacion || data.ultima_sincronizacion;
+                    pushSyncTelemetry(fechaSync);
+
+                    document.getElementById("sync-timestamp-display").textContent = formatReadableSpanishDate(fechaSync);
+
+                    const isOk = (data.estado || "OK").toUpperCase() === "OK";
+                    const badge = document.getElementById("sync-status-badge");
+                    const dot = document.getElementById("sync-status-dot");
+                    const statusText = document.getElementById("sync-status-text");
+
+                    if (isOk) {
+                        badge.className = "inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1 text-xs font-bold text-emerald-800";
+                        dot.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse";
+                        statusText.textContent = "Sincronizado";
+                    } else {
+                        badge.className = "inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3.5 py-1 text-xs font-bold text-rose-800";
+                        dot.className = "h-2 w-2 rounded-full bg-rose-500";
+                        statusText.textContent = "Con Errores";
+                    }
+
+                    const varGlobal = Number(data.porcentaje_variacion_global || 0);
+                    const varSign = varGlobal > 0 ? "+" : "";
+                    document.getElementById("global-variation-pill").textContent = `Variación global: ${varSign}${varGlobal}%`;
+
+                    document.getElementById("kpi-nuevos-count").textContent = String(data.total_nuevos || 0);
+                    document.getElementById("kpi-bajadas-count").textContent = String(data.total_bajaron_precio || 0);
+                    document.getElementById("kpi-subidas-count").textContent = String(data.total_subieron_precio || 0);
+                    document.getElementById("kpi-ofertas-count").textContent = String(data.total_ofertas_monitoreadas || 0);
+                    document.getElementById("kpi-productos-total").textContent = `${data.total_productos_catalogados || 0} productos catalogados`;
+
+                    const ahorroClp = Number(data.ahorro_total_clp || 0);
+                    const ahorroPct = Number(data.porcentaje_ahorro_promedio || 0);
+                    document.getElementById("kpi-bajadas-ahorro").textContent =
+                        ahorroClp > 0
+                            ? `Ahorro: ${formatCLP(ahorroClp)} (-${ahorroPct}%)`
+                            : "Sin bajas en la última pasada";
+
+                    const totalSubieron = Number(data.total_subieron_precio || 0);
+                    document.getElementById("kpi-subidas-alerta").textContent =
+                        totalSubieron > 0
+                            ? `⚠️ ${totalSubieron} ${totalSubieron === 1 ? 'alza detectada' : 'alzas detectadas'}`
+                            : "Sin alertas de alza";
+
+                    state.cambiosPrecio = Array.isArray(data.cambios_precio) ? data.cambios_precio : [];
+                    state.productosNuevos = Array.isArray(data.productos_nuevos) ? data.productos_nuevos : [];
+
+                    const storesNuevos = new Set(state.productosNuevos.map((p) => p.tienda)).size;
+                    document.getElementById("kpi-nuevos-breakdown").textContent =
+                        state.productosNuevos.length > 0
+                            ? `${state.productosNuevos.length} en ${storesNuevos} ${storesNuevos === 1 ? 'tienda' : 'tiendas'} →`
+                            : "Ver desglose de novedades →";
+
+                    document.getElementById("badge-count-variaciones").textContent = String(state.cambiosPrecio.length);
+                    document.getElementById("badge-count-novedades").textContent = String(state.productosNuevos.length);
+
+                    renderPriceChangesTable();
+                    renderNewProducts();
+                } catch (err) {
+                    console.error("Error cargando resumen de sincronización:", err);
+                    pushSyncTelemetry(null);
+                    document.getElementById("sync-timestamp-display").textContent = "No disponible temporalmente";
+                }
+            }
+
+            async function loadSyncHistory(page) {
+                const tbody = document.getElementById("sync-history-tbody");
+                try {
+                    const params = new URLSearchParams({
+                        page: String(page),
+                        page_size: String(state.historyPageSize)
+                    });
+                    const response = await fetch(`${API_BASE}/api/sincronizaciones/historial?${params.toString()}`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+
+                    const items = Array.isArray(data.items) ? data.items : [];
+                    state.historyPage = Number(data.page || 1);
+                    state.historyTotalPages = Number(data.total_pages || 1);
+
+                    document.getElementById("badge-count-historial").textContent = String(data.total_items || items.length);
+                    document.getElementById("history-pagination-info").textContent =
+                        `Página ${state.historyPage} de ${state.historyTotalPages} (${data.total_items || 0} registros)`;
+
+                    document.getElementById("btn-history-prev").disabled = state.historyPage <= 1;
+                    document.getElementById("btn-history-next").disabled = state.historyPage >= state.historyTotalPages;
+
+                    if (!items.length) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="px-4 py-8 text-center text-xs text-stone-400">
+                                    Aún no hay corridas registradas en el historial.
+                                </td>
+                            </tr>
+                        `;
+                        return;
+                    }
+
+                    tbody.innerHTML = items.map((log) => {
+                        const isOk = (log.estado || "").toUpperCase() === "OK";
+                        const pillClass = isOk
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                            : "border-rose-200 bg-rose-50 text-rose-800";
+                        return `
+                            <tr class="hover:bg-stone-50 transition">
+                                <th scope="row" class="px-4 py-3 font-bold text-stone-900">#${log.id}</th>
+                                <td class="px-4 py-3 text-stone-700">${log.fecha}</td>
+                                <td class="px-4 py-3 text-stone-500 font-mono">${log.hora} hrs</td>
+                                <td class="px-4 py-3 text-stone-600">${log.duracion_estimada || (log.duracion_estimada_segundos + 's')}</td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${pillClass}">
+                                        ${log.estado}
+                                    </span>
+                                    ${log.mensaje_error ? `<p class="mt-1 text-[10px] text-rose-600">${log.mensaje_error}</p>` : ""}
+                                </td>
+                                <td class="px-4 py-3 text-right font-medium text-stone-700">
+                                    <span class="inline-block rounded-md bg-sky-50 px-2 py-0.5 text-sky-900">🆕 ${log.productos_nuevos}</span>
+                                    <span class="inline-block rounded-md bg-stone-100 px-2 py-0.5 text-stone-700 ml-1">🔄 ${log.productos_actualizados}</span>
+                                    <span class="inline-block rounded-md bg-amber-50 px-2 py-0.5 text-amber-900 ml-1">🏷️ ${log.productos_con_cambio_precio}</span>
+                                </td>
+                            </tr>
+                        `;
+                    }).join("");
+                } catch (err) {
+                    console.error("Error cargando historial:", err);
+                    if (tbody) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="px-4 py-8 text-center text-xs text-stone-400">
+                                    No se pudo cargar el historial de sincronizaciones.
+                                </td>
+                            </tr>
+                        `;
+                    }
+                }
+            }
+
+            function renderDistributionList(containerId, list) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                if (!Array.isArray(list) || !list.length) {
+                    container.innerHTML = `<p class="text-xs text-stone-400">Sin datos disponibles.</p>`;
+                    return;
+                }
+                container.innerHTML = list.slice(0, 6).map((item) => `
+                    <div class="space-y-1">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-semibold text-stone-800">${item.categoria}</span>
+                            <span class="text-stone-500">${item.cantidad} (${item.porcentaje}%) &bull; ${formatCLP(item.precio_promedio_kilo)}/kg</span>
+                        </div>
+                        <div class="h-2 w-full overflow-hidden rounded-full bg-stone-100">
+                            <div class="h-full rounded-full bg-emerald-700" style="width: ${Math.min(100, Math.max(4, Number(item.porcentaje) || 0))}%"></div>
+                        </div>
+                    </div>
+                `).join("");
+            }
+
+            async function loadMarketAnalytics() {
+                try {
+                    const response = await fetch(`${API_BASE}/api/analitica/mercado`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+
+                    document.getElementById("market-avg-kilo").textContent = `${formatCLP(data.precio_promedio_kilo)} / kg`;
+                    document.getElementById("market-min-kilo").textContent = `Mín: ${formatCLP(data.precio_minimo_kilo)}/kg`;
+                    document.getElementById("market-max-kilo").textContent = `Máx: ${formatCLP(data.precio_maximo_kilo)}/kg`;
+                    document.getElementById("market-avg-bag").textContent = `Bolsa prom: ${formatCLP(data.precio_promedio_bolsa_clp)}`;
+
+                    const best = data.tienda_mejor_descuento || {};
+                    if (best.nombre) {
+                        document.getElementById("market-best-discount-store").textContent = best.nombre;
+                        document.getElementById("market-best-discount-meta").textContent =
+                            best.descuento_promedio_porcentaje > 0
+                                ? `Descuento prom: ${best.descuento_promedio_porcentaje}% (${best.total_ofertas_descuento} ofertas) · Prom: ${formatCLP(best.precio_promedio_kilo)}/kg`
+                                : `Promedio competitivo: ${formatCLP(best.precio_promedio_kilo)}/kg (${best.cantidad_productos} cafés)`;
+                    }
+
+                    const compContainer = document.getElementById("market-competitive-stores");
+                    const stores = Array.isArray(data.tiendas_mas_competitivas) ? data.tiendas_mas_competitivas : [];
+                    if (stores.length) {
+                        compContainer.innerHTML = stores.slice(0, 5).map((st, idx) => `
+                            <div class="flex items-center justify-between rounded-xl border border-stone-200/80 bg-[#FCFBF7] px-3.5 py-2.5 text-xs">
+                                <div class="flex items-center gap-2">
+                                    <span class="flex h-5 w-5 items-center justify-center rounded-full bg-stone-200 text-[10px] font-bold text-stone-700">${idx + 1}</span>
+                                    <div>
+                                        <p class="font-bold text-stone-900">${st.nombre}</p>
+                                        <p class="text-[10px] text-stone-500">${st.cantidad_productos} cafés activos</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-extrabold text-emerald-800">${formatCLP(st.precio_promedio_kilo)}/kg</p>
+                                    ${st.descuento_promedio_porcentaje > 0 ? `<p class="text-[10px] font-semibold text-amber-700">-${st.descuento_promedio_porcentaje}% dto.</p>` : ""}
+                                </div>
+                            </div>
+                        `).join("");
+                    } else {
+                        compContainer.innerHTML = `<p class="text-xs text-stone-400">Sin tiendas activas.</p>`;
+                    }
+
+                    renderDistributionList("market-process-distribution", data.distribucion_proceso);
+                    renderDistributionList("market-roast-distribution", data.distribucion_tueste);
+                } catch (err) {
+                    console.error("Error cargando analítica de mercado:", err);
+                }
+            }
+
+            document.addEventListener("DOMContentLoaded", () => {
+                document.querySelectorAll(".sync-tab-btn").forEach((btn) => {
+                    btn.addEventListener("click", () => {
+                        activateTab(btn.getAttribute("data-tab"));
+                    });
+                });
+
+                document.querySelectorAll(".kpi-interactive-card").forEach((card) => {
+                    card.addEventListener("click", () => {
+                        const targetTab = card.getAttribute("data-target-tab");
+                        const filterType = card.getAttribute("data-filter-type");
+                        if (targetTab) activateTab(targetTab);
+                        if (filterType) {
+                            state.changeFilter = filterType;
+                            document.querySelectorAll(".filter-change-btn").forEach((b) => {
+                                const active = b.getAttribute("data-change-filter") === filterType;
+                                b.className = active
+                                    ? "filter-change-btn rounded-lg bg-stone-900 px-3 py-1 text-xs font-semibold text-white"
+                                    : "filter-change-btn rounded-lg px-3 py-1 text-xs font-semibold text-stone-700 hover:bg-stone-200/60";
+                            });
+                            renderPriceChangesTable();
+                        }
+                    });
+                });
+
+                document.querySelectorAll(".filter-change-btn").forEach((btn) => {
+                    btn.addEventListener("click", () => {
+                        state.changeFilter = btn.getAttribute("data-change-filter") || "ALL";
+                        document.querySelectorAll(".filter-change-btn").forEach((b) => {
+                            const active = b === btn;
+                            b.className = active
+                                ? "filter-change-btn rounded-lg bg-stone-900 px-3 py-1 text-xs font-semibold text-white"
+                                : "filter-change-btn rounded-lg px-3 py-1 text-xs font-semibold text-stone-700 hover:bg-stone-200/60";
+                        });
+                        renderPriceChangesTable();
+                    });
+                });
+
+                const searchInput = document.getElementById("search-price-changes");
+                if (searchInput) {
+                    searchInput.addEventListener("input", (e) => {
+                        state.searchQuery = e.target.value || "";
+                        renderPriceChangesTable();
+                    });
+                }
+
+                document.getElementById("btn-history-prev")?.addEventListener("click", () => {
+                    if (state.historyPage > 1) loadSyncHistory(state.historyPage - 1);
+                });
+                document.getElementById("btn-history-next")?.addEventListener("click", () => {
+                    if (state.historyPage < state.historyTotalPages) loadSyncHistory(state.historyPage + 1);
+                });
+                document.getElementById("btn-refresh-report")?.addEventListener("click", () => {
+                    loadCurrentSummary();
+                    loadSyncHistory(state.historyPage);
+                    loadMarketAnalytics();
+                });
+
+                loadCurrentSummary();
+                loadSyncHistory(1);
+                loadMarketAnalytics();
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -1,7 +1,8 @@
+import html
 import re
 import logging
 import requests
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 from typing import List, Dict, Any, Optional
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
@@ -26,6 +27,14 @@ def calcular_precio_por_kilo(precio_clp: int, formato_gramos: int) -> float:
 class WooCommerceDriver:
     """Driver para consumir y normalizar productos de tiendas bajo la plataforma WooCommerce."""
 
+    _GENERIC_SHOP_SEGMENTS = {
+        'tienda', 'shop', 'productos', 'products', 'producto', 'product',
+        'catalogo', 'catalog', 'store', 'cafe', 'cafes', 'coffee',
+    }
+    _CATEGORY_PATH_MARKERS = {
+        'categoria-producto', 'product-category', 'categoria', 'category',
+    }
+
     def __init__(self, nombre: str, url_base: str):
         self.nombre = nombre
         self.url_base = url_base
@@ -42,6 +51,35 @@ class WooCommerceDriver:
         parsed = urlparse(url)
         return f"{parsed.scheme}://{parsed.netloc}"
 
+    def _extraer_categoria_slug(self, url: str) -> Optional[str]:
+        parsed = urlparse(url)
+        query_params = parse_qs(parsed.query)
+        for key in ('category', 'product_cat'):
+            vals = query_params.get(key)
+            if vals and vals[0].strip():
+                return vals[0].strip()
+
+        path_lower = parsed.path.lower()
+        if 'wp-json' in path_lower or 'rest_route' in parsed.query.lower():
+            return None
+
+        segments = [
+            seg.strip()
+            for seg in parsed.path.split('/')
+            if seg.strip() and not seg.strip().lower().endswith('.php')
+        ]
+        if not segments:
+            return None
+
+        for idx, seg in enumerate(segments):
+            if seg.lower() in self._CATEGORY_PATH_MARKERS and idx + 1 < len(segments):
+                return segments[-1]
+
+        if len(segments) == 1 and segments[0].lower() not in self._GENERIC_SHOP_SEGMENTS:
+            return segments[0]
+
+        return None
+
     def _parse_price(self, raw_val: Any, minor_unit: int = 0) -> int:
         if raw_val is None:
             return 0
@@ -55,7 +93,7 @@ class WooCommerceDriver:
 
     def normalizar_producto(self, prod: Dict[str, Any], base_site: str = "") -> Dict[str, Any]:
         """Normaliza un producto crudo proveniente de la WooCommerce Store API."""
-        titulo_prod = prod.get('name', '').strip()
+        titulo_prod = html.unescape(prod.get('name', '')).strip()
         permalink = prod.get('permalink') or f"{base_site}/productos/{prod.get('slug', '')}"
 
         images = prod.get('images', [])
@@ -193,7 +231,7 @@ class WooCommerceDriver:
             'variantes': variantes_normalizadas
         }
 
-    def consumir_productos(self) -> List[Dict[str, Any]]:
+    def consumir_productos(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """Consume el catálogo completo desde los endpoints de la API de WooCommerce Store."""
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -202,17 +240,37 @@ class WooCommerceDriver:
         logging.info(f"Escaneando tienda WooCommerce '{self.nombre}' en {self.url_base}...")
 
         base_site = self._obtener_base_site(self.url_base)
-        urls_a_probar = [self.url_base]
+        categoria_slug = self._extraer_categoria_slug(self.url_base)
+        url_lower = self.url_base.lower()
+        es_url_api = ('wp-json' in url_lower) or ('rest_route=' in url_lower) or url_lower.endswith('.json')
 
-        fallback_store_v1 = f"{base_site}/wp-json/wc/store/v1/products"
-        fallback_store = f"{base_site}/wp-json/wc/store/products"
+        urls_a_probar: List[str] = []
+        if es_url_api:
+            urls_a_probar.append(self.url_base)
 
-        if fallback_store_v1 not in urls_a_probar:
-            urls_a_probar.append(fallback_store_v1)
-        if fallback_store not in urls_a_probar:
-            urls_a_probar.append(fallback_store)
+        if categoria_slug:
+            for cat_ep in (
+                f"{base_site}/wp-json/wc/store/v1/products?category={categoria_slug}",
+                f"{base_site}/wp-json/wc/store/products?category={categoria_slug}",
+                f"{base_site}/?rest_route=/wc/store/v1/products&category={categoria_slug}",
+                f"{base_site}/?rest_route=/wc/store/products&category={categoria_slug}",
+            ):
+                if cat_ep not in urls_a_probar:
+                    urls_a_probar.append(cat_ep)
 
-        productos_raw = []
+        for std_ep in (
+            f"{base_site}/wp-json/wc/store/v1/products",
+            f"{base_site}/wp-json/wc/store/products",
+            f"{base_site}/?rest_route=/wc/store/v1/products",
+            f"{base_site}/?rest_route=/wc/store/products",
+        ):
+            if std_ep not in urls_a_probar:
+                urls_a_probar.append(std_ep)
+
+        if not es_url_api and self.url_base not in urls_a_probar:
+            urls_a_probar.append(self.url_base)
+
+        productos_raw: List[Dict[str, Any]] = []
         url_exitosa = None
         respuesta_exitosa = False
 
@@ -230,12 +288,18 @@ class WooCommerceDriver:
                     if response.status_code == 200:
                         data = response.json()
                         if isinstance(data, list):
+                            if not data and page == 1 and ('category=' in base_url or 'product_cat=' in base_url) and base_url != self.url_base:
+                                break
                             respuesta_exitosa = True
                             url_exitosa = base_url
                             if not data:
                                 break
                             productos_raw.extend(data)
                             url_funciona = True
+
+                            if limit is not None and len(productos_raw) >= limit:
+                                productos_raw = productos_raw[:limit]
+                                break
 
                             total_pages_header = response.headers.get('X-WP-TotalPages')
                             if total_pages_header and total_pages_header.isdigit():
@@ -255,7 +319,7 @@ class WooCommerceDriver:
                     logging.warning(f"[{self.nombre}] Error al conectar a {base_url} (página {page}): {e}")
                     break
 
-            if url_funciona or respuesta_exitosa:
+            if url_funciona or (respuesta_exitosa and not ('category=' in base_url and not productos_raw and base_url != self.url_base)):
                 break
 
         if not productos_raw:
@@ -264,6 +328,18 @@ class WooCommerceDriver:
                 return []
             raise RuntimeError(f"No se pudo obtener catálogo en ningún endpoint de WooCommerce para '{self.nombre}'.")
 
+        if categoria_slug and 'category=' not in (url_exitosa or '').lower():
+            slug_target = categoria_slug.lower()
+            filtrados = [
+                prod for prod in productos_raw
+                if any(
+                    isinstance(cat, dict) and str(cat.get('slug', '')).strip().lower() == slug_target
+                    for cat in (prod.get('categories') or [])
+                )
+            ]
+            if filtrados:
+                productos_raw = filtrados
+
         productos_normalizados = [
             self.normalizar_producto(prod, base_site=base_site)
             for prod in productos_raw
@@ -271,3 +347,4 @@ class WooCommerceDriver:
 
         logging.info(f"✅ [{self.nombre}] {len(productos_normalizados)} productos obtenidos desde {url_exitosa}.")
         return productos_normalizados
+

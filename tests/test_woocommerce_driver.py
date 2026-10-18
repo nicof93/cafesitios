@@ -70,5 +70,49 @@ class TestWooCommerceDriver(unittest.TestCase):
         self.assertEqual(var['formato_gramos'], 1000)
         self.assertFalse(var['disponible'])
 
+    def test_extraer_categoria_slug_y_priorizar_store_api_por_categoria(self):
+        from unittest.mock import Mock, patch
+        driver = WooCommerceDriver(
+            nombre="Café Cascanueces (Classic Blend)",
+            url_base="https://cafecascanueces.cl/categoria-producto/linea-classic-blend/",
+        )
+        self.assertEqual(driver._extraer_categoria_slug(driver.url_base), "linea-classic-blend")
+        ok_resp = Mock(status_code=200, headers={})
+        ok_resp.json.return_value = [self.sample_data[0]]
+        with patch("scrapper.woocommerce_driver.requests.get", return_value=ok_resp) as mock_get:
+            driver.consumir_productos()
+        called_url = mock_get.call_args_list[0][0][0]
+        self.assertTrue(
+            called_url.startswith(
+                "https://cafecascanueces.cl/wp-json/wc/store/v1/products?category=linea-classic-blend"
+            )
+        )
+
+    def test_extraer_categoria_slug_en_ruta_primer_nivel(self):
+        driver = WooCommerceDriver(
+            nombre="Café Lama",
+            url_base="https://cafelama.cl/cafe-tostado-lama/",
+        )
+        self.assertEqual(driver._extraer_categoria_slug(driver.url_base), "cafe-tostado-lama")
+
+    def test_incluye_fallback_rest_route_para_permalinks_simples(self):
+        from unittest.mock import Mock, patch
+        driver = WooCommerceDriver(
+            nombre="Ristro Café",
+            url_base="https://ristrocafe.cl/?post_type=product",
+        )
+        not_found = Mock(status_code=404, headers={})
+        ok_resp = Mock(status_code=200, headers={})
+        ok_resp.json.return_value = [self.sample_data[0]]
+        with patch(
+            "scrapper.woocommerce_driver.requests.get",
+            side_effect=[not_found, not_found, ok_resp],
+        ) as mock_get:
+            products = driver.consumir_productos()
+        self.assertEqual(len(products), 1)
+        third_url = mock_get.call_args_list[2][0][0]
+        self.assertIn("rest_route=/wc/store/v1/products", third_url)
+
 if __name__ == "__main__":
     unittest.main()
+

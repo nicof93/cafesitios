@@ -13,6 +13,7 @@ interface Props {
   initialVariety?: string;
   initialNotes?: string;
   initialCategory?: string;
+  hasNoCafeProducts?: boolean;
 }
 
 const {
@@ -27,6 +28,7 @@ const {
   initialVariety = '',
   initialNotes = '',
   initialCategory = 'cafe',
+  hasNoCafeProducts = false,
 } = Astro.props;
 
 const sortedStores = [...stores].sort((a, b) => 
@@ -89,21 +91,25 @@ const hasActiveFilters = Boolean(
         </div>
       </div>
 
-      <!-- SELECTOR DE CATEGORÍA -->
-      <div>
-        <label for="catalog-category-select" class="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
-          Categoría
-        </label>
-        <select 
-          name="category"
-          id="catalog-category-select" 
-          class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-3 py-2 text-xs font-medium text-stone-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition"
-        >
-          <option value="cafe" selected={initialCategory === 'cafe'}>☕ Solo Café de Especialidad</option>
-          <option value="no_cafe" selected={initialCategory === 'no_cafe'}>🎁 Ropa, Cajas y Accesorios</option>
-          <option value="todos" selected={initialCategory === 'todos'}>🌐 Todo el Catálogo</option>
-        </select>
-      </div>
+      <!-- SELECTOR DE CATEGORÍA (Oculta categorías vacías como ropa y accesorios) -->
+      {(hasNoCafeProducts || initialCategory === 'no_cafe') && (
+        <div>
+          <label for="catalog-category-select" class="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
+            Categoría
+          </label>
+          <select 
+            name="category"
+            id="catalog-category-select" 
+            class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-3 py-2 text-xs font-medium text-stone-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition"
+          >
+            <option value="cafe" selected={initialCategory === 'cafe'}>☕ Solo Café de Especialidad</option>
+            {hasNoCafeProducts && (
+              <option value="no_cafe" selected={initialCategory === 'no_cafe'}>🎁 Ropa, Cajas y Accesorios</option>
+            )}
+            <option value="todos" selected={initialCategory === 'todos'}>🌐 Todo el Catálogo</option>
+          </select>
+        </div>
+      )}
 
       <!-- SELECTOR DE ORDENAMIENTO -->
       <div>

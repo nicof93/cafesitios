@@ -25,12 +25,12 @@ const esEstimado = bestVariant?.es_estimado || false;
     <!-- CONTENEDOR DE IMAGEN CON ALTO CONTRASTE (NEUTRO SUAVE) -->
     <div class="relative flex h-52 items-center justify-center overflow-hidden rounded-xl bg-[#F4F3ED] p-4 transition-colors group-hover:bg-[#EFECE3]">
       <img 
-        src={product.imagen} 
+        src={product.imagen || '/images/producto-referencial.jpg'} 
         alt={product.nombre} 
         loading="lazy"
         decoding="async"
         referrerpolicy="no-referrer"
-        onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop';"
+        onerror="this.onerror=null; this.src='/images/producto-referencial.jpg';"
         class="h-full w-full object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105"
       />
       
@@ -49,6 +49,23 @@ const esEstimado = bestVariant?.es_estimado || false;
           -{bestVariant?.descuento_porcentaje}% OFF
         </span>
       ) : null}
+
+      <!-- BOTÓN FAVORITOS (CORAZÓN LOCAL-FIRST) -->
+      <button
+        type="button"
+        class="btn-card-favorite absolute bottom-3 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-stone-400 hover:text-rose-600 shadow-xs backdrop-blur-xs transition hover:scale-110 focus:outline-none"
+        data-cafe-id={product.id}
+        data-name={product.nombre}
+        data-store={product.tienda}
+        data-price={precioClp}
+        data-price-kilo={precioKilo}
+        data-image={product.imagen || ''}
+        data-url={`/product/${product.id}`}
+        title="Guardar en favoritos"
+        onclick="event.stopPropagation();"
+      >
+        ♡
+      </button>
     </div>
 
     <!-- METADATOS Y TÍTULO -->
@@ -205,6 +222,52 @@ const esEstimado = bestVariant?.es_estimado || false;
       window.dispatchEvent(new CustomEvent('cafesitios:toggle-compare', {
         detail: { id, name, checked: target.checked }
       }));
+    });
+  });
+
+  // Manejo de Favoritos (Local-First)
+  import { FavoritesAdapter } from '../../core/infrastructure/storage/FavoritesAdapter';
+
+  document.querySelectorAll('.btn-card-favorite').forEach((btn) => {
+    const id = btn.getAttribute('data-cafe-id');
+    if (id && FavoritesAdapter.isFavorite(id)) {
+      btn.innerHTML = '♥';
+      btn.classList.add('text-rose-600');
+      btn.classList.remove('text-stone-400');
+    }
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cafeId = btn.getAttribute('data-cafe-id');
+      const name = btn.getAttribute('data-name') || '';
+      const store = btn.getAttribute('data-store') || '';
+      const price = Number(btn.getAttribute('data-price')) || 0;
+      const priceKilo = Number(btn.getAttribute('data-price-kilo')) || 0;
+      const image = btn.getAttribute('data-image') || undefined;
+      const url = btn.getAttribute('data-url') || undefined;
+
+      if (!cafeId) return;
+
+      const isNowFav = FavoritesAdapter.toggleFavorite({
+        cafe_id: cafeId,
+        nombre: name,
+        tienda: store,
+        precio_clp: price,
+        ultimo_precio_guardado: price,
+        ultimo_precio_kilo_guardado: priceKilo,
+        imagen: image,
+        url_detalle: url,
+      } as any);
+
+      if (isNowFav) {
+        btn.innerHTML = '♥';
+        btn.classList.add('text-rose-600');
+        btn.classList.remove('text-stone-400');
+      } else {
+        btn.innerHTML = '♡';
+        btn.classList.remove('text-rose-600');
+        btn.classList.add('text-stone-400');
+      }
     });
   });
 </script>

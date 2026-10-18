@@ -42,10 +42,11 @@ const config = {
 
 fs.mkdirSync(outputDirectory, { recursive: true });
 
-for (const fileName of ["index.html", "product.html", "stores.html", "analytics.js", "vercel.json"]) {
+for (const fileName of ["index.html", "product.html", "stores.html", "sincronizacion.html", "pages/sincronizacion.html", "analytics.js", "vercel.json"]) {
     const sourcePath = path.join(sourceDirectory, fileName);
     if (!fs.existsSync(sourcePath)) continue;
     const outputPath = path.join(outputDirectory, fileName);
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     let contents = fs.readFileSync(sourcePath, "utf8");
 
     if (fileName.endsWith(".html")) {
@@ -58,6 +59,10 @@ for (const fileName of ["index.html", "product.html", "stores.html", "analytics.
             .replaceAll("__GTM_ID__", config.googleTagManagerId)
             .replaceAll("__GA_MEASUREMENT_ID__", config.googleAnalyticsId);
         fs.writeFileSync(outputPath, contents);
+        if (fileName === "sincronizacion.html") {
+            fs.writeFileSync(path.join(outputDirectory, "sincronizaciones.html"), contents);
+            fs.writeFileSync(path.join(outputDirectory, "sync-status.html"), contents);
+        }
     } else {
         fs.copyFileSync(sourcePath, outputPath);
     }

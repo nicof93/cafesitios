@@ -1,9 +1,13 @@
 ---
+import { Environment } from "../../core/infrastructure/config/Environment";
+
 interface Props {
   lastSync?: string;
 }
 
 const { lastSync = "Al día" } = Astro.props;
+const showAnalytics = Environment.isAnalyticsEnabled(Astro.url);
+const showLocalAdmin = Environment.isLocalAdminEnabled(Astro.url);
 ---
 
 <header class="sticky top-0 z-30 border-b border-stone-200/70 bg-[#FCFBF7]/90 backdrop-blur-md transition-all">
@@ -63,15 +67,56 @@ const { lastSync = "Al día" } = Astro.props;
         <span class="hidden sm:inline">Bitácora</span>
       </a>
 
+      {showLocalAdmin && (
+        <a 
+          href="/admin" 
+          class="local-admin-nav hidden inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-amber-800 bg-amber-50 hover:bg-amber-100 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 font-semibold"
+          title="Panel Administrativo Local (Tiendas, Sucursales y Moderación)"
+        >
+          <span aria-hidden="true">⚙️</span>
+          <span class="hidden sm:inline">Admin Local</span>
+        </a>
+      )}
+
+      {showAnalytics && (
+        <a 
+          href="/sincronizaciones" 
+          class="local-analytics-nav hidden inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+          title="Reporte de Sincronización y Analítica"
+        >
+          <span aria-hidden="true">📊</span>
+          <span class="hidden sm:inline">Sincronización</span>
+        </a>
+      )}
+
       <!-- PILL DISCRETO DE SINCRONIZACIÓN -->
-      <div 
-        class="hidden lg:inline-flex items-center gap-1.5 rounded-full border border-stone-200/80 bg-white/80 px-2.5 py-1 text-[10px] font-medium text-stone-500 shadow-2xs ml-1"
-        title="Última sincronización de catálogo"
-      >
-        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="header-sync-time" class="truncate max-w-[130px]">{lastSync}</span>
-      </div>
+      {showAnalytics && (
+        <a 
+          href="/sincronizaciones"
+          class="local-analytics-nav hidden lg:inline-flex items-center gap-1.5 rounded-full border border-stone-200/80 bg-white/80 hover:border-emerald-300 hover:bg-emerald-50/60 px-2.5 py-1 text-[10px] font-medium text-stone-500 hover:text-emerald-800 shadow-2xs ml-1 transition"
+          title="Ver Reporte de Sincronización y Analítica"
+        >
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="header-sync-time" class="truncate max-w-[130px]">{lastSync}</span>
+        </a>
+      )}
     </nav>
 
   </div>
 </header>
+
+<script>
+  // Verificación estricta en el cliente para ocultar navegación local si se accede fuera de localhost
+  (function enforceLocalhostNav() {
+    const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname) || window.location.hostname.endsWith('.local');
+    if (isLocalhost) {
+      document.querySelectorAll('.local-admin-nav, .local-analytics-nav').forEach((el) => {
+        el.classList.remove('hidden');
+      });
+    } else {
+      document.querySelectorAll('.local-admin-nav, .local-analytics-nav').forEach((el) => {
+        el.remove();
+      });
+    }
+  })();
+</script>

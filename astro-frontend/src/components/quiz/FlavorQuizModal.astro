@@ -161,23 +161,41 @@
       if (recommendations.length === 0) {
         resultContainer.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No encontramos cafés con ese perfil exacto en este momento.</p>';
       } else {
-        resultContainer.innerHTML = recommendations.map((rec, idx) => `
-          <div class="flex items-center gap-3 p-3 rounded-2xl border border-stone-200 bg-white hover:border-emerald-200 transition">
-            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs">${idx + 1}</span>
-            <img src="${rec.imagen || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100'}" alt="${rec.nombre}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100';" class="w-12 h-12 object-contain bg-[#F7F6F0] rounded-xl p-1">
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-1.5">
-                <span class="text-[10px] font-bold text-slate-500">${rec.tienda}</span>
-                <span class="bg-emerald-50 text-emerald-700 text-[10px] font-extrabold px-1.5 py-0.5 rounded-full">${Math.round(rec.match_score * 100)}% Match</span>
+        resultContainer.innerHTML = recommendations.map((rec, idx) => {
+          const precio = rec.variante?.precio_clp ?? rec.precio_clp ?? 0;
+          const precioKilo = rec.variante?.precio_por_kilo ?? rec.precio_por_kilo ?? 0;
+          const gramos = rec.variante?.formato_gramos ?? rec.formato_gramos ?? 250;
+          const score = Math.round((rec.match_score ?? 0.85) * 100);
+          const notas = (rec.notas_cata && rec.notas_cata.length > 0)
+            ? `<div class="flex flex-wrap gap-1 mt-1">${rec.notas_cata.slice(0, 3).map(n => `<span class="bg-stone-100 text-stone-700 text-[9px] px-1.5 py-0.5 rounded-md font-medium">${n}</span>`).join('')}</div>`
+            : '';
+          const motivo = rec.motivo_recomendacion 
+            ? `<p class="text-[10px] text-stone-500 italic truncate mt-0.5" title="${rec.motivo_recomendacion}">${rec.motivo_recomendacion}</p>` 
+            : '';
+
+          return `
+            <div class="flex items-start gap-3 p-3 rounded-2xl border border-stone-200 bg-white hover:border-emerald-300 transition shadow-2xs">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs mt-1">${idx + 1}</span>
+              <img src="${rec.imagen || '/images/producto-referencial.jpg'}" alt="${rec.nombre}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='/images/producto-referencial.jpg';" class="w-14 h-14 object-contain bg-[#F7F6F0] rounded-xl p-1 shrink-0">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] font-bold text-slate-500 truncate">${rec.tienda}</span>
+                  <span class="bg-emerald-50 text-emerald-700 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full shrink-0">${score}% Match</span>
+                </div>
+                <h5 class="text-xs font-bold text-slate-900 truncate" title="${rec.nombre}">${rec.nombre}</h5>
+                <p class="text-[11px] text-emerald-700 font-black mt-0.5">
+                  $${precio.toLocaleString('es-CL')} <small class="text-stone-400 font-normal">(${gramos}g)</small>
+                  <span class="text-stone-500 font-medium ml-1">· $${precioKilo.toLocaleString('es-CL')}/kg</span>
+                </p>
+                ${motivo}
+                ${notas}
               </div>
-              <h5 class="text-xs font-bold text-slate-900 truncate">${rec.nombre}</h5>
-              <p class="text-[11px] text-emerald-700 font-extrabold">$${(rec.variante?.precio_clp || 0).toLocaleString('es-CL')} <span class="text-slate-400 font-normal">($${(rec.variante?.precio_por_kilo || 0).toLocaleString('es-CL')}/kg)</span></p>
+              <a href="/product/${rec.id}" class="shrink-0 mt-1 rounded-xl border border-stone-200 bg-stone-50 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 text-slate-700 font-bold text-xs px-3 py-2 transition">
+                Ver
+              </a>
             </div>
-            <a href="/product/${rec.id}" class="rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 text-slate-700 font-bold text-xs px-3 py-2 transition">
-              Ver
-            </a>
-          </div>
-        `).join('');
+          `;
+        }).join('');
       }
 
       AnalyticsTracker.trackQuizCompleted(

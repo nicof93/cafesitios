@@ -182,15 +182,17 @@ def _note_identity(raw_note: str) -> Tuple[str, str]:
 
 
 def _extract_notes(value: str, source: str) -> List[Dict[str, Any]]:
+    from core.normalizer import is_valid_tasting_note
+
     candidates = re.split(r'\s*(?:[,;|/•]|\s+(?:y|and|& )\s+)\s*', value, flags=re.IGNORECASE)
     notes = []
     seen = set()
     for candidate in candidates:
         candidate = candidate.strip()
-        if not candidate:
+        if not candidate or not is_valid_tasting_note(candidate):
             continue
         key, display_name = _note_identity(candidate)
-        if not key or key in seen:
+        if not key or key in seen or not is_valid_tasting_note(display_name):
             continue
         seen.add(key)
         notes.append({
@@ -233,7 +235,91 @@ def _source(value: Any, text: Optional[str], confidence: float = 0.95) -> Option
     return {'texto': text.strip(), 'confianza': confidence, 'version': EXTRACTOR_VERSION}
 
 
-def extract_coffee_characteristics(description: Optional[str]) -> Dict[str, Any]:
+def generar_resumen_corto(
+    titulo: Optional[str] = None,
+    descripcion: Optional[str] = None,
+    notas: Optional[List[Any]] = None,
+    proceso: Optional[str] = None,
+    origen: Optional[str] = None,
+    variedad: Optional[str] = None,
+) -> str:
+    """
+    Extrae o sintetiza una descripción extremadamente resumida (micro-resumen / pie de foto)
+    a partir del título, descripción y notas de cata del café.
+    """
+    nombres_notas: List[str] = []
+    if notas:
+        for n in notas:
+            if isinstance(n, dict):
+                nom = n.get("nombre") or n.get("descriptor") or ""
+            else:
+                nom = str(n)
+            nom = nom.strip(" .,;-")
+            if nom and nom.lower() not in [x.lower() for x in nombres_notas]:
+                nombres_notas.append(nom)
+
+    paises_conocidos = {
+        "colombia": "Colombia", "etiopia": "Etiopía", "ethiopia": "Etiopía",
+        "brasil": "Brasil", "brazil": "Brasil", "guatemala": "Guatemala",
+        "costa rica": "Costa Rica", "panama": "Panamá", "peru": "Perú",
+        "kenia": "Kenia", "kenya": "Kenia", "honduras": "Honduras",
+        "ruanda": "Ruanda", "rwanda": "Ruanda", "burundi": "Burundi",
+        "el salvador": "El Salvador", "ecuador": "Ecuador", "mexico": "México",
+        "nicaragua": "Nicaragua", "bolivia": "Bolivia", "indonesia": "Indonesia",
+    }
+    texto_combinado = f"{titulo or ''} {descripcion or ''}".lower()
+    pais_detectado = origen
+    if not pais_detectado:
+        for k, v in sorted(paises_conocidos.items(), key=lambda x: len(x[0]), reverse=True):
+            if re.search(rf"\b{re.escape(k)}\b", texto_combinado):
+                pais_detectado = v
+                break
+
+    proceso_detectado = proceso
+    if not proceso_detectado:
+        for k, v in [
+            ("anaerobico", "Anaeróbico"), ("anaerobic", "Anaeróbico"),
+            ("honey", "Honey"), ("lavado", "Lavado"), ("washed", "Lavado"),
+            ("natural", "Natural"),
+        ]:
+            if re.search(rf"\b{re.escape(k)}\b", texto_combinado):
+                proceso_detectado = v
+                break
+
+    notas_str = ""
+    top_notas = [n.lower() for n in nombres_notas[:3]]
+    if len(top_notas) == 1:
+        notas_str = top_notas[0]
+    elif len(top_notas) == 2:
+        notas_str = f"{top_notas[0]} y {top_notas[1]}"
+    elif len(top_notas) >= 3:
+        notas_str = f"{top_notas[0]}, {top_notas[1]} y {top_notas[2]}"
+
+    if pais_detectado and proceso_detectado and notas_str:
+        resumen = f"Café de {pais_detectado} ({proceso_detectado}), con notas a {notas_str}."
+    elif pais_detectado and notas_str:
+        resumen = f"Café de {pais_detectado} con perfil dulce y notas a {notas_str}."
+    elif proceso_detectado and notas_str:
+        resumen = f"Café de especialidad proceso {proceso_detectado}, destacando notas a {notas_str}."
+    elif notas_str:
+        resumen = f"Perfil sensorial aromático con notas distintivas a {notas_str}."
+    elif pais_detectado and proceso_detectado:
+        resumen = f"Café de especialidad origen {pais_detectado}, proceso {proceso_detectado}."
+    elif pais_detectado:
+        resumen = f"Café de especialidad origen {pais_detectado} de tueste artesanal fresco."
+    else:
+        resumen = "Café de especialidad seleccionado con tueste fresco de especialidad."
+
+    if len(resumen) > 135:
+        resumen = resumen[:132].rsplit(" ", 1)[0] + "..."
+
+    return resumen
+
+
+def extract_coffee_characteristics(
+    description: Optional[str],
+    title: Optional[str] = None,
+) -> Dict[str, Any]:
     lines = _description_lines(description)
     result: Dict[str, Any] = {
         'proceso': None,
@@ -248,6 +334,7 @@ def extract_coffee_characteristics(description: Optional[str]) -> Dict[str, Any]
         'fuentes': {},
         'notas_cata': [],
         'notas_cata_mencionadas': False,
+        'resumen_corto': None,
         'version': EXTRACTOR_VERSION,
     }
 
@@ -293,6 +380,15 @@ def extract_coffee_characteristics(description: Optional[str]) -> Dict[str, Any]
                 _fold(fermentation_type), fermentation_type.lower()
             )
             result['fuentes']['fermentacion_tipo'] = _source(result['fermentacion_tipo'], source)
+
+    result['resumen_corto'] = generar_resumen_corto(
+        titulo=title,
+        descripcion=description,
+        notas=result['notas_cata'],
+        proceso=result.get('proceso'),
+        origen=result.get('pais_origen'),
+        variedad=result.get('variedad'),
+    )
 
     return result
 

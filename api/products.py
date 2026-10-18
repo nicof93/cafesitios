@@ -20,14 +20,19 @@ from api.schemas import (
     ProductMatchItem,
     RecommendationResponse,
     RecommendationItem,
+    WeeklyPriceDropsResponse,
+    WeeklyPriceDropItem,
 )
+from api.stores import extract_official_website
 from application.get_cheapest_products import GetCheapestProductsUseCase
 from application.compare_products import CompareProductsUseCase
 from application.recommend_products import RecommendProductsUseCase
+from application.get_weekly_price_drops import GetWeeklyPriceDropsUseCase
 from db.database import Producto, ProductoNotaCata, Tienda, Variante
 from infrastructure.postgres_repository import PostgresCoffeeRepository
 
 router = APIRouter(prefix="/api/v1/products", tags=["Productos"])
+ofertas_router = APIRouter(prefix="/api/productos", tags=["Ofertas"])
 
 _DESCRIPTION_TAGS = {
     'a', 'b', 'blockquote', 'br', 'caption', 'div', 'em', 'figcaption', 'figure',
@@ -141,12 +146,16 @@ class _DescriptionSanitizer(HTMLParser):
         return ''.join(self.output)
 
 
+from core.normalizer import is_valid_tasting_note
+from scrapper.coffee_metadata import generar_resumen_corto
+
+
 @router.get(
     "/compare",
     response_model=CompareResponse,
     status_code=status.HTTP_200_OK,
-    summary="Comparativa directa side-by-side de productos (CU-03)",
-    description="Permite comparar hasta 4 productos deduplicando variantes por gramaje (RN-03)."
+    summary="Comparativa directa side-by-side de productos",
+    description="Permite comparar hasta 4 productos con atributos técnicos, notas y perfil organoléptico."
 )
 def compare_products(
     ids: str = Query(..., description="IDs de productos separados por coma (ej. '1,2,3')"),
@@ -175,13 +184,22 @@ def compare_products(
                 id=item.id,
                 nombre=item.nombre,
                 tienda=item.tienda,
-                tienda_url=item.tienda_url,
+                tienda_url=extract_official_website(item.tienda_url) or item.tienda_url,
+                tienda_sitio_oficial=extract_official_website(item.tienda_url),
+                tienda_catalogo_url=item.tienda_url,
                 url_detalle=item.url_detalle,
                 imagen=item.imagen,
                 proceso=item.proceso,
                 pais_origen=item.pais_origen,
                 finca=item.finca,
                 variedad=item.variedad,
+                tueste=item.tueste,
+                escala_agtron=item.escala_agtron,
+                elevacion_min_msnm=item.elevacion_min_msnm,
+                elevacion_max_msnm=item.elevacion_max_msnm,
+                altura_msnm=item.altura_msnm,
+                puntuacion_sca=item.puntuacion_sca,
+                atributos_organolepticos=item.atributos_organolepticos,
                 notas_cata=item.notas_cata,
                 variantes_por_gramaje=[
                     CompareVariantItem(
@@ -209,11 +227,13 @@ def compare_products(
     response_model=RecommendationResponse,
     status_code=status.HTTP_200_OK,
     summary="Recomendador interactivo por perfil de taza / Quiz (CU-07)",
-    description="Calcula afinidad de cafés según método de extracción, perfil de sabor y tueste."
+    description="Calcula afinidad de cafés según método de extracción, perfil de sabor, acidez y tueste."
 )
 def recommend_products(
-    metodo: Optional[str] = Query(None, description="Método (Espresso, Filtro/Goteo, Prensa Francesa, Italiana/Moka)"),
-    perfil_sabor: Optional[str] = Query(None, description="Perfil de sabor (Frutal/Cítrico, Achocolatado/Nuez, Floral, Balanceado)"),
+    metodo: Optional[str] = Query(None, description="Método (Espresso, Filtrado, Prensa Francesa, Cold Brew)"),
+    perfil_sabor: Optional[str] = Query(None, description="Perfil de sabor (Frutal/Floral, Chocolate/Nueces, Cítrico/Balanceado, Especiado/Intenso)"),
+    perfil: Optional[str] = Query(None, description="Alias de perfil de sabor del Quiz"),
+    acidez: Optional[str] = Query(None, description="Preferencia de acidez (baja, media, alta)"),
     tueste: Optional[str] = Query(None, description="Nivel de tueste (Claro, Medio, Oscuro)"),
     limit: int = Query(6, ge=1, le=20, description="Cantidad máxima de recomendaciones"),
     db_session: Session = Depends(get_db_session)
@@ -221,8 +241,9 @@ def recommend_products(
     use_case = RecommendProductsUseCase(session=db_session)
     results = use_case.execute(
         metodo=metodo,
-        perfil_sabor=perfil_sabor,
+        perfil_sabor=perfil_sabor or perfil,
         tueste=tueste,
+        acidez=acidez,
         limit=limit,
     )
     return RecommendationResponse(
@@ -239,10 +260,20 @@ def recommend_products(
                 tueste=r.tueste,
                 precio_clp=r.precio_clp,
                 precio_por_kilo=r.precio_por_kilo,
+                formato_gramos=r.formato_gramos,
                 es_estimado=r.es_estimado,
                 disponible=r.disponible,
                 puntaje_coincidencia=r.puntaje_coincidencia,
+                match_score=round(min(0.99, max(0.55, r.puntaje_coincidencia / 100.0)), 2),
                 motivo_recomendacion=r.motivo_recomendacion,
+                notas_cata=r.notas_cata,
+                variante={
+                    "formato_gramos": r.formato_gramos,
+                    "precio_clp": r.precio_clp,
+                    "precio_por_kilo": r.precio_por_kilo,
+                    "disponible": r.disponible,
+                    "es_estimado": r.es_estimado,
+                },
             )
             for r in results
         ]
@@ -268,6 +299,7 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
         .filter(
             Producto.id == product_id,
             Producto.activo.is_(True),
+            Producto.oculto_catalogo.is_(False),
             Tienda.activo.is_(True),
         )
         .first()
@@ -386,13 +418,39 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
             finca = "El Vergel"
 
     tienda_nombre = (product.tienda.nombre or '').replace(')', '').strip()
+    official_store_url = extract_official_website(product.tienda.url_base) or product.tienda.url_base
+
+    caract_fuente = product.caracteristicas_fuente or {}
+    resumen_corto = (
+        caract_fuente.get("resumen_corto")
+        if isinstance(caract_fuente, dict) else None
+    )
+    if not resumen_corto:
+        notas_validas = [
+            relation.nota.nombre
+            for relation in product.notas_cata
+            if relation.nota and is_valid_tasting_note(relation.nota.nombre)
+        ]
+        resumen_corto = generar_resumen_corto(
+            titulo=product.nombre,
+            descripcion=product.descripcion,
+            notas=notas_validas,
+            proceso=proceso,
+            origen=pais_origen,
+            variedad=variedad,
+        )
 
     return {
         "id": product.id,
         "tienda": tienda_nombre,
-        "tienda_url": product.tienda.url_base,
+        "tienda_url": official_store_url,
+        "tienda_sitio_oficial": official_store_url,
+        "sitio_oficial": official_store_url,
+        "tienda_catalogo_url": product.tienda.url_base,
         "nombre": product.nombre,
         "descripcion": _DescriptionSanitizer().get_html(product.descripcion),
+        "descripcion_resumida": resumen_corto,
+        "resumen_corto": resumen_corto,
         "url_detalle": product.url_detalle,
         "imagen": product.imagen,
         "fecha_actualizacion": product.fecha_actualizacion,
@@ -419,6 +477,7 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
                 "version_extractor": relation.version_extractor,
             }
             for relation in sorted(product.notas_cata, key=lambda relation: relation.nota.clave_normalizada)
+            if relation.nota and is_valid_tasting_note(relation.nota.nombre) and is_valid_tasting_note(relation.nota.clave_normalizada)
         ],
         "variantes": [
             {
@@ -643,3 +702,38 @@ def get_cheapest_coffee_products(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error interno al procesar la consulta: {str(e)}"
         )
+
+
+@router.get(
+    "/ofertas-semana",
+    response_model=WeeklyPriceDropsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Mayores caídas de precio de la semana (Ofertas verificadas)",
+    description="Devuelve los cafés con mayores descuentos y rebajas reales verificadas en los últimos 7 días."
+)
+@ofertas_router.get(
+    "/ofertas-semana",
+    response_model=WeeklyPriceDropsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Mayores caídas de precio de la semana (Ofertas verificadas)",
+    description="Devuelve los cafés con mayores descuentos y rebajas reales verificadas en los últimos 7 días."
+)
+@ofertas_router.get(
+    "/bajas-precio-semana",
+    response_model=WeeklyPriceDropsResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False
+)
+def get_weekly_price_drops(
+    limit: int = Query(10, ge=1, le=50, description="Límite máximo de ofertas a retornar"),
+    dias: int = Query(7, ge=1, le=30, description="Ventana de días para evaluar la caída de precio"),
+    db_session: Session = Depends(get_db_session)
+) -> WeeklyPriceDropsResponse:
+    use_case = GetWeeklyPriceDropsUseCase(db_session)
+    items = use_case.execute(limit=limit, dias=dias)
+    return WeeklyPriceDropsResponse(
+        total=len(items),
+        dias_evaluados=dias,
+        ofertas=items
+    )
+

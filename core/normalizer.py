@@ -179,6 +179,63 @@ def sanitize_text(text: Optional[str]) -> str:
     )
 
 
+INVALID_TASTING_NOTES = {
+    "historia", "nuestra historia", "la historia", "sobre el cafe", "sobre este cafe",
+    "acerca de", "origen", "pais", "pais de origen", "region", "subregion", "municipio",
+    "finca", "productor", "productores", "cooperativa", "estacion", "beneficio",
+    "proceso", "variedad", "varietal", "cultivar", "altitud", "altura", "elevacion",
+    "msnm", "cosecha", "lote", "tueste", "nivel de tueste", "perfil de tueste",
+    "agtron", "puntaje", "puntuacion", "puntuacion sca", "sca", "puntos",
+    "descripcion", "informacion", "ficha", "ficha tecnica", "caracteristicas",
+    "especificaciones", "detalle", "detalles", "resumen", "notas", "notas de cata",
+    "notas cata", "perfil", "perfil de taza", "perfil en taza", "sensorial",
+    "perfil sensorial", "cata", "tasting notes", "flavor notes", "cup profile",
+    "preparacion", "metodo", "metodos", "receta", "recomendacion", "recomendado",
+    "molienda", "grano", "grano entero", "molido", "espresso", "filtro", "filtrado",
+    "prensa francesa", "aeropress", "v60", "chemex", "italiana", "moka", "cafetera",
+    "formato", "peso", "bolsa", "envase", "pack", "kit", "stock", "disponible",
+    "agotado", "envio", "despacho", "tienda", "comprar", "precio", "oferta",
+    "cafe", "cafe de especialidad", "arabica", "100% arabica", "robusta", "blend",
+    "single origin", "origen unico", "edicion limitada", " microlote", "microlote",
+    "post-cosecha", "fermentacion", "secado", "lavado", "natural", "washed",
+    "ver mas", "leer mas", "compartir", "categoria", "categorias", "etiquetas", "sku",
+}
+
+
+def is_valid_tasting_note(raw_note: Optional[str]) -> bool:
+    """Valida que un texto corresponda a un descriptor sensorial real y no a encabezados como 'historia' o 'finca'."""
+    if not raw_note:
+        return False
+    cleaned = re.sub(r"\s+", " ", str(raw_note)).strip(" .:;–—-|•*\"'()[]{}")
+    if len(cleaned) < 2 or len(cleaned) > 38:
+        return False
+    if ":" in cleaned or "http" in cleaned.lower() or "<" in cleaned or ">" in cleaned:
+        return False
+
+    sanitized = sanitize_text(cleaned)
+    if not sanitized or len(sanitized) < 2:
+        return False
+
+    if sanitized in INVALID_TASTING_NOTES:
+        return False
+
+    # Rechazar valores numéricos puros, gramajes o alturas (ej. 250g, 1800 msnm, 86 pts)
+    if re.fullmatch(r"[\d.,\s%-]+", sanitized):
+        return False
+    if re.search(r"\b\d+\s*(?:g|gr|grs|gramos|kg|kilo|msnm|m\.s\.n\.m|pts|puntos|hrs|horas|%)\b", sanitized):
+        return False
+
+    words = sanitized.split()
+    if len(words) > 4:
+        return False
+
+    # Rechazar frases narrativas o encabezados compuestos
+    if words[0] in {"historia", "finca", "productor", "proceso", "variedad", "altitud", "altura", "origen", "region", "tueste", "formato", "molienda", "preparacion", "receta"}:
+        return False
+
+    return True
+
+
 class SCAFlavorWheelNormalizer:
     """Normalizador determinista según la Rueda de Sabores de la SCA (Specialty Coffee Association)."""
 
@@ -188,6 +245,8 @@ class SCAFlavorWheelNormalizer:
         Retorna (descriptor_canonico, macro_familia) para una nota cruda.
         Si la nota contiene múltiples sub-descriptores, busca la mejor coincidencia.
         """
+        if not is_valid_tasting_note(nota_cruda):
+            return None
         sanitized = sanitize_text(nota_cruda)
         if not sanitized:
             return None
@@ -220,8 +279,10 @@ class SCAFlavorWheelNormalizer:
         seen_norm = set()
 
         for raw in notas_crudas:
-            raw_clean = re.sub(r"[.;,]+$", "", raw.strip())
-            if not raw_clean or raw_clean.lower() in seen_orig:
+            raw_clean = re.sub(r"[.;,]+$", "", str(raw or "").strip())
+            if not is_valid_tasting_note(raw_clean):
+                continue
+            if raw_clean.lower() in seen_orig:
                 continue
             seen_orig.add(raw_clean.lower())
             notas_orig.append(raw_clean)
@@ -245,6 +306,7 @@ class SCAFlavorWheelNormalizer:
             "notas_normalizadas": notas_norm,
             "macro_familias": sorted(list(familias)),
         }
+
 
 
 def calcular_precio_kilo(

@@ -1,9 +1,18 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ProductCard from '../components/catalog/ProductCard.astro';
+import FavoritesAlertsBanner from '../components/catalog/FavoritesAlertsBanner.astro';
+import WeeklyPriceDropsSection from '../components/catalog/WeeklyPriceDropsSection.astro';
 import { GetCatalogUseCase } from '../core/application/GetCatalog';
 import { GetStoresUseCase } from '../core/application/GetStores';
 import { HttpClient } from '../core/infrastructure/api/HttpClient';
+
+// Si el usuario llega con parámetro de tienda en la URL principal, redirigir directo al catálogo filtrado
+const searchParams = Astro.url.searchParams;
+const storeRedirect = searchParams.get('tienda') || searchParams.get('store_name') || searchParams.get('store');
+if (storeRedirect) {
+  return Astro.redirect(`/catalog?tienda=${encodeURIComponent(storeRedirect)}`);
+}
 
 const catalogUseCase = new GetCatalogUseCase();
 const storesUseCase = new GetStoresUseCase();
@@ -39,7 +48,7 @@ try {
 }
 
 // Imagen default e información de respaldo ante errores del catálogo
-const DEFAULT_HERO_IMAGE = 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800&auto=format&fit=crop';
+const DEFAULT_HERO_IMAGE = '/images/producto-referencial.jpg';
 
 const fallbackHeroProduct = {
   id: 0,
@@ -55,38 +64,33 @@ const fallbackHeroProduct = {
   url_detalle: '/catalog?q=Geisha'
 };
 
-let heroFeaturedProduct = fallbackHeroProduct;
+// Generar pool de candidatos para la rotación automática en el Hero cada 3 segundos
+const heroCandidates = (featuredProducts && featuredProducts.length > 0)
+  ? featuredProducts.slice(0, 15).map(p => {
+      const bestVariant = p?.getBestVariant ? p.getBestVariant() : p?.variantes?.[0];
+      const notas = (p.notas_cata && p.notas_cata.length > 0)
+        ? p.notas_cata.slice(0, 3)
+        : ['Equilibrado', 'Aromático'];
+      const imagenValida = (p.imagen && typeof p.imagen === 'string' && p.imagen.trim().startsWith('http'))
+        ? p.imagen.trim()
+        : DEFAULT_HERO_IMAGE;
+      return {
+        id: p.id,
+        nombre: p.nombre || fallbackHeroProduct.nombre,
+        tienda: p.tienda || fallbackHeroProduct.tienda,
+        origen: p.origen || 'Origen de Especialidad',
+        proceso: p.proceso || 'Arábica',
+        notas_cata: notas,
+        imagen: imagenValida,
+        formato_gramos: bestVariant?.formato_gramos || 250,
+        precio_clp: bestVariant?.precio_clp || 10000,
+        precio_por_kilo: bestVariant?.precio_por_kilo || 40000,
+        url_detalle: p.id ? `/product/${p.id}` : '/catalog'
+      };
+    })
+  : [fallbackHeroProduct];
 
-if (featuredProducts && featuredProducts.length > 0) {
-  // Selección pseudoaleatoria de un café real del catálogo
-  const randomIndex = Math.floor(Math.random() * featuredProducts.length);
-  const picked = featuredProducts[randomIndex];
-  const bestVariant = picked?.getBestVariant ? picked.getBestVariant() : picked?.variantes?.[0];
-
-  if (picked) {
-    const notas = (picked.notas_cata && picked.notas_cata.length > 0)
-      ? picked.notas_cata.slice(0, 3)
-      : ['Equilibrado', 'Aromático'];
-
-    const imagenValida = (picked.imagen && typeof picked.imagen === 'string' && picked.imagen.trim().startsWith('http'))
-      ? picked.imagen.trim()
-      : DEFAULT_HERO_IMAGE;
-
-    heroFeaturedProduct = {
-      id: picked.id,
-      nombre: picked.nombre || fallbackHeroProduct.nombre,
-      tienda: picked.tienda || fallbackHeroProduct.tienda,
-      origen: picked.origen || 'Origen de Especialidad',
-      proceso: picked.proceso || 'Arábica',
-      notas_cata: notas,
-      imagen: imagenValida,
-      formato_gramos: bestVariant?.formato_gramos || 250,
-      precio_clp: bestVariant?.precio_clp || 10000,
-      precio_por_kilo: bestVariant?.precio_por_kilo || 40000,
-      url_detalle: picked.id ? `/product/${picked.id}` : '/catalog'
-    };
-  }
-}
+let heroFeaturedProduct = heroCandidates[Math.floor(Math.random() * heroCandidates.length)];
 
 // Datos estructurados JSON-LD (Schema.org) para la Home / Landing Page
 const jsonLdHome = {
@@ -203,38 +207,52 @@ const jsonLdHome = {
         </div>
 
         <!-- Columna Visual Mockup / Card Hero (LCP Optimizado - Dinámico Aleatorio) -->
-        <div class="lg:col-span-5 relative">
-          <div class="relative mx-auto max-w-sm rounded-3xl bg-white p-5 shadow-xl border border-stone-200/90 space-y-4">
+        <div class="lg:col-span-5 relative" id="hero-card-container">
+          <!-- Pool serializado para rotación automática cada 3 segundos -->
+          <script id="hero-candidates-data" type="application/json" set:html={JSON.stringify(heroCandidates)}></script>
+
+          <div 
+            id="hero-card"
+            class="relative mx-auto max-w-sm rounded-3xl bg-white p-5 shadow-xl border border-stone-200/90 space-y-4 transition-all duration-300 ease-in-out"
+          >
             
             <div class="relative h-60 w-full overflow-hidden rounded-2xl bg-stone-100 flex items-center justify-center">
               <img 
-                src={heroFeaturedProduct.imagen} 
+                id="hero-img"
+                src={heroFeaturedProduct.imagen || DEFAULT_HERO_IMAGE} 
                 alt={`${heroFeaturedProduct.nombre} de ${heroFeaturedProduct.tienda}`} 
                 width="400"
                 height="300"
                 loading="eager"
                 fetchpriority="high"
-                class="h-full w-full object-cover"
+                class="h-full w-full object-cover transition-opacity duration-300"
                 referrerpolicy="no-referrer"
                 onerror={`this.onerror=null; this.src='${DEFAULT_HERO_IMAGE}';`}
               />
-              <span class="absolute top-3 left-3 bg-white/95 backdrop-blur-xs text-stone-800 text-xs font-bold px-3 py-1 rounded-full shadow-2xs border border-stone-200 max-w-[180px] truncate" title={heroFeaturedProduct.tienda}>
+              <span 
+                id="hero-tienda"
+                class="absolute top-3 left-3 bg-white/95 backdrop-blur-xs text-stone-800 text-xs font-bold px-3 py-1 rounded-full shadow-2xs border border-stone-200 max-w-[180px] truncate" 
+                title={heroFeaturedProduct.tienda}
+              >
                 {heroFeaturedProduct.tienda}
               </span>
-              <span class="absolute bottom-3 right-3 bg-emerald-800 text-white text-xs font-black px-3 py-1 rounded-full shadow-md">
+              <span 
+                id="hero-kilo-badge"
+                class="absolute bottom-3 right-3 bg-emerald-800 text-white text-xs font-black px-3 py-1 rounded-full shadow-md"
+              >
                 ${heroFeaturedProduct.precio_por_kilo.toLocaleString('es-CL')} /kg
               </span>
             </div>
 
             <div class="space-y-2">
               <div class="flex items-center justify-between text-xs text-stone-500 font-medium">
-                <span class="truncate max-w-[180px]">{heroFeaturedProduct.origen}</span>
-                <span class="rounded bg-stone-100 px-2 py-0.5 font-bold text-stone-700">{heroFeaturedProduct.proceso}</span>
+                <span id="hero-origen" class="truncate max-w-[180px]">{heroFeaturedProduct.origen}</span>
+                <span id="hero-proceso" class="rounded bg-stone-100 px-2 py-0.5 font-bold text-stone-700">{heroFeaturedProduct.proceso}</span>
               </div>
-              <h2 class="text-base font-bold text-stone-900 truncate" title={heroFeaturedProduct.nombre}>
+              <h2 id="hero-title" class="text-base font-bold text-stone-900 truncate" title={heroFeaturedProduct.nombre}>
                 {heroFeaturedProduct.nombre}
               </h2>
-              <div class="flex flex-wrap gap-1 text-[11px]">
+              <div id="hero-notas" class="flex flex-wrap gap-1 text-[11px]">
                 {heroFeaturedProduct.notas_cata.map((nota, i) => (
                   <span class={`rounded-md px-2 py-0.5 font-medium ${
                     i === 0 ? 'bg-emerald-50 text-emerald-800' :
@@ -249,14 +267,15 @@ const jsonLdHome = {
 
             <div class="pt-2 border-t border-stone-100 flex items-center justify-between">
               <div>
-                <span class="block text-[10px] uppercase font-bold text-stone-400">
+                <span id="hero-formato-label" class="block text-[10px] uppercase font-bold text-stone-400">
                   Precio Bolsa ({heroFeaturedProduct.formato_gramos}g)
                 </span>
-                <span class="text-lg font-black text-stone-900">
+                <span id="hero-precio-bolsa" class="text-lg font-black text-stone-900">
                   ${heroFeaturedProduct.precio_clp.toLocaleString('es-CL')} <small class="text-xs font-semibold text-stone-500">CLP</small>
                 </span>
               </div>
               <a 
+                id="hero-detail-link"
                 href={heroFeaturedProduct.url_detalle} 
                 class="rounded-xl bg-stone-900 hover:bg-emerald-900 text-white text-xs font-bold px-4 py-2.5 transition"
               >
@@ -271,7 +290,7 @@ const jsonLdHome = {
             <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 text-lg font-bold">
               💡
             </div>
-            <p class="text-xs font-medium text-stone-700 leading-snug">
+            <p id="hero-pill-text" class="text-xs font-medium text-stone-700 leading-snug">
               Un café de <strong>${heroFeaturedProduct.precio_clp.toLocaleString('es-CL')} ({heroFeaturedProduct.formato_gramos}g)</strong> equivale a <strong>${heroFeaturedProduct.precio_por_kilo.toLocaleString('es-CL')}/kg</strong>. ¡Compara antes de comprar!
             </p>
           </div>
@@ -282,6 +301,11 @@ const jsonLdHome = {
 
     </section>
 
+    <!-- Alertas de Variación de Precio de Favoritos Guardados -->
+    <FavoritesAlertsBanner />
+
+    <!-- Mayores Caídas de Precio de la Semana (Ofertas Verificadas) -->
+    <WeeklyPriceDropsSection />
 
     <!-- ===================================================================== -->
     <!-- 2. EXPLORA POR FAMILIA DE SABOR (Rueda SCA Interactiva) -->
@@ -580,5 +604,88 @@ const jsonLdHome = {
       const fbBtn = document.getElementById('btn-open-feedback');
       if (fbBtn) fbBtn.click();
     });
+  }
+
+  // =======================================================================
+  // ROTACIÓN AUTOMÁTICA DEL PRODUCTO HERO CADA 3 SEGUNDOS
+  // =======================================================================
+  try {
+    const rawCandidates = document.getElementById('hero-candidates-data')?.textContent;
+    const heroCandidates = rawCandidates ? JSON.parse(rawCandidates) : [];
+
+    if (Array.isArray(heroCandidates) && heroCandidates.length > 1) {
+      let currentIdx = 0;
+      const heroCard = document.getElementById('hero-card');
+      const heroImg = document.getElementById('hero-img') as HTMLImageElement | null;
+      const heroTienda = document.getElementById('hero-tienda');
+      const heroKiloBadge = document.getElementById('hero-kilo-badge');
+      const heroOrigen = document.getElementById('hero-origen');
+      const heroProceso = document.getElementById('hero-proceso');
+      const heroTitle = document.getElementById('hero-title');
+      const heroNotas = document.getElementById('hero-notas');
+      const heroFormatoLabel = document.getElementById('hero-formato-label');
+      const heroPrecioBolsa = document.getElementById('hero-precio-bolsa');
+      const heroDetailLink = document.getElementById('hero-detail-link') as HTMLAnchorElement | null;
+      const heroPillText = document.getElementById('hero-pill-text');
+
+      setInterval(() => {
+        let nextIdx = Math.floor(Math.random() * heroCandidates.length);
+        if (nextIdx === currentIdx && heroCandidates.length > 1) {
+          nextIdx = (currentIdx + 1) % heroCandidates.length;
+        }
+        currentIdx = nextIdx;
+        const item = heroCandidates[currentIdx];
+        if (!item) return;
+
+        if (heroCard) {
+          heroCard.classList.add('opacity-40', 'scale-[0.98]');
+          setTimeout(() => {
+            if (heroImg) {
+              heroImg.src = item.imagen;
+              heroImg.alt = `${item.nombre} de ${item.tienda}`;
+            }
+            if (heroTienda) {
+              heroTienda.textContent = item.tienda;
+              heroTienda.title = item.tienda;
+            }
+            if (heroKiloBadge) {
+              heroKiloBadge.textContent = `$${Number(item.precio_por_kilo || 0).toLocaleString('es-CL')} /kg`;
+            }
+            if (heroOrigen) heroOrigen.textContent = item.origen;
+            if (heroProceso) heroProceso.textContent = item.proceso;
+            if (heroTitle) {
+              heroTitle.textContent = item.nombre;
+              heroTitle.title = item.nombre;
+            }
+            if (heroNotas && Array.isArray(item.notas_cata)) {
+              heroNotas.innerHTML = item.notas_cata.map((nota: string, i: number) => `
+                <span class="rounded-md px-2 py-0.5 font-medium ${
+                  i === 0 ? 'bg-emerald-50 text-emerald-800' :
+                  i === 1 ? 'bg-amber-50 text-amber-800' :
+                  'bg-stone-100 text-stone-700'
+                }">
+                  ${nota}
+                </span>
+              `).join('');
+            }
+            if (heroFormatoLabel) {
+              heroFormatoLabel.textContent = `Precio Bolsa (${item.formato_gramos}g)`;
+            }
+            if (heroPrecioBolsa) {
+              heroPrecioBolsa.innerHTML = `$${Number(item.precio_clp || 0).toLocaleString('es-CL')} <small class="text-xs font-semibold text-stone-500">CLP</small>`;
+            }
+            if (heroDetailLink) {
+              heroDetailLink.href = item.url_detalle;
+            }
+            if (heroPillText) {
+              heroPillText.innerHTML = `Un café de <strong>$${Number(item.precio_clp || 0).toLocaleString('es-CL')} (${item.formato_gramos}g)</strong> equivale a <strong>$${Number(item.precio_por_kilo || 0).toLocaleString('es-CL')}/kg</strong>. ¡Compara antes de comprar!`;
+            }
+            heroCard.classList.remove('opacity-40', 'scale-[0.98]');
+          }, 200);
+        }
+      }, 6000);
+    }
+  } catch (err) {
+    console.warn('Error iniciando rotación automática del Hero:', err);
   }
 </script>

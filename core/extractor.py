@@ -5,6 +5,7 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from core.normalizer import SCAFlavorWheelNormalizer, sanitize_text
+from scrapper.coffee_metadata import generar_resumen_corto
 
 logger = logging.getLogger("core.extractor")
 
@@ -531,5 +532,16 @@ class CoffeeAttributesExtractor:
         final_data["notas_normalizadas"] = clasificacion_sca["notas_normalizadas"]
         final_data["macro_familias"] = clasificacion_sca["macro_familias"]
         final_data["hash_descripcion"] = current_hash
+
+        resumen = generar_resumen_corto(
+            titulo=nombre_producto,
+            descripcion=text,
+            notas=final_data["notas_cata"] or final_data["notas_normalizadas"],
+            proceso=final_data.get("proceso"),
+            origen=final_data.get("origen"),
+            variedad=final_data.get("variedad"),
+        )
+        final_data["resumen_corto"] = resumen
+        final_data["descripcion_resumida"] = resumen
 
         return final_data

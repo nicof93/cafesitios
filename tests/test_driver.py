@@ -81,5 +81,61 @@ class TestShopifyDriver(unittest.TestCase):
         precio_kilo = ShopifyDriver.calcular_precio_por_kilo(0, 250)
         self.assertEqual(precio_kilo, 0.0)
 
+    def test_configured_platform_falls_back_when_primary_driver_fails(self):
+        class FailingShopifyDriver:
+            def __init__(self, nombre, url_base):
+                pass
+
+            def consumir_productos(self):
+                raise RuntimeError('No Shopify endpoints responded')
+
+        class WorkingWooDriver:
+            def __init__(self, nombre, url_base):
+                pass
+
+            def consumir_productos(self):
+                return [{'nombre': 'Café recuperado por WooCommerce'}]
+
+        tienda = {
+            'nombre': 'Tienda mal etiquetada',
+            'url_base': 'https://example.com',
+            'plataforma': 'shopify',
+        }
+        with patch.dict(
+            scrapper_application.drivers_por_plataforma,
+            {'shopify': FailingShopifyDriver, 'woocommerce': WorkingWooDriver},
+            clear=True,
+        ):
+            products = scrapper_application.consumir_productos_tienda(tienda)
+
+        self.assertEqual(products, [{'nombre': 'Café recuperado por WooCommerce'}])
+
+    def test_shopify_driver_ignores_200_json_without_products_key_and_tries_next_endpoint(self):
+        driver = ShopifyDriver('Apricot', 'https://apricot.cl/collections/cafe')
+        invalid_resp = Mock(status_code=200)
+        invalid_resp.json.return_value = {'collection': {'title': 'Café'}}
+        valid_resp = Mock(status_code=200)
+        valid_resp.json.return_value = {
+            'products': [{
+                'id': 101,
+                'title': 'Etiopía Guji',
+                'handle': 'etiopia-guji',
+                'variants': [{
+                    'id': 202,
+                    'title': '250g',
+                    'price': '14500',
+                    'grams': 250,
+                    'available': True,
+                }],
+            }],
+        }
+
+        with patch('scrapper.shopify_driver.requests.get', side_effect=[invalid_resp, valid_resp]):
+            products = driver.consumir_productos()
+
+        self.assertEqual(len(products), 1)
+        self.assertEqual(products[0]['nombre'], 'Etiopía Guji')
+
 if __name__ == "__main__":
     unittest.main()
+

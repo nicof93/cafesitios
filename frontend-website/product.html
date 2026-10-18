@@ -517,18 +517,19 @@
             if (product.fecha_actualizacion) {
                 document.getElementById("updated-at").textContent = `Información actualizada ${new Date(product.fecha_actualizacion).toLocaleString("es-CL")}`;
             }
-            if (product.imagen) {
-                const image = document.getElementById("product-image");
-                image.src = product.imagen;
-                image.alt = product.nombre;
-                image.classList.remove("hidden");
-                document.getElementById("image-placeholder").classList.add("hidden");
-                const stickyImage = document.getElementById("sticky-image");
-                stickyImage.src = product.imagen;
-                stickyImage.alt = "";
-                stickyImage.classList.remove("hidden");
-                document.getElementById("sticky-placeholder").classList.add("hidden");
-            }
+            const image = document.getElementById("product-image");
+            const stickyImage = document.getElementById("sticky-image");
+            const placeholderSrc = "images/producto-referencial.jpg";
+            image.src = product.imagen || placeholderSrc;
+            image.onerror = () => { image.src = placeholderSrc; };
+            image.alt = product.nombre;
+            image.classList.remove("hidden");
+            document.getElementById("image-placeholder").classList.add("hidden");
+            stickyImage.src = product.imagen || placeholderSrc;
+            stickyImage.onerror = () => { stickyImage.src = placeholderSrc; };
+            stickyImage.alt = "";
+            stickyImage.classList.remove("hidden");
+            document.getElementById("sticky-placeholder").classList.add("hidden");
 
             variantSelect.replaceChildren(...product.variantes.map((variant, index) => {
                 const option = document.createElement("option");

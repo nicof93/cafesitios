@@ -1,0 +1,5 @@
+---
+// Redirección canónica de /catalogo a /catalog manteniendo todos los parámetros (ej. ?tienda=..., ?q=...)
+const search = Astro.url.search;
+return Astro.redirect(`/catalog${search}`, 301);
+---
