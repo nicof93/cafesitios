@@ -1,0 +1,43 @@
+name: Migraciones de Base de Datos - Cafe-sitios
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'migrations/**'
+      - 'alembic.ini'
+      - 'db/**'
+      - '.github/workflows/database-migrations.yml'
+  workflow_dispatch: # Permite ejecución manual desde la pestaña Actions en GitHub
+
+jobs:
+  run_migrations:
+    name: Aplicar Migraciones Alembic a Supabase / PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instalar dependencias mínimas de BD
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ejecutar Migraciones con Alembic
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PYTHONUNBUFFERED: "1"
+        run: |
+          echo "🚀 Verificando y aplicando migraciones pendientes..."
+          python -m alembic upgrade head
+          echo "✅ Base de datos actualizada exitosamente a la última revisión."
+

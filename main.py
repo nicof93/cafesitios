@@ -1,14 +1,26 @@
+from contextlib import asynccontextmanager
+import logging
 import os
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from api.products import router as products_router
+from api.admin import router as admin_router
+from api.admin_tienda import router as admin_tienda_router
+from api.dependencies import is_localhost_request
+from api.products import ofertas_router, router as products_router
 from api.stores import router as stores_router
-from api.sync import router as sync_router
+from api.sync import (
+    analitica_router,
+    analitica_v1_router,
+    router as sync_router,
+    sincronizaciones_router,
+    sincronizaciones_v1_router,
+)
 from api.recipes import router as recipes_router
 from api.feedback import router as feedback_router
 from api.telemetry import router as telemetry_router
+from db.database import DatabaseManager
 
 # Configuración de documentación OpenAPI según ambiente
 is_render = os.getenv("RENDER", "").strip().lower() == "true"
@@ -29,6 +41,21 @@ docs_url = "/docs" if enable_docs else None
 redoc_url = "/redoc" if enable_docs else None
 openapi_url = "/openapi.json" if enable_docs else None
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    skip_migrations = os.getenv("SKIP_DB_MIGRATIONS", "").strip().lower() in ("true", "1", "yes")
+    if not skip_migrations:
+        try:
+            db = DatabaseManager()
+            db.inicializar_db()
+        except Exception as exc:
+            logging.warning(f"No se pudo sincronizar el esquema de base de datos al iniciar la API: {exc}")
+    else:
+        logging.info("⏩ Omitiendo chequeo de migraciones DDL al iniciar la API (SKIP_DB_MIGRATIONS activo).")
+    yield
+
+
 app = FastAPI(
     title="Cafe-sitios API",
     description="API RESTful para la comparación de precios de cafés de especialidad en Chile.",
@@ -36,27 +63,49 @@ app = FastAPI(
     docs_url=docs_url,
     redoc_url=redoc_url,
     openapi_url=openapi_url,
+    lifespan=lifespan,
 )
 
-# Configuración de CORS basada en variables de entorno (ALLOWED_ORIGINS)
+# Configuración de CORS basada en variables de entorno (ALLOWED_ORIGINS) y puertos locales estándar
 raw_origins = os.getenv("ALLOWED_ORIGINS", "").strip()
+local_origins = [
+    "http://localhost:4321",
+    "http://127.0.0.1:4321",
+    "http://admin.localhost:4321",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://admin.localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "https://admin.cafesitios.cl",
+    "https://admin.cafesitios.vercel.app",
+]
+
 if raw_origins:
     allow_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
 elif is_production:
-    # En producción publicada sin orígenes configurados, no permitir orígenes locales
-    allow_origins = []
+    # En producción publicada sin orígenes configurados, incluir subdominios oficiales
+    allow_origins = [
+        "https://cafesitios.cl",
+        "https://www.cafesitios.cl",
+        "https://admin.cafesitios.cl",
+        "https://admin.cafesitios.vercel.app",
+    ]
 else:
     # Entorno local de desarrollo
-    allow_origins = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-    ]
+    allow_origins = list(local_origins)
+
+# En desarrollo cuando no hay orígenes explícitos fijados, permitimos regex para cualquier puerto en localhost
+allow_origin_regex = (
+    r"^https?://([a-zA-Z0-9-]+\.)?(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$" if (not is_production and not raw_origins) else None
+)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,8 +116,12 @@ proxy_secret = os.getenv("PROXY_SECRET", "").strip()
 
 @app.middleware("http")
 async def verify_proxy_origin(request: Request, call_next):
-    # En desarrollo local o rutas esenciales de healthcheck (/), permitir libremente
-    if request.url.path == "/" or not is_production:
+    # En desarrollo local, peticiones preflight CORS (OPTIONS) o rutas healthcheck (/), permitir libremente
+    if (
+        request.method == "OPTIONS"
+        or request.url.path == "/"
+        or not is_production
+    ):
         return await call_next(request)
 
     # 1. Si se configuró PROXY_SECRET, validar la firma
@@ -106,11 +159,18 @@ async def verify_proxy_origin(request: Request, call_next):
     )
 
 app.include_router(products_router)
+app.include_router(ofertas_router)
 app.include_router(stores_router)
 app.include_router(sync_router)
+app.include_router(sincronizaciones_router)
+app.include_router(sincronizaciones_v1_router)
+app.include_router(analitica_router)
+app.include_router(analitica_v1_router)
 app.include_router(recipes_router)
 app.include_router(feedback_router)
 app.include_router(telemetry_router)
+app.include_router(admin_router)
+app.include_router(admin_tienda_router)
 
 
 @app.get("/", tags=["Healthcheck"])
