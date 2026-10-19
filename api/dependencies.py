@@ -7,9 +7,14 @@ from db.database import DatabaseManager
 _LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1", "[::1]", "testclient", "testserver"}
 
 
-def get_db_session() -> Generator[Session, None, None]:
-    """Provee una sesión de base de datos SQLAlchemy por solicitud HTTP."""
-    db = DatabaseManager()
+def get_db_session(request: Request = None) -> Generator[Session, None, None]:
+    """Provee una sesión de base de datos SQLAlchemy por solicitud HTTP, respetando X-Target-Environment en localhost."""
+    env_target = None
+    if request is not None and hasattr(request, "headers"):
+        if is_localhost_request(request):
+            env_target = request.headers.get("x-target-environment")
+
+    db = DatabaseManager.get_instance_for_env(env_target)
     session = db.SessionLocal()
     try:
         yield session

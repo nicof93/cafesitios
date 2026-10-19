@@ -5,21 +5,22 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from api.admin import router as admin_router
+from api.admin import administracion_router, router as admin_router
 from api.admin_tienda import router as admin_tienda_router
 from api.dependencies import is_localhost_request
-from api.products import ofertas_router, router as products_router
-from api.stores import router as stores_router
+from api.products import ofertas_router, productos_router, router as products_router
+from api.stores import router as stores_router, tiendas_router
 from api.sync import (
     analitica_router,
     analitica_v1_router,
     router as sync_router,
+    sincronizacion_router,
     sincronizaciones_router,
     sincronizaciones_v1_router,
 )
 from api.recipes import router as recipes_router
-from api.feedback import router as feedback_router
-from api.telemetry import router as telemetry_router
+from api.feedback import router as feedback_router, sugerencias_router
+from api.telemetry import router as telemetry_router, telemetria_router
 from db.database import DatabaseManager
 
 # Configuración de documentación OpenAPI según ambiente
@@ -158,17 +159,24 @@ async def verify_proxy_origin(request: Request, call_next):
         }
     )
 
+# Routers canónicos en español y alias en inglés
+app.include_router(productos_router)
 app.include_router(products_router)
 app.include_router(ofertas_router)
+app.include_router(tiendas_router)
 app.include_router(stores_router)
+app.include_router(sincronizacion_router)
 app.include_router(sync_router)
 app.include_router(sincronizaciones_router)
 app.include_router(sincronizaciones_v1_router)
 app.include_router(analitica_router)
 app.include_router(analitica_v1_router)
 app.include_router(recipes_router)
+app.include_router(sugerencias_router)
 app.include_router(feedback_router)
+app.include_router(telemetria_router)
 app.include_router(telemetry_router)
+app.include_router(administracion_router)
 app.include_router(admin_router)
 app.include_router(admin_tienda_router)
 

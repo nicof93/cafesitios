@@ -34,6 +34,11 @@ router = APIRouter(
     tags=["Administración Local"],
     dependencies=[Depends(require_local_admin)],
 )
+administracion_router = APIRouter(
+    prefix="/api/v1/administracion",
+    tags=["Administración Local"],
+    dependencies=[Depends(require_local_admin)],
+)
 
 
 # --- DTOs de Tiendas y Sucursales ---
@@ -343,19 +348,74 @@ def _sql_literal(val: Any) -> str:
     return f"'{escaped}'"
 
 
+@administracion_router.get(
+    "/estado",
+    status_code=status.HTTP_200_OK,
+    summary="Verificar estado de herramientas administrativas locales",
+)
+@administracion_router.get("/status", status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.get(
+    "/estado",
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 @router.get(
     "/status",
     status_code=status.HTTP_200_OK,
     summary="Verificar estado de herramientas administrativas locales",
 )
-def get_admin_status() -> Dict[str, Any]:
+def get_admin_status(db_session: Session = Depends(get_db_session)) -> Dict[str, Any]:
+    total_tiendas = 0
+    total_productos = 0
+    ultima_sincronizacion: Optional[str] = None
+
+    if hasattr(db_session, "scalar"):
+        try:
+            total_tiendas = db_session.scalar(select(func.count(Tienda.id))) or 0
+            total_productos = db_session.scalar(select(func.count(Producto.id))) or 0
+        except Exception:
+            pass
+
+        try:
+            from db.database import EstadoSincronizacion, SincronizacionLog
+            estado_sync = db_session.get(EstadoSincronizacion, 1) if hasattr(db_session, "get") else None
+            if estado_sync and estado_sync.ultima_ejecucion:
+                ultima_sincronizacion = estado_sync.ultima_ejecucion.isoformat()
+            else:
+                latest_log = db_session.scalars(
+                    select(SincronizacionLog)
+                    .where(SincronizacionLog.estado == "OK")
+                    .order_by(SincronizacionLog.fecha_ejecucion.desc())
+                    .limit(1)
+                ).first()
+                if latest_log and latest_log.fecha_ejecucion:
+                    ultima_sincronizacion = latest_log.fecha_ejecucion.isoformat()
+        except Exception:
+            pass
+
     return {
         "enabled": True,
         "is_localhost": True,
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "total_tiendas": total_tiendas,
+        "total_productos": total_productos,
+        "ultima_sincronizacion": ultima_sincronizacion,
     }
 
 
+@administracion_router.get(
+    "/tiendas",
+    response_model=AdminStoresListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Listar todas las tiendas registradas y sus sucursales",
+)
+@administracion_router.get("/stores", response_model=AdminStoresListResponse, include_in_schema=False)
+@router.get(
+    "/tiendas",
+    response_model=AdminStoresListResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 @router.get(
     "/stores",
     response_model=AdminStoresListResponse,
@@ -456,6 +516,19 @@ def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminSto
     )
 
 
+@administracion_router.post(
+    "/tiendas",
+    response_model=AdminStoreItem,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar o actualizar una tostaduría/tienda y sus sucursales",
+)
+@administracion_router.post("/stores", response_model=AdminStoreItem, include_in_schema=False)
+@router.post(
+    "/tiendas",
+    response_model=AdminStoreItem,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
 @router.post(
     "/stores",
     response_model=AdminStoreItem,
@@ -556,6 +629,19 @@ def create_or_update_store(
     )
 
 
+@administracion_router.put(
+    "/tiendas/{store_id}",
+    response_model=AdminStoreItem,
+    status_code=status.HTTP_200_OK,
+    summary="Actualizar una tienda existente y sus sucursales por ID",
+)
+@administracion_router.put("/stores/{store_id}", response_model=AdminStoreItem, include_in_schema=False)
+@router.put(
+    "/tiendas/{store_id}",
+    response_model=AdminStoreItem,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 @router.put(
     "/stores/{store_id}",
     response_model=AdminStoreItem,
@@ -645,6 +731,22 @@ def update_store_by_id(
     )
 
 
+@administracion_router.post(
+    "/tiendas/probar-catalogo",
+    response_model=CatalogTestResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Probar si el catálogo ingresado es legible y obtener el primer producto con el driver",
+)
+@administracion_router.post("/probar-catalogo", response_model=CatalogTestResponse, include_in_schema=False)
+@administracion_router.post("/stores/test-catalog", response_model=CatalogTestResponse, include_in_schema=False)
+@administracion_router.post("/test-catalog", response_model=CatalogTestResponse, include_in_schema=False)
+@router.post(
+    "/tiendas/probar-catalogo",
+    response_model=CatalogTestResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+@router.post("/probar-catalogo", response_model=CatalogTestResponse, include_in_schema=False)
 @router.post(
     "/stores/test-catalog",
     response_model=CatalogTestResponse,
@@ -760,6 +862,19 @@ def test_store_catalog(payload: CatalogTestRequest) -> CatalogTestResponse:
     )
 
 
+@administracion_router.post(
+    "/tiendas/{store_id}/sincronizar",
+    response_model=SingleStoreSyncResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Sincronizar el catálogo de una tostaduría específica",
+)
+@administracion_router.post("/stores/{store_id}/sync", response_model=SingleStoreSyncResponse, include_in_schema=False)
+@router.post(
+    "/tiendas/{store_id}/sincronizar",
+    response_model=SingleStoreSyncResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 @router.post(
     "/stores/{store_id}/sync",
     response_model=SingleStoreSyncResponse,
@@ -808,6 +923,22 @@ def sync_single_store(
     )
 
 
+@administracion_router.post(
+    "/sincronizar/pendientes",
+    response_model=BatchSyncResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Sincronizar únicamente las tiendas que no han sido sincronizadas o no tienen productos",
+)
+@administracion_router.post("/tiendas/sincronizar-pendientes", response_model=BatchSyncResponse, include_in_schema=False)
+@administracion_router.post("/sync/unsynced", response_model=BatchSyncResponse, include_in_schema=False)
+@administracion_router.post("/stores/sync-unsynced", response_model=BatchSyncResponse, include_in_schema=False)
+@router.post(
+    "/sincronizar/pendientes",
+    response_model=BatchSyncResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+@router.post("/tiendas/sincronizar-pendientes", response_model=BatchSyncResponse, include_in_schema=False)
 @router.post(
     "/sync/unsynced",
     response_model=BatchSyncResponse,
@@ -876,6 +1007,22 @@ def sync_unsynced_stores(
     )
 
 
+@administracion_router.post(
+    "/sincronizar/todas",
+    response_model=BatchSyncResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Iniciar sincronización masiva de todas las tiendas activas",
+)
+@administracion_router.post("/tiendas/sincronizar-todas", response_model=BatchSyncResponse, include_in_schema=False)
+@administracion_router.post("/sync/all", response_model=BatchSyncResponse, include_in_schema=False)
+@administracion_router.post("/stores/sync-all", response_model=BatchSyncResponse, include_in_schema=False)
+@router.post(
+    "/sincronizar/todas",
+    response_model=BatchSyncResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+@router.post("/tiendas/sincronizar-todas", response_model=BatchSyncResponse, include_in_schema=False)
 @router.post(
     "/sync/all",
     response_model=BatchSyncResponse,
@@ -944,6 +1091,19 @@ def sync_all_stores(
     )
 
 
+@administracion_router.get(
+    "/tiendas/exportar",
+    response_model=StoresExportResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Exportar tiendas y sucursales registradas para ambiente productivo (JSON + SQL)",
+)
+@administracion_router.get("/stores/export", response_model=StoresExportResponse, include_in_schema=False)
+@router.get(
+    "/tiendas/exportar",
+    response_model=StoresExportResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 @router.get(
     "/stores/export",
     response_model=StoresExportResponse,
@@ -1057,6 +1217,17 @@ def export_stores_and_branches(
     )
 
 
+@administracion_router.post(
+    "/tiendas/importar",
+    status_code=status.HTTP_200_OK,
+    summary="Importar lote de tiendas y sucursales desde JSON exportado",
+)
+@administracion_router.post("/stores/import", status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.post(
+    "/tiendas/importar",
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 @router.post(
     "/stores/import",
     status_code=status.HTTP_200_OK,
@@ -1073,7 +1244,19 @@ def import_stores_and_branches(
     return {"status": "ok", "imported_stores": imported}
 
 
-# --- Moderación de Productos No-Café y Visibilidad en Catálogo ---
+@administracion_router.get(
+    "/productos/moderacion",
+    response_model=ModerationListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Listar productos para moderación administrativa (sospechosos no-café, ocultos o todos)",
+)
+@administracion_router.get("/products/moderation", response_model=ModerationListResponse, include_in_schema=False)
+@router.get(
+    "/productos/moderacion",
+    response_model=ModerationListResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 @router.get(
     "/products/moderation",
     response_model=ModerationListResponse,
@@ -1179,6 +1362,19 @@ def list_moderation_products(
     )
 
 
+@administracion_router.patch(
+    "/productos/{product_id}/visibilidad",
+    response_model=VisibilityUpdateResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Ocultar o mostrar un producto del catálogo general",
+)
+@administracion_router.patch("/products/{product_id}/visibility", response_model=VisibilityUpdateResponse, include_in_schema=False)
+@router.patch(
+    "/productos/{product_id}/visibilidad",
+    response_model=VisibilityUpdateResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 @router.patch(
     "/products/{product_id}/visibility",
     response_model=VisibilityUpdateResponse,
@@ -1208,6 +1404,19 @@ def update_product_visibility(
     )
 
 
+@administracion_router.post(
+    "/productos/visibilidad-lote",
+    response_model=VisibilityUpdateResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Ocultar o restaurar múltiples productos en lote",
+)
+@administracion_router.post("/products/bulk-visibility", response_model=VisibilityUpdateResponse, include_in_schema=False)
+@router.post(
+    "/productos/visibilidad-lote",
+    response_model=VisibilityUpdateResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 @router.post(
     "/products/bulk-visibility",
     response_model=VisibilityUpdateResponse,
@@ -1239,3 +1448,141 @@ def bulk_update_product_visibility(
         oculto_catalogo=bool(payload.oculto_catalogo),
         conteo_por_tienda=_compute_store_moderation_counts(db_session),
     )
+
+
+# --- DTOs y Endpoints de Gestión de Ambientes ---
+class EnvironmentInput(BaseModel):
+    id: str = Field(..., min_length=2, max_length=50)
+    nombre: str = Field(..., min_length=2, max_length=100)
+    descripcion: Optional[str] = Field(None, max_length=255)
+    tipo: str = Field("postgres", max_length=50)
+    connection_url: str = Field(..., min_length=5)
+    color_badge: str = Field("emerald", max_length=30)
+    activo: bool = True
+    es_protegido: bool = False
+
+
+class EnvironmentUpdateInput(BaseModel):
+    nombre: Optional[str] = Field(None, min_length=2, max_length=100)
+    descripcion: Optional[str] = Field(None, max_length=255)
+    tipo: Optional[str] = Field(None, max_length=50)
+    connection_url: Optional[str] = None
+    color_badge: Optional[str] = Field(None, max_length=30)
+    activo: Optional[bool] = None
+    es_protegido: Optional[bool] = None
+
+
+@administracion_router.get(
+    "/ambientes",
+    summary="Listar ambientes de base de datos configurados",
+)
+@router.get(
+    "/ambientes",
+    summary="Listar ambientes de base de datos configurados",
+    include_in_schema=False,
+)
+@router.get(
+    "/environments",
+    summary="Listar ambientes (alias EN)",
+    include_in_schema=False,
+)
+def list_environments_endpoint() -> List[Dict[str, Any]]:
+    from db.environments import EnvironmentManager
+    return EnvironmentManager.list_environments(mask_secrets=True)
+
+
+@administracion_router.get(
+    "/ambientes/{env_id}",
+    summary="Obtener detalle de un ambiente de base de datos",
+)
+@router.get(
+    "/ambientes/{env_id}",
+    include_in_schema=False,
+)
+def get_environment_endpoint(env_id: str) -> Dict[str, Any]:
+    from db.environments import EnvironmentManager
+    env = EnvironmentManager.get_environment(env_id)
+    if not env:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Ambiente '{env_id}' no encontrado.")
+    return env
+
+
+@administracion_router.post(
+    "/ambientes",
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear o actualizar un ambiente de base de datos",
+)
+@router.post(
+    "/ambientes",
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
+def save_environment_endpoint(payload: EnvironmentInput) -> Dict[str, Any]:
+    from db.environments import EnvironmentManager
+    try:
+        saved = EnvironmentManager.save_environment(payload.model_dump())
+        return {"status": "ok", "environment": saved}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@administracion_router.put(
+    "/ambientes/{env_id}",
+    summary="Editar un ambiente de base de datos existente",
+)
+@router.put(
+    "/ambientes/{env_id}",
+    include_in_schema=False,
+)
+def update_environment_endpoint(env_id: str, payload: EnvironmentUpdateInput) -> Dict[str, Any]:
+    from db.environments import EnvironmentManager
+    try:
+        data = payload.model_dump(exclude_unset=True)
+        updated = EnvironmentManager.update_environment(env_id, data)
+        return {"status": "ok", "environment": updated}
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@administracion_router.delete(
+    "/ambientes/{env_id}",
+    summary="Eliminar un ambiente de base de datos",
+)
+@router.delete(
+    "/ambientes/{env_id}",
+    include_in_schema=False,
+)
+def delete_environment_endpoint(env_id: str) -> Dict[str, Any]:
+    from db.environments import EnvironmentManager
+    try:
+        success = EnvironmentManager.delete_environment(env_id)
+        if not success:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Ambiente '{env_id}' no encontrado.")
+        return {"status": "ok", "deleted": env_id}
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+@administracion_router.post(
+    "/ambientes/{env_id}/probar",
+    summary="Probar conexión a un ambiente de base de datos",
+)
+@administracion_router.post(
+    "/ambientes/{env_id}/test",
+    include_in_schema=False,
+)
+@router.post(
+    "/ambientes/{env_id}/probar",
+    include_in_schema=False,
+)
+@router.post(
+    "/ambientes/{env_id}/test",
+    include_in_schema=False,
+)
+def test_environment_endpoint(env_id: str) -> Dict[str, Any]:
+    from db.environments import EnvironmentManager
+    result = EnvironmentManager.test_connection(env_id)
+    return result
+
