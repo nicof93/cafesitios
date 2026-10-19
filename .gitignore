@@ -16,4 +16,8 @@ plataforma-admin/.astro/
 node_modules/
 **/node_modules/
 ambientes.json
-.vercel/
+.vercel/
+*.db
+*.sqlite
+playwright-report/
+test-results/
