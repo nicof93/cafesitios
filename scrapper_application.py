@@ -13,6 +13,8 @@ if sys.platform == "win32":
     except Exception:
         pass
 
+from typing import Any, Dict, List, Optional, Union
+
 from db.database import DatabaseManager
 from scrapper.coffee_metadata import (
     extract_coffee_characteristics,
