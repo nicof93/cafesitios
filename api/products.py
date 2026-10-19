@@ -1,7 +1,7 @@
 import re
 from html import escape
 from html.parser import HTMLParser
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -18,6 +18,7 @@ from api.schemas import (
     CompareVariantItem,
     ProductMatchesResponse,
     ProductMatchItem,
+    ProductRecipeResponse,
     RecommendationResponse,
     RecommendationItem,
     WeeklyPriceDropsResponse,
@@ -28,7 +29,7 @@ from application.get_cheapest_products import GetCheapestProductsUseCase
 from application.compare_products import CompareProductsUseCase
 from application.recommend_products import RecommendProductsUseCase
 from application.get_weekly_price_drops import GetWeeklyPriceDropsUseCase
-from db.database import Producto, ProductoNotaCata, Tienda, Variante
+from db.database import Producto, ProductoNotaCata, Receta, Tienda, Variante
 from infrastructure.postgres_repository import PostgresCoffeeRepository
 
 router = APIRouter(prefix="/api/v1/products", tags=["Productos"])
@@ -549,7 +550,107 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
             }
             for variant in product.variantes
         ],
+        "recetas": [
+            {
+                "id": r.id,
+                "nombre_receta": r.nombre_receta,
+                "metodo": r.metodo,
+                "dosis_cafe_g": float(r.dosis_cafe_g),
+                "agua_ml": float(r.agua_ml),
+                "ratio": r.ratio,
+                "molino_usado": r.molino_usado,
+                "grosor_molienda": r.grosor_molienda,
+                "temperatura_c": r.temperatura_c,
+                "tiempo_total_s": r.tiempo_total_s,
+                "notas_catado": r.notas_catado,
+                "es_borrador": bool(getattr(r, "es_borrador", False)),
+                "pasos": r.pasos if isinstance(r.pasos, list) else None,
+                "autor_tipo": getattr(r, "autor_tipo", "tostaduria") or "tostaduria",
+                "tienda_nombre": r.tienda.nombre if r.tienda else product.tienda.nombre,
+                "fecha_creacion": r.fecha_creacion,
+            }
+            for r in (
+                db_session.query(Receta)
+                .options(joinedload(Receta.tienda))
+                .filter(
+                    Receta.producto_id == product.id,
+                    Receta.es_publica.is_(True),
+                    Receta.es_borrador.is_(False),
+                )
+                .order_by(Receta.fecha_creacion.desc())
+                .all()
+            )
+        ],
     }
+
+
+@productos_router.get(
+    "/{product_id}/recetas",
+    response_model=List[ProductRecipeResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Listar recetas públicas de preparación para este café",
+)
+@productos_router.get("/{product_id}/recipes", response_model=List[ProductRecipeResponse], include_in_schema=False)
+@router.get(
+    "/{product_id}/recetas",
+    response_model=List[ProductRecipeResponse],
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+@router.get(
+    "/{product_id}/recipes",
+    response_model=List[ProductRecipeResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Listar recetas públicas de preparación para este café",
+)
+def get_product_recipes(product_id: int, db_session: Session = Depends(get_db_session)) -> List[Dict[str, Any]]:
+    prod = (
+        db_session.query(Producto)
+        .filter(
+            Producto.id == product_id,
+            Producto.activo.is_(True),
+            Producto.oculto_catalogo.is_(False),
+        )
+        .first()
+    )
+    if prod is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Producto no encontrado",
+        )
+
+    recetas_db = (
+        db_session.query(Receta)
+        .options(joinedload(Receta.tienda))
+        .filter(
+            Receta.producto_id == product_id,
+            Receta.es_publica.is_(True),
+            Receta.es_borrador.is_(False),
+        )
+        .order_by(Receta.fecha_creacion.desc())
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "nombre_receta": r.nombre_receta,
+            "metodo": r.metodo,
+            "dosis_cafe_g": float(r.dosis_cafe_g),
+            "agua_ml": float(r.agua_ml),
+            "ratio": r.ratio,
+            "molino_usado": r.molino_usado,
+            "grosor_molienda": r.grosor_molienda,
+            "temperatura_c": r.temperatura_c,
+            "tiempo_total_s": r.tiempo_total_s,
+            "notas_catado": r.notas_catado,
+            "es_borrador": bool(getattr(r, "es_borrador", False)),
+            "pasos": r.pasos if isinstance(r.pasos, list) else None,
+            "autor_tipo": getattr(r, "autor_tipo", "tostaduria") or "tostaduria",
+            "tienda_nombre": r.tienda.nombre if r.tienda else None,
+            "fecha_creacion": r.fecha_creacion,
+        }
+        for r in recetas_db
+    ]
 
 
 @productos_router.get(
@@ -577,7 +678,11 @@ def get_product_matches(product_id: int, db_session: Session = Depends(get_db_se
     origin_prod = (
         db_session.query(Producto)
         .options(selectinload(Producto.variantes))
-        .filter(Producto.id == product_id, Producto.activo.is_(True))
+        .filter(
+            Producto.id == product_id,
+            Producto.activo.is_(True),
+            Producto.oculto_catalogo.is_(False),
+        )
         .first()
     )
     if origin_prod is None:
@@ -663,7 +768,7 @@ def get_cheapest_coffee_products(
         "kilo",
         description="Criterio de ordenamiento: 'kilo' ($/kg) o 'unit' (precio unitario en CLP)"
     ),
-    limit: int = Query(10, ge=1, le=50, description="Cantidad de productos a retornar (1-50)"),
+    limit: int = Query(10, ge=1, le=1000, description="Cantidad de productos a retornar (1-1000)"),
     offset: int = Query(0, ge=0, description="Desplazamiento / paginación para scroll infinito (offset)"),
     category: Optional[str] = Query("cafe", description="Filtrar por categoría: 'cafe' (predeterminado), 'no_cafe', o 'todos'"),
     only_available: bool = Query(True, description="Filtrar solo productos que tengan stock disponible"),
@@ -675,18 +780,18 @@ def get_cheapest_coffee_products(
     min_weight_g: Optional[int] = Query(None, ge=50, le=5000, description="Peso mínimo en gramos (ej. 200)"),
     max_weight_g: Optional[int] = Query(None, ge=50, le=5000, description="Peso máximo en gramos (ej. 300)"),
     search_query: Optional[str] = Query(None, description="Búsqueda por texto en el nombre del café (ej. 'Geisha')"),
-    min_price: Optional[int] = Query(None, ge=0, description="Precio unitario mínimo en CLP"),
-    max_price: Optional[int] = Query(None, ge=0, description="Precio unitario máximo en CLP"),
-    min_price_kilo: Optional[int] = Query(None, ge=0, description="Precio por kilo mínimo en CLP"),
-    max_price_kilo: Optional[int] = Query(None, ge=0, description="Precio por kilo máximo en CLP"),
-    process: Optional[str] = Query(None, min_length=1, max_length=255, description="Filtrar por proceso de beneficio"),
-    country: Optional[str] = Query(None, min_length=1, max_length=255, description="Filtrar por país de origen"),
-    pais_origen: Optional[str] = Query(None, min_length=1, max_length=255, description="Alias en español para país de origen"),
-    variety: Optional[str] = Query(None, min_length=1, max_length=255, description="Filtrar por variedad del café"),
-    variedad: Optional[str] = Query(None, min_length=1, max_length=255, description="Alias en español para variedad"),
-    notes: Optional[str] = Query(None, min_length=1, max_length=255, description="Filtrar por nota de cata"),
-    notas_cata: Optional[str] = Query(None, min_length=1, max_length=255, description="Alias en español para nota de cata"),
-    tasting_notes: Optional[str] = Query(None, min_length=1, max_length=255, description="Alias de nota de cata"),
+    min_price: Optional[Union[int, str]] = Query(None, description="Precio unitario mínimo en CLP"),
+    max_price: Optional[Union[int, str]] = Query(None, description="Precio unitario máximo en CLP"),
+    min_price_kilo: Optional[Union[int, str]] = Query(None, description="Precio por kilo mínimo en CLP"),
+    max_price_kilo: Optional[Union[int, str]] = Query(None, description="Precio por kilo máximo en CLP"),
+    process: Optional[str] = Query(None, max_length=255, description="Filtrar por proceso de beneficio"),
+    country: Optional[str] = Query(None, max_length=255, description="Filtrar por país de origen"),
+    pais_origen: Optional[str] = Query(None, max_length=255, description="Alias en español para país de origen"),
+    variety: Optional[str] = Query(None, max_length=255, description="Filtrar por variedad del café"),
+    variedad: Optional[str] = Query(None, max_length=255, description="Alias en español para variedad"),
+    notes: Optional[str] = Query(None, max_length=255, description="Filtrar por nota de cata"),
+    notas_cata: Optional[str] = Query(None, max_length=255, description="Alias en español para nota de cata"),
+    tasting_notes: Optional[str] = Query(None, max_length=255, description="Alias de nota de cata"),
     db_session: Session = Depends(get_db_session)
 ) -> PaginatedProductsResponse:
     try:
@@ -702,13 +807,37 @@ def get_cheapest_coffee_products(
         selected_stores = list(dict.fromkeys(raw_stores))
         store_filter_str = ",".join(selected_stores) if selected_stores else None
 
-        if country is None:
-            country = pais_origen
-        if variety is None:
-            variety = variedad
-        if notes is None:
-            notes = notas_cata or tasting_notes
-        categoria_filtro = None if category in ("todos", "all", "") else category
+        def _to_clean_str(val: Optional[str]) -> Optional[str]:
+            if val is None:
+                return None
+            s = str(val).strip()
+            return s if s else None
+
+        def _to_clean_int(val: Optional[Union[int, str]]) -> Optional[int]:
+            if val is None:
+                return None
+            if isinstance(val, int):
+                return val if val >= 0 else None
+            s = str(val).strip()
+            if not s:
+                return None
+            try:
+                parsed = int(s)
+                return parsed if parsed >= 0 else None
+            except (ValueError, TypeError):
+                return None
+
+        clean_search_query = _to_clean_str(search_query)
+        clean_process = _to_clean_str(process)
+        clean_country = _to_clean_str(country or pais_origen)
+        clean_variety = _to_clean_str(variety or variedad)
+        clean_notes = _to_clean_str(notes or notas_cata or tasting_notes)
+        clean_min_price = _to_clean_int(min_price)
+        clean_max_price = _to_clean_int(max_price)
+        clean_min_price_kilo = _to_clean_int(min_price_kilo)
+        clean_max_price_kilo = _to_clean_int(max_price_kilo)
+
+        categoria_filtro = None if category in ("todos", "all", "", None) else _to_clean_str(category)
 
         import api.router
         repo_cls = getattr(api.router, "PostgresCoffeeRepository", PostgresCoffeeRepository)
@@ -723,15 +852,15 @@ def get_cheapest_coffee_products(
             store_name=store_filter_str,
             min_weight_g=min_weight_g,
             max_weight_g=max_weight_g,
-            search_query=search_query,
-            min_price=min_price,
-            max_price=max_price,
-            process=process,
-            country=country,
-            variety=variety,
-            tasting_notes=notes,
-            min_price_kilo=min_price_kilo,
-            max_price_kilo=max_price_kilo,
+            search_query=clean_search_query,
+            min_price=clean_min_price,
+            max_price=clean_max_price,
+            process=clean_process,
+            country=clean_country,
+            variety=clean_variety,
+            tasting_notes=clean_notes,
+            min_price_kilo=clean_min_price_kilo,
+            max_price_kilo=clean_max_price_kilo,
             category=categoria_filtro,
         )
 
@@ -743,15 +872,15 @@ def get_cheapest_coffee_products(
                 store_name=store_filter_str,
                 min_weight_g=min_weight_g,
                 max_weight_g=max_weight_g,
-                search_query=search_query,
-                min_price=min_price,
-                max_price=max_price,
-                process=process,
-                country=country,
-                variety=variety,
-                tasting_notes=notes,
-                min_price_kilo=min_price_kilo,
-                max_price_kilo=max_price_kilo,
+                search_query=clean_search_query,
+                min_price=clean_min_price,
+                max_price=clean_max_price,
+                process=clean_process,
+                country=clean_country,
+                variety=clean_variety,
+                tasting_notes=clean_notes,
+                min_price_kilo=clean_min_price_kilo,
+                max_price_kilo=clean_max_price_kilo,
                 category=categoria_filtro,
             )
 
@@ -763,6 +892,7 @@ def get_cheapest_coffee_products(
                 url_detalle=prod.url_detalle,
                 imagen=prod.imagen,
                 categoria=getattr(prod, 'categoria', 'cafe'),
+                oculto_catalogo=bool(getattr(prod, 'oculto_catalogo', False)),
                 variante=VariantResponse(
                     id_externo=prod.variante_mas_barata.id_externo,
                     opcion=prod.variante_mas_barata.opcion,

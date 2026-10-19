@@ -23,6 +23,7 @@ class CheapestProductResponse(BaseModel):
     url_detalle: str
     imagen: Optional[str] = None
     categoria: str = "cafe"
+    oculto_catalogo: bool = False
     variante: VariantResponse
 
 
@@ -61,6 +62,25 @@ class ProductTastingNoteResponse(BaseModel):
     confianza: float
     version_extractor: str
 
+class ProductRecipeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    nombre_receta: str
+    metodo: str
+    dosis_cafe_g: float
+    agua_ml: float
+    ratio: Optional[str] = None
+    molino_usado: Optional[str] = None
+    grosor_molienda: Optional[str] = None
+    temperatura_c: Optional[int] = None
+    tiempo_total_s: Optional[int] = None
+    notas_catado: Optional[str] = None
+    es_borrador: bool = False
+    pasos: Optional[List[str]] = None
+    autor_tipo: str = "tostaduria"
+    tienda_nombre: Optional[str] = None
+    fecha_creacion: Optional[datetime] = None
+
 class ProductDetailResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -91,6 +111,7 @@ class ProductDetailResponse(BaseModel):
     caracteristicas_fuente: Dict[str, Any] = Field(default_factory=dict)
     notas_cata: List[ProductTastingNoteResponse] = Field(default_factory=list)
     variantes: List[ProductVariantDetailResponse]
+    recetas: List[ProductRecipeResponse] = Field(default_factory=list)
 
 # --- CU-03: Comparativa Side-by-Side ---
 class CompareVariantItem(BaseModel):

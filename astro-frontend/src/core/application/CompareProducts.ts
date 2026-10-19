@@ -24,7 +24,9 @@ export class CompareProductsUseCase {
       params: { ids: idsParam }
     });
 
-    const productos = (response.productos || []).map(p => new CoffeeProduct(p));
+    const productos = (response.productos || [])
+      .filter((p: any) => !p.oculto_catalogo)
+      .map(p => new CoffeeProduct(p));
     return {
       productos,
       total: response.total || productos.length

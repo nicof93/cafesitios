@@ -182,7 +182,7 @@
         const res = await fetch(`${apiBase}/api/v1/products?limit=50&category=cafe&only_available=false`);
         if (res.ok) {
           const json = await res.json();
-          cachedCatalog = json.data || [];
+          cachedCatalog = (json.data || []).filter((item: any) => !item.oculto_catalogo);
         }
       } catch (err) {
         console.warn('Error cargando catálogo para picker:', err);
@@ -195,7 +195,7 @@
     if (!pickerResultsList) return;
     const q = search.toLowerCase().trim();
     const filtered = cachedCatalog.filter((item) => {
-      if (Number(item.id) === baseProductId) return false;
+      if (item.oculto_catalogo || Number(item.id) === baseProductId) return false;
       if (!q) return true;
       return (
         item.nombre?.toLowerCase().includes(q) ||

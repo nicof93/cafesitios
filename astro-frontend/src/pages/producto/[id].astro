@@ -32,7 +32,8 @@ const currentPrice = bestVariant?.precio_clp || 0;
 const currentPriceKilo = bestVariant?.precio_por_kilo || 0;
 
 // Calcular métricas de precio histórico si existen
-const historicalPrices = bestVariant?.historial_precios?.map(h => h.precio_clp) || [currentPrice];
+const histPoints = (bestVariant?.historial_precios || []).map(h => h.precio_clp).filter(p => p > 0);
+const historicalPrices = histPoints.length > 0 ? histPoints : [currentPrice];
 const minHistorical = historicalPrices.length > 0 ? Math.min(...historicalPrices) : currentPrice;
 const avgHistorical = historicalPrices.length > 0 ? Math.round(historicalPrices.reduce((a, b) => a + b, 0) / historicalPrices.length) : currentPrice;
 
@@ -523,6 +524,105 @@ const captionText = product.descripcion_resumida
       </div>
     </section>
 
+    <!-- RECETAS OFICIALES RECOMENDADAS POR LA TOSTADURÍA -->
+    {product.recetas && product.recetas.length > 0 && (
+      <section class="bg-white p-6 sm:p-8 rounded-3xl border border-stone-200/80 shadow-2xs space-y-6">
+        <div class="border-b border-stone-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 class="text-base font-bold text-stone-900 flex items-center gap-2">
+              <span>☕</span>
+              <span>Guía y Receta de Preparación Oficial</span>
+              <span class="rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold px-2 py-0.5">
+                Recomendado por {product.tienda}
+              </span>
+            </h2>
+            <p class="text-xs text-stone-400 mt-0.5">
+              Parámetros de extracción calibrados directamente por el tostador para resaltar el mejor perfil de taza de este grano.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {product.recetas.map(rec => (
+            <div class="rounded-2xl border border-stone-200 bg-stone-50/50 p-5 space-y-4 hover:border-emerald-300 transition">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <span class="rounded-full bg-emerald-100 text-emerald-900 text-xs font-black px-2.5 py-0.5 inline-block">
+                    {rec.metodo}
+                  </span>
+                  <h3 class="text-sm font-black text-stone-900 mt-2">{rec.nombre_receta}</h3>
+                </div>
+                {rec.ratio && (
+                  <span class="text-xs font-black text-emerald-800 bg-white border border-emerald-200 px-2 py-1 rounded-xl shadow-2xs">
+                    Ratio {rec.ratio}
+                  </span>
+                )}
+              </div>
+
+              <!-- Parámetros clave -->
+              <div class="grid grid-cols-3 gap-2 bg-white p-3 rounded-xl border border-stone-100 text-center text-xs">
+                <div>
+                  <span class="text-[10px] uppercase font-bold text-stone-400 block">Dosis</span>
+                  <span class="font-black text-stone-900 text-sm">{rec.dosis_cafe_g}g</span>
+                </div>
+                <div>
+                  <span class="text-[10px] uppercase font-bold text-stone-400 block">Agua</span>
+                  <span class="font-black text-stone-900 text-sm">{rec.agua_ml}ml</span>
+                </div>
+                <div>
+                  <span class="text-[10px] uppercase font-bold text-stone-400 block">Temp.</span>
+                  <span class="font-black text-stone-900 text-sm">{rec.temperatura_c ? `${rec.temperatura_c}°C` : '92°C'}</span>
+                </div>
+              </div>
+
+              <!-- Parámetros secundarios -->
+              <div class="space-y-1.5 text-[11px] text-stone-600">
+                {rec.grosor_molienda && (
+                  <div class="flex items-center justify-between">
+                    <span class="text-stone-400">Molienda:</span>
+                    <span class="font-bold text-stone-800">{rec.grosor_molienda}</span>
+                  </div>
+                )}
+                {rec.molino_usado && (
+                  <div class="flex items-center justify-between">
+                    <span class="text-stone-400">Molino / Clicks:</span>
+                    <span class="font-bold text-stone-800">{rec.molino_usado}</span>
+                  </div>
+                )}
+                {rec.tiempo_total_s && (
+                  <div class="flex items-center justify-between">
+                    <span class="text-stone-400">Tiempo estimado:</span>
+                    <span class="font-bold text-stone-800">
+                      {Math.floor(rec.tiempo_total_s / 60)}:{String(rec.tiempo_total_s % 60).padStart(2, '0')} min
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {rec.notas_catado && (
+                <div class="bg-amber-50/70 border border-amber-200/60 rounded-xl p-3 text-[11px] text-amber-950 italic">
+                  💡 <span class="font-bold">Consejo del Tostador:</span> "{rec.notas_catado}"
+                </div>
+              )}
+
+              {rec.pasos && Array.isArray(rec.pasos) && rec.pasos.length > 0 && (
+                <div class="space-y-2 pt-2 border-t border-stone-200/60">
+                  <span class="text-[11px] font-bold uppercase tracking-wider text-stone-500 block">Paso a paso:</span>
+                  <ol class="space-y-1.5 text-xs text-stone-700 list-decimal list-inside pl-1">
+                    {rec.pasos.map((paso: string) => (
+                      <li class="leading-relaxed">
+                        <span class="font-normal text-stone-800">{paso}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
+
     <!-- CU-06: HISTÓRICO Y GRÁFICO DE PRECIOS CON MÉTRICAS SUPERIORES -->
     <section class="bg-white p-6 sm:p-8 rounded-3xl border border-stone-200/80 shadow-2xs space-y-6">
       
@@ -677,6 +777,14 @@ const captionText = product.descripcion_resumida
 </BaseLayout>
 
 <script is:inline define:vars={{ variantsJson, product }}>
+  window.variantsJson = variantsJson;
+  try {
+    window.__PRODUCT_VARIANTS__ = typeof variantsJson === 'string' ? JSON.parse(variantsJson) : variantsJson;
+  } catch (_) {
+    window.__PRODUCT_VARIANTS__ = [];
+  }
+  window.__PRODUCT__ = product;
+
   // Guardar en Vistos Recientemente (CU-10)
   try {
     const raw = localStorage.getItem('cafesitios_vistos_recientemente_v1');
@@ -714,7 +822,8 @@ const captionText = product.descripcion_resumida
   const btnUnit = document.getElementById('btn-chart-unit');
 
   // Datos serializados de variantes inyectados
-  const variantsRaw = (window as any).variantsJson ? JSON.parse((window as any).variantsJson) : [];
+  const variantsRaw = (window as any).__PRODUCT_VARIANTS__ 
+    || ((window as any).variantsJson ? (typeof (window as any).variantsJson === 'string' ? JSON.parse((window as any).variantsJson) : (window as any).variantsJson) : []);
   let currentVarIndex = 0;
   let chartMode: 'kilo' | 'unit' = 'kilo';
 

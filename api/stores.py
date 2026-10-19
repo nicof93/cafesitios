@@ -2,11 +2,11 @@ import math
 from typing import Any, Dict, List, Literal, Optional
 from fastapi import APIRouter, Depends, Header, Query, status
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import distinct, func, not_, or_
+from sqlalchemy import distinct, func, not_, or_, literal, String
 from sqlalchemy.orm import Session
 
 from api.dependencies import get_db_session
-from db.database import Producto, SucursalTienda, Tienda, Variante
+from db.database import Producto, SucursalTienda, Tienda, Variante, engine_has_tienda_column
 from domain.search_normalizer import NON_COFFEE_KEYWORDS_SQL
 
 router = APIRouter(prefix="/api/v1/stores", tags=["Tiendas"])
@@ -83,6 +83,7 @@ class StoreSummaryItem(BaseModel):
     latitud: Optional[float] = None
     longitud: Optional[float] = None
     distancia_km: Optional[float] = None
+    logo_url: Optional[str] = None
     sucursales: List[StoreBranchPublicItem] = []
 
 
@@ -160,6 +161,14 @@ def get_stores_summary(
 
     non_coffee_clauses = [Producto.nombre.ilike(f"%{kw}%") for kw in NON_COFFEE_KEYWORDS_SQL]
 
+    bind = db_session.get_bind()
+    has_logo = engine_has_tienda_column(bind, "logo_url")
+    logo_col = Tienda.logo_url.label("logo_url") if has_logo else literal(None, type_=String).label("logo_url")
+
+    group_cols = [Tienda.id, Tienda.nombre, Tienda.url_base, Tienda.comuna, Tienda.latitud, Tienda.longitud]
+    if has_logo:
+        group_cols.append(Tienda.logo_url)
+
     query = (
         db_session.query(
             Tienda.nombre.label("nombre"),
@@ -167,6 +176,7 @@ def get_stores_summary(
             Tienda.comuna.label("comuna"),
             Tienda.latitud.label("latitud"),
             Tienda.longitud.label("longitud"),
+            logo_col,
             func.count(distinct(Producto.id)).label("cantidad_productos")
         )
         .join(Producto, Producto.tienda_id == Tienda.id)
@@ -178,7 +188,7 @@ def get_stores_summary(
             not_(or_(*non_coffee_clauses)),
             Variante.disponible == True,
         )
-        .group_by(Tienda.id, Tienda.nombre, Tienda.url_base, Tienda.comuna, Tienda.latitud, Tienda.longitud)
+        .group_by(*group_cols)
     )
 
     if filter_comuna and not user_lat:
@@ -229,6 +239,7 @@ def get_stores_summary(
             "url_web": official_site,
             "sitio_oficial": official_site,
             "cantidad_productos": row.cantidad_productos,
+            "logo_url": getattr(row, "logo_url", None),
             "sucursales": sucursales_por_nombre.get(row.nombre, []),
         }
         if row.comuna:

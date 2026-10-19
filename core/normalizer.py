@@ -322,12 +322,72 @@ def calcular_precio_kilo(
       round((precio_clp / formato_gramos) * 1000, 2) y es_estimado = True.
     - Si faltan datos válidos, retorna (0.0, True).
     """
-    if unit_price is not None and float(unit_price) > 0:
-        return round(float(unit_price), 2), False
+    if unit_price is not None:
+        try:
+            up = float(unit_price)
+            if up > 0:
+                if up >= 100000000.0:
+                    up = 99999999.99
+                return round(up, 2), False
+        except (ValueError, TypeError):
+            pass
 
     if precio_clp > 0 and formato_gramos > 0:
-        precio_calculado = round((float(precio_clp) / float(formato_gramos)) * 1000.0, 2)
-        return precio_calculado, True
+        precio_calculado = (float(precio_clp) / float(formato_gramos)) * 1000.0
+        if precio_calculado >= 100000000.0:
+            precio_calculado = 99999999.99
+        return round(precio_calculado, 2), True
 
     return 0.0, True
+
+
+class CoffeeDataNormalizer:
+    @staticmethod
+    def extraer_gramos(texto: Optional[str], default: int = 250) -> int:
+        if not texto:
+            return default
+        match = re.search(
+            r'(\d+(?:\.\d+)?)\s*[-_]?\s*(g|gr|grs|gramos|k|kg|kgs|kilo|kilos)\b',
+            str(texto),
+            re.IGNORECASE,
+        )
+        if match:
+            valor = float(match.group(1))
+            unidad = match.group(2).lower()
+            return int(valor * 1000) if unidad in ['k', 'kg', 'kgs', 'kilo', 'kilos'] else int(valor)
+        return default
+
+    @staticmethod
+    def calcular_precio_por_kilo(precio_clp: int, formato_gramos: int) -> float:
+        if formato_gramos > 0 and precio_clp > 0:
+            val = (precio_clp / formato_gramos) * 1000
+            if val >= 100000000.0:
+                val = 99999999.99
+            return round(val, 2)
+        return 0.0
+
+    @classmethod
+    def normalizar_oferta(
+        cls,
+        nombre_producto: str,
+        precio_actual: int,
+        formato_gramos: Optional[int],
+        link_detalle: str,
+        imagen_url: Optional[str] = None,
+        disponible: bool = True,
+        plataforma: str = "desconocida",
+    ) -> Dict[str, Any]:
+        gramos = int(formato_gramos) if formato_gramos and formato_gramos > 0 else 250
+        precio = int(precio_actual) if precio_actual and precio_actual > 0 else 0
+        precio_kilo = cls.calcular_precio_por_kilo(precio, gramos)
+        return {
+            "nombre_producto": str(nombre_producto or "").strip(),
+            "precio_actual": precio,
+            "formato_gramos": gramos,
+            "precio_por_kilo": precio_kilo,
+            "link_detalle": str(link_detalle or "").strip(),
+            "imagen_url": str(imagen_url or "").strip(),
+            "disponible": bool(disponible),
+            "plataforma": str(plataforma or "").strip().lower(),
+        }
 

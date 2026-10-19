@@ -61,7 +61,9 @@ export class GetCatalogUseCase {
       params: queryParams
     });
 
-    const items = (response.data || []).map(p => new CoffeeProduct(p));
+    const items = (response.data || [])
+      .filter((p: any) => !p.oculto_catalogo)
+      .map(p => new CoffeeProduct(p));
     return {
       items,
       total: response.total_items || items.length

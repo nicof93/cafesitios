@@ -86,13 +86,13 @@ try {
   if (isOfertas) {
     if (weeklyRes.status === 'fulfilled' && weeklyRes.value?.ofertas?.length) {
       const weeklyIds = new Set(weeklyRes.value.ofertas.map((o: any) => Number(o.producto_id)));
-      const filtered = items.filter(p => weeklyIds.has(Number(p.id)) || p.variante?.en_oferta);
+      const filtered = items.filter(p => !p.oculto_catalogo && (weeklyIds.has(Number(p.id)) || p.variante?.en_oferta));
       if (filtered.length > 0) {
         items = filtered;
         totalItems = filtered.length;
       }
     } else {
-      items = items.filter(p => p.variante?.en_oferta);
+      items = items.filter(p => !p.oculto_catalogo && p.variante?.en_oferta);
       totalItems = items.length;
     }
   }
@@ -569,25 +569,44 @@ const jsonLdCatalog = {
       spinner?.classList.add('flex');
 
       try {
-        const params = new URLSearchParams({
-          limit: String(limit),
-          offset: String(currentLoaded),
-          sort_by: grid.getAttribute('data-sort') || 'kilo',
-          category: grid.getAttribute('data-category') || 'cafe',
-          search_query: grid.getAttribute('data-search') || '',
-          store_name: grid.getAttribute('data-store') || '',
-          country: grid.getAttribute('data-country') || '',
-          process: grid.getAttribute('data-process') || '',
-          variety: grid.getAttribute('data-variety') || '',
-          notes: grid.getAttribute('data-notes') || '',
-          min_price: grid.getAttribute('data-min-price') || '',
-          max_price: grid.getAttribute('data-max-price') || ''
-        });
+        const params = new URLSearchParams();
+        params.set('limit', String(limit));
+        params.set('offset', String(currentLoaded));
+        
+        const sortBy = grid.getAttribute('data-sort');
+        if (sortBy) params.set('sort_by', sortBy);
+        
+        const category = grid.getAttribute('data-category');
+        if (category) params.set('category', category);
+        
+        const search = grid.getAttribute('data-search');
+        if (search) params.set('search_query', search);
+        
+        const store = grid.getAttribute('data-store');
+        if (store) params.set('store_name', store);
+        
+        const country = grid.getAttribute('data-country');
+        if (country) params.set('country', country);
+        
+        const process = grid.getAttribute('data-process');
+        if (process) params.set('process', process);
+        
+        const variety = grid.getAttribute('data-variety');
+        if (variety) params.set('variety', variety);
+        
+        const notes = grid.getAttribute('data-notes');
+        if (notes) params.set('notes', notes);
+        
+        const minPrice = grid.getAttribute('data-min-price');
+        if (minPrice) params.set('min_price', minPrice);
+        
+        const maxPrice = grid.getAttribute('data-max-price');
+        if (maxPrice) params.set('max_price', maxPrice);
 
         const res = await fetch(`/api/v1/products?${params.toString()}`);
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         const json = await res.json();
-        const newProducts = json.data || json.items || [];
+        const newProducts = (json.data || json.items || []).filter((p: any) => !p.oculto_catalogo);
 
         if (newProducts.length > 0) {
           const tempDiv = document.createElement('div');
