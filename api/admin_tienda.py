@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import math
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
@@ -22,6 +22,7 @@ from db.database import (
     AuditoriaAccionesTienda,
     DatabaseManager,
     HistorialPrecio,
+    PedidoWhatsApp,
     Producto,
     Receta,
     Sincronizacion,
@@ -75,6 +76,29 @@ class StoreAdminProfileResponse(BaseModel):
     total_productos: int = 0
     cooldown_sync_segundos: int = 0
     logo_url: Optional[str] = None
+    telefono_whatsapp: Optional[str] = None
+
+
+class StoreWhatsAppConfigRequest(BaseModel):
+    telefono_whatsapp: Optional[str] = Field(default=None, max_length=50)
+
+
+class StoreWhatsAppOrderOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    tienda_id: int
+    dispositivo_uuid: str
+    monto_total_clp: int
+    items: List[Dict[str, Any]]
+    estado: str
+    fecha_creacion: datetime
+
+
+class StoreWhatsAppMetricsOutput(BaseModel):
+    ventas_whatsapp_30d: int
+    total_pedidos_30d: int
+    incremento_estimado_clp: int
+    texto_proyeccion: str
 
 
 class StoreProductVariantInput(BaseModel):
@@ -405,6 +429,7 @@ def get_store_profile(
         total_productos=total_prods,
         cooldown_sync_segundos=cooldown_secs,
         logo_url=getattr(t, "logo_url", None),
+        telefono_whatsapp=getattr(t, "telefono_whatsapp", None),
     )
 
 
@@ -1093,4 +1118,105 @@ def delete_store_recipe(
     )
     db_session.commit()
     return {"status": "success", "message": "Receta eliminada correctamente."}
+
+
+# --- GESTIÓN DE PEDIDOS Y VENTAS POR WHATSAPP (MERCHANT) ---
+
+@router.put(
+    "/whatsapp/config",
+    summary="Actualizar número de WhatsApp comercial de la tostaduría",
+)
+def update_store_whatsapp_config(
+    payload: StoreWhatsAppConfigRequest,
+    request: Request,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    tienda = db_session.get(Tienda, ctx.tienda_id)
+    if not tienda:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tienda no encontrada.")
+
+    val = payload.telefono_whatsapp
+    if val:
+        val = val.strip()
+        cleaned = ("+" if val.startswith("+") else "") + "".join(c for c in val if c.isdigit())
+        tienda.telefono_whatsapp = cleaned or None
+    else:
+        tienda.telefono_whatsapp = None
+
+    db_session.commit()
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="ACTUALIZAR_WHATSAPP_CONFIG",
+        entidad="tiendas",
+        entidad_id=ctx.tienda_id,
+        valores_nuevos={"telefono_whatsapp": tienda.telefono_whatsapp},
+        ip_origen=get_client_ip(request),
+    )
+    return {
+        "status": "success",
+        "telefono_whatsapp": tienda.telefono_whatsapp,
+        "mensaje": "Número de WhatsApp comercial actualizado correctamente.",
+    }
+
+
+@router.get(
+    "/whatsapp/pedidos",
+    response_model=List[StoreWhatsAppOrderOutput],
+    summary="Listado de pedidos enviados vía WhatsApp por usuarios a esta tostaduría",
+)
+def list_store_whatsapp_orders(
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> List[StoreWhatsAppOrderOutput]:
+    pedidos = db_session.scalars(
+        select(PedidoWhatsApp)
+        .where(PedidoWhatsApp.tienda_id == ctx.tienda_id)
+        .order_by(PedidoWhatsApp.fecha_creacion.desc())
+    ).all()
+    return pedidos
+
+
+@router.get(
+    "/whatsapp/metricas",
+    response_model=StoreWhatsAppMetricsOutput,
+    summary="Métricas de ventas solicitadas por WhatsApp y proyección financiera",
+)
+def get_store_whatsapp_metrics(
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> StoreWhatsAppMetricsOutput:
+    since_30d = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
+
+    stmt = (
+        select(
+            func.coalesce(func.sum(PedidoWhatsApp.monto_total_clp), 0).label("total_monto"),
+            func.count(PedidoWhatsApp.id).label("total_pedidos"),
+        )
+        .where(
+            PedidoWhatsApp.tienda_id == ctx.tienda_id,
+            PedidoWhatsApp.fecha_creacion >= since_30d,
+        )
+    )
+    row = db_session.execute(stmt).one()
+    total_monto_int = int(row[0] or 0)
+    total_pedidos_int = int(row[1] or 0)
+    incremento_estimado = round(total_monto_int * 0.18)
+
+    monto_fmt = f"{total_monto_int:,.0f}".replace(",", ".")
+    texto = (
+        f"Tus clientes han solicitado ${monto_fmt} CLP en pedidos por WhatsApp este mes. "
+        "Si gestionaras los pagos directamente en la plataforma con la futura pasarela Cafesitios, "
+        "podrías aumentar tu tasa de conversión en un 18% estimado y automatizar la confirmación de inventario."
+    )
+
+    return StoreWhatsAppMetricsOutput(
+        ventas_whatsapp_30d=total_monto_int,
+        total_pedidos_30d=total_pedidos_int,
+        incremento_estimado_clp=incremento_estimado,
+        texto_proyeccion=texto,
+    )
+
 

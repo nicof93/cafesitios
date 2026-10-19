@@ -29,6 +29,7 @@ export class AnalyticsTracker {
 
   private static sendBeacon(eventType: string, metadata: Record<string, unknown> = {}): void {
     if (typeof window === 'undefined' || !navigator.sendBeacon) return;
+    if (typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || process.env.VITEST)) return;
 
     try {
       const url = `${Environment.getApiBaseUrl()}/api/v1/telemetry/event`;
@@ -125,6 +126,41 @@ export class AnalyticsTracker {
   static trackFeedbackSubmitted(category: string): void {
     this.sendToDataLayer('feedback_submitted', {
       category: category
+    });
+  }
+
+  // --- EVENTOS TELEMETRÍA CARRITO WHATSAPP (SECCIÓN 5) ---
+
+  static trackAddToCart(item: { itemName: string; price: number; storeName: string; productId?: number | string }): void {
+    this.sendToDataLayer('add_to_cart', {
+      item_name: item.itemName,
+      price: item.price,
+      store_name: item.storeName,
+      item_id: item.productId,
+    });
+  }
+
+  static trackRemoveFromCart(item: { itemName: string; storeName: string; productId?: number | string }): void {
+    this.sendToDataLayer('remove_from_cart', {
+      item_name: item.itemName,
+      store_name: item.storeName,
+      item_id: item.productId,
+    });
+  }
+
+  static trackViewCart(itemsCount: number, storesCount: number): void {
+    this.sendToDataLayer('view_cart', {
+      items_count: itemsCount,
+      stores_count: storesCount,
+    });
+  }
+
+  static trackGenerateWhatsAppOrder(payload: { totalClp: number; itemsCount: number; storeId: number | string; storeName: string }): void {
+    this.sendToDataLayer('generate_whatsapp_order', {
+      total_clp: payload.totalClp,
+      items_count: payload.itemsCount,
+      store_id: payload.storeId,
+      store_name: payload.storeName,
     });
   }
 }

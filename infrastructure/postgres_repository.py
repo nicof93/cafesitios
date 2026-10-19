@@ -233,6 +233,8 @@ class PostgresCoffeeRepository(ICoffeeRepository):
                 variante_mas_barata=variante_dom,
                 categoria=classify_product_category(prod.nombre),
                 oculto_catalogo=bool(getattr(prod, 'oculto_catalogo', False)),
+                tienda_id=tienda.id,
+                tienda_telefono_whatsapp=getattr(tienda, 'telefono_whatsapp', None),
             )
             productos_dominio.append(prod_dom)
 

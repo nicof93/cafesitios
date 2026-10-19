@@ -19,6 +19,8 @@ class CheapestProductResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     tienda: str
+    tienda_id: Optional[int] = None
+    tienda_telefono_whatsapp: Optional[str] = None
     nombre: str
     url_detalle: str
     imagen: Optional[str] = None
@@ -85,6 +87,8 @@ class ProductDetailResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     tienda: str
+    tienda_id: Optional[int] = None
+    tienda_telefono_whatsapp: Optional[str] = None
     tienda_url: str
     tienda_sitio_oficial: Optional[str] = None
     sitio_oficial: Optional[str] = None

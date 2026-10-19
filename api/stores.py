@@ -71,7 +71,9 @@ class StoreBranchPublicItem(BaseModel):
 
 class StoreSummaryItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+    id: Optional[int] = None
     nombre: str
+    telefono_whatsapp: Optional[str] = None
     url_base: Optional[str] = None
     url_catalogo: Optional[str] = None
     url_web: Optional[str] = None
@@ -165,17 +167,24 @@ def get_stores_summary(
     has_logo = engine_has_tienda_column(bind, "logo_url")
     logo_col = Tienda.logo_url.label("logo_url") if has_logo else literal(None, type_=String).label("logo_url")
 
+    has_whatsapp = engine_has_tienda_column(bind, "telefono_whatsapp")
+    whatsapp_col = Tienda.telefono_whatsapp.label("telefono_whatsapp") if has_whatsapp else literal(None, type_=String).label("telefono_whatsapp")
+
     group_cols = [Tienda.id, Tienda.nombre, Tienda.url_base, Tienda.comuna, Tienda.latitud, Tienda.longitud]
     if has_logo:
         group_cols.append(Tienda.logo_url)
+    if has_whatsapp:
+        group_cols.append(Tienda.telefono_whatsapp)
 
     query = (
         db_session.query(
+            Tienda.id.label("id"),
             Tienda.nombre.label("nombre"),
             Tienda.url_base.label("url_base"),
             Tienda.comuna.label("comuna"),
             Tienda.latitud.label("latitud"),
             Tienda.longitud.label("longitud"),
+            whatsapp_col,
             logo_col,
             func.count(distinct(Producto.id)).label("cantidad_productos")
         )
@@ -233,7 +242,9 @@ def get_stores_summary(
 
         official_site = extract_official_website(row.url_base)
         item_dict: Dict[str, Any] = {
+            "id": getattr(row, "id", None),
             "nombre": row.nombre,
+            "telefono_whatsapp": getattr(row, "telefono_whatsapp", None),
             "url_base": row.url_base,
             "url_catalogo": row.url_base,
             "url_web": official_site,

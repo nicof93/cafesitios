@@ -8,6 +8,7 @@ export interface StoreProps {
   longitud?: number;
   cantidad_productos: number;
   distancia_km?: number;
+  telefono_whatsapp?: string;
   activa?: boolean;
 }
 
@@ -21,6 +22,7 @@ export class Store {
   readonly longitud?: number;
   readonly cantidad_productos: number;
   readonly distancia_km?: number;
+  readonly telefono_whatsapp?: string;
   readonly activa: boolean;
 
   constructor(props: StoreProps) {
@@ -33,6 +35,7 @@ export class Store {
     this.longitud = props.longitud;
     this.cantidad_productos = props.cantidad_productos || 0;
     this.distancia_km = props.distancia_km;
+    this.telefono_whatsapp = props.telefono_whatsapp;
     this.activa = props.activa !== undefined ? props.activa : true;
   }
 }

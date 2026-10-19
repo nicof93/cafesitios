@@ -487,6 +487,8 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
     return {
         "id": product.id,
         "tienda": tienda_nombre,
+        "tienda_id": product.tienda.id if product.tienda else None,
+        "tienda_telefono_whatsapp": getattr(product.tienda, "telefono_whatsapp", None) if product.tienda else None,
         "tienda_url": official_store_url,
         "tienda_sitio_oficial": official_store_url,
         "sitio_oficial": official_store_url,
@@ -888,6 +890,8 @@ def get_cheapest_coffee_products(
             CheapestProductResponse(
                 id=prod.id,
                 tienda=prod.tienda,
+                tienda_id=getattr(prod, 'tienda_id', None),
+                tienda_telefono_whatsapp=getattr(prod, 'tienda_telefono_whatsapp', None),
                 nombre=prod.nombre,
                 url_detalle=prod.url_detalle,
                 imagen=prod.imagen,

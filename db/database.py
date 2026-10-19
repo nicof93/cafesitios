@@ -37,12 +37,14 @@ class Tienda(Base):
     longitud = Column(Numeric(11, 8), nullable=True)
     comuna = Column(String(100), nullable=True)
     logo_url = Column(String(500), nullable=True)
+    telefono_whatsapp = Column(String(50), nullable=True)
     fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
     fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
     productos = relationship("Producto", back_populates="tienda", cascade="all, delete-orphan")
     sincronizaciones = relationship("Sincronizacion", back_populates="tienda", cascade="all, delete-orphan")
     sucursales = relationship("SucursalTienda", back_populates="tienda", cascade="all, delete-orphan")
     catalogos = relationship("TiendaCatalogo", back_populates="tienda", cascade="all, delete-orphan")
+    pedidos_whatsapp = relationship("PedidoWhatsApp", back_populates="tienda", cascade="all, delete-orphan")
 
 
 class TiendaCatalogo(Base):
@@ -75,6 +77,25 @@ class SucursalTienda(Base):
     fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
     fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
     tienda = relationship("Tienda", back_populates="sucursales")
+
+
+class PedidoWhatsApp(Base):
+    __tablename__ = 'pedidos_whatsapp'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tienda_id = Column(Integer, ForeignKey('tiendas.id', ondelete='CASCADE'), nullable=False, index=True)
+    dispositivo_uuid = Column(String(100), nullable=False, index=True)
+    monto_total_clp = Column(Integer, nullable=False, default=0, server_default='0')
+    items = Column(JSON, nullable=False)
+    estado = Column(String(50), nullable=False, default='ENVIADO', server_default='ENVIADO')
+    ip_origen = Column(String(50), nullable=True)
+    fecha_creacion = Column(DateTime, nullable=False, default=_utcnow, server_default=text("CURRENT_TIMESTAMP"))
+
+    tienda = relationship("Tienda", back_populates="pedidos_whatsapp")
+
+    __table_args__ = (
+        Index('idx_pedidos_whatsapp_tienda_fecha', 'tienda_id', 'fecha_creacion'),
+        Index('idx_pedidos_whatsapp_dispositivo', 'dispositivo_uuid'),
+    )
 
 
 class NotaCata(Base):
@@ -364,15 +385,17 @@ def _handle_missing_columns_in_remote_schemas(orm_execute_state):
             if isinstance(d, dict) and d.get("expr") is d.get("entity")
         ]
 
-        # 1. Tienda (logo_url)
+        # 1. Tienda (logo_url, telefono_whatsapp)
         tiendas_cols = engine_get_columns(bind, 'tiendas')
-        if tiendas_cols and "logo_url" not in tiendas_cols:
-            if Tienda in entities:
-                orm_execute_state.statement = orm_execute_state.statement.options(defer(Tienda.logo_url))
-            elif Producto in entities:
-                orm_execute_state.statement = orm_execute_state.statement.options(
-                    defaultload(Producto.tienda).defer(Tienda.logo_url)
-                )
+        if tiendas_cols:
+            for t_col in ["logo_url", "telefono_whatsapp"]:
+                if t_col not in tiendas_cols:
+                    if Tienda in entities:
+                        orm_execute_state.statement = orm_execute_state.statement.options(defer(getattr(Tienda, t_col)))
+                    elif Producto in entities:
+                        orm_execute_state.statement = orm_execute_state.statement.options(
+                            defaultload(Producto.tienda).defer(getattr(Tienda, t_col))
+                        )
 
         # 2. UsuarioTienda (password_hash, debe_cambiar_password)
         users_cols = engine_get_columns(bind, 'usuarios_tienda')
@@ -398,9 +421,11 @@ def _handle_missing_columns_in_remote_schemas(orm_execute_state):
 
 @event.listens_for(Tienda, "load")
 def _receive_tienda_load_fallback(target, context):
-    """Asigna None si logo_url no fue seleccionada por diferimiento en esquemas no migrados."""
+    """Asigna None si logo_url o telefono_whatsapp no fueron seleccionadas por diferimiento en esquemas no migrados."""
     if "logo_url" not in target.__dict__:
         target.__dict__["logo_url"] = None
+    if "telefono_whatsapp" not in target.__dict__:
+        target.__dict__["telefono_whatsapp"] = None
 
 
 @event.listens_for(UsuarioTienda, "load")

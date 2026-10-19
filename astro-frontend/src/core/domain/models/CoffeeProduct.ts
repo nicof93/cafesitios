@@ -42,6 +42,8 @@ export interface CoffeeProductProps {
   descripcion_resumida?: string;
   resumen_corto?: string;
   fecha_actualizacion?: string;
+  tienda_id?: number;
+  tienda_telefono_whatsapp?: string;
   recetas?: ProductRecipe[];
   oculto_catalogo?: boolean;
 }
@@ -50,6 +52,8 @@ export class CoffeeProduct {
   readonly id: number;
   readonly nombre: string;
   readonly tienda: string;
+  readonly tienda_id?: number;
+  readonly tienda_telefono_whatsapp?: string;
   readonly url_detalle: string;
   readonly imagen: string;
   readonly categoria: string;
@@ -74,6 +78,8 @@ export class CoffeeProduct {
     this.id = props.id;
     this.nombre = props.nombre;
     this.tienda = props.tienda;
+    this.tienda_id = props.tienda_id;
+    this.tienda_telefono_whatsapp = props.tienda_telefono_whatsapp;
     this.url_detalle = props.url_detalle;
     this.imagen = props.imagen || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop';
     this.categoria = props.categoria || 'cafe';
