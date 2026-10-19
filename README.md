@@ -164,14 +164,23 @@ Configura el secreto en tu repositorio de GitHub (`Settings -> Secrets and varia
 
 ## 📌 Endpoints Principales de la API
 
-| Método | Endpoint | Descripción |
-| :--- | :--- | :--- |
-| `GET` | `/` | Healthcheck de la API. |
-| `GET` | `/api/v1/products` | Catálogo paginado con filtros de origen, proceso, variedad, rango de precio y notas. |
-| `GET` | `/api/v1/products/cheapest` | Productos ordenados por precio por kilo (`$/kg`) o precio unitario. |
-| `GET` | `/api/v1/products/{id}/detail` | Ficha técnica completa, variantes e historial temporal de precios. |
-| `GET` | `/api/v1/stores` | Directorio paginado de tostadurías activas y sucursales. |
-| `GET` | `/api/v1/sync/last` | Estado y métricas de la última sincronización. |
-| `POST` | `/api/v1/admin-tienda/login` | Autenticación multi-tenant para administradores de tostadurías. |
-| `GET/POST`| `/api/v1/admin-tienda/productos` | Gestión aislada de catálogo para la tostaduría autenticada. |
-| `GET` | `/api/v1/admin-tienda/auditoria` | Registro de auditoría de modificaciones de la tienda. |
+La API cuenta con endpoints canónicos en español y alias transparentes en inglés para garantizar total retrocompatibilidad:
+
+| Método | Endpoint Canónico (ES) | Alias Retrocompatible (EN) | Descripción |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/` | `/` | Healthcheck de la API. |
+| `GET` | `/api/v1/productos` | `/api/v1/products` (`/cheapest`) | Catálogo paginado con filtros de origen, proceso, variedad, rango de precio, notas y ordenamiento por `$/kg`. |
+| `GET` | `/api/v1/productos/comparar` | `/api/v1/products/compare` | Comparador side-by-side de hasta 4 cafés (atributos técnicos y organolépticos). |
+| `GET` | `/api/v1/productos/recomendar` | `/api/v1/products/recommend` | Recomendador interactivo / Quiz de afinidad por método de preparación y perfil. |
+| `GET` | `/api/v1/productos/{id}/detalle` | `/api/v1/products/{id}/detail` | Ficha técnica completa, variantes e historial temporal de precios. |
+| `GET` | `/api/v1/productos/ofertas-semana` | `/api/v1/products/ofertas-semana` | Mayores rebajas de precio verificadas en los últimos 7 días. |
+| `GET` | `/api/v1/tiendas` | `/api/v1/stores` | Directorio paginado de tostadurías activas y sucursales con cercanía geográfica. |
+| `GET` | `/api/v1/sincronizacion/ultima` | `/api/v1/sync/last` | Marca temporal y estado de la última sincronización del scraper. |
+| `GET` | `/api/v1/sincronizacion/resumen` | `/api/v1/sync/summary` | Resumen de novedades, productos agregados y variaciones de precio. |
+| `GET` | `/api/v1/sincronizacion/mercado` | `/api/v1/sync/market` | Estadísticas agregadas del mercado de café (precios promedio, distribución de tueste y procesos). |
+| `POST` | `/api/v1/sugerencias` | `/api/v1/feedback` | Envío anónimo y seguro de sugerencias con rate limiting y honeypot anti-bot. |
+| `POST` | `/api/v1/telemetria/evento` | `/api/v1/telemetry/event` | Registro anónimo de clics hacia tiendas externas e interacciones. |
+| `GET` | `/api/v1/recetas` | — | Guías y recetas interactivas de barismo según método de extracción. |
+| `POST` | `/api/v1/admin-tienda/login` | — | Autenticación multi-tenant (RBAC) para tostadurías asociadas. |
+| `GET/POST`| `/api/v1/admin-tienda/productos` | — | Gestión del catálogo de la tostaduría autenticada. |
+| `GET` | `/api/v1/administracion/tiendas` | `/api/v1/admin/stores` | Administración local de tostadurías, sincronización manual y moderación. |

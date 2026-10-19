@@ -53,17 +53,23 @@ cafe-sitios/
 ├── infrastructure/          # Adaptadores E/S y Persistencia
 │   └── postgres_repository.py # Implementación SQLAlchemy 2.0 de ProductRepository
 ├── api/                     # Capa HTTP (FastAPI)
-│   ├── router.py            # Orquestador de rutas (/api/v1/...)
-│   ├── products.py          # Catálogo público y comparador
-│   ├── stores.py            # Directorio de tiendas y sucursales
-│   ├── admin_tienda.py      # Panel multi-inquilino para tostadurías (RBAC)
+│   ├── router.py            # Orquestador y re-exportador de rutas (ES canónico / EN alias)
+│   ├── products.py          # Catálogo (/api/v1/productos, alias /api/v1/products) y comparador
+│   ├── stores.py            # Directorio de tiendas y sucursales (/api/v1/tiendas, alias /stores)
+│   ├── sync.py              # Métricas y analítica (/api/v1/sincronizacion, alias /sync)
+│   ├── recipes.py           # Guías de preparación (/api/v1/recetas)
+│   ├── feedback.py          # Sugerencias (/api/v1/sugerencias, alias /feedback)
+│   ├── telemetry.py         # Registro anónimo de clics (/api/v1/telemetria, alias /telemetry)
+│   ├── admin.py             # Herramientas administrativas (/api/v1/administracion, alias /admin)
+│   ├── admin_tienda.py      # Panel multi-inquilino para tostadurías (RBAC / Tenancy)
 │   └── schemas.py           # DTOs de entrada y salida Pydantic v2
 ├── db/                      # Configuración de BD y Modelos ORM
 │   ├── config.py            # Carga de variables de entorno (.env)
 │   └── database.py          # Tablas SQLAlchemy (DeclarativeBase) y DatabaseManager
 ├── migrations/versions/     # Migraciones de base de datos con Alembic
 ├── scrapper/                # Drivers ETL (Shopify JSON / WooCommerce Store API)
-├── astro-frontend/          # Frontend SSR / SSG en Astro + Tailwind
+├── astro-frontend/          # Frontend Público (SSR / Edge CDN en Vercel) y Portal de Tiendas
+├── plataforma-admin/        # Administrador Local Multi-Ambiente y Bitácora Barista (/plataforma en :4322)
 ├── tests/                   # Pruebas automatizadas con unittest
 ├── scrapper_application.py  # Entrypoint ETL / Sincronización
 └── main.py                  # Entrypoint API FastAPI
@@ -79,6 +85,7 @@ Todos los comandos se ejecutan desde la raíz del proyecto.
    ```powershell
    python -m unittest tests/test_database.py
    python -m unittest tests/test_api.py
+   python -m unittest tests/test_multi_environment_admin.py
    python -m unittest tests/test_store_admin_multi_tenant.py
    python -m unittest tests/test_weekly_price_drops.py
    ```
@@ -91,6 +98,8 @@ Todos los comandos se ejecutan desde la raíz del proyecto.
    ```powershell
    python scrapper_application.py          # Correr scraper / sincronización
    python -m uvicorn main:app --reload      # Correr API FastAPI
+   cd astro-frontend; npm run dev           # Correr Sitio Público (localhost:4321)
+   cd plataforma-admin; npm run dev         # Correr Administrador Local (localhost:4322/plataforma)
    ```
 
 ---
@@ -160,11 +169,14 @@ Todo diseño o modificación del esquema debe cumplir con estándares estrictos 
    * Usar `Field(..., ge=..., le=...)` y validadores para impedir inyecciones, precios negativos o strings excesivamente largos.
    * Evitar vulnerabilidades de asignación masiva (*Mass Assignment*).
 3. **Estrategia de Caché en el Edge / CDN:**
-   * Los endpoints de catálogo público (`/api/v1/products`) deben emitir encabezados HTTP de caché compatibles con Vercel/Cloudflare:
+   * Los endpoints de catálogo público (`/api/v1/productos` y `/api/v1/products`) deben emitir encabezados HTTP de caché compatibles con Vercel/Cloudflare:
      `Cache-Control: public, s-maxage=60, stale-while-revalidate=300`
    * Esto permite responder al 95% del tráfico en menos de **15 ms** directamente desde el CDN sin sobrecargar la base de datos.
 4. **Respuestas de Error Consistentes:**
    * Los errores 4xx y 5xx deben emitir un formato estándar con código de error legible, mensaje descriptivo en español y sin filtrar detalles de stack traces internos.
+5. **Estrategia Lingüística y Nomenclatura de URLs (Dual Routing):**
+   * Toda la API expone **rutas canónicas en español** (`/api/v1/productos`, `/api/v1/tiendas`, `/api/v1/sincronizacion`, `/api/v1/administracion`, `/api/v1/sugerencias`, `/api/v1/telemetria`, `/api/v1/recetas`, `/api/v1/admin-tienda`) como estándar visible en OpenAPI/Swagger.
+   * **Invariante de compatibilidad hacia atrás:** Toda ruta renombrada o nueva debe preservar sus alias en inglés (`/api/v1/products`, `/stores`, `/sync`, etc.) con `include_in_schema=False` o enrutadores secundarios para garantizar cero roturas en llamadas existentes de Astro o clientes externos.
 
 ---
 
