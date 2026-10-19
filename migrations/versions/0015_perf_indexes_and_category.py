@@ -1,12 +1,12 @@
 """Add performance indexes, category column, pg_trgm GIN index, and materialized price variations.
 
-Revision ID: 0015_performance_indexes_and_product_category
+Revision ID: 0015_perf_indexes_and_category
 Revises: 0014_store_admin_multi_tenant
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = '0015_performance_indexes_and_product_category'
+revision = '0015_perf_indexes_and_category'
 down_revision = '0014_store_admin_multi_tenant'
 branch_labels = None
 depends_on = None

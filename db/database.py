@@ -1,7 +1,7 @@
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from sqlalchemy import (
     create_engine, Column, Integer, String, Text, Boolean,
     Numeric, DateTime, ForeignKey, UniqueConstraint, Index, inspect, text, Float, JSON, ARRAY
@@ -289,6 +289,17 @@ class AuditoriaAccionesTienda(Base):
 
 
 class DatabaseManager:
+    _instances: Dict[str, "DatabaseManager"] = {}
+
+    @classmethod
+    def get_instance_for_env(cls, env_id: Optional[str] = None) -> "DatabaseManager":
+        from db.environments import EnvironmentManager
+        clean_id = (env_id or "local").strip().lower()
+        if clean_id not in cls._instances:
+            url = EnvironmentManager.get_connection_url(clean_id)
+            cls._instances[clean_id] = cls(db_url=url)
+        return cls._instances[clean_id]
+
     def __init__(self, db_url: str = None):
         url_final = db_url or settings.database_url
         connect_args = {} if str(url_final).startswith("sqlite") else {"prepare_threshold": None}

@@ -53,7 +53,17 @@ class PostgresCoffeeRepository(ICoffeeRepository):
 
 
         if store_name:
-            query = query.filter(Tienda.nombre.ilike(f"%{store_name}%"))
+            if isinstance(store_name, str):
+                stores = [s.strip() for s in store_name.split(",") if s.strip()]
+            elif isinstance(store_name, (list, tuple, set)):
+                stores = [str(s).strip() for s in store_name if str(s).strip()]
+            else:
+                stores = [str(store_name).strip()]
+
+            if len(stores) == 1:
+                query = query.filter(Tienda.nombre.ilike(f"%{stores[0]}%"))
+            elif len(stores) > 1:
+                query = query.filter(or_(*[Tienda.nombre.ilike(f"%{s}%") for s in stores]))
 
         if process:
             proc_synonyms = get_synonym_group(process)
