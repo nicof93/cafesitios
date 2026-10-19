@@ -10,6 +10,8 @@ except ImportError:
 from typing import List, Dict, Any, Optional
 from core.normalizer import calcular_precio_kilo
 
+from scrapper.base_driver import BaseDriver
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 def extraer_gramos(texto: Optional[str], default: Optional[int] = None) -> Optional[int]:
@@ -24,10 +26,13 @@ def extraer_gramos(texto: Optional[str], default: Optional[int] = None) -> Optio
 
 def calcular_precio_por_kilo(precio_clp: int, formato_gramos: int) -> float:
     if formato_gramos and formato_gramos > 0 and precio_clp > 0:
-        return round((precio_clp / formato_gramos) * 1000, 2)
+        val = (precio_clp / formato_gramos) * 1000
+        if val >= 100000000.0:
+            val = 99999999.99
+        return round(val, 2)
     return 0.0
 
-class ShopifyDriver:
+class ShopifyDriver(BaseDriver):
     @staticmethod
     def extraer_gramos(texto: Optional[str], default: int = 250) -> int:
         return extraer_gramos(texto, default=default) or default
@@ -142,8 +147,7 @@ class ShopifyDriver:
             return {}
 
     def __init__(self, nombre: str, url_base: str, shopify_default: bool = True):
-        self.nombre = nombre
-        self.url_base = url_base
+        super().__init__(nombre=nombre, url_base=url_base, plataforma="shopify")
         self.shopify_default = shopify_default
 
     def _obtener_base_site(self, url: str) -> str:
