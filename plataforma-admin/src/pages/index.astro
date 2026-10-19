@@ -1,0 +1,319 @@
+---
+import AdminLteLayout from '../layouts/AdminLteLayout.astro';
+---
+
+<AdminLteLayout 
+  title="Dashboard Principal | Plataforma Admin Cafesitios"
+  activeNav="dashboard"
+  breadcrumb={[{ label: "Inicio", url: "/plataforma/" }, { label: "Dashboard" }]}
+>
+  <!-- ENCABEZADO DE PÁGINA -->
+  <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h2 class="text-xl sm:text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2">
+        <span>📊</span>
+        <span>Panel de Control de la Plataforma</span>
+      </h2>
+      <p class="text-xs text-stone-500 mt-1">
+        Gestión integral de tiendas, moderación de catálogos y sincronización de datos.
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <a 
+        href="/plataforma/ambientes" 
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 shadow-2xs transition"
+      >
+        <span>⚙️</span>
+        <span>Ambientes</span>
+      </a>
+      <a 
+        href="/plataforma/administracion" 
+        class="btn-admin-primary shadow-xs"
+      >
+        <span>🏪</span>
+        <span>Gestionar Tiendas</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- INFO BOXES / SMALL BOXES ESTILO ADMINLTE -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    
+    <!-- Info Box 1: Tiendas -->
+    <div class="info-box">
+      <div class="info-box-icon bg-emerald-50 text-emerald-800">
+        🏪
+      </div>
+      <div class="info-box-content">
+        <span class="info-box-text">Tiendas Registradas</span>
+        <span class="info-box-number" id="kpi-tiendas">--</span>
+        <span class="text-[11px] text-stone-400 mt-0.5 block">Tiendas activas registradas</span>
+      </div>
+    </div>
+
+    <!-- Info Box 2: Productos -->
+    <div class="info-box">
+      <div class="info-box-icon bg-amber-50 text-amber-800">
+        ☕
+      </div>
+      <div class="info-box-content">
+        <span class="info-box-text">Productos Registrados</span>
+        <span class="info-box-number" id="kpi-productos">--</span>
+        <span class="text-[11px] text-stone-400 mt-0.5 block">Cafés de especialidad</span>
+      </div>
+    </div>
+
+    <!-- Info Box 3: Ambientes -->
+    <div class="info-box">
+      <div class="info-box-icon bg-sky-50 text-sky-800">
+        ⚙️
+      </div>
+      <div class="info-box-content">
+        <span class="info-box-text">Ambientes BD</span>
+        <span class="info-box-number" id="kpi-ambientes">--</span>
+        <span class="text-[11px] text-stone-400 mt-0.5 block">Localhost, Supabase...</span>
+      </div>
+    </div>
+
+    <!-- Info Box 4: Sincronización -->
+    <div class="info-box">
+      <div class="info-box-icon bg-purple-50 text-purple-800">
+        ⚡
+      </div>
+      <div class="info-box-content">
+        <span class="info-box-text">Última Sincronización</span>
+        <span class="info-box-number text-sm font-black" id="kpi-sync">Consultando...</span>
+        <span class="text-[11px] text-stone-400 mt-0.5 block" id="kpi-sync-sub">Fecha y hora</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TARJETAS PRINCIPALES DEL DASHBOARD -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Card 1: Accesos Directos a Módulos (2 columnas en LG) -->
+    <div class="lg:col-span-2 space-y-6">
+      
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <h3 class="admin-card-title">
+            <span>⚡</span>
+            <span>Módulos de la Plataforma</span>
+          </h3>
+          <div class="admin-card-tools">
+            <span class="text-xs text-stone-400">Modo Localhost</span>
+          </div>
+        </div>
+
+        <div class="admin-card-body">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
+            <a 
+              href="/plataforma/administracion" 
+              class="group block p-4 rounded-xl border border-stone-200 bg-stone-50/60 hover:bg-emerald-50/60 hover:border-emerald-300 transition"
+            >
+              <div class="flex items-center gap-3">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 text-xl font-bold group-hover:scale-105 transition">
+                  🏪
+                </span>
+                <div>
+                  <h4 class="text-sm font-bold text-stone-900 group-hover:text-emerald-900">
+                    Tiendas y Sucursales
+                  </h4>
+                  <p class="text-xs text-stone-500 mt-0.5">
+                    Alta de tiendas, drivers y moderación no-café.
+                  </p>
+                </div>
+              </div>
+            </a>
+
+            <a 
+              href="/plataforma/administracion?tab=moderacion" 
+              class="group block p-4 rounded-xl border border-stone-200 bg-stone-50/60 hover:bg-emerald-50/60 hover:border-emerald-300 transition"
+            >
+              <div class="flex items-center gap-3">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 text-rose-800 text-xl font-bold group-hover:scale-105 transition">
+                  🛡️
+                </span>
+                <div>
+                  <h4 class="text-sm font-bold text-stone-900 group-hover:text-emerald-900">
+                    Moderación de Catálogo
+                  </h4>
+                  <p class="text-xs text-stone-500 mt-0.5">
+                    Detección y filtro de productos no-café.
+                  </p>
+                </div>
+              </div>
+            </a>
+
+            <a 
+              href="/plataforma/sincronizaciones" 
+              class="group block p-4 rounded-xl border border-stone-200 bg-stone-50/60 hover:bg-emerald-50/60 hover:border-emerald-300 transition"
+            >
+              <div class="flex items-center gap-3">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-800 text-xl font-bold group-hover:scale-105 transition">
+                  📈
+                </span>
+                <div>
+                  <h4 class="text-sm font-bold text-stone-900 group-hover:text-emerald-900">
+                    Sincronización y Analítica
+                  </h4>
+                  <p class="text-xs text-stone-500 mt-0.5">
+                    Logs de ejecución ETL y métricas de scraping.
+                  </p>
+                </div>
+              </div>
+            </a>
+
+            <a 
+              href="/plataforma/ambientes" 
+              class="group block p-4 rounded-xl border border-stone-200 bg-stone-50/60 hover:bg-emerald-50/60 hover:border-emerald-300 transition"
+            >
+              <div class="flex items-center gap-3">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-800 text-xl font-bold group-hover:scale-105 transition">
+                  ⚙️
+                </span>
+                <div>
+                  <h4 class="text-sm font-bold text-stone-900 group-hover:text-emerald-900">
+                    Gestión de Ambientes
+                  </h4>
+                  <p class="text-xs text-stone-500 mt-0.5">
+                    Configuración de conexiones Localhost y Supabase.
+                  </p>
+                </div>
+              </div>
+            </a>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Card 2: Estado del Ambiente Activo -->
+    <div class="space-y-6">
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <h3 class="admin-card-title">
+            <span>🛡️</span>
+            <span>Ambiente Conectado</span>
+          </h3>
+        </div>
+
+        <div class="admin-card-body space-y-4">
+          <div class="p-3.5 rounded-xl border border-stone-200 bg-stone-50/70">
+            <div class="text-[10px] uppercase font-bold text-stone-400">Ambiente Seleccionado</div>
+            <div class="mt-1 flex items-center justify-between">
+              <span id="dash-env-name" class="font-bold text-stone-900 text-sm">PostgreSQL Local</span>
+              <span id="dash-env-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                LOCAL
+              </span>
+            </div>
+            <p id="dash-env-desc" class="text-xs text-stone-500 mt-2">
+              Conexión activa a base de datos local.
+            </p>
+          </div>
+
+          <div class="text-xs text-stone-600 space-y-2">
+            <div class="flex items-center justify-between border-b border-stone-100 pb-1.5">
+              <span class="text-stone-400">Protección de Guardado:</span>
+              <span class="font-bold text-emerald-800">Activa (Pide Confirmación)</span>
+            </div>
+            <div class="flex items-center justify-between border-b border-stone-100 pb-1.5">
+              <span class="text-stone-400">Host Permitido:</span>
+              <span class="font-mono text-[11px] text-stone-700">127.0.0.1 / localhost</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-stone-400">Prefijo URL:</span>
+              <span class="font-mono text-[11px] text-stone-700">/plataforma</span>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <a 
+              href="/plataforma/ambientes" 
+              class="block w-full text-center py-2 px-3 rounded-lg border border-stone-300 bg-white hover:bg-stone-50 text-xs font-bold text-stone-700 transition"
+            >
+              Configurar o Cambiar Ambiente ➔
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script is:inline>
+    (async function initDashboard() {
+      const API_BASE = 'http://localhost:8000';
+
+      // Actualizar tarjeta de ambiente
+      function updateEnvCard() {
+        if (!window.plataformaState) return;
+        const env = window.plataformaState.getActiveEnv();
+        const nameEl = document.getElementById('dash-env-name');
+        const badgeEl = document.getElementById('dash-env-badge');
+        const descEl = document.getElementById('dash-env-desc');
+
+        if (nameEl) nameEl.textContent = env.nombre;
+        if (badgeEl) {
+          badgeEl.textContent = env.tipo.toUpperCase();
+          badgeEl.className = `px-2 py-0.5 rounded text-[10px] font-bold badge-env-${env.color_badge || 'amber'}`;
+        }
+        if (descEl) descEl.textContent = env.descripcion || `Conectado a ${env.nombre}.`;
+      }
+
+      // Cargar KPIs del ambiente activo
+      async function loadMetrics() {
+        try {
+          const res = await window.plataformaState.fetchWithEnv(`${API_BASE}/api/v1/administracion/estado`);
+          if (res.ok) {
+            const data = await res.json();
+            const tiendasEl = document.getElementById('kpi-tiendas');
+            const productosEl = document.getElementById('kpi-productos');
+            const syncEl = document.getElementById('kpi-sync');
+            const syncSubEl = document.getElementById('kpi-sync-sub');
+
+            if (tiendasEl) tiendasEl.textContent = data.total_tiendas ?? 0;
+            if (productosEl) productosEl.textContent = data.total_productos ?? 0;
+
+            if (data.ultima_sincronizacion) {
+              const d = new Date(data.ultima_sincronizacion);
+              if (!isNaN(d.getTime())) {
+                const fecha = d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const hora = d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) + ' hrs';
+                if (syncEl) syncEl.textContent = fecha;
+                if (syncSubEl) syncSubEl.textContent = `${hora} • Éxito`;
+              } else {
+                if (syncEl) syncEl.textContent = data.ultima_sincronizacion;
+              }
+            } else {
+              if (syncEl) syncEl.textContent = 'Sin registros';
+              if (syncSubEl) syncSubEl.textContent = 'Nunca ejecutado';
+            }
+          }
+        } catch (e) {
+          console.warn('Error al cargar métricas de administración', e);
+        }
+
+        // Contar ambientes configurados
+        const envsCount = window.plataformaState?.environments?.length || 2;
+        const ambEl = document.getElementById('kpi-ambientes');
+        if (ambEl) ambEl.textContent = envsCount;
+      }
+
+      window.addEventListener('plataforma:env-changed', () => {
+        updateEnvCard();
+        loadMetrics();
+      });
+
+      setTimeout(() => {
+        updateEnvCard();
+        loadMetrics();
+      }, 300);
+    })();
+  </script>
+</AdminLteLayout>
+

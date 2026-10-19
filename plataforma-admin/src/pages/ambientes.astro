@@ -1,0 +1,503 @@
+---
+import AdminLteLayout from '../layouts/AdminLteLayout.astro';
+---
+
+<AdminLteLayout 
+  title="Gestión de Ambientes de Base de Datos | Plataforma Admin"
+  activeNav="ambientes"
+  breadcrumb={[{ label: "Inicio", url: "/plataforma/" }, { label: "Gestión de Ambientes" }]}
+>
+  <!-- CABECERA DE SECCIÓN -->
+  <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-stone-200/80 pb-4">
+    <div>
+      <h2 class="text-xl sm:text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2">
+        <span>⚙️</span>
+        <span>Gestión de Ambientes Multi-Entorno</span>
+      </h2>
+      <p class="text-xs text-stone-500 mt-1">
+        Crea, configura y alterna entre bases de datos de desarrollo (Localhost), producción (Supabase) o entornos de prueba.
+      </p>
+    </div>
+
+    <div>
+      <button 
+        type="button" 
+        id="btn-open-create-env"
+        class="btn-admin-primary shadow-xs"
+      >
+        <span>➕</span>
+        <span>Nuevo Ambiente</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- LISTADO DE AMBIENTES EN CARDS ADMINLTE -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="environments-grid">
+    <div class="p-8 text-center text-stone-400 col-span-full">
+      Cargando ambientes registrados...
+    </div>
+  </div>
+
+  <!-- MODAL: CREAR / EDITAR AMBIENTE -->
+  <dialog 
+    id="env-form-dialog" 
+    class="fixed inset-0 z-50 m-auto w-[92%] max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-stone-200 backdrop:bg-stone-950/60 backdrop:backdrop-blur-xs"
+  >
+    <div class="flex items-center justify-between pb-3 border-b border-stone-200">
+      <h3 class="text-base font-bold text-stone-900" id="env-dialog-title">
+        ➕ Agregar Nuevo Ambiente
+      </h3>
+      <button 
+        type="button" 
+        id="btn-close-env-dialog" 
+        class="text-stone-400 hover:text-stone-700 font-bold p-1 rounded-lg"
+      >
+        ✕
+      </button>
+    </div>
+
+    <form id="env-form" class="mt-4 space-y-4 text-xs">
+      <div>
+        <label for="input-env-id" class="block font-bold text-stone-600 mb-1">
+          Identificador / Slug único:
+        </label>
+        <input 
+          id="input-env-id" 
+          type="text" 
+          required 
+          placeholder="ej. supabase-staging, replica-read"
+          class="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-600 font-mono"
+        />
+        <span class="text-[10px] text-stone-400">Solo letras, números y guiones.</span>
+      </div>
+
+      <div>
+        <label for="input-env-nombre" class="block font-bold text-stone-600 mb-1">
+          Nombre descriptivo:
+        </label>
+        <input 
+          id="input-env-nombre" 
+          type="text" 
+          required 
+          placeholder="ej. Supabase Staging (Pruebas)"
+          class="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-600"
+        />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="select-env-tipo" class="block font-bold text-stone-600 mb-1">
+            Tipo de Base de Datos:
+          </label>
+          <select 
+            id="select-env-tipo" 
+            class="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-600"
+          >
+            <option value="postgres">PostgreSQL</option>
+            <option value="supabase">Supabase</option>
+            <option value="sqlite">SQLite</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="select-env-badge" class="block font-bold text-stone-600 mb-1">
+            Color Identificador:
+          </label>
+          <select 
+            id="select-env-badge" 
+            class="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-600"
+          >
+            <option value="emerald">Verde Esmeralda</option>
+            <option value="amber">Ámbar (Local)</option>
+            <option value="red">Rojo (Producción)</option>
+            <option value="purple">Púrpura</option>
+            <option value="sky">Azul Cielo</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label for="input-env-url" class="block font-bold text-stone-600 mb-1">
+          Cadena de Conexión (Connection String URL):
+        </label>
+        <input 
+          id="input-env-url" 
+          type="password" 
+          required 
+          placeholder="postgresql+psycopg://user:password@host:5432/dbname"
+          class="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-emerald-600"
+        />
+        <span class="text-[10px] text-stone-400">Las credenciales se guardan de forma local en tu máquina.</span>
+      </div>
+
+      <div>
+        <label for="input-env-desc" class="block font-bold text-stone-600 mb-1">
+          Descripción u observaciones (opcional):
+        </label>
+        <textarea 
+          id="input-env-desc" 
+          rows="2" 
+          placeholder="Servidor de staging para probar nuevos drivers..."
+          class="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-600"
+        ></textarea>
+      </div>
+
+      <div class="flex items-center gap-2 pt-1">
+        <input id="check-env-protegido" type="checkbox" class="rounded text-emerald-700 focus:ring-emerald-600" />
+        <label for="check-env-protegido" class="font-bold text-stone-700">
+          Entorno protegido (requiere confirmación estricta antes de cada guardado)
+        </label>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-2 border-t border-stone-200 pt-3">
+        <button 
+          type="button" 
+          id="btn-cancel-env-dialog" 
+          class="px-4 py-2 rounded-lg border border-stone-300 text-stone-700 hover:bg-stone-50 font-semibold transition"
+        >
+          Cancelar
+        </button>
+        <button 
+          type="submit" 
+          id="btn-save-env-dialog" 
+          class="btn-admin-primary shadow-xs"
+        >
+          Guardar Ambiente
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <script is:inline>
+    (function initEnvironmentsModule() {
+      const API_BASE = 'http://localhost:8000';
+      const grid = document.getElementById('environments-grid');
+      const dialog = document.getElementById('env-form-dialog');
+      const form = document.getElementById('env-form');
+      const openBtn = document.getElementById('btn-open-create-env');
+      const closeBtn = document.getElementById('btn-close-env-dialog');
+      const cancelBtn = document.getElementById('btn-cancel-env-dialog');
+
+      let currentEnvironments = [];
+
+      async function fetchEnvironments() {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/administracion/ambientes`);
+          if (res.ok) {
+            currentEnvironments = await res.json();
+            renderEnvironments();
+          } else {
+            grid.innerHTML = `<div class="p-6 text-center text-rose-600 col-span-full">Error al cargar ambientes (${res.status}).</div>`;
+          }
+        } catch (err) {
+          grid.innerHTML = `<div class="p-6 text-center text-rose-600 col-span-full">Error de conexión con el backend: ${err.message}</div>`;
+        }
+      }
+
+      function renderEnvironments() {
+        grid.innerHTML = '';
+        const activeEnvId = window.plataformaState?.activeEnvId || 'local';
+
+        currentEnvironments.forEach(env => {
+          const isActive = env.id === activeEnvId;
+          const card = document.createElement('div');
+          card.className = `admin-card transition hover:shadow-md ${isActive ? 'ring-2 ring-emerald-600' : ''}`;
+
+          card.innerHTML = `
+            <div class="admin-card-header bg-stone-50/70">
+              <div class="flex items-center gap-2">
+                <span class="h-3 w-3 rounded-full ${
+                  env.color_badge === 'red' ? 'bg-red-500' : env.color_badge === 'amber' ? 'bg-amber-500' : 'bg-emerald-500'
+                } ${isActive ? 'animate-pulse' : ''}"></span>
+                <h3 class="admin-card-title text-sm font-bold text-stone-900">${env.nombre}</h3>
+              </div>
+              <div class="admin-card-tools">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold badge-env-${env.color_badge || 'amber'}">
+                  ${env.tipo.toUpperCase()}
+                </span>
+              </div>
+            </div>
+
+            <div class="admin-card-body space-y-3 text-xs">
+              ${isActive ? `
+                <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 font-bold text-[10px]">
+                  <span>✓</span> <span>Ambiente Activo Actual</span>
+                </div>
+              ` : ''}
+
+              <p class="text-stone-600 text-xs min-h-[32px]">
+                ${env.descripcion || 'Sin descripción configurada.'}
+              </p>
+
+              <div class="p-2.5 rounded-lg border border-stone-200 bg-stone-50 space-y-1 font-mono text-[11px]">
+                <div class="text-[10px] uppercase font-bold text-stone-400 font-sans">Cadena de Conexión:</div>
+                <div class="truncate text-stone-700" title="${env.connection_url_masked || ''}">
+                  ${env.connection_url_masked || 'Configurado por entorno'}
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between text-[11px] text-stone-500 pt-1">
+                <span>Protegido: <strong>${env.es_protegido ? 'Sí (Estricto)' : 'No'}</strong></span>
+                <span id="ping-result-${env.id}" class="text-emerald-700 font-semibold font-mono">--</span>
+              </div>
+
+              <div class="pt-3 border-t border-stone-100 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5">
+                  <button 
+                    type="button" 
+                    class="btn-test-conn px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 font-semibold text-[11px] transition shadow-2xs"
+                    data-id="${env.id}"
+                    title="Probar conexión y medir latencia"
+                  >
+                    ⚡ Probar
+                  </button>
+
+                  <button 
+                    type="button" 
+                    class="btn-edit-env px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 font-semibold text-[11px] transition shadow-2xs"
+                    data-id="${env.id}"
+                    title="Editar configuración del ambiente"
+                  >
+                    ✏️ Editar
+                  </button>
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                  ${!isActive ? `
+                    <button 
+                      type="button" 
+                      class="btn-select-env px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-[11px] transition shadow-2xs"
+                      data-id="${env.id}"
+                    >
+                      Usar
+                    </button>
+                  ` : ''}
+
+                  ${!env.es_sistema ? `
+                    <button 
+                      type="button" 
+                      class="btn-delete-env px-2 py-1.5 rounded-lg text-rose-700 hover:bg-rose-50 font-bold text-[11px] transition"
+                      data-id="${env.id}"
+                      title="Eliminar ambiente"
+                    >
+                      🗑️
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+
+          grid.appendChild(card);
+        });
+
+        // Eventos: Probar Conexión
+        grid.querySelectorAll('.btn-test-conn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.dataset.id;
+            const resEl = document.getElementById(`ping-result-${id}`);
+            if (resEl) resEl.textContent = 'Probando...';
+
+            try {
+              const res = await fetch(`${API_BASE}/api/v1/administracion/ambientes/${id}/probar`, { method: 'POST' });
+              const data = await res.json();
+              if (resEl) {
+                if (data.success) {
+                  resEl.textContent = `✓ ${data.latency_ms} ms`;
+                  resEl.className = 'text-emerald-700 font-semibold font-mono';
+                } else {
+                  resEl.textContent = '✕ Error';
+                  resEl.className = 'text-rose-700 font-semibold font-mono';
+                  alert(`Error en ${id}: ${data.error}`);
+                }
+              }
+            } catch (err) {
+              if (resEl) {
+                resEl.textContent = '✕ Sin red';
+                resEl.className = 'text-rose-700 font-semibold font-mono';
+              }
+            }
+          });
+        });
+
+        // Eventos: Editar Ambiente
+        grid.querySelectorAll('.btn-edit-env').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = e.currentTarget.dataset.id;
+            const env = currentEnvironments.find(item => item.id === id);
+            if (!env) return;
+
+            editingEnvId = env.id;
+            document.getElementById('env-dialog-title').textContent = `✏️ Editar Ambiente: ${env.nombre}`;
+            
+            const idInput = document.getElementById('input-env-id');
+            idInput.value = env.id;
+            idInput.readOnly = true;
+            idInput.className = 'w-full bg-stone-100 text-stone-500 border border-stone-200 rounded-lg px-3 py-2 text-xs font-mono cursor-not-allowed';
+
+            document.getElementById('input-env-nombre').value = env.nombre || '';
+            document.getElementById('select-env-tipo').value = env.tipo || 'postgres';
+            document.getElementById('select-env-badge').value = env.color_badge || 'emerald';
+            
+            const urlInput = document.getElementById('input-env-url');
+            urlInput.value = '';
+            urlInput.required = false;
+            urlInput.placeholder = '(Dejar en blanco para conservar la URL y contraseña actual)';
+
+            document.getElementById('input-env-desc').value = env.descripcion || '';
+            document.getElementById('check-env-protegido').checked = Boolean(env.es_protegido);
+
+            dialog.showModal();
+          });
+        });
+
+        // Eventos: Seleccionar Ambiente
+        grid.querySelectorAll('.btn-select-env').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = e.currentTarget.dataset.id;
+            if (window.plataformaState) {
+              window.plataformaState.activeEnvId = id;
+              localStorage.setItem('plataforma_active_env', id);
+              window.location.reload();
+            }
+          });
+        });
+
+        // Eventos: Eliminar Ambiente
+        grid.querySelectorAll('.btn-delete-env').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.dataset.id;
+            if (!confirm(`¿Estás seguro de eliminar el ambiente '${id}'?`)) return;
+
+            try {
+              const res = await fetch(`${API_BASE}/api/v1/administracion/ambientes/${id}`, { method: 'DELETE' });
+              if (res.ok) {
+                fetchEnvironments();
+              } else {
+                const err = await res.json();
+                alert(`Error al eliminar: ${err.detail || 'Fallo desconocido'}`);
+              }
+            } catch (err) {
+              alert(`Error: ${err.message}`);
+            }
+          });
+        });
+      }
+
+      let editingEnvId = null;
+
+      // Diálogo Nuevo Ambiente
+      if (openBtn) {
+        openBtn.addEventListener('click', () => {
+          editingEnvId = null;
+          form.reset();
+          document.getElementById('env-dialog-title').textContent = '➕ Agregar Nuevo Ambiente';
+          const idInput = document.getElementById('input-env-id');
+          idInput.readOnly = false;
+          idInput.className = 'w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-600 font-mono';
+          const urlInput = document.getElementById('input-env-url');
+          urlInput.required = true;
+          urlInput.placeholder = 'postgresql+psycopg://user:password@host:5432/dbname';
+          dialog.showModal();
+        });
+      }
+
+      if (closeBtn) closeBtn.addEventListener('click', () => dialog.close());
+      if (cancelBtn) cancelBtn.addEventListener('click', () => dialog.close());
+
+      // Guardar / Actualizar Ambiente
+      if (form) {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const nombreVal = document.getElementById('input-env-nombre').value.trim();
+
+          if (editingEnvId) {
+            // Confirmación antes de actualizar
+            if (window.plataformaState?.confirmAction) {
+              window.plataformaState.confirmAction({
+                title: 'Confirmar Actualización de Ambiente',
+                message: `¿Estás seguro de actualizar la configuración del ambiente "${nombreVal}"?`,
+                onProceed: async () => {
+                  await executeUpdate();
+                }
+              });
+            } else {
+              await executeUpdate();
+            }
+
+            async function executeUpdate() {
+              const payload = {
+                nombre: nombreVal,
+                tipo: document.getElementById('select-env-tipo').value,
+                color_badge: document.getElementById('select-env-badge').value,
+                descripcion: document.getElementById('input-env-desc').value.trim(),
+                es_protegido: document.getElementById('check-env-protegido').checked,
+              };
+              const urlVal = document.getElementById('input-env-url').value.trim();
+              if (urlVal) {
+                payload.connection_url = urlVal;
+              }
+
+              try {
+                const res = await fetch(`${API_BASE}/api/v1/administracion/ambientes/${editingEnvId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                  dialog.close();
+                  form.reset();
+                  await fetchEnvironments();
+                  if (window.plataformaState?.activeEnvId === editingEnvId) {
+                    window.location.reload();
+                  }
+                } else {
+                  const err = await res.json().catch(() => ({}));
+                  alert(`Error al actualizar ambiente: ${err.detail || 'Verifica los campos'}`);
+                }
+              } catch (err) {
+                alert(`Error de conexión: ${err.message}`);
+              }
+            }
+
+          } else {
+            // Modo Creación (POST)
+            const payload = {
+              id: document.getElementById('input-env-id').value.trim().toLowerCase(),
+              nombre: nombreVal,
+              tipo: document.getElementById('select-env-tipo').value,
+              color_badge: document.getElementById('select-env-badge').value,
+              connection_url: document.getElementById('input-env-url').value.trim(),
+              descripcion: document.getElementById('input-env-desc').value.trim(),
+              es_protegido: document.getElementById('check-env-protegido').checked,
+              activo: true
+            };
+
+            try {
+              const res = await fetch(`${API_BASE}/api/v1/administracion/ambientes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+
+              if (res.ok) {
+                dialog.close();
+                form.reset();
+                fetchEnvironments();
+              } else {
+                const err = await res.json().catch(() => ({}));
+                alert(`Error al guardar ambiente: ${err.detail || 'Verifica los campos'}`);
+              }
+            } catch (err) {
+              alert(`Error de conexión: ${err.message}`);
+            }
+          }
+        });
+      }
+
+      fetchEnvironments();
+    })();
+  </script>
+</AdminLteLayout>
+
