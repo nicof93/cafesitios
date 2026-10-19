@@ -517,20 +517,46 @@ const jsonLdCatalog = {
               </label>
             </div>
 
-            <a 
-              href="${prod.url_detalle}" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              data-track-outbound="true"
-              data-store="${prod.tienda}"
-              data-product-name="${prod.nombre}"
-              data-price="${precioClp}"
-              onclick="event.stopPropagation();"
-              class="inline-flex items-center justify-center gap-1.5 w-full rounded-xl bg-stone-900 hover:bg-emerald-800 text-white font-semibold text-xs py-2.5 px-3 transition-colors duration-150 shadow-2xs"
-            >
-              <span>Comprar en tienda</span>
-              <span aria-hidden="true">↗</span>
-            </a>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              ${(prod.tienda_telefono_whatsapp || prod.telefono_whatsapp) ? `
+                <button
+                  type="button"
+                  class="btn-add-to-cart inline-flex items-center justify-center gap-1.5 w-full rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs py-2.5 px-3 transition-colors duration-150 shadow-2xs"
+                  data-product-id="${prod.id}"
+                  data-product-name="${prod.nombre}"
+                  data-product-grams="${formatoGramos}"
+                  data-product-grind="${opcion}"
+                  data-product-price="${precioClp}"
+                  data-store-id="${prod.tienda_id || prod.tienda}"
+                  data-store-name="${prod.tienda}"
+                  data-store-whatsapp="${prod.tienda_telefono_whatsapp || prod.telefono_whatsapp || ''}"
+                  data-product-image="${imagen || ''}"
+                  onclick="event.stopPropagation();"
+                >
+                  <span>🛍️</span>
+                  <span>Agregar al Pedido</span>
+                </button>
+              ` : ''}
+
+              <a 
+                href="${prod.url_detalle}" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                data-track-outbound="true"
+                data-store="${prod.tienda}"
+                data-product-name="${prod.nombre}"
+                data-price="${precioClp}"
+                onclick="event.stopPropagation();"
+                class="inline-flex items-center justify-center gap-1.5 w-full rounded-xl ${
+                  (prod.tienda_telefono_whatsapp || prod.telefono_whatsapp)
+                    ? 'bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold'
+                    : 'bg-stone-900 hover:bg-emerald-800 text-white font-semibold'
+                } text-xs py-2.5 px-3 transition-colors duration-150 shadow-2xs"
+              >
+                <span>Ver en tienda</span>
+                <span aria-hidden="true">↗</span>
+              </a>
+            </div>
           </div>
         </article>
       `;
@@ -554,6 +580,46 @@ const jsonLdCatalog = {
           window.dispatchEvent(new CustomEvent('cafesitios:toggle-compare', {
             detail: { id, name, checked: target.checked }
           }));
+        });
+      });
+
+      // Eventos para botón Agregar al Pedido inyectados dinámicamente
+      container.querySelectorAll('.btn-add-to-cart').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const productId = btn.getAttribute('data-product-id') || '';
+          const nombre = btn.getAttribute('data-product-name') || '';
+          const formatoGramos = Number(btn.getAttribute('data-product-grams')) || 250;
+          const molienda = btn.getAttribute('data-product-grind') || 'Grano';
+          const precioUnitarioClp = Number(btn.getAttribute('data-product-price')) || 0;
+          const tiendaId = btn.getAttribute('data-store-id') || '';
+          const tiendaNombre = btn.getAttribute('data-store-name') || '';
+          const tiendaWhatsapp = btn.getAttribute('data-store-whatsapp') || undefined;
+          const imagen = btn.getAttribute('data-product-image') || undefined;
+
+          // Uso de CartManager
+          import('../core/application/CartManager').then(({ CartManager }) => {
+            CartManager.addItem({
+              productId,
+              nombre,
+              formatoGramos,
+              molienda,
+              cantidad: 1,
+              precioUnitarioClp,
+              tiendaId,
+              tiendaNombre,
+              tiendaWhatsapp,
+              imagen,
+            });
+
+            const original = btn.innerHTML;
+            btn.innerHTML = '<span>✓</span> <span>¡Agregado!</span>';
+            btn.classList.add('bg-emerald-600');
+            setTimeout(() => {
+              btn.innerHTML = original;
+              btn.classList.remove('bg-emerald-600');
+            }, 1200);
+          });
         });
       });
     };

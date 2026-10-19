@@ -25,6 +25,8 @@ class CoffeeProductDomain:
     variante_mas_barata: VariantDomain
     categoria: str = 'cafe'
     oculto_catalogo: bool = False
+    tienda_id: Optional[int] = None
+    tienda_telefono_whatsapp: Optional[str] = None
 
 
 @dataclass

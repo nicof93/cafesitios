@@ -4,6 +4,7 @@ import Footer from '../components/common/Footer.astro';
 import CompareBarAndModal from '../components/compare/CompareBarAndModal.astro';
 import FlavorQuizModal from '../components/quiz/FlavorQuizModal.astro';
 import FeedbackWidget from '../components/feedback/FeedbackWidget.astro';
+import CartDrawer from '../components/cart/CartDrawer.astro';
 import Analytics from '@vercel/analytics/astro';
 import { Environment } from '../core/infrastructure/config/Environment';
 import '../styles/global.css';
@@ -98,6 +99,16 @@ const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'htt
     </noscript>
   )}
 
+  <!-- BANNER INFORMATIVO DE TRANSPARENCIA -->
+  <div class="bg-stone-900 text-stone-200 text-[11px] sm:text-xs py-2 px-4 text-center border-b border-stone-800">
+    <div class="max-w-7xl mx-auto flex items-center justify-center gap-1.5 leading-snug">
+      <span aria-hidden="true">ℹ️</span>
+      <span>
+        Los pedidos se envían directamente por WhatsApp a la tostaduría. El pago, despacho y entrega se acuerdan directamente con ellos. <strong>Cafesitios no cobra comisiones ni procesa pagos en línea.</strong>
+      </span>
+    </div>
+  </div>
+
   <Header lastSync={lastSync} />
 
   <main class="w-[92%] max-w-7xl mx-auto px-2 py-6 flex-1">
@@ -110,6 +121,7 @@ const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'htt
   <CompareBarAndModal />
   <FlavorQuizModal />
   <FeedbackWidget />
+  <CartDrawer />
 
   <!-- SCRIPTS GLOBALES CLIENTE -->
   <script>

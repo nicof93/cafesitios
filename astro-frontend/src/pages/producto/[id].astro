@@ -382,21 +382,40 @@ const captionText = product.descripcion_resumida
             </div>
           )}
 
-          <!-- BOTÓN DIRECTO DE COMPRA -->
-          <a 
-            id="btn-main-outbound-store"
-            href={product.url_detalle} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            data-track-outbound="true"
-            data-store={product.tienda}
-            data-product-name={product.nombre}
-            data-price={currentPrice}
-            class="flex items-center justify-center gap-2 w-full bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-center py-3.5 px-6 rounded-2xl shadow-sm transition duration-150 hover:shadow-md"
-          >
-            <span>Ir a comprar en {product.tienda}</span>
-            <span aria-hidden="true">↗</span>
-          </a>
+          <!-- BOTONES DE COMPRA Y ENCARGO POR WHATSAPP -->
+          <div class="space-y-2">
+            {(product as any).tienda_telefono_whatsapp ? (
+              <button
+                type="button"
+                id="btn-detail-add-to-cart"
+                class="flex items-center justify-center gap-2 w-full bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-center py-3.5 px-6 rounded-2xl shadow-sm transition duration-150 hover:shadow-md cursor-pointer"
+                data-product-id={product.id}
+                data-product-name={product.nombre}
+                data-store-id={(product as any).tienda_id || product.tienda}
+                data-store-name={product.tienda}
+                data-store-whatsapp={(product as any).tienda_telefono_whatsapp}
+                data-product-image={product.imagen || ''}
+              >
+                <span class="text-lg">🛍️</span>
+                <span>Agregar al Pedido</span>
+              </button>
+            ) : null}
+
+            <a 
+              id="btn-main-outbound-store"
+              href={product.url_detalle} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              data-track-outbound="true"
+              data-store={product.tienda}
+              data-product-name={product.nombre}
+              data-price={currentPrice}
+              class={`flex items-center justify-center gap-2 w-full ${(product as any).tienda_telefono_whatsapp ? 'bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold' : 'bg-emerald-800 hover:bg-emerald-900 text-white font-bold'} text-center py-3 px-6 rounded-2xl shadow-2xs transition duration-150`}
+            >
+              <span>Ver en tienda oficial {product.tienda}</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+          </div>
 
           <!-- ACCIONES SECUNDARIAS: COMPARAR CON Y FAVORITO -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
@@ -1053,4 +1072,45 @@ const captionText = product.descripcion_resumida
       }
     });
   }
+
+  // Acción "Agregar al Pedido" en detalle de producto
+  import { CartManager } from '../../core/application/CartManager';
+
+  const btnDetailAddToCart = document.getElementById('btn-detail-add-to-cart');
+  btnDetailAddToCart?.addEventListener('click', () => {
+    const productId = btnDetailAddToCart.getAttribute('data-product-id') || '';
+    const nombre = btnDetailAddToCart.getAttribute('data-product-name') || '';
+    const tiendaId = btnDetailAddToCart.getAttribute('data-store-id') || '';
+    const tiendaNombre = btnDetailAddToCart.getAttribute('data-store-name') || '';
+    const tiendaWhatsapp = btnDetailAddToCart.getAttribute('data-store-whatsapp') || undefined;
+    const imagen = btnDetailAddToCart.getAttribute('data-product-image') || undefined;
+
+    // Obtener variante activa desde el select o la predeterminada
+    const currentVariant = variants[selectedVariantIndex] || variants[0];
+    const formatoGramos = currentVariant?.formato_gramos || 250;
+    const molienda = currentVariant?.opcion || 'Grano';
+    const precioUnitarioClp = currentVariant?.precio_clp || 0;
+
+    CartManager.addItem({
+      productId,
+      nombre,
+      formatoGramos,
+      molienda,
+      cantidad: 1,
+      precioUnitarioClp,
+      tiendaId,
+      tiendaNombre,
+      tiendaWhatsapp,
+      imagen,
+    });
+
+    // Feedback visual en botón
+    const originalText = btnDetailAddToCart.innerHTML;
+    btnDetailAddToCart.innerHTML = '<span class="text-lg">✓</span> <span>¡Agregado al Pedido!</span>';
+    btnDetailAddToCart.classList.add('bg-emerald-600');
+    setTimeout(() => {
+      btnDetailAddToCart.innerHTML = originalText;
+      btnDetailAddToCart.classList.remove('bg-emerald-600');
+    }, 1500);
+  });
 </script>

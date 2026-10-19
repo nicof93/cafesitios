@@ -1,0 +1,324 @@
+---
+// CartDrawer.astro: Drawer lateral interactivo para preparación de pedidos por WhatsApp
+---
+
+<div id="cart-drawer-container">
+  <!-- Botón Flotante del Carrito -->
+  <button
+    id="btn-open-cart"
+    type="button"
+    class="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 bg-emerald-800 hover:bg-emerald-900 text-white px-4 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+    aria-label="Ver preparador de pedidos por WhatsApp"
+  >
+    <span class="text-xl">🛍️</span>
+    <span class="font-bold text-xs sm:text-sm">Pedido</span>
+    <span
+      id="cart-badge-count"
+      class="hidden bg-amber-400 text-stone-900 text-[11px] font-black px-2 py-0.5 rounded-full"
+    >
+      0
+    </span>
+  </button>
+
+  <!-- Backdrop / Fondo Oscuro -->
+  <div
+    id="cart-backdrop"
+    class="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 hidden transition-opacity duration-300 opacity-0"
+    aria-hidden="true"
+  ></div>
+
+  <!-- Drawer Lateral Desplegable -->
+  <aside
+    id="cart-drawer"
+    class="fixed top-0 right-0 bottom-0 w-full max-w-md bg-[#FCFBF7] z-50 shadow-2xl flex flex-col justify-between transform translate-x-full transition-transform duration-300 ease-in-out border-l border-stone-200"
+    role="dialog"
+    aria-label="Preparador de pedidos por WhatsApp"
+    aria-modal="true"
+  >
+    <!-- Header del Drawer -->
+    <div class="px-5 py-4 border-b border-stone-200 bg-white flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🛍️</span>
+        <div>
+          <h2 class="text-sm font-bold text-stone-900">Preparador de Pedidos</h2>
+          <p class="text-[11px] text-stone-500">Encargos directos vía WhatsApp</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          id="btn-clear-all-cart"
+          type="button"
+          class="text-[11px] font-semibold text-rose-600 hover:text-rose-800 hover:underline px-2 py-1"
+          title="Vaciar todo el carrito"
+        >
+          Vaciar
+        </button>
+        <button
+          id="btn-close-cart"
+          type="button"
+          class="text-stone-400 hover:text-stone-700 p-1 rounded-lg text-lg leading-none"
+          aria-label="Cerrar pedido"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+
+    <!-- Leyenda de Transparencia y Sin Comisiones -->
+    <div class="bg-amber-50/90 border-b border-amber-200/80 px-4 py-2.5 text-[11px] text-amber-900 flex items-start gap-2">
+      <span class="text-sm mt-0.5">⚠️</span>
+      <p class="leading-relaxed">
+        <strong>Preparador de pedidos por WhatsApp:</strong> No se solicitarán datos de tarjeta de crédito ni pago en línea en Cafesitios. El pago, despacho y entrega se acuerdan directamente con cada tostaduría.
+      </p>
+    </div>
+
+    <!-- Lista de Ítems Agrupados por Tostaduría -->
+    <div id="cart-items-container" class="flex-1 overflow-y-auto p-4 space-y-5">
+      <!-- Inyectado dinámicamente vía CartManager -->
+    </div>
+
+    <!-- Estado Vacío -->
+    <div id="cart-empty-state" class="hidden flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
+      <span class="text-4xl">☕</span>
+      <h3 class="text-sm font-bold text-stone-800">Tu pedido está vacío</h3>
+      <p class="text-xs text-stone-500 max-w-xs">
+        Explora el catálogo o las fichas de café y presiona "🛍️ Agregar al Pedido" para armar tu encargo por WhatsApp.
+      </p>
+    </div>
+
+    <!-- Footer del Drawer -->
+    <div class="p-4 bg-white border-t border-stone-200 space-y-2">
+      <p class="text-[10px] text-stone-400 text-center">
+        Cafesitios genera un enlace de WhatsApp seguro y gratuito con el desglose de tu pedido.
+      </p>
+    </div>
+  </aside>
+</div>
+
+<script>
+  import { CartManager, type StoreCartGroup, type CartItem } from '../../core/application/CartManager';
+  import { AnalyticsTracker } from '../../core/infrastructure/analytics/AnalyticsTracker';
+  import { Environment } from '../../core/infrastructure/config/Environment';
+
+  const btnOpen = document.getElementById('btn-open-cart');
+  const btnClose = document.getElementById('btn-close-cart');
+  const btnClearAll = document.getElementById('btn-clear-all-cart');
+  const drawer = document.getElementById('cart-drawer');
+  const backdrop = document.getElementById('cart-backdrop');
+  const itemsContainer = document.getElementById('cart-items-container');
+  const emptyState = document.getElementById('cart-empty-state');
+  const badgeCount = document.getElementById('cart-badge-count');
+
+  function openCart() {
+    if (!drawer || !backdrop) return;
+    drawer.classList.remove('translate-x-full');
+    backdrop.classList.remove('hidden');
+    setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+    renderCart();
+
+    const groups = CartManager.getGroupedByStore();
+    const totalItems = CartManager.getTotalCount();
+    AnalyticsTracker.trackViewCart(totalItems, groups.length);
+  }
+
+  function closeCart() {
+    if (!drawer || !backdrop) return;
+    drawer.classList.add('translate-x-full');
+    backdrop.classList.add('opacity-0');
+    setTimeout(() => backdrop.classList.add('hidden'), 300);
+  }
+
+  function formatClp(num: number): string {
+    return num.toLocaleString('es-CL');
+  }
+
+  function updateBadge() {
+    const total = CartManager.getTotalCount();
+    if (!badgeCount) return;
+    if (total > 0) {
+      badgeCount.textContent = String(total);
+      badgeCount.classList.remove('hidden');
+    } else {
+      badgeCount.classList.add('hidden');
+    }
+  }
+
+  function renderCart() {
+    updateBadge();
+    const groups = CartManager.getGroupedByStore();
+
+    if (!itemsContainer || !emptyState) return;
+
+    if (groups.length === 0) {
+      itemsContainer.innerHTML = '';
+      emptyState.classList.remove('hidden');
+      return;
+    }
+
+    emptyState.classList.add('hidden');
+    itemsContainer.innerHTML = groups.map((group: StoreCartGroup) => {
+      const hasPhone = Boolean(group.tiendaWhatsapp && group.tiendaWhatsapp.trim());
+      return `
+        <div class="bg-white rounded-2xl border border-stone-200/90 shadow-2xs overflow-hidden">
+          <!-- Header de la Tostaduría -->
+          <div class="bg-stone-50 px-4 py-3 border-b border-stone-200 flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-800">Tostaduría</span>
+              <h3 class="text-xs font-bold text-stone-900">${group.tiendaNombre}</h3>
+            </div>
+            <button
+              type="button"
+              class="btn-clear-store text-[10px] font-semibold text-stone-500 hover:text-rose-600 transition"
+              data-store-id="${group.tiendaId}"
+            >
+              Vaciar tostaduría
+            </button>
+          </div>
+
+          <!-- Ítems del Pedido -->
+          <div class="p-3 divide-y divide-stone-100">
+            ${group.items.map((item: CartItem) => `
+              <div class="py-2.5 flex items-center gap-3">
+                <div class="w-12 h-12 rounded-lg bg-stone-100 p-1 flex-shrink-0 flex items-center justify-center">
+                  <img
+                    src="${item.imagen || '/images/producto-referencial.jpg'}"
+                    alt="${item.nombre}"
+                    class="w-full h-full object-contain"
+                    onerror="this.src='/images/producto-referencial.jpg'"
+                  />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <h4 class="text-xs font-bold text-stone-900 truncate">${item.nombre}</h4>
+                  <p class="text-[10px] text-stone-500">
+                    ${item.formatoGramos}g &bull; ${item.molienda || 'Grano entero'}
+                  </p>
+                  <p class="text-[11px] font-extrabold text-stone-900 mt-0.5">
+                    $${formatClp(item.precioUnitarioClp * item.cantidad)} CLP
+                  </p>
+                </div>
+                <!-- Controles de Cantidad -->
+                <div class="flex items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-lg p-1">
+                  <button
+                    type="button"
+                    class="btn-qty-minus w-6 h-6 flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-stone-200 rounded text-xs font-bold transition"
+                    data-item-id="${item.id}"
+                    aria-label="Restar una unidad"
+                  >-</button>
+                  <span class="text-xs font-bold text-stone-900 w-4 text-center">${item.cantidad}</span>
+                  <button
+                    type="button"
+                    class="btn-qty-plus w-6 h-6 flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-stone-200 rounded text-xs font-bold transition"
+                    data-item-id="${item.id}"
+                    aria-label="Sumar una unidad"
+                  >+</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- Resumen de Costo y Acción WhatsApp -->
+          <div class="bg-[#FAF9F5] p-3.5 border-t border-stone-200 space-y-2.5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-stone-500 font-medium">Subtotal tostaduría:</span>
+              <span class="text-sm font-black text-stone-900">$${formatClp(group.subtotalClp)} CLP</span>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-stone-400">
+              <span>Peso total: ${group.totalGramos}g</span>
+              <span>Promedio: $${formatClp(group.precioPromedioKiloClp)}/kg</span>
+            </div>
+
+            ${hasPhone ? `
+              <button
+                type="button"
+                class="btn-checkout-whatsapp flex items-center justify-center gap-2 w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2.5 px-3 rounded-xl shadow-xs hover:shadow transition"
+                data-store-id="${group.tiendaId}"
+              >
+                <span>💬</span>
+                <span>Encargar por WhatsApp ($${formatClp(group.subtotalClp)} CLP)</span>
+              </button>
+            ` : `
+              <div class="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] p-2 rounded-xl text-center">
+                Esta tostaduría no tiene WhatsApp configurado aún. Puedes comprar directo en su sitio oficial.
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Asignar listeners dinámicos de botones
+    itemsContainer.querySelectorAll('.btn-qty-plus').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-item-id');
+        if (id) {
+          CartManager.increment(id);
+          renderCart();
+        }
+      });
+    });
+
+    itemsContainer.querySelectorAll('.btn-qty-minus').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-item-id');
+        if (id) {
+          CartManager.decrement(id);
+          renderCart();
+        }
+      });
+    });
+
+    itemsContainer.querySelectorAll('.btn-clear-store').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const storeId = btn.getAttribute('data-store-id');
+        if (storeId) {
+          CartManager.clearStore(storeId);
+          renderCart();
+        }
+      });
+    });
+
+    itemsContainer.querySelectorAll('.btn-checkout-whatsapp').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const storeId = btn.getAttribute('data-store-id');
+        const targetGroup = CartManager.getGroupedByStore().find(g => String(g.tiendaId) === String(storeId));
+        if (targetGroup) {
+          const apiBaseUrl = Environment.getApiBaseUrl();
+          await CartManager.checkoutStoreViaWhatsApp(targetGroup, apiBaseUrl);
+        }
+      });
+    });
+  }
+
+  // Inicialización de eventos
+  btnOpen?.addEventListener('click', openCart);
+  btnClose?.addEventListener('click', closeCart);
+  backdrop?.addEventListener('click', closeCart);
+  btnClearAll?.addEventListener('click', () => {
+    CartManager.clearAll();
+    renderCart();
+  });
+
+  // Reaccionar a cambios globales de carrito
+  window.addEventListener('cafesitios:cart-updated', () => {
+    updateBadge();
+    if (drawer && !drawer.classList.contains('translate-x-full')) {
+      renderCart();
+    }
+  });
+
+  // Abrir carrito desde cualquier botón con atributo data-open-cart
+  document.addEventListener('click', (e) => {
+    const target = (e.target as HTMLElement).closest('[data-open-cart]');
+    if (target) {
+      openCart();
+    }
+  });
+
+  // Escuchar tecla Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeCart();
+  });
+
+  // Render inicial
+  updateBadge();
+</script>

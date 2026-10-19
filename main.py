@@ -21,6 +21,7 @@ from api.sync import (
 from api.recipes import router as recipes_router
 from api.feedback import router as feedback_router, sugerencias_router
 from api.telemetry import router as telemetry_router, telemetria_router
+from api.orders import pedidos_router, router as orders_router
 from db.database import DatabaseManager
 
 # Configuración de documentación OpenAPI según ambiente
@@ -179,6 +180,8 @@ app.include_router(telemetry_router)
 app.include_router(administracion_router)
 app.include_router(admin_router)
 app.include_router(admin_tienda_router)
+app.include_router(pedidos_router)
+app.include_router(orders_router)
 
 
 @app.get("/", tags=["Healthcheck"])

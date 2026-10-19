@@ -67,6 +67,118 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       </div>
     </div>
 
+    <!-- SECCIÓN WHATSAPP COMMERCE: CONTACTO, MÉTRICAS Y PROYECCIÓN FINANCIERA -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Configuración WhatsApp de Ventas -->
+      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+        <div class="flex items-center gap-2 text-stone-900 font-bold text-base">
+          <span>💬</span>
+          <span>WhatsApp Comercial de Ventas</span>
+        </div>
+        <p class="text-xs text-stone-500">
+          Los clientes de Cafesitios te enviarán sus pedidos directamente a este número con el detalle armado.
+        </p>
+
+        <form id="form-whatsapp-config" class="space-y-3">
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">
+              Número de WhatsApp
+            </label>
+            <div class="flex items-center gap-1.5">
+              <span class="px-2.5 py-2 rounded-xl bg-stone-100 border border-stone-300 text-xs font-bold text-stone-700 select-none">
+                🇨🇱 +56
+              </span>
+              <input
+                type="tel"
+                id="input-whatsapp-phone"
+                placeholder="912345678"
+                class="flex-1 rounded-xl border border-stone-300 px-3 py-2 text-xs font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              />
+            </div>
+            <p class="text-[10px] text-stone-400 mt-1">Ingresa los 9 dígitos móviles (ej: 912345678).</p>
+          </div>
+
+          <button
+            type="submit"
+            id="btn-save-whatsapp"
+            class="w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-4 transition shadow-xs"
+          >
+            Guardar WhatsApp de Ventas
+          </button>
+          <p id="msg-whatsapp-status" class="text-[11px] text-center hidden font-semibold"></p>
+        </form>
+      </div>
+
+      <!-- Métricas de WhatsApp y Proyección Financiera (KPI 1 & KPI 2) -->
+      <div class="lg:col-span-2 rounded-2xl border-2 border-emerald-500/20 bg-gradient-to-br from-emerald-50/50 via-white to-amber-50/30 p-6 shadow-xs flex flex-col justify-between space-y-4">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-bold uppercase tracking-wider">
+              <span>📈</span> Módulo de Proyección Comercial
+            </span>
+            <span class="text-[11px] text-stone-400 font-medium">Últimos 30 días</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <!-- KPI 1 -->
+            <div class="p-4 rounded-xl bg-white border border-emerald-100 shadow-2xs space-y-1">
+              <span class="text-[10px] uppercase font-bold text-stone-400">Ventas Solicitadas vía WhatsApp</span>
+              <div class="text-2xl font-black text-emerald-900" id="kpi-whatsapp-sales">$0 CLP</div>
+              <p class="text-[11px] text-stone-500 font-medium" id="kpi-whatsapp-orders-count">0 pedidos recibidos</p>
+            </div>
+
+            <!-- Proyección Pasarela +18% -->
+            <div class="p-4 rounded-xl bg-white border border-amber-200/80 shadow-2xs space-y-1">
+              <span class="text-[10px] uppercase font-bold text-amber-800">Crecimiento Estimado Pasarela (+18%)</span>
+              <div class="text-2xl font-black text-amber-900" id="kpi-whatsapp-boost">+$0 CLP</div>
+              <p class="text-[11px] text-stone-500 font-medium">Incremento estimado con pago integrado</p>
+            </div>
+          </div>
+
+          <!-- Cuadro Analítico Destacado KPI 2 -->
+          <div class="mt-4 p-4 rounded-xl bg-white/90 border border-stone-200 text-xs text-stone-700 leading-relaxed shadow-2xs">
+            <div class="flex items-start gap-2.5">
+              <span class="text-lg mt-0.5">💡</span>
+              <p id="kpi-whatsapp-projection-text">
+                Tus clientes han solicitado $0 CLP en pedidos por WhatsApp este mes. Si gestionaras los pagos directamente en la plataforma con la futura pasarela Cafesitios, podrías aumentar tu tasa de conversión en un 18% estimado y automatizar la confirmación de inventario.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLA DE HISTORIAL DE PEDIDOS RECIBIDOS POR WHATSAPP -->
+    <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-stone-100 pb-4">
+        <div>
+          <h2 class="text-sm font-bold text-stone-900 flex items-center gap-2">
+            <span>🛒</span> Pedidos Recibidos vía WhatsApp
+          </h2>
+          <p class="text-xs text-stone-500">Historial de encargos generados por usuarios desde Cafesitios.</p>
+        </div>
+        <span class="text-xs font-bold text-stone-500" id="whatsapp-orders-count-badge">0 pedidos</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-stone-600">
+          <thead class="bg-stone-50 text-[10px] uppercase tracking-wider text-stone-400 font-bold border-y border-stone-200">
+            <tr>
+              <th class="py-2.5 px-3">Fecha y Hora</th>
+              <th class="py-2.5 px-3">Detalle de Ítems</th>
+              <th class="py-2.5 px-3 text-right">Monto Estimado</th>
+              <th class="py-2.5 px-3 text-center">Estado</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-whatsapp-orders" class="divide-y divide-stone-100">
+            <tr>
+              <td colspan="4" class="py-6 text-center text-stone-400">Cargando pedidos recibidos...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- ACCESOS RÁPIDOS Y RESUMEN -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Tarjeta Gestión de Catálogo -->
@@ -251,8 +363,138 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           if (data.cooldown_sync_segundos > 0) {
             startCooldownTimer(data.cooldown_sync_segundos);
           }
+
+          // Pre-cargar número de WhatsApp en el formulario
+          const inputPhone = document.getElementById('input-whatsapp-phone');
+          if (inputPhone && data.telefono_whatsapp) {
+            // Eliminar +56 si viene incluido
+            let cleanPhone = String(data.telefono_whatsapp).replace(/^\+56/, '').trim();
+            inputPhone.value = cleanPhone;
+          }
         } catch (_) {}
       }
+
+      async function loadWhatsAppMetrics() {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/whatsapp/metricas`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+          const salesEl = document.getElementById('kpi-whatsapp-sales');
+          const countEl = document.getElementById('kpi-whatsapp-orders-count');
+          const boostEl = document.getElementById('kpi-whatsapp-boost');
+          const projTextEl = document.getElementById('kpi-whatsapp-projection-text');
+
+          if (salesEl) salesEl.textContent = `$${(data.ventas_whatsapp_30d || 0).toLocaleString('es-CL')} CLP`;
+          if (countEl) countEl.textContent = `${data.total_pedidos_30d || 0} pedidos recibidos`;
+          if (boostEl) boostEl.textContent = `+$${(data.incremento_estimado_clp || 0).toLocaleString('es-CL')} CLP`;
+          if (projTextEl && data.texto_proyeccion) projTextEl.textContent = data.texto_proyeccion;
+        } catch (_) {}
+      }
+
+      async function loadWhatsAppOrders() {
+        const tbody = document.getElementById('tbody-whatsapp-orders');
+        const badge = document.getElementById('whatsapp-orders-count-badge');
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/whatsapp/pedidos`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) {
+            if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-rose-500">Error al cargar pedidos.</td></tr>`;
+            return;
+          }
+          const orders = await res.json();
+          if (badge) badge.textContent = `${orders.length} pedidos`;
+
+          if (!tbody) return;
+          if (orders.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-stone-400">Aún no has recibido pedidos vía WhatsApp. Aparecerán aquí cuando los usuarios preparen su compra.</td></tr>`;
+            return;
+          }
+
+          tbody.innerHTML = orders.map((order) => {
+            const dt = new Date(order.fecha_creacion);
+            const dateStr = dt.toLocaleString('es-CL');
+            const items = Array.isArray(order.items) ? order.items : [];
+            const itemsSummary = items.map(i => `${i.cantidad}x ${i.nombre} (${i.formato || '250g'})`).join(', ');
+
+            return `
+              <tr class="hover:bg-stone-50 transition">
+                <td class="py-3 px-3 font-mono text-[11px] text-stone-600 whitespace-nowrap">${dateStr}</td>
+                <td class="py-3 px-3">
+                  <div class="font-semibold text-stone-900 max-w-md truncate" title="${itemsSummary}">${itemsSummary || 'Sin detalle'}</div>
+                  <div class="text-[10px] text-stone-400 font-mono">Dispositivo: ${order.dispositivo_uuid ? order.dispositivo_uuid.substring(0, 16) + '...' : 'Anónimo'}</div>
+                </td>
+                <td class="py-3 px-3 text-right font-black text-stone-900 whitespace-nowrap">
+                  $${(order.monto_total_clp || 0).toLocaleString('es-CL')} CLP
+                </td>
+                <td class="py-3 px-3 text-center whitespace-nowrap">
+                  <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    order.estado === 'ENVIADO' ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-700'
+                  }">
+                    ${order.estado || 'ENVIADO'}
+                  </span>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        } catch (e) {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-rose-500">Error de conexión al cargar pedidos.</td></tr>`;
+        }
+      }
+
+      // Guardar formulario de configuración de WhatsApp
+      const formWhatsApp = document.getElementById('form-whatsapp-config');
+      const msgStatus = document.getElementById('msg-whatsapp-status');
+
+      formWhatsApp?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const inputPhone = document.getElementById('input-whatsapp-phone');
+        let raw = (inputPhone ? inputPhone.value : '').trim();
+        let formatted = '';
+        if (raw) {
+          raw = raw.replace(/[^0-9]/g, '');
+          if (raw.length === 9) {
+            formatted = `+56${raw}`;
+          } else if (raw.startsWith('56') && raw.length === 11) {
+            formatted = `+${raw}`;
+          } else {
+            formatted = `+56${raw}`;
+          }
+        }
+
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/whatsapp/config`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ telefono_whatsapp: formatted || null }),
+          });
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            if (msgStatus) {
+              msgStatus.textContent = err.detail || 'Error al guardar WhatsApp.';
+              msgStatus.className = 'text-[11px] text-center text-rose-600 block font-semibold';
+            }
+            return;
+          }
+
+          if (msgStatus) {
+            msgStatus.textContent = '✅ WhatsApp comercial guardado correctamente.';
+            msgStatus.className = 'text-[11px] text-center text-emerald-700 block font-semibold';
+            setTimeout(() => msgStatus.classList.add('hidden'), 3000);
+          }
+        } catch (_) {
+          if (msgStatus) {
+            msgStatus.textContent = 'Error de conexión al guardar.';
+            msgStatus.className = 'text-[11px] text-center text-rose-600 block font-semibold';
+          }
+        }
+      });
 
       btnSync?.addEventListener('click', async () => {
         if (!confirm('¿Deseas iniciar la sincronización de tu catálogo ahora? El proceso consultará tu tienda y actualizará precios y productos.')) {
@@ -316,6 +558,8 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       });
 
       loadProfile();
+      loadWhatsAppMetrics();
+      loadWhatsAppOrders();
     })();
   </script>
 </StoreAdminLayout>
