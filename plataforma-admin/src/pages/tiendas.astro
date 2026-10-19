@@ -1,0 +1,1681 @@
+---
+import AdminLteLayout from '../layouts/AdminLteLayout.astro';
+
+const apiBaseUrl = "http://localhost:8000";
+---
+
+<AdminLteLayout 
+  title="Tiendas y Sucursales | Plataforma Admin"
+  activeNav="tiendas"
+  breadcrumb={[{ label: "Inicio", url: "/plataforma/" }, { label: "Tiendas y Sucursales" }]}
+>
+  <div class="space-y-6" data-api-base={apiBaseUrl}>
+    
+    <!-- CABECERA DE LA PÁGINA -->
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-stone-200/80 pb-6">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-black tracking-tight text-stone-900 flex items-center gap-2">
+          <span>🏪</span>
+          <span>Gestión de Tiendas y Sucursales</span>
+        </h1>
+        <p class="mt-1 text-xs text-stone-500 max-w-2xl">
+          Registra tiendas, prueba sus drivers en vivo, gestiona sucursales y sincroniza catálogos para el comparador.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button
+          type="button"
+          id="btn-open-create-store"
+          class="btn-admin-primary shadow-xs"
+        >
+          <span>➕</span>
+          <span>Nueva Tienda</span>
+        </button>
+        <button
+          type="button"
+          id="btn-sync-unsynced"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 disabled:pointer-events-none"
+          title="Sincronizar tiendas sin catálogo o pendientes"
+        >
+          <span>⚡</span>
+          <span>Sincronizar Pendientes</span>
+          <span id="badge-unsynced-count" class="rounded-full bg-amber-200 px-1.5 py-0.2 text-[10px] font-bold text-amber-900 ml-0.5">0</span>
+        </button>
+        <button
+          type="button"
+          id="btn-sync-all"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-900 shadow-xs hover:bg-emerald-100 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+          title="Iniciar sincronización masiva de todas las tiendas activas"
+        >
+          <span>🔄</span>
+          <span>Sincronización Masiva</span>
+        </button>
+        <button
+          type="button"
+          id="btn-export-stores"
+          class="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-stone-800 transition focus:outline-none focus:ring-2 focus:ring-stone-600"
+        >
+          <span>📦</span>
+          <span>Exportar Tiendas</span>
+        </button>
+        <button
+          type="button"
+          id="btn-open-import-stores"
+          class="inline-flex items-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-xs font-bold text-stone-800 shadow-xs hover:bg-stone-50 transition focus:outline-none focus:ring-2 focus:ring-stone-500"
+          title="Importar tiendas, catálogos y sucursales desde JSON exportado"
+        >
+          <span>📥</span>
+          <span>Importar Tiendas</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- LISTADO DE TIENDAS REGISTRADAS -->
+    <div class="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 shadow-xs">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-stone-900 flex items-center gap-2">
+            <span>📋</span>
+            <span>Tiendas Registradas</span>
+          </h2>
+          <p class="text-xs text-stone-500">Tiendas activas e inactivas en el ambiente seleccionado.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="stores-synced-badge" class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">0 Sincronizadas</span>
+          <span id="stores-count-badge" class="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-semibold text-stone-700">0 Tiendas</span>
+        </div>
+      </div>
+
+      <!-- BUSCADOR DE TIENDAS Y FILTROS -->
+      <div class="mb-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-stone-50 p-3 rounded-xl border border-stone-200">
+        <div class="relative w-full sm:max-w-md">
+          <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-stone-400">🔍</span>
+          <input
+            type="text"
+            id="store-search-input"
+            placeholder="Buscar tienda por nombre, plataforma, URL o comuna..."
+            class="block w-full rounded-lg border border-stone-300 pl-9 pr-8 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600 bg-white"
+          />
+          <button
+            type="button"
+            id="btn-clear-store-search"
+            class="absolute inset-y-0 right-0 pr-3 flex items-center text-stone-400 hover:text-stone-600 hidden text-xs font-bold"
+            title="Limpiar búsqueda"
+          >✕</button>
+        </div>
+        <div class="flex items-center justify-between sm:justify-end gap-3 text-xs text-stone-600">
+          <span id="stores-search-count" class="font-semibold text-stone-700">Mostrando 0 tiendas</span>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-stone-600">
+          <thead class="bg-stone-100 text-stone-800 font-bold uppercase tracking-wider">
+            <tr>
+              <th class="px-4 py-3">Tienda</th>
+              <th class="px-4 py-3">Plataforma</th>
+              <th class="px-4 py-3">Sitio Oficial / Catálogo</th>
+              <th class="px-4 py-3">Comuna / Dirección</th>
+              <th class="px-4 py-3 text-center">Sucursales</th>
+              <th class="px-4 py-3 text-center">Productos / Sincronización</th>
+              <th class="px-4 py-3 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="stores-table-body" class="divide-y divide-stone-100 font-medium">
+            <tr>
+              <td colspan="7" class="py-8 text-center text-stone-400">Cargando tiendas...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DRAWER LATERAL DESLIZABLE (SLIDE-OVER REDIMENSIONABLE) PARA REGISTRO/EDICIÓN -->
+  <div
+    id="store-drawer-backdrop"
+    class="fixed inset-0 z-40 bg-stone-950/40 backdrop-blur-xs transition-opacity duration-300 opacity-0 pointer-events-none"
+    aria-hidden="true"
+  ></div>
+
+  <aside
+    id="store-slide-drawer"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="form-title"
+    class="fixed inset-y-0 right-0 z-50 w-full max-w-xl bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full border-l border-stone-200"
+  >
+    <!-- CABECERA DEL SLIDE-OVER -->
+    <div class="flex items-center justify-between p-5 border-b border-stone-200/80 bg-[#FAF8F2]/90 backdrop-blur-md">
+      <div class="flex items-center gap-3">
+        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 text-base font-bold shadow-2xs">
+          🏪
+        </span>
+        <div>
+          <h2 id="form-title" class="text-base font-bold text-stone-900 tracking-tight">
+            Registrar Nueva Tienda
+          </h2>
+          <p class="text-xs text-stone-500">
+            Configuración técnica de ecommerce y sucursales
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <button
+          type="button"
+          id="btn-expand-store-drawer"
+          class="h-8 px-2.5 flex items-center justify-center rounded-lg text-stone-500 hover:text-stone-800 hover:bg-stone-200/60 transition text-xs font-semibold gap-1"
+          title="Expandir / Contraer ancho del panel"
+        >
+          <span id="expand-store-icon">⤢</span>
+          <span id="expand-store-text" class="hidden sm:inline text-[11px]">Ampliar</span>
+        </button>
+        <button
+          type="button"
+          id="btn-close-store-drawer"
+          class="h-8 w-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/60 transition text-lg font-bold"
+          aria-label="Cerrar panel de tienda"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+
+    <!-- CUERPO SCROLLEABLE DEL FORMULARIO -->
+    <form id="form-store" class="flex-1 overflow-y-auto p-6 space-y-6">
+      <input type="hidden" id="store-id" value="" />
+
+      <!-- Sección 1: Datos Principales -->
+      <div class="space-y-4">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">1. Datos Principales del Ecommerce</span>
+        
+        <div>
+          <label for="store-name" class="block text-xs font-bold text-stone-700">Nombre de la Tienda *</label>
+          <input
+            type="text"
+            id="store-name"
+            required
+            placeholder="Ej. Tienda Singular"
+            class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+          />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="store-platform" class="block text-xs font-bold text-stone-700">Plataforma *</label>
+            <select
+              id="store-platform"
+              class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            >
+              <option value="woocommerce">WooCommerce</option>
+              <option value="shopify">Shopify</option>
+              <option value="jumpseller">Jumpseller</option>
+              <option value="prestashop">PrestaShop</option>
+              <option value="odoo">Odoo eCommerce</option>
+              <option value="sumup">SumUp Storefront</option>
+              <option value="auto">Detección Automática</option>
+              <option value="desconocida">Otra / Personalizada</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700">Favicon / Logo</label>
+            <div class="mt-1.5 flex items-center gap-2 p-1.5 rounded-xl border border-stone-200 bg-stone-50">
+              <img id="store-preview-favicon" src="" alt="Favicon" class="h-6 w-6 rounded-md object-contain bg-white border border-stone-200 p-0.5 hidden shrink-0" />
+              <span id="store-preview-favicon-empty" class="text-xs text-stone-400">🤖 Se resuelve automáticamente al sincronizar</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-bold text-stone-700">Catálogos / Colecciones de Ingesta *</label>
+            <button
+              type="button"
+              id="btn-add-catalog"
+              class="inline-flex items-center gap-1 rounded-lg bg-stone-200 px-2 py-0.5 text-[11px] font-semibold text-stone-800 hover:bg-stone-300 transition"
+            >
+              <span>+</span>
+              <span>Agregar otra URL</span>
+            </button>
+          </div>
+          <p class="mt-0.5 text-[11px] text-stone-400">Si la tienda tiene distintas URLs (ej. 250g, 1kg o líneas insignia), agrégalas aquí para unificar productos.</p>
+          <div id="catalogs-list" class="mt-2 space-y-2">
+            <!-- Inyectado dinámicamente -->
+          </div>
+          <input type="hidden" id="store-url" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="store-address" class="block text-xs font-bold text-stone-700">Dirección Principal</label>
+            <input
+              type="text"
+              id="store-address"
+              placeholder="Ej. Av. Providencia 1234"
+              class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+
+          <div>
+            <label for="store-comuna" class="block text-xs font-bold text-stone-700">Comuna Principal</label>
+            <input
+              type="text"
+              id="store-comuna"
+              placeholder="Ej. Providencia"
+              class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="store-admin-email" class="block text-xs font-bold text-stone-700">Email Administrador (Multi-Inquilino)</label>
+            <input
+              type="email"
+              id="store-admin-email"
+              placeholder="admin@tienda.cl"
+              class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+            <p class="mt-1 text-[10px] text-stone-400">Permite al encargado ingresar a su panel en /admin-tienda.</p>
+          </div>
+
+          <div>
+            <label for="store-admin-password" class="block text-xs font-bold text-stone-700">Clave de Acceso Inicial</label>
+            <input
+              type="password"
+              id="store-admin-password"
+              placeholder="•••••••• (dejar vacío para mantener)"
+              class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+            <p class="mt-1 text-[10px] text-amber-600 font-medium">⚠️ El encargado deberá cambiarla en su primer ingreso.</p>
+          </div>
+        </div>
+
+        <div class="pt-1">
+          <label class="inline-flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="store-active" checked class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+            <span class="text-xs font-semibold text-stone-700">Tienda Activa en Scraping y Catálogo</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Sección 2: Sucursales Físicas -->
+      <div class="space-y-3 pt-3 border-t border-stone-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">2. Sucursales Físicas</span>
+            <p class="text-[11px] text-stone-500">Locales para cálculo de cercanía geográfica ($0 geocoding).</p>
+          </div>
+          <button
+            type="button"
+            id="btn-add-branch"
+            class="inline-flex items-center gap-1 rounded-lg bg-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-800 hover:bg-stone-300 transition"
+          >
+            <span>+</span>
+            <span>Agregar Sucursal</span>
+          </button>
+        </div>
+
+        <div id="branches-list" class="space-y-2">
+          <!-- Inyectado por JS -->
+        </div>
+      </div>
+
+      <!-- Sección 3: Prueba de Catálogo en Vivo -->
+      <div class="space-y-3 pt-3 border-t border-stone-200">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">3. Validación y Pruebas</span>
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            id="btn-test-catalog"
+            class="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <span>🔍</span>
+            <span>Probar Driver (1er Producto)</span>
+          </button>
+          <label class="inline-flex items-center gap-2 text-xs font-semibold text-stone-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              id="store-sync-immediate"
+              checked
+              class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <span>Sincronizar tras guardar</span>
+          </label>
+        </div>
+
+        <!-- Resultado de prueba -->
+        <div id="catalog-test-result" class="hidden"></div>
+      </div>
+
+      <!-- BOTONES DEL PIE DEL DRAWER -->
+      <div class="sticky bottom-0 bg-white/95 backdrop-blur-md pt-4 pb-2 border-t border-stone-200 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          id="btn-cancel-drawer"
+          class="rounded-xl border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-100 transition"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          id="btn-submit-store"
+          class="rounded-xl bg-emerald-700 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-800 transition focus:outline-none focus:ring-2 focus:ring-emerald-600"
+        >
+          Guardar Tienda
+        </button>
+      </div>
+
+    </form>
+  </aside>
+
+  <!-- MODAL DE CONFIRMACIÓN DE SINCRONIZACIÓN RECIENTE (< 5 MINUTOS) -->
+  <dialog
+    id="sync-recent-dialog"
+    class="fixed inset-0 z-50 m-auto w-[92%] max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-stone-200 backdrop:bg-stone-950/60 backdrop:backdrop-blur-xs"
+  >
+    <div class="flex items-start gap-3">
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 text-xl font-bold">
+        ⏱️
+      </span>
+      <div>
+        <h3 class="text-base font-bold text-stone-900">Sincronizada recientemente</h3>
+        <p class="text-xs text-stone-600 mt-1">
+          La tienda <strong id="recent-sync-store-name"></strong> fue sincronizada hace menos de 5 minutos (<span id="recent-sync-store-time" class="font-semibold text-stone-800"></span>).
+        </p>
+        <p class="text-xs text-stone-500 mt-2">
+          ¿Estás seguro de que deseas forzar una nueva sincronización del catálogo ahora?
+        </p>
+      </div>
+    </div>
+    <div class="mt-6 flex items-center justify-end gap-3 pt-3 border-t border-stone-100">
+      <button
+        type="button"
+        id="btn-cancel-recent-sync"
+        class="px-4 py-2 rounded-lg border border-stone-200 text-stone-700 hover:bg-stone-50 text-xs font-semibold transition"
+      >
+        Cancelar
+      </button>
+      <button
+        type="button"
+        id="btn-proceed-recent-sync"
+        class="px-4 py-2 rounded-lg bg-emerald-800 text-white hover:bg-emerald-700 text-xs font-bold transition shadow-xs"
+      >
+        Sí, Forzar Sincronización
+      </button>
+    </div>
+  </dialog>
+
+  <!-- MODAL DE RESULTADOS DE SINCRONIZACIÓN -->
+  <div id="modal-sync-results" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="w-full max-w-2xl rounded-2xl bg-white p-6 sm:p-8 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-stone-200 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-stone-900" id="sync-modal-title">Resultado de Sincronización</h3>
+          <p class="text-xs text-stone-500" id="sync-modal-subtitle">Procesamiento de catálogos</p>
+        </div>
+        <button type="button" id="btn-close-sync-modal" class="text-stone-400 hover:text-stone-600 text-lg font-bold">✕</button>
+      </div>
+      <div id="sync-modal-summary" class="p-4 rounded-xl bg-stone-50 border border-stone-200 text-xs"></div>
+      <div class="max-h-60 overflow-y-auto rounded-xl border border-stone-200 divide-y divide-stone-100" id="sync-modal-list"></div>
+      <div class="flex justify-end pt-2">
+        <button type="button" id="btn-confirm-sync-modal" class="rounded-xl bg-stone-900 px-5 py-2 text-xs font-bold text-white hover:bg-stone-800 transition">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE EXPORTACIÓN (JSON / SQL) -->
+  <div id="modal-export" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="w-full max-w-3xl rounded-2xl bg-white p-6 sm:p-8 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-stone-200 pb-4">
+        <div>
+          <h3 class="text-base font-bold text-stone-900">Exportar Tiendas y Sucursales a Producción</h3>
+          <p class="text-xs text-stone-500">Ejecuta el script SQL en el Editor SQL de Supabase o importa el JSON.</p>
+        </div>
+        <button type="button" id="btn-close-export-modal" class="text-stone-400 hover:text-stone-600 text-lg font-bold">✕</button>
+      </div>
+
+      <div class="flex items-center gap-2 border-b border-stone-200 pb-2 text-xs font-semibold">
+        <button type="button" id="tab-export-json" class="export-tab active text-emerald-800 border-b-2 border-emerald-700 pb-1">JSON Completo (Recomendado)</button>
+        <button type="button" id="tab-export-sql" class="export-tab text-stone-500 pb-1 hover:text-stone-900">SQL Script (Supabase)</button>
+      </div>
+
+      <textarea
+        id="export-content-area"
+        readonly
+        rows="13"
+        class="w-full rounded-xl border border-stone-300 bg-stone-900 p-4 font-mono text-xs text-emerald-400 focus:outline-none"
+      ></textarea>
+
+      <!-- Nombre de archivo personalizable -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs">
+        <div class="flex-1">
+          <label for="export-filename-input" class="block font-bold text-stone-700 mb-1">
+            Nombre del archivo de descarga:
+          </label>
+          <div class="relative">
+            <input
+              type="text"
+              id="export-filename-input"
+              class="w-full rounded-lg border border-stone-300 px-3 py-1.5 text-xs text-stone-900 font-mono focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600 bg-white"
+              placeholder="20261019-export-local.json"
+            />
+          </div>
+        </div>
+        <div class="text-[11px] text-stone-500 self-end sm:self-center">
+          <span id="export-summary-text" class="font-semibold text-stone-700">0 tiendas exportadas</span>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button
+          type="button"
+          id="btn-copy-export"
+          class="rounded-xl border border-stone-300 bg-white px-4 py-2 text-xs font-bold text-stone-800 hover:bg-stone-50 transition"
+        >
+          📋 Copiar al Portapapeles
+        </button>
+        <button
+          type="button"
+          id="btn-download-export"
+          class="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-800 transition"
+        >
+          💾 Descargar Archivo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE IMPORTACIÓN (JSON) -->
+  <div id="modal-import" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="w-full max-w-2xl rounded-2xl bg-white p-6 sm:p-8 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-stone-200 pb-4">
+        <div>
+          <h3 class="text-base font-bold text-stone-900 flex items-center gap-2">
+            <span>📥</span>
+            <span>Importar Tiendas y Catálogos</span>
+          </h3>
+          <p class="text-xs text-stone-500">Carga un archivo JSON exportado previamente para trasladar tiendas, URLs de catálogos y sucursales.</p>
+        </div>
+        <button type="button" id="btn-close-import-modal" class="text-stone-400 hover:text-stone-600 text-lg font-bold">✕</button>
+      </div>
+
+      <!-- Ambiente Destino Activo -->
+      <div class="flex items-center justify-between p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs">
+        <div>
+          <span class="text-stone-500">Ambiente Destino:</span>
+          <span id="import-target-env-label" class="font-bold text-stone-800 ml-1">Localhost</span>
+        </div>
+        <span class="text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+          ⚠️ Si las tiendas ya existen por nombre, se actualizarán sus catálogos y sucursales
+        </span>
+      </div>
+
+      <!-- Selector de Archivo o Textarea -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <label for="import-file-input" class="text-xs font-bold text-stone-700">
+            Cargar archivo .json:
+          </label>
+          <input
+            type="file"
+            id="import-file-input"
+            accept=".json,application/json"
+            class="text-xs text-stone-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+          />
+        </div>
+
+        <div>
+          <label for="import-content-area" class="block text-xs font-bold text-stone-700 mb-1">
+            O pega el contenido JSON aquí:
+          </label>
+          <textarea
+            id="import-content-area"
+            rows="10"
+            placeholder='[ { "nombre": "Tienda Ejemplo", "url_catalogo": "https://ejemplo.cl/shop", "plataforma": "woocommerce", "catalogos": [...] } ]'
+            class="w-full rounded-xl border border-stone-300 bg-stone-900 p-3 font-mono text-xs text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+          ></textarea>
+        </div>
+
+        <div id="import-preview-box" class="hidden p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 font-medium"></div>
+        <div id="import-error-box" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-medium"></div>
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-stone-200">
+        <button
+          type="button"
+          id="btn-preview-import"
+          class="rounded-xl border border-stone-300 bg-white px-4 py-2 text-xs font-bold text-stone-800 hover:bg-stone-50 transition"
+        >
+          🔍 Validar JSON
+        </button>
+        <div class="flex items-center gap-3">
+          <button
+            type="button"
+            id="btn-cancel-import"
+            class="rounded-xl border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-100 transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            id="btn-execute-import"
+            class="rounded-xl bg-emerald-700 px-5 py-2 text-xs font-bold text-white hover:bg-emerald-800 transition focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:opacity-50"
+          >
+            📥 Importar Tiendas
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    (function () {
+      const API_BASE = 'http://localhost:8000';
+
+      const fetchWithEnv = (url, opts = {}) => {
+        if (window.plataformaState && typeof window.plataformaState.fetchWithEnv === 'function') {
+          return window.plataformaState.fetchWithEnv(url, opts);
+        }
+        const headers = new Headers(opts.headers || {});
+        headers.set('X-Target-Environment', localStorage.getItem('plataforma_active_env') || 'local');
+        return fetch(url, { ...opts, headers });
+      };
+
+      // --- Gestión Dinámica de Catálogos / Colecciones ---
+      const catalogsContainer = document.getElementById('catalogs-list');
+      const btnAddCatalog = document.getElementById('btn-add-catalog');
+
+      function syncPrimaryUrl() {
+        const firstUrlInput = catalogsContainer?.querySelector('.catalog-url');
+        const hiddenStoreUrl = document.getElementById('store-url');
+        if (hiddenStoreUrl && firstUrlInput) {
+          hiddenStoreUrl.value = firstUrlInput.value.trim();
+        }
+      }
+
+      function createCatalogRow(cat = {}) {
+        if (!catalogsContainer) return;
+        const row = document.createElement('div');
+        row.className = 'catalog-row flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 p-2 text-xs';
+        row.innerHTML = `
+          <div class="flex-1 space-y-1">
+            <input
+              type="url"
+              class="catalog-url block w-full rounded-lg border border-stone-300 px-2.5 py-1.5 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600 bg-white"
+              placeholder="https://tienda.cl/collections/cafe o /tienda"
+              value="${cat.url_catalogo || ''}"
+              required
+            />
+            <input
+              type="text"
+              class="catalog-label block w-full rounded-lg border border-stone-200 px-2.5 py-1 text-[11px] text-stone-600 focus:border-emerald-600 focus:outline-none bg-white"
+              placeholder="Etiqueta opcional (ej. 250g, 1kg, granos, insignia)"
+              value="${cat.etiqueta || ''}"
+            />
+          </div>
+          <button
+            type="button"
+            class="btn-remove-catalog text-stone-400 hover:text-rose-600 p-1 font-bold text-sm"
+            title="Eliminar URL"
+          >✕</button>
+        `;
+        row.querySelector('.btn-remove-catalog')?.addEventListener('click', () => {
+          if (catalogsContainer.children.length > 1) {
+            row.remove();
+            syncPrimaryUrl();
+          } else {
+            alert('Debe existir al menos una URL de catálogo.');
+          }
+        });
+        row.querySelector('.catalog-url')?.addEventListener('input', syncPrimaryUrl);
+        catalogsContainer.appendChild(row);
+        syncPrimaryUrl();
+      }
+
+      btnAddCatalog?.addEventListener('click', () => {
+        createCatalogRow();
+      });
+
+      // --- Gestión Dinámica de Sucursales en Formulario ---
+      const branchesContainer = document.getElementById('branches-list');
+      const btnAddBranch = document.getElementById('btn-add-branch');
+
+      function createBranchRow(branch = {}) {
+        const row = document.createElement('div');
+        row.className = 'branch-row grid grid-cols-1 sm:grid-cols-4 gap-2 bg-white p-2.5 rounded-lg border border-stone-200 text-xs items-center';
+        row.innerHTML = `
+          <input type="text" class="branch-name rounded-lg border border-stone-300 px-2.5 py-1 text-xs" placeholder="Nombre (ej. Sucursal Tobalaba)" value="${branch.nombre || ''}" required />
+          <input type="text" class="branch-address rounded-lg border border-stone-300 px-2.5 py-1 text-xs" placeholder="Dirección" value="${branch.direccion || ''}" />
+          <input type="text" class="branch-comuna rounded-lg border border-stone-300 px-2.5 py-1 text-xs" placeholder="Comuna" value="${branch.comuna || ''}" />
+          <div class="flex items-center justify-between gap-2">
+            <label class="inline-flex items-center gap-1 text-[11px] text-stone-600">
+              <input type="checkbox" class="branch-active" ${branch.activo !== false ? 'checked' : ''} /> Activa
+            </label>
+            <button type="button" class="btn-remove-branch text-rose-600 hover:text-rose-800 font-bold px-1.5">✕</button>
+          </div>
+        `;
+        row.querySelector('.btn-remove-branch')?.addEventListener('click', () => row.remove());
+        branchesContainer?.appendChild(row);
+      }
+
+      btnAddBranch?.addEventListener('click', () => createBranchRow());
+
+      // --- Drawer Deslizable Redimensionable ---
+      const storeDrawer = document.getElementById('store-slide-drawer');
+      const storeDrawerBackdrop = document.getElementById('store-drawer-backdrop');
+      const btnOpenCreateStore = document.getElementById('btn-open-create-store');
+      const btnCloseStoreDrawer = document.getElementById('btn-close-store-drawer');
+      const btnCancelDrawer = document.getElementById('btn-cancel-drawer');
+      const btnExpandStoreDrawer = document.getElementById('btn-expand-store-drawer');
+      const expandStoreIcon = document.getElementById('expand-store-icon');
+      const expandStoreText = document.getElementById('expand-store-text');
+      let isDrawerExpanded = false;
+
+      function openDrawer() {
+        if (!storeDrawer || !storeDrawerBackdrop) return;
+        storeDrawerBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+        storeDrawerBackdrop.classList.add('opacity-100', 'pointer-events-auto');
+        storeDrawer.classList.remove('translate-x-full');
+        storeDrawer.classList.add('translate-x-0');
+        document.body.classList.add('overflow-hidden');
+      }
+
+      function closeDrawer() {
+        if (!storeDrawer || !storeDrawerBackdrop) return;
+        storeDrawerBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+        storeDrawerBackdrop.classList.add('opacity-0', 'pointer-events-none');
+        storeDrawer.classList.remove('translate-x-0');
+        storeDrawer.classList.add('translate-x-full');
+        document.body.classList.remove('overflow-hidden');
+      }
+
+      btnOpenCreateStore?.addEventListener('click', () => {
+        resetForm();
+        openDrawer();
+      });
+      btnCloseStoreDrawer?.addEventListener('click', closeDrawer);
+      btnCancelDrawer?.addEventListener('click', closeDrawer);
+      storeDrawerBackdrop?.addEventListener('click', closeDrawer);
+
+      btnExpandStoreDrawer?.addEventListener('click', () => {
+        isDrawerExpanded = !isDrawerExpanded;
+        if (storeDrawer) {
+          if (isDrawerExpanded) {
+            storeDrawer.classList.remove('max-w-xl');
+            storeDrawer.classList.add('max-w-4xl');
+            if (expandStoreIcon) expandStoreIcon.textContent = '⤡';
+            if (expandStoreText) expandStoreText.textContent = 'Reducir';
+          } else {
+            storeDrawer.classList.remove('max-w-4xl');
+            storeDrawer.classList.add('max-w-xl');
+            if (expandStoreIcon) expandStoreIcon.textContent = '⤢';
+            if (expandStoreText) expandStoreText.textContent = 'Ampliar';
+          }
+        }
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && storeDrawer && !storeDrawer.classList.contains('translate-x-full')) {
+          closeDrawer();
+        }
+      });
+
+      // --- Estado de Tiendas y Filtro de Búsqueda ---
+      let cachedStores = [];
+      const storeSearchInput = document.getElementById('store-search-input');
+      const btnClearStoreSearch = document.getElementById('btn-clear-store-search');
+      const storesSearchCount = document.getElementById('stores-search-count');
+      const btnSyncUnsynced = document.getElementById('btn-sync-unsynced');
+      const btnSyncAll = document.getElementById('btn-sync-all');
+      const modalSyncResults = document.getElementById('modal-sync-results');
+
+      function filterAndRenderStores() {
+        const term = (storeSearchInput?.value || '').toLowerCase().trim();
+        if (btnClearStoreSearch) {
+          btnClearStoreSearch.classList.toggle('hidden', !term);
+        }
+
+        const filtered = cachedStores.filter((s) => {
+          if (!term) return true;
+          const name = (s.nombre || '').toLowerCase();
+          const plat = (s.plataforma || '').toLowerCase();
+          const url = (s.url_catalogo || s.url_base || '').toLowerCase();
+          const site = (s.sitio_oficial || '').toLowerCase();
+          const comuna = (s.comuna || '').toLowerCase();
+          const address = (s.direccion || '').toLowerCase();
+          const adminEmail = (s.email_administrador || '').toLowerCase();
+          return (
+            name.includes(term) ||
+            plat.includes(term) ||
+            url.includes(term) ||
+            site.includes(term) ||
+            comuna.includes(term) ||
+            address.includes(term) ||
+            adminEmail.includes(term)
+          );
+        });
+
+        if (storesSearchCount) {
+          storesSearchCount.textContent = `Mostrando ${filtered.length} de ${cachedStores.length} tiendas`;
+        }
+        renderStoresTable(filtered);
+      }
+
+      storeSearchInput?.addEventListener('input', () => filterAndRenderStores());
+      btnClearStoreSearch?.addEventListener('click', () => {
+        if (storeSearchInput) storeSearchInput.value = '';
+        filterAndRenderStores();
+      });
+
+      function renderStoresTable(stores) {
+        const tbody = document.getElementById('stores-table-body');
+        if (!tbody) return;
+
+        if (!stores || stores.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-stone-400">No se encontraron tiendas bajo el criterio de búsqueda.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = stores.map((store) => `
+          <tr class="hover:bg-stone-50/60 transition border-b border-stone-100">
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2.5">
+                ${store.logo_url ? `<img src="${store.logo_url}" alt="${store.nombre}" class="h-6 w-6 rounded-md object-contain bg-stone-50 border border-stone-200 p-0.5 shrink-0" onerror="this.onerror=null; this.classList.add('hidden');" />` : ''}
+                <div>
+                  <div class="font-bold text-stone-900">${store.nombre}</div>
+                  ${!store.activo ? '<span class="inline-block rounded-md bg-stone-200 text-stone-600 px-1.5 py-0.2 text-[10px] font-semibold">Inactiva</span>' : ''}
+                  ${store.email_administrador
+                    ? `<div class="text-[11px] text-stone-500 flex flex-wrap items-center gap-1.5 mt-0.5" title="Usuario administrador asignado">
+                        <span class="font-mono text-emerald-800 font-semibold truncate max-w-[170px]">👤 ${store.email_administrador}</span>
+                        ${store.tiene_password_configurada
+                          ? (store.debe_cambiar_password
+                            ? '<span class="text-[9px] bg-amber-100 text-amber-900 border border-amber-200 px-1.5 py-0.2 rounded font-bold" title="Debe cambiar clave en 1er ingreso">🔑 1er cambio pend.</span>'
+                            : '<span class="text-[9px] bg-emerald-100 text-emerald-900 border border-emerald-200 px-1.5 py-0.2 rounded font-bold" title="Clave activa">🔑 Activa</span>')
+                          : '<span class="text-[9px] bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.2 rounded font-bold" title="Sin clave configurada">⚠️ Sin clave</span>'}
+                      </div>`
+                    : `<div class="text-[10px] text-amber-700/80 flex items-center gap-1 mt-0.5">
+                        <span>⚠️</span>
+                        <span>Sin admin asignado</span>
+                      </div>`
+                  }
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3">
+              <span class="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] font-semibold uppercase text-stone-700">${store.plataforma}</span>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex flex-col gap-0.5">
+                <a href="${store.sitio_oficial || store.url_base}" target="_blank" rel="noopener noreferrer" class="text-emerald-700 hover:underline font-semibold flex items-center gap-1">
+                  <span>🌐 Sitio Oficial</span>
+                  <span class="text-[10px] text-stone-400 font-normal">(${store.sitio_oficial || 'N/A'})</span>
+                </a>
+                <a href="${store.url_catalogo || store.url_base}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-stone-500 hover:underline truncate max-w-[220px]">
+                  🛒 Catálogo: ${store.url_catalogo || store.url_base}
+                </a>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-stone-600">${store.comuna || store.direccion || 'Sin dirección'}</td>
+            <td class="px-4 py-3 text-center">
+              <span class="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-bold text-stone-700">${store.sucursales ? store.sucursales.length : 0}</span>
+            </td>
+            <td class="px-4 py-3 text-center">
+              <div class="font-bold text-emerald-800">${store.cantidad_productos_visibles || 0} visibles</div>
+              ${store.cantidad_productos_ocultos ? `<div class="text-[10px] text-rose-600 font-semibold">(${store.cantidad_productos_ocultos} ocultos)</div>` : ''}
+              <div class="mt-1">
+                ${store.es_pendiente_sincronizacion
+                  ? `<span class="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-900 px-2 py-0.5 text-[10px] font-bold" title="${store.estado_sincronizacion === 'fallido' ? 'Último intento falló' : 'Sin sincronizar aún'}">⏳ Pendiente</span>`
+                  : `<span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-900 px-2 py-0.5 text-[10px] font-bold" title="${store.ultima_sincronizacion ? 'Sincronizado: ' + store.ultima_sincronizacion : ''}">✅ Sincronizada</span>`
+                }
+              </div>
+            </td>
+            <td class="px-4 py-3 text-center">
+              <div class="flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  class="btn-sync-single-store inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition shadow-xs"
+                  data-id="${store.id}"
+                  data-name="${store.nombre}"
+                  data-last-sync="${store.ultima_sincronizacion || ''}"
+                  title="Sincronizar ahora el catálogo de esta tienda"
+                >
+                  <span>🔄</span>
+                  <span>Sincronizar</span>
+                </button>
+                <button
+                  type="button"
+                  class="btn-edit-store text-stone-600 hover:text-stone-900 font-bold px-2 py-1 text-xs transition"
+                  data-store='${JSON.stringify(store).replace(/'/g, "&#39;")}'
+                >
+                  ✏️ Editar
+                </button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+
+        // Enlazar botones de edición
+        document.querySelectorAll('.btn-edit-store').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const raw = btn.getAttribute('data-store');
+            if (!raw) return;
+            const storeData = JSON.parse(raw);
+            populateForm(storeData);
+            openDrawer();
+          });
+        });
+
+        // Enlazar botones de sincronización individual con chequeo de 5 min
+        document.querySelectorAll('.btn-sync-single-store').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name') || 'Tienda';
+            const lastSync = btn.getAttribute('data-last-sync');
+            
+            // Chequeo de 5 minutos
+            if (lastSync) {
+              const syncTime = new Date(lastSync).getTime();
+              const now = Date.now();
+              const diffMinutes = (now - syncTime) / (1000 * 60);
+              if (diffMinutes < 5) {
+                promptRecentSyncConfirmation(id, name, lastSync, btn);
+                return;
+              }
+            }
+
+            await syncStoreById(id, name, btn);
+          });
+        });
+      }
+
+      // --- Confirmación de Sincronización Reciente ---
+      const recentSyncDialog = document.getElementById('sync-recent-dialog');
+      const recentStoreNameEl = document.getElementById('recent-sync-store-name');
+      const recentStoreTimeEl = document.getElementById('recent-sync-store-time');
+      const btnCancelRecentSync = document.getElementById('btn-cancel-recent-sync');
+      const btnProceedRecentSync = document.getElementById('btn-proceed-recent-sync');
+      let pendingRecentSync = null;
+
+      function promptRecentSyncConfirmation(id, name, lastSync, btn) {
+        pendingRecentSync = { id, name, btn };
+        if (recentStoreNameEl) recentStoreNameEl.textContent = name;
+        if (recentStoreTimeEl) {
+          const dt = new Date(lastSync);
+          recentStoreTimeEl.textContent = isNaN(dt.getTime()) ? lastSync : dt.toLocaleTimeString('es-CL');
+        }
+        recentSyncDialog?.showModal();
+      }
+
+      btnCancelRecentSync?.addEventListener('click', () => {
+        pendingRecentSync = null;
+        recentSyncDialog?.close();
+      });
+
+      btnProceedRecentSync?.addEventListener('click', async () => {
+        recentSyncDialog?.close();
+        if (pendingRecentSync) {
+          const { id, name, btn } = pendingRecentSync;
+          pendingRecentSync = null;
+          await syncStoreById(id, name, btn);
+        }
+      });
+
+      // --- Modal de Resultados de Sincronización ---
+      function showSyncResultsModal(title, subtitle, summaryHtml, detailsList = []) {
+        const modal = document.getElementById('modal-sync-results');
+        const titleEl = document.getElementById('sync-modal-title');
+        const subtitleEl = document.getElementById('sync-modal-subtitle');
+        const summaryEl = document.getElementById('sync-modal-summary');
+        const listEl = document.getElementById('sync-modal-list');
+
+        if (titleEl) titleEl.textContent = title;
+        if (subtitleEl) subtitleEl.textContent = subtitle;
+        if (summaryEl) summaryEl.innerHTML = summaryHtml;
+
+        if (listEl) {
+          if (!detailsList || detailsList.length === 0) {
+            listEl.innerHTML = '<div class="p-4 text-center text-xs text-stone-400">Sin detalles adicionales.</div>';
+          } else {
+            listEl.innerHTML = detailsList.map((item) => {
+              const isOk = item.exito !== undefined ? Boolean(item.exito) : (item.estado === 'exitoso');
+              return `
+              <div class="p-3 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-stone-50">
+                <div class="space-y-0.5">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-stone-900">${item.nombre || item.tienda_nombre || 'Tienda'}</span>
+                    <span class="rounded-full px-2 py-0.2 text-[10px] font-bold ${isOk ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                      ${isOk ? 'Completado' : 'Fallido'}
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-stone-500">${item.mensaje || (isOk ? 'Sincronizado' : item.error || 'Error')}</p>
+                </div>
+                <div class="text-right text-[11px] font-semibold text-stone-600 shrink-0">
+                  <span>${item.total_productos ?? 0} prods</span>
+                  <span class="text-stone-400">•</span>
+                  <span class="text-emerald-700">+${item.productos_nuevos ?? 0}</span>
+                </div>
+              </div>
+            `;
+            }).join('');
+          }
+        }
+
+        modal?.classList.remove('hidden');
+        modal?.classList.add('flex');
+      }
+
+      function closeSyncModal() {
+        modalSyncResults?.classList.add('hidden');
+        modalSyncResults?.classList.remove('flex');
+      }
+
+      document.getElementById('btn-close-sync-modal')?.addEventListener('click', closeSyncModal);
+      document.getElementById('btn-confirm-sync-modal')?.addEventListener('click', closeSyncModal);
+
+      // --- Sincronizar Tienda por ID ---
+      async function syncStoreById(id, name, btnElement = null) {
+        const originalHtml = btnElement ? btnElement.innerHTML : '';
+        if (btnElement) {
+          btnElement.disabled = true;
+          btnElement.innerHTML = '<span>⏳</span><span>Sincronizando...</span>';
+        }
+
+        try {
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/stores/${id}/sync`, {
+            method: 'POST',
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `Error HTTP ${res.status} al sincronizar tienda`);
+          }
+          const data = await res.json();
+          const isSuccess = Boolean(data.exito || data.estado === 'exitoso');
+
+          const summaryHtml = `
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-sm ${isSuccess ? 'text-emerald-800' : 'text-rose-800'}">
+                  ${isSuccess ? '✅ Catálogo Sincronizado con Éxito' : '❌ Sincronización con Errores'}
+                </span>
+                <span class="text-xs font-mono text-stone-500">${data.duracion_segundos}s</span>
+              </div>
+              <p class="text-xs text-stone-700">${data.mensaje}</p>
+              <div class="flex flex-wrap gap-3 pt-2 text-[11px] font-semibold text-stone-700 border-t border-stone-200 mt-2">
+                <span class="text-emerald-700">🌱 ${data.productos_nuevos || 0} nuevos</span>
+                <span class="text-sky-700">🔄 ${data.productos_actualizados || 0} actualizados</span>
+                <span class="text-stone-500">📦 ${data.productos_encontrados ?? data.total_productos ?? 0} encontrados</span>
+              </div>
+            </div>
+          `;
+
+          showSyncResultsModal(
+            `Sincronización: ${name}`,
+            `Catálogo de ${name} procesado`,
+            summaryHtml,
+            [data]
+          );
+
+          await loadStores();
+        } catch (err) {
+          alert(`Error al sincronizar tienda ${name}: ${err.message}`);
+        } finally {
+          if (btnElement) {
+            btnElement.disabled = false;
+            btnElement.innerHTML = originalHtml;
+          }
+        }
+      }
+
+      // --- Sincronizar Tiendas Pendientes ---
+      async function syncUnsyncedStores() {
+        if (!confirm('¿Deseas iniciar la sincronización de todas las tiendas pendientes (sin catálogo o con fallos previos)?')) {
+          return;
+        }
+        if (btnSyncUnsynced) {
+          btnSyncUnsynced.disabled = true;
+          btnSyncUnsynced.innerHTML = '<span>⏳</span><span>Sincronizando pendientes...</span>';
+        }
+
+        try {
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/sync/unsynced`, {
+            method: 'POST',
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `Error HTTP ${res.status} al sincronizar pendientes`);
+          }
+          const data = await res.json();
+
+          const summaryHtml = `
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-sm text-stone-900">⚡ Sincronización de Pendientes Finalizada</span>
+                <span class="text-xs font-mono text-stone-500">${data.duracion_segundos}s</span>
+              </div>
+              <p class="text-xs text-stone-700">${data.mensaje}</p>
+              <div class="flex flex-wrap gap-3 pt-2 text-[11px] font-semibold text-stone-700 border-t border-stone-200 mt-2">
+                <span class="text-emerald-700">✅ ${data.tiendas_exitosas} tiendas exitosas</span>
+                <span class="${data.tiendas_fallidas ? 'text-rose-600' : 'text-stone-400'}">❌ ${data.tiendas_fallidas} fallidas</span>
+                <span class="text-stone-700">📦 ${data.total_productos_sincronizados} productos</span>
+              </div>
+            </div>
+          `;
+
+          showSyncResultsModal('Sincronización de Tiendas Pendientes', 'Proceso por lote', summaryHtml, data.detalles || []);
+          await loadStores();
+        } catch (err) {
+          alert(`Error al sincronizar pendientes: ${err.message}`);
+        } finally {
+          if (btnSyncUnsynced) {
+            btnSyncUnsynced.disabled = false;
+            btnSyncUnsynced.innerHTML = `<span>⚡</span><span>Sincronizar Pendientes (<span id="badge-unsynced-count">${cachedStores.filter((s) => s.es_pendiente_sincronizacion).length}</span>)</span>`;
+          }
+        }
+      }
+
+      // --- Sincronización Masiva (Sin confirmación de 5 minutos) ---
+      async function syncAllStores() {
+        if (!confirm('¿Deseas iniciar una sincronización masiva de TODAS las tiendas activas en el sistema? Este proceso recorrerá todos los catálogos.')) {
+          return;
+        }
+        if (btnSyncAll) {
+          btnSyncAll.disabled = true;
+          btnSyncAll.innerHTML = '<span>⏳</span><span>Sincronización Masiva en curso...</span>';
+        }
+
+        try {
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/sync/all`, {
+            method: 'POST',
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `Error HTTP ${res.status} en sincronización masiva`);
+          }
+          const data = await res.json();
+
+          const summaryHtml = `
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-sm text-stone-900">🔄 Sincronización Masiva Completada</span>
+                <span class="text-xs font-mono text-stone-500">${data.duracion_segundos}s</span>
+              </div>
+              <p class="text-xs text-stone-700">${data.mensaje}</p>
+              <div class="flex flex-wrap gap-3 pt-2 text-[11px] font-semibold text-stone-700 border-t border-stone-200 mt-2">
+                <span class="text-emerald-700">✅ ${data.tiendas_exitosas} tiendas exitosas</span>
+                <span class="${data.tiendas_fallidas ? 'text-rose-600' : 'text-stone-400'}">❌ ${data.tiendas_fallidas} fallidas</span>
+                <span class="text-stone-700">📦 ${data.total_productos_sincronizados} productos revisados</span>
+                <span class="text-emerald-700">🌱 ${data.total_productos_nuevos} nuevos</span>
+                <span class="text-sky-700">🔄 ${data.total_productos_actualizados} actualizados</span>
+              </div>
+            </div>
+          `;
+
+          showSyncResultsModal('Sincronización Masiva de Catálogos', `Se procesaron ${data.total_tiendas} tiendas activas`, summaryHtml, data.detalles || []);
+          await loadStores();
+        } catch (err) {
+          alert(`Error en sincronización masiva: ${err.message}`);
+        } finally {
+          if (btnSyncAll) {
+            btnSyncAll.disabled = false;
+            btnSyncAll.innerHTML = '<span>🔄</span><span>Sincronización Masiva</span>';
+          }
+        }
+      }
+
+      btnSyncUnsynced?.addEventListener('click', syncUnsyncedStores);
+      btnSyncAll?.addEventListener('click', syncAllStores);
+
+      // --- Cargar Tiendas Registradas (Multi-Ambiente) ---
+      async function loadStores() {
+        const tbody = document.getElementById('stores-table-body');
+        try {
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/stores`);
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `Error HTTP ${res.status} al cargar tiendas`);
+          }
+          const data = await res.json();
+          cachedStores = data.tiendas || [];
+
+          const badge = document.getElementById('stores-count-badge');
+          if (badge) badge.textContent = `${data.total_tiendas} Tiendas`;
+
+          const syncedBadge = document.getElementById('stores-synced-badge');
+          if (syncedBadge) syncedBadge.textContent = `${data.total_sincronizadas || 0} Sincronizadas`;
+
+          const currentBadgeUnsynced = document.getElementById('badge-unsynced-count');
+          if (currentBadgeUnsynced) {
+            currentBadgeUnsynced.textContent = `${data.total_pendientes || 0}`;
+          }
+          if (btnSyncUnsynced) {
+            btnSyncUnsynced.disabled = !data.total_pendientes;
+          }
+
+          filterAndRenderStores();
+        } catch (err) {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-rose-600">Error: ${err.message}</td></tr>`;
+        }
+      }
+
+      function populateForm(store) {
+        document.getElementById('form-title').textContent = `Editar Tienda: ${store.nombre}`;
+        document.getElementById('store-id').value = store.id || '';
+        document.getElementById('store-name').value = store.nombre || '';
+        document.getElementById('store-platform').value = store.plataforma || 'woocommerce';
+        document.getElementById('store-url').value = store.url_catalogo || store.url_base || '';
+        document.getElementById('store-address').value = store.direccion || '';
+        document.getElementById('store-comuna').value = store.comuna || '';
+        document.getElementById('store-admin-email').value = store.email_administrador || '';
+        const passInput = document.getElementById('store-admin-password');
+        if (passInput) {
+          passInput.value = '';
+          passInput.placeholder = store.tiene_password_configurada
+            ? '•••••••• (clave configurada, ingresa para cambiar)'
+            : '•••••••• (sin clave, ingresa para asignar)';
+        }
+        document.getElementById('store-active').checked = store.activo !== false;
+
+        const previewImg = document.getElementById('store-preview-favicon');
+        const emptyLabel = document.getElementById('store-preview-favicon-empty');
+        if (store.logo_url) {
+          if (previewImg) {
+            previewImg.src = store.logo_url;
+            previewImg.classList.remove('hidden');
+          }
+          if (emptyLabel) emptyLabel.textContent = store.logo_url;
+        } else {
+          if (previewImg) previewImg.classList.add('hidden');
+          if (emptyLabel) emptyLabel.textContent = '🤖 Se resuelve automáticamente al sincronizar';
+        }
+
+        if (catalogsContainer) catalogsContainer.innerHTML = '';
+        if (store.catalogos && store.catalogos.length > 0) {
+          store.catalogos.forEach((c) => createCatalogRow(c));
+        } else {
+          createCatalogRow({ url_catalogo: store.url_catalogo || store.url_base || '' });
+        }
+
+        if (branchesContainer) branchesContainer.innerHTML = '';
+        if (store.sucursales && store.sucursales.length > 0) {
+          store.sucursales.forEach((b) => createBranchRow(b));
+        }
+      }
+
+      function resetForm() {
+        document.getElementById('form-title').textContent = 'Registrar Nueva Tienda';
+        document.getElementById('store-id').value = '';
+        document.getElementById('store-name').value = '';
+        document.getElementById('store-platform').value = 'woocommerce';
+        document.getElementById('store-url').value = '';
+        document.getElementById('store-address').value = '';
+        document.getElementById('store-comuna').value = '';
+        document.getElementById('store-admin-email').value = '';
+        const passInput = document.getElementById('store-admin-password');
+        if (passInput) {
+          passInput.value = '';
+          passInput.placeholder = '•••••••• (dejar vacío para no asignar)';
+        }
+        document.getElementById('store-active').checked = true;
+
+        const previewImg = document.getElementById('store-preview-favicon');
+        const emptyLabel = document.getElementById('store-preview-favicon-empty');
+        if (previewImg) previewImg.classList.add('hidden');
+        if (emptyLabel) emptyLabel.textContent = '🤖 Se resuelve automáticamente al sincronizar';
+
+        if (catalogsContainer) {
+          catalogsContainer.innerHTML = '';
+          createCatalogRow();
+        }
+
+        if (branchesContainer) branchesContainer.innerHTML = '';
+        const testResultBox = document.getElementById('catalog-test-result');
+        if (testResultBox) testResultBox.classList.add('hidden');
+      }
+
+      // --- Probar Catálogo con Driver Nativo ---
+      const btnTestCatalog = document.getElementById('btn-test-catalog');
+      btnTestCatalog?.addEventListener('click', async () => {
+        const name = document.getElementById('store-name')?.value || 'Tienda de Prueba';
+        const url = document.getElementById('store-url')?.value;
+        const platform = document.getElementById('store-platform')?.value || 'auto';
+        const resultBox = document.getElementById('catalog-test-result');
+
+        if (!url) {
+          alert('Por favor ingresa la URL del catálogo para probar.');
+          document.getElementById('store-url')?.focus();
+          return;
+        }
+
+        btnTestCatalog.disabled = true;
+        btnTestCatalog.innerHTML = '<span>⏳</span><span>Probando catálogo con driver...</span>';
+        if (resultBox) {
+          resultBox.classList.remove('hidden');
+          resultBox.innerHTML = '<div class="p-4 rounded-xl bg-stone-100 text-xs text-stone-600 animate-pulse">Consultando catálogo y extrayendo primer producto devuelto por el driver...</div>';
+        }
+
+        try {
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/stores/test-catalog`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: name, url_catalogo: url, plataforma: platform }),
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            const errMsg = errData.detail || errData.mensaje || `Error HTTP ${res.status}: ${res.statusText}`;
+            resultBox.innerHTML = `
+              <div class="rounded-xl border border-rose-300 bg-rose-50/70 p-5 space-y-2">
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-200 px-3 py-0.5 text-xs font-bold text-rose-900">
+                  ❌ Error del servidor (${res.status})
+                </span>
+                <p class="text-xs font-semibold text-rose-800">${errMsg}</p>
+              </div>
+            `;
+            return;
+          }
+          const data = await res.json();
+
+          if (data.legible && data.primer_producto) {
+            const p = data.primer_producto;
+            resultBox.innerHTML = `
+              <div class="rounded-xl border border-emerald-300 bg-emerald-50/70 p-4 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-200 px-3 py-0.5 text-xs font-bold text-emerald-900">
+                    ✅ Catálogo Legible (${data.plataforma_detectada.toUpperCase()})
+                  </span>
+                  <span class="text-xs font-bold text-emerald-800">${data.total_productos_detectados} productos</span>
+                </div>
+                <div class="mt-2 flex items-center gap-3 rounded-lg bg-white p-3 border border-emerald-200">
+                  ${p.imagen ? `<img src="${p.imagen}" alt="${p.nombre}" class="h-14 w-14 rounded-lg object-contain bg-[#F4F3ED] border border-stone-200 p-1" />` : ''}
+                  <div class="text-xs">
+                    <h4 class="font-bold text-stone-900">${p.nombre}</h4>
+                    <p class="text-emerald-900 font-semibold">$${p.precio_clp.toLocaleString('es-CL')} CLP • ${p.formato_gramos}g ($${p.precio_por_kilo.toLocaleString('es-CL')}/kg)</p>
+                  </div>
+                </div>
+              </div>
+            `;
+          } else {
+            resultBox.innerHTML = `
+              <div class="rounded-xl border border-rose-300 bg-rose-50/70 p-4 space-y-2">
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-200 px-3 py-0.5 text-xs font-bold text-rose-900">
+                  ❌ No fue posible leer el catálogo
+                </span>
+                <p class="text-xs font-semibold text-rose-800">${data.mensaje || 'Error al conectar'}</p>
+              </div>
+            `;
+          }
+        } catch (err) {
+          resultBox.innerHTML = `<div class="p-4 rounded-xl bg-rose-100 text-xs text-rose-800 font-bold">Error: ${err.message}</div>`;
+        } finally {
+          btnTestCatalog.disabled = false;
+          btnTestCatalog.innerHTML = '<span>🔍</span><span>Probar Driver (1er Producto)</span>';
+        }
+      });
+
+      // --- Guardar Tienda ---
+      document.getElementById('form-store')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const storeId = document.getElementById('store-id')?.value;
+        const name = document.getElementById('store-name')?.value;
+        const platform = document.getElementById('store-platform')?.value;
+        const address = document.getElementById('store-address')?.value;
+        const comuna = document.getElementById('store-comuna')?.value;
+        const adminEmail = document.getElementById('store-admin-email')?.value?.trim();
+        const adminPassword = document.getElementById('store-admin-password')?.value?.trim();
+        const active = document.getElementById('store-active')?.checked;
+        const syncImmediate = document.getElementById('store-sync-immediate')?.checked;
+
+        const catalogos = [];
+        document.querySelectorAll('.catalog-row').forEach((row) => {
+          const urlVal = row.querySelector('.catalog-url')?.value?.trim();
+          const labelVal = row.querySelector('.catalog-label')?.value?.trim();
+          if (urlVal) {
+            catalogos.push({
+              url_catalogo: urlVal,
+              etiqueta: labelVal || null,
+              activa: true,
+            });
+          }
+        });
+
+        if (catalogos.length === 0) {
+          alert('Por favor ingresa al menos una URL de catálogo.');
+          return;
+        }
+
+        const primaryUrl = catalogos[0].url_catalogo;
+
+        const branches = [];
+        document.querySelectorAll('.branch-row').forEach((row) => {
+          const bName = row.querySelector('.branch-name')?.value;
+          if (bName && bName.trim()) {
+            branches.push({
+              nombre: bName.trim(),
+              direccion: row.querySelector('.branch-address')?.value || null,
+              comuna: row.querySelector('.branch-comuna')?.value || null,
+              activo: row.querySelector('.branch-active')?.checked !== false,
+            });
+          }
+        });
+
+        const payload = {
+          nombre: name,
+          url_catalogo: primaryUrl,
+          catalogos: catalogos,
+          plataforma: platform,
+          direccion: address || null,
+          comuna: comuna || null,
+          email_administrador: adminEmail || null,
+          activo: active,
+          sucursales: branches,
+        };
+
+        if (adminPassword) {
+          payload.password_administrador = adminPassword;
+        }
+
+        try {
+          const endpoint = storeId ? `${API_BASE}/api/v1/admin/stores/${storeId}` : `${API_BASE}/api/v1/admin/stores`;
+          const method = storeId ? 'PUT' : 'POST';
+          const res = await fetchWithEnv(endpoint, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `Error HTTP ${res.status} al guardar la tienda`);
+          }
+          const savedStore = await res.json();
+          closeDrawer();
+          resetForm();
+          await loadStores();
+
+          if (syncImmediate && savedStore && savedStore.id) {
+            await syncStoreById(savedStore.id, savedStore.nombre);
+          } else {
+            alert('Tienda guardada con éxito.');
+          }
+        } catch (err) {
+          alert(`Error: ${err.message}`);
+        }
+      });
+
+      // --- Modal de Exportación ---
+      let exportData = null;
+      const modalExport = document.getElementById('modal-export');
+      const exportContentArea = document.getElementById('export-content-area');
+      const tabExportSql = document.getElementById('tab-export-sql');
+      const tabExportJson = document.getElementById('tab-export-json');
+
+      function getFormattedDateCompact() {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}${month}${day}`;
+      }
+
+      function updateExportFilenameSuggestion(isSql = false) {
+        const env = localStorage.getItem('plataforma_active_env') || 'local';
+        const dateStr = getFormattedDateCompact();
+        const ext = isSql ? 'sql' : 'json';
+        const filenameInput = document.getElementById('export-filename-input');
+        if (filenameInput) {
+          filenameInput.value = `${dateStr}-export-${env}.${ext}`;
+        }
+      }
+
+      document.getElementById('btn-export-stores')?.addEventListener('click', async () => {
+        try {
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/stores/export`);
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `Error HTTP ${res.status} al exportar tiendas`);
+          }
+          exportData = await res.json();
+
+          const totalCat = exportData.total_catalogos || 0;
+          document.getElementById('export-summary-text').textContent = 
+            `${exportData.total_tiendas} tiendas, ${totalCat} catálogos y ${exportData.total_sucursales} sucursales listas`;
+
+          // Preseleccionar tab JSON
+          tabExportJson?.classList.add('text-emerald-800', 'border-b-2', 'border-emerald-700');
+          tabExportJson?.classList.remove('text-stone-500');
+          tabExportSql?.classList.remove('text-emerald-800', 'border-b-2', 'border-emerald-700');
+          tabExportSql?.classList.add('text-stone-500');
+
+          exportContentArea.value = JSON.stringify(exportData.tiendas, null, 2);
+          updateExportFilenameSuggestion(false);
+
+          modalExport?.classList.remove('hidden');
+          modalExport?.classList.add('flex');
+        } catch (err) {
+          alert(`Error al exportar: ${err.message}`);
+        }
+      });
+
+      document.getElementById('btn-close-export-modal')?.addEventListener('click', () => {
+        modalExport?.classList.add('hidden');
+        modalExport?.classList.remove('flex');
+      });
+
+      tabExportSql?.addEventListener('click', () => {
+        tabExportSql.classList.add('text-emerald-800', 'border-b-2', 'border-emerald-700');
+        tabExportSql.classList.remove('text-stone-500');
+        tabExportJson?.classList.remove('text-emerald-800', 'border-b-2', 'border-emerald-700');
+        tabExportJson?.classList.add('text-stone-500');
+        if (exportData) exportContentArea.value = exportData.sql_script;
+        updateExportFilenameSuggestion(true);
+      });
+
+      tabExportJson?.addEventListener('click', () => {
+        tabExportJson?.classList.add('text-emerald-800', 'border-b-2', 'border-emerald-700');
+        tabExportJson?.classList.remove('text-stone-500');
+        tabExportSql?.classList.remove('text-emerald-800', 'border-b-2', 'border-emerald-700');
+        tabExportSql?.classList.add('text-stone-500');
+        if (exportData) exportContentArea.value = JSON.stringify(exportData.tiendas, null, 2);
+        updateExportFilenameSuggestion(false);
+      });
+
+      document.getElementById('btn-copy-export')?.addEventListener('click', () => {
+        if (exportContentArea) {
+          navigator.clipboard.writeText(exportContentArea.value);
+          alert('Copiado al portapapeles.');
+        }
+      });
+
+      document.getElementById('btn-download-export')?.addEventListener('click', () => {
+        if (!exportData) return;
+        const isSql = tabExportSql?.classList.contains('text-emerald-800');
+        const filenameInput = document.getElementById('export-filename-input');
+        const suggestedExt = isSql ? 'sql' : 'json';
+        const fallbackName = `${getFormattedDateCompact()}-export-${localStorage.getItem('plataforma_active_env') || 'local'}.${suggestedExt}`;
+        let filename = (filenameInput?.value || '').trim() || fallbackName;
+        if (!filename.includes('.')) {
+          filename += `.${suggestedExt}`;
+        }
+
+        const content = isSql ? exportData.sql_script : JSON.stringify(exportData.tiendas, null, 2);
+        const blob = new Blob([content], { type: isSql ? 'text/sql' : 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+      });
+
+      // --- Modal de Importación ---
+      const modalImport = document.getElementById('modal-import');
+      const importFileInput = document.getElementById('import-file-input');
+      const importContentArea = document.getElementById('import-content-area');
+      const importPreviewBox = document.getElementById('import-preview-box');
+      const importErrorBox = document.getElementById('import-error-box');
+      const btnPreviewImport = document.getElementById('btn-preview-import');
+      const btnExecuteImport = document.getElementById('btn-execute-import');
+
+      function getActiveEnvName() {
+        const env = localStorage.getItem('plataforma_active_env') || 'local';
+        return env === 'local' ? 'Localhost (Desarrollo)' : `Ambiente: ${env.toUpperCase()}`;
+      }
+
+      function updateImportEnvLabel() {
+        const label = document.getElementById('import-target-env-label');
+        if (label) label.textContent = getActiveEnvName();
+      }
+
+      function openImportModal() {
+        updateImportEnvLabel();
+        if (importPreviewBox) {
+          importPreviewBox.classList.add('hidden');
+          importPreviewBox.textContent = '';
+        }
+        if (importErrorBox) {
+          importErrorBox.classList.add('hidden');
+          importErrorBox.textContent = '';
+        }
+        modalImport?.classList.remove('hidden');
+        modalImport?.classList.add('flex');
+      }
+
+      function closeImportModal() {
+        modalImport?.classList.add('hidden');
+        modalImport?.classList.remove('flex');
+      }
+
+      document.getElementById('btn-open-import-stores')?.addEventListener('click', openImportModal);
+      document.getElementById('btn-close-import-modal')?.addEventListener('click', closeImportModal);
+      document.getElementById('btn-cancel-import')?.addEventListener('click', closeImportModal);
+
+      // Cargar archivo JSON seleccionado
+      importFileInput?.addEventListener('change', (e) => {
+        const file = e.target?.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (importContentArea) {
+            importContentArea.value = event.target?.result || '';
+            parseAndValidateImport(false);
+          }
+        };
+        reader.readAsText(file);
+      });
+
+      function parseAndValidateImport(showAlert = true) {
+        if (importPreviewBox) importPreviewBox.classList.add('hidden');
+        if (importErrorBox) importErrorBox.classList.add('hidden');
+
+        const rawText = importContentArea?.value?.trim();
+        if (!rawText) {
+          if (showAlert) alert('Por favor ingresa o selecciona un contenido JSON.');
+          return null;
+        }
+
+        try {
+          const parsed = JSON.parse(rawText);
+          let storesList = [];
+          if (Array.isArray(parsed)) {
+            storesList = parsed;
+          } else if (parsed && Array.isArray(parsed.tiendas)) {
+            storesList = parsed.tiendas;
+          } else if (parsed && typeof parsed === 'object') {
+            storesList = [parsed];
+          }
+
+          if (storesList.length === 0) {
+            throw new Error('El JSON no contiene un arreglo de tiendas válido.');
+          }
+
+          let totalCatalogs = 0;
+          let totalBranches = 0;
+          storesList.forEach((s) => {
+            if (!s.nombre) {
+              throw new Error('Todas las tiendas deben tener la propiedad "nombre".');
+            }
+            if (s.catalogos && Array.isArray(s.catalogos)) {
+              totalCatalogs += s.catalogos.length;
+            } else if (s.url_catalogo || s.url_base) {
+              totalCatalogs += 1;
+            }
+            if (s.sucursales && Array.isArray(s.sucursales)) {
+              totalBranches += s.sucursales.length;
+            }
+          });
+
+          if (importPreviewBox) {
+            importPreviewBox.innerHTML = `
+              ✅ <strong>JSON Válido:</strong> Se detectaron <strong>${storesList.length} tiendas</strong>, 
+              <strong>${totalCatalogs} catálogos / URLs</strong> y <strong>${totalBranches} sucursales</strong> listos para importar en <strong>${getActiveEnvName()}</strong>.
+            `;
+            importPreviewBox.classList.remove('hidden');
+          }
+          return storesList;
+        } catch (err) {
+          if (importErrorBox) {
+            importErrorBox.innerHTML = `❌ <strong>Error en formato JSON:</strong> ${err.message}`;
+            importErrorBox.classList.remove('hidden');
+          }
+          if (showAlert) alert(`Error al validar JSON: ${err.message}`);
+          return null;
+        }
+      }
+
+      btnPreviewImport?.addEventListener('click', () => parseAndValidateImport(true));
+
+      btnExecuteImport?.addEventListener('click', async () => {
+        const storesList = parseAndValidateImport(true);
+        if (!storesList) return;
+
+        btnExecuteImport.disabled = true;
+        btnExecuteImport.innerHTML = '<span>⏳</span><span>Importando tiendas...</span>';
+
+        try {
+          const payload = { tiendas: storesList };
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/stores/import`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `Error HTTP ${res.status} al importar tiendas`);
+          }
+
+          const result = await res.json();
+          closeImportModal();
+          if (importContentArea) importContentArea.value = '';
+          if (importFileInput) importFileInput.value = '';
+
+          alert(
+            `¡Importación completada con éxito en ${getActiveEnvName()}!\n` +
+            `• Tiendas procesadas: ${result.imported_stores}\n` +
+            `• Catálogos/URLs configurados: ${result.total_catalogos}\n` +
+            `• Sucursales: ${result.total_sucursales}`
+          );
+          await loadStores();
+        } catch (err) {
+          alert(`Error al importar: ${err.message}`);
+        } finally {
+          btnExecuteImport.disabled = false;
+          btnExecuteImport.innerHTML = '📥 Importar Tiendas';
+        }
+      });
+
+      // Recargar al cambiar ambiente
+      window.addEventListener('plataforma:env-changed', () => {
+        updateImportEnvLabel();
+        loadStores();
+      });
+
+      // Cargar tiendas al inicio
+      loadStores();
+    })();
+  </script>
+</AdminLteLayout>
+

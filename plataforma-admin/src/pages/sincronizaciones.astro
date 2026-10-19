@@ -246,48 +246,24 @@ const jsonLd = {
 
   <div class="space-y-8" id="sync-analytics-root" data-fecha-sync={fechaSyncRaw}>
     <!-- CABECERA DE ESTADO Y TIMESTAMP -->
-    <section aria-labelledby="sync-page-heading" class="rounded-3xl border border-stone-200/80 bg-white p-6 sm:p-8 shadow-2xs">
-      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div class="space-y-2">
-          <div class="flex flex-wrap items-center gap-2.5">
-            <span
-              id="sync-status-badge"
-              class={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-bold ${
-                isOk
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                  : 'border-rose-200 bg-rose-50 text-rose-800'
-              }`}
-            >
-              <span
-                id="sync-status-dot"
-                class={`h-2 w-2 rounded-full ${isOk ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}
-              ></span>
-              <span id="sync-status-text">{isOk ? 'Sincronizado' : 'Con Errores'}</span>
-            </span>
-            <span
-              id="global-variation-pill"
-              class="inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-semibold text-stone-600"
-            >
-              Variación global: {summary.porcentaje_variacion_global > 0 ? `+${summary.porcentaje_variacion_global}` : summary.porcentaje_variacion_global}%
-            </span>
-          </div>
-
-          <h1 id="sync-page-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-stone-900">
-            Reporte de Sincronización y Analítica de Café de Especialidad
-          </h1>
-          <p class="text-xs sm:text-sm text-stone-500 max-w-3xl">
-            Monitoreo en tiempo real de cambios de precio por kilo ($/kg), nuevos cafés ingresados al catálogo y desempeño del mercado en Chile.
-          </p>
-        </div>
-
-        <div class="rounded-2xl border border-stone-200/80 bg-[#FCFBF7] px-5 py-4 lg:text-right shrink-0">
-          <p class="text-[11px] font-bold uppercase tracking-wider text-stone-400">Última corrida exitosa</p>
-          <p id="sync-timestamp-display" class="mt-1 text-sm sm:text-base font-bold text-stone-900">
-            {fechaSyncLegible}
-          </p>
-        </div>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-stone-200/80 pb-6">
+      <div class="space-y-1">
+        <h1 id="sync-page-heading" class="text-xl sm:text-2xl font-black tracking-tight text-stone-900 flex items-center gap-2">
+          <span>📈</span>
+          <span>Reporte de Sincronización y Analítica</span>
+        </h1>
+        <p class="text-xs text-stone-500 max-w-3xl">
+          Monitoreo en tiempo real de cambios de precio por kilo ($/kg), nuevos cafés ingresados al catálogo y desempeño del mercado en Chile.
+        </p>
       </div>
-    </section>
+
+      <div class="rounded-xl border border-stone-200/80 bg-white px-4 py-3 sm:text-right shrink-0 shadow-2xs">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-stone-400">Última corrida exitosa</p>
+        <p id="sync-timestamp-display" class="mt-0.5 text-xs sm:text-sm font-bold text-stone-900">
+          {fechaSyncLegible}
+        </p>
+      </div>
+    </div>
 
     <!-- TARJETAS RESUMEN (KPI CARDS) -->
     <section aria-labelledby="kpi-heading">

@@ -6,17 +6,19 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, inspect, select
 from sqlalchemy.orm import Session, selectinload
 
 from api.dependencies import get_db_session, require_local_admin
 from api.stores import extract_official_website
+from core.security_store_admin import hash_store_password
 from db.database import (
     DatabaseManager,
     Producto,
     Sincronizacion,
     SucursalTienda,
     Tienda,
+    TiendaCatalogo,
     UsuarioTienda,
     Variante,
 )
@@ -25,7 +27,11 @@ from domain.search_normalizer import (
     detect_non_coffee_suspicion,
 )
 from scrapper.coffee_metadata import extract_coffee_characteristics
+from scrapper.jumpseller_driver import JumpsellerDriver
+from scrapper.odoo_driver import OdooDriver
+from scrapper.prestashop_driver import PrestaShopDriver
 from scrapper.shopify_driver import ShopifyDriver
+from scrapper.sumup_driver import SumUpDriver
 from scrapper.woocommerce_driver import WooCommerceDriver
 from scrapper_application import sincronizar_tienda, sincronizar_multiples_tiendas
 
@@ -64,10 +70,26 @@ class BranchOutput(BaseModel):
     activo: bool = True
 
 
+class CatalogInput(BaseModel):
+    id: Optional[int] = None
+    url_catalogo: str = Field(..., min_length=4, max_length=500)
+    etiqueta: Optional[str] = Field(None, max_length=100)
+    activa: bool = True
+
+
+class CatalogOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    url_catalogo: str
+    etiqueta: Optional[str] = None
+    activa: bool = True
+
+
 class StoreCreateUpdateRequest(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=120)
-    url_catalogo: str = Field(..., min_length=4, max_length=500)
-    plataforma: str = Field("woocommerce", description="woocommerce, shopify o desconocida")
+    url_catalogo: Optional[str] = Field(None, max_length=500)
+    catalogos: List[CatalogInput] = Field(default_factory=list)
+    plataforma: str = Field("woocommerce", description="woocommerce, shopify, jumpseller, prestashop, odoo, sumup o desconocida")
     direccion: Optional[str] = Field(None, max_length=255)
     comuna: Optional[str] = Field(None, max_length=100)
     latitud: Optional[float] = None
@@ -75,6 +97,9 @@ class StoreCreateUpdateRequest(BaseModel):
     activo: bool = True
     email_administrador: Optional[str] = Field(
         None, max_length=150, description="Email del usuario administrador asignado a la tostaduría"
+    )
+    password_administrador: Optional[str] = Field(
+        None, max_length=100, description="Clave de acceso inicial para el administrador de la tostaduría"
     )
     sucursales: List[BranchInput] = Field(default_factory=list)
 
@@ -94,12 +119,16 @@ class AdminStoreItem(BaseModel):
     longitud: Optional[float] = None
     activo: bool = True
     email_administrador: Optional[str] = None
+    tiene_password_configurada: bool = False
+    debe_cambiar_password: bool = True
     cantidad_productos_visibles: int = 0
     cantidad_productos_ocultos: int = 0
     cantidad_productos_sospechosos: int = 0
     ultima_sincronizacion: Optional[str] = None
     estado_sincronizacion: Optional[str] = None
     es_pendiente_sincronizacion: bool = True
+    logo_url: Optional[str] = None
+    catalogos: List[CatalogOutput] = Field(default_factory=list)
     sucursales: List[BranchOutput] = Field(default_factory=list)
 
 
@@ -179,6 +208,7 @@ class StoresExportResponse(BaseModel):
     fecha_exportacion: str
     total_tiendas: int
     total_sucursales: int
+    total_catalogos: int = 0
     tiendas: List[Dict[str, Any]]
     sql_script: str
 
@@ -261,9 +291,34 @@ def _normalize_platform(plataforma: str) -> str:
         return "woocommerce"
     if plat in ("shopify",):
         return "shopify"
-    if plat in ("jumpseller", "custom", "otra", "desconocida", "auto", ""):
+    if plat in ("jumpseller", "prestashop", "odoo", "sumup"):
+        return plat
+    if plat in ("custom", "otra", "desconocida", "auto", ""):
         return "desconocida" if plat != "auto" else "auto"
     return plat
+
+
+def _get_store_catalogs_safe(store: Tienda, db_session: Optional[Session] = None) -> List[Any]:
+    """Retorna los catálogos cargados en la tienda de forma segura sin disparar lazy-loads si la tabla no existe."""
+    if not hasattr(store, "__dict__"):
+        return []
+    val = store.__dict__.get("catalogos")
+    if isinstance(val, list):
+        return val
+
+    try:
+        from sqlalchemy import inspect as sa_inspect
+        insp = sa_inspect(store)
+        session = db_session or (insp.session if insp else None)
+        if session is not None:
+            bind = session.get_bind()
+            table_names = set(sa_inspect(bind).get_table_names())
+            if "tienda_catalogos" in table_names:
+                return list(getattr(store, "catalogos", []) or [])
+    except Exception:
+        pass
+
+    return []
 
 
 def _compute_store_moderation_counts(db_session: Session) -> List[StoreModerationCountItem]:
@@ -305,36 +360,43 @@ def _compute_store_moderation_counts(db_session: Session) -> List[StoreModeratio
 
 
 def _sync_store_admin_user(
-    db_session: Session, store_id: int, email: Optional[str]
+    db_session: Session, store_id: int, email: Optional[str], password: Optional[str] = None
 ) -> Optional[str]:
     """Crea, actualiza o consulta el usuario administrador vinculado a la tienda."""
     existing = db_session.scalars(
         select(UsuarioTienda).where(UsuarioTienda.tienda_id == store_id)
     ).first()
 
-    if email is None:
+    if email is None and password is None:
         return existing.usuario_id if existing else None
 
-    email_clean = email.strip().lower()
-    if not email_clean:
+    email_clean = email.strip().lower() if email else None
+    if email is not None and not email_clean:
         if existing:
             db_session.delete(existing)
             db_session.flush()
         return None
 
     if existing:
-        existing.usuario_id = email_clean
-        existing.rol = "STORE_ADMIN"
-    else:
+        if email_clean:
+            existing.usuario_id = email_clean
+            existing.rol = "STORE_ADMIN"
+        if password and password.strip():
+            existing.password_hash = hash_store_password(password.strip())
+            existing.debe_cambiar_password = True
+    elif email_clean:
+        pwd_hash = hash_store_password(password.strip()) if (password and password.strip()) else None
         new_user = UsuarioTienda(
             id=str(uuid.uuid4()),
             usuario_id=email_clean,
             tienda_id=store_id,
             rol="STORE_ADMIN",
+            password_hash=pwd_hash,
+            debe_cambiar_password=True,
         )
         db_session.add(new_user)
     db_session.flush()
-    return email_clean
+    return email_clean or (existing.usuario_id if existing else None)
 
 
 def _sql_literal(val: Any) -> str:
@@ -368,11 +430,14 @@ def get_admin_status(db_session: Session = Depends(get_db_session)) -> Dict[str,
     total_tiendas = 0
     total_productos = 0
     ultima_sincronizacion: Optional[str] = None
+    productos_sin_moderar = 0
+    productos_ocultos = 0
+    tiendas_resumen: List[Dict[str, Any]] = []
 
     if hasattr(db_session, "scalar"):
         try:
-            total_tiendas = db_session.scalar(select(func.count(Tienda.id))) or 0
-            total_productos = db_session.scalar(select(func.count(Producto.id))) or 0
+            total_tiendas = db_session.scalar(select(func.count(Tienda.id)).where(Tienda.activo.is_(True))) or 0
+            total_productos = db_session.scalar(select(func.count(Producto.id)).where(Producto.activo.is_(True))) or 0
         except Exception:
             pass
 
@@ -393,13 +458,67 @@ def get_admin_status(db_session: Session = Depends(get_db_session)) -> Dict[str,
         except Exception:
             pass
 
+        # Conteo de productos sospechosos no-café pendientes de moderar
+        try:
+            moderation_counts = _compute_store_moderation_counts(db_session)
+            productos_sin_moderar = sum(c.cantidad_sospechosos for c in moderation_counts)
+            productos_ocultos = sum(c.cantidad_ocultos for c in moderation_counts)
+        except Exception:
+            pass
+
+        # Resumen de sincronización por tienda activa
+        try:
+            tiendas = db_session.scalars(
+                select(Tienda).where(Tienda.activo.is_(True)).order_by(Tienda.nombre.asc())
+            ).all()
+
+            syncs = db_session.scalars(
+                select(Sincronizacion).order_by(Sincronizacion.tienda_id, Sincronizacion.fecha_inicio.desc())
+            ).all()
+
+            sync_map_latest: Dict[int, Sincronizacion] = {}
+            sync_map_last_success: Dict[int, Sincronizacion] = {}
+            for s in syncs:
+                if s.tienda_id not in sync_map_latest:
+                    sync_map_latest[s.tienda_id] = s
+                if s.resultado == "exitoso" and s.tienda_id not in sync_map_last_success:
+                    sync_map_last_success[s.tienda_id] = s
+
+            for t in tiendas:
+                last_s = sync_map_latest.get(t.id)
+                last_ok = sync_map_last_success.get(t.id)
+
+                estado = last_s.resultado if last_s else "nunca"
+                fecha_ultimo = last_s.fecha_inicio.isoformat() if (last_s and last_s.fecha_inicio) else None
+                fecha_last_ok = last_ok.fecha_inicio.isoformat() if (last_ok and last_ok.fecha_inicio) else None
+                detalle_error = last_s.detalle_error if (last_s and last_s.resultado != "exitoso") else None
+
+                tiendas_resumen.append({
+                    "id": t.id,
+                    "nombre": t.nombre,
+                    "logo_url": getattr(t, "logo_url", None),
+                    "url_base": t.url_base,
+                    "plataforma": t.plataforma or "desconocida",
+                    "estado_ultimo": estado,
+                    "fecha_ultimo": fecha_ultimo,
+                    "ultima_sincronizacion_exitosa": fecha_last_ok,
+                    "detalle_error": detalle_error,
+                    "productos_agregados": last_s.productos_agregados if last_s else 0,
+                    "productos_actualizados": last_s.productos_actualizados if last_s else 0,
+                })
+        except Exception:
+            pass
+
     return {
         "enabled": True,
         "is_localhost": True,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "total_tiendas": total_tiendas,
         "total_productos": total_productos,
+        "productos_sin_moderar": productos_sin_moderar,
+        "productos_ocultos": productos_ocultos,
         "ultima_sincronizacion": ultima_sincronizacion,
+        "tiendas_resumen": tiendas_resumen,
     }
 
 
@@ -423,12 +542,20 @@ def get_admin_status(db_session: Session = Depends(get_db_session)) -> Dict[str,
     summary="Listar todas las tiendas registradas y sus sucursales",
 )
 def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminStoresListResponse:
+    has_catalogos_table = True
+    try:
+        bind = db_session.get_bind()
+        table_names = set(inspect(bind).get_table_names())
+        has_catalogos_table = 'tienda_catalogos' in table_names
+    except Exception:
+        pass
+
+    stmt = select(Tienda).options(selectinload(Tienda.sucursales))
+    if has_catalogos_table:
+        stmt = stmt.options(selectinload(Tienda.catalogos))
+
     stores = (
-        db_session.scalars(
-            select(Tienda)
-            .options(selectinload(Tienda.sucursales))
-            .order_by(Tienda.nombre.asc())
-        )
+        db_session.scalars(stmt.order_by(Tienda.nombre.asc()))
         .unique()
         .all()
     )
@@ -437,17 +564,23 @@ def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminSto
     }
 
     # Mapa de administradores de tiendas vinculados
-    user_stores = db_session.scalars(select(UsuarioTienda)).all()
-    store_admin_map: Dict[int, str] = {u.tienda_id: u.usuario_id for u in user_stores}
+    try:
+        user_stores = db_session.scalars(select(UsuarioTienda)).all()
+        store_admin_obj_map: Dict[int, UsuarioTienda] = {u.tienda_id: u for u in user_stores}
+    except Exception:
+        store_admin_obj_map = {}
 
     # Mapa de última sincronización por tienda
-    latest_syncs = (
-        db_session.scalars(
-            select(Sincronizacion).order_by(
-                Sincronizacion.tienda_id, Sincronizacion.fecha_inicio.desc()
-            )
-        ).all()
-    )
+    try:
+        latest_syncs = (
+            db_session.scalars(
+                select(Sincronizacion).order_by(
+                    Sincronizacion.tienda_id, Sincronizacion.fecha_inicio.desc()
+                )
+            ).all()
+        )
+    except Exception:
+        latest_syncs = []
     sync_map: Dict[int, Sincronizacion] = {}
     for sync in latest_syncs:
         if sync.tienda_id not in sync_map:
@@ -469,6 +602,16 @@ def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminSto
             )
             for b in (getattr(s, "sucursales", None) or [])
         ]
+        catalogos_out = [
+            CatalogOutput(
+                id=c.id,
+                url_catalogo=c.url_catalogo,
+                etiqueta=c.etiqueta,
+                activa=bool(c.activa),
+            )
+            for c in _get_store_catalogs_safe(s, db_session=db_session)
+        ]
+        url_cat_principal = catalogos_out[0].url_catalogo if catalogos_out else s.url_base
 
         last_sync = sync_map.get(s.id)
         last_sync_time = (
@@ -480,11 +623,12 @@ def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminSto
         total_prods = (cnt.cantidad_productos_visibles + cnt.cantidad_ocultos) if cnt else 0
         is_pending = (total_prods == 0) or (last_sync_status != "exitoso")
 
+        adm_user = store_admin_obj_map.get(s.id)
         items.append(
             AdminStoreItem(
                 id=s.id,
                 nombre=s.nombre,
-                url_catalogo=s.url_base,
+                url_catalogo=url_cat_principal,
                 url_base=s.url_base,
                 sitio_oficial=extract_official_website(s.url_base),
                 url_web=extract_official_website(s.url_base),
@@ -494,13 +638,17 @@ def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminSto
                 latitud=s.latitud,
                 longitud=s.longitud,
                 activo=bool(s.activo),
-                email_administrador=store_admin_map.get(s.id),
+                email_administrador=adm_user.usuario_id if adm_user else None,
+                tiene_password_configurada=bool(adm_user and adm_user.password_hash),
+                debe_cambiar_password=bool(adm_user.debe_cambiar_password) if adm_user else True,
                 cantidad_productos_visibles=cnt.cantidad_productos_visibles if cnt else 0,
                 cantidad_productos_ocultos=cnt.cantidad_ocultos if cnt else 0,
                 cantidad_productos_sospechosos=cnt.cantidad_sospechosos if cnt else 0,
                 ultima_sincronizacion=last_sync_time,
                 estado_sincronizacion=last_sync_status,
                 es_pendiente_sincronizacion=is_pending,
+                logo_url=getattr(s, "logo_url", None),
+                catalogos=catalogos_out,
                 sucursales=branches,
             )
         )
@@ -539,22 +687,51 @@ def create_or_update_store(
     payload: StoreCreateUpdateRequest,
     db_session: Session = Depends(get_db_session),
 ) -> AdminStoreItem:
+    has_catalogos_table = True
+    try:
+        bind = db_session.get_bind()
+        table_names = set(inspect(bind).get_table_names())
+        has_catalogos_table = 'tienda_catalogos' in table_names
+    except Exception:
+        pass
+
     nombre_limpio = payload.nombre.strip()
-    url_normalizada = _normalize_url(payload.url_catalogo)
+
+    catalogos_input = list(payload.catalogos)
+    if not catalogos_input and payload.url_catalogo:
+        catalogos_input.append(
+            CatalogInput(
+                url_catalogo=_normalize_url(payload.url_catalogo),
+                etiqueta="Catálogo Principal",
+                activa=True,
+            )
+        )
+    elif not catalogos_input and not payload.url_catalogo:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debe proporcionar al menos una URL de catálogo.",
+        )
+
+    first_url = _normalize_url(catalogos_input[0].url_catalogo)
+    parsed = urlparse(first_url)
+    url_raiz = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else first_url
+
     plataforma_norm = _normalize_platform(payload.plataforma)
     if plataforma_norm == "auto":
         plataforma_norm = "desconocida"
 
+    query_existing = select(Tienda).options(selectinload(Tienda.sucursales))
+    if has_catalogos_table:
+        query_existing = query_existing.options(selectinload(Tienda.catalogos))
+
     existing = db_session.scalars(
-        select(Tienda)
-        .options(selectinload(Tienda.sucursales))
-        .where(func.lower(Tienda.nombre) == nombre_limpio.lower())
+        query_existing.where(func.lower(Tienda.nombre) == nombre_limpio.lower())
     ).first()
 
     if existing is None:
         store = Tienda(
             nombre=nombre_limpio,
-            url_base=url_normalizada,
+            url_base=url_raiz,
             plataforma=plataforma_norm,
             direccion=payload.direccion.strip() if payload.direccion else None,
             comuna=payload.comuna.strip() if payload.comuna else None,
@@ -567,7 +744,7 @@ def create_or_update_store(
     else:
         store = existing
         store.nombre = nombre_limpio
-        store.url_base = url_normalizada
+        store.url_base = url_raiz
         store.plataforma = plataforma_norm
         store.direccion = payload.direccion.strip() if payload.direccion else None
         store.comuna = payload.comuna.strip() if payload.comuna else None
@@ -592,10 +769,33 @@ def create_or_update_store(
         )
         db_session.add(branch)
 
-    admin_email = _sync_store_admin_user(db_session, store.id, payload.email_administrador)
+    if has_catalogos_table:
+        for old_c in list(getattr(store, "catalogos", []) or []):
+            db_session.delete(old_c)
+        db_session.flush()
+
+        for c_in in catalogos_input:
+            url_cat = _normalize_url(c_in.url_catalogo)
+            db_session.add(
+                TiendaCatalogo(
+                    tienda_id=store.id,
+                    url_catalogo=url_cat,
+                    etiqueta=c_in.etiqueta.strip() if c_in.etiqueta else None,
+                    activa=c_in.activa,
+                )
+            )
+
+    admin_email = _sync_store_admin_user(
+        db_session, store.id, payload.email_administrador, payload.password_administrador
+    )
 
     db_session.commit()
     db_session.refresh(store)
+
+    try:
+        adm_user = db_session.scalars(select(UsuarioTienda).where(UsuarioTienda.tienda_id == store.id)).first()
+    except Exception:
+        adm_user = None
 
     branches_out = [
         BranchOutput(
@@ -610,11 +810,21 @@ def create_or_update_store(
         )
         for b in (store.sucursales or [])
     ]
+    catalogos_out = [
+        CatalogOutput(
+            id=c.id,
+            url_catalogo=c.url_catalogo,
+            etiqueta=c.etiqueta,
+            activa=bool(c.activa),
+        )
+        for c in _get_store_catalogs_safe(store, db_session=db_session)
+    ]
+    url_cat_principal = catalogos_out[0].url_catalogo if catalogos_out else store.url_base
 
     return AdminStoreItem(
         id=store.id,
         nombre=store.nombre,
-        url_catalogo=store.url_base,
+        url_catalogo=url_cat_principal,
         url_base=store.url_base,
         sitio_oficial=extract_official_website(store.url_base),
         url_web=extract_official_website(store.url_base),
@@ -625,6 +835,10 @@ def create_or_update_store(
         longitud=store.longitud,
         activo=bool(store.activo),
         email_administrador=admin_email,
+        tiene_password_configurada=bool(adm_user and adm_user.password_hash),
+        debe_cambiar_password=bool(adm_user.debe_cambiar_password) if adm_user else True,
+        logo_url=getattr(store, "logo_url", None),
+        catalogos=catalogos_out,
         sucursales=branches_out,
     )
 
@@ -653,10 +867,20 @@ def update_store_by_id(
     payload: StoreCreateUpdateRequest,
     db_session: Session = Depends(get_db_session),
 ) -> AdminStoreItem:
+    has_catalogos_table = True
+    try:
+        bind = db_session.get_bind()
+        table_names = set(inspect(bind).get_table_names())
+        has_catalogos_table = 'tienda_catalogos' in table_names
+    except Exception:
+        pass
+
+    query_store = select(Tienda).options(selectinload(Tienda.sucursales))
+    if has_catalogos_table:
+        query_store = query_store.options(selectinload(Tienda.catalogos))
+
     store = db_session.scalars(
-        select(Tienda)
-        .options(selectinload(Tienda.sucursales))
-        .where(Tienda.id == store_id)
+        query_store.where(Tienda.id == store_id)
     ).first()
     if store is None:
         raise HTTPException(
@@ -664,12 +888,31 @@ def update_store_by_id(
             detail="Tienda no encontrada.",
         )
 
+    catalogos_input = list(payload.catalogos)
+    if not catalogos_input and payload.url_catalogo:
+        catalogos_input.append(
+            CatalogInput(
+                url_catalogo=_normalize_url(payload.url_catalogo),
+                etiqueta="Catálogo Principal",
+                activa=True,
+            )
+        )
+    elif not catalogos_input and not payload.url_catalogo:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debe proporcionar al menos una URL de catálogo.",
+        )
+
+    first_url = _normalize_url(catalogos_input[0].url_catalogo)
+    parsed = urlparse(first_url)
+    url_raiz = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else first_url
+
     plataforma_norm = _normalize_platform(payload.plataforma)
     if plataforma_norm == "auto":
         plataforma_norm = "desconocida"
 
     store.nombre = payload.nombre.strip()
-    store.url_base = _normalize_url(payload.url_catalogo)
+    store.url_base = url_raiz
     store.plataforma = plataforma_norm
     store.direccion = payload.direccion.strip() if payload.direccion else None
     store.comuna = payload.comuna.strip() if payload.comuna else None
@@ -696,15 +939,49 @@ def update_store_by_id(
             )
         )
 
-    admin_email = _sync_store_admin_user(db_session, store.id, payload.email_administrador)
+    if has_catalogos_table:
+        for old_c in list(getattr(store, "catalogos", []) or []):
+            db_session.delete(old_c)
+        db_session.flush()
+
+        for c_in in catalogos_input:
+            url_cat = _normalize_url(c_in.url_catalogo)
+            db_session.add(
+                TiendaCatalogo(
+                    tienda_id=store.id,
+                    url_catalogo=url_cat,
+                    etiqueta=c_in.etiqueta.strip() if c_in.etiqueta else None,
+                    activa=c_in.activa,
+                )
+            )
+
+    admin_email = _sync_store_admin_user(
+        db_session, store.id, payload.email_administrador, payload.password_administrador
+    )
 
     db_session.commit()
     db_session.refresh(store)
 
+    try:
+        adm_user = db_session.scalars(select(UsuarioTienda).where(UsuarioTienda.tienda_id == store.id)).first()
+    except Exception:
+        adm_user = None
+
+    catalogos_out = [
+        CatalogOutput(
+            id=c.id,
+            url_catalogo=c.url_catalogo,
+            etiqueta=c.etiqueta,
+            activa=bool(c.activa),
+        )
+        for c in _get_store_catalogs_safe(store, db_session=db_session)
+    ]
+    url_cat_principal = catalogos_out[0].url_catalogo if catalogos_out else store.url_base
+
     return AdminStoreItem(
         id=store.id,
         nombre=store.nombre,
-        url_catalogo=store.url_base,
+        url_catalogo=url_cat_principal,
         url_base=store.url_base,
         sitio_oficial=extract_official_website(store.url_base),
         url_web=extract_official_website(store.url_base),
@@ -715,6 +992,10 @@ def update_store_by_id(
         longitud=store.longitud,
         activo=bool(store.activo),
         email_administrador=admin_email,
+        tiene_password_configurada=bool(adm_user and adm_user.password_hash),
+        debe_cambiar_password=bool(adm_user.debe_cambiar_password) if adm_user else True,
+        logo_url=getattr(store, "logo_url", None),
+        catalogos=catalogos_out,
         sucursales=[
             BranchOutput(
                 id=b.id,
@@ -766,6 +1047,10 @@ def test_store_catalog(payload: CatalogTestRequest) -> CatalogTestResponse:
     driver_map = {
         "woocommerce": ("woocommerce", WooCommerceDriver),
         "shopify": ("shopify", ShopifyDriver),
+        "jumpseller": ("jumpseller", JumpsellerDriver),
+        "prestashop": ("prestashop", PrestaShopDriver),
+        "odoo": ("odoo", OdooDriver),
+        "sumup": ("sumup", SumUpDriver),
     }
 
     if plataforma_solicitada in driver_map:
@@ -774,6 +1059,10 @@ def test_store_catalog(payload: CatalogTestRequest) -> CatalogTestResponse:
         candidate_drivers = [
             ("woocommerce", WooCommerceDriver),
             ("shopify", ShopifyDriver),
+            ("jumpseller", JumpsellerDriver),
+            ("prestashop", PrestaShopDriver),
+            ("odoo", OdooDriver),
+            ("sumup", SumUpDriver),
         ]
 
     errores: List[str] = []
@@ -885,18 +1174,38 @@ def sync_single_store(
     store_id: int,
     db_session: Session = Depends(get_db_session),
 ) -> SingleStoreSyncResponse:
-    store = db_session.scalars(select(Tienda).where(Tienda.id == store_id)).first()
+    has_catalogos_table = True
+    try:
+        bind = db_session.get_bind()
+        table_names = set(inspect(bind).get_table_names())
+        has_catalogos_table = 'tienda_catalogos' in table_names
+    except Exception:
+        pass
+
+    query_store = select(Tienda)
+    if has_catalogos_table:
+        query_store = query_store.options(selectinload(Tienda.catalogos))
+
+    store = db_session.scalars(
+        query_store.where(Tienda.id == store_id)
+    ).first()
     if not store:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Tienda con ID {store_id} no encontrada.",
         )
 
+    catalogos_list = [
+        {"url_catalogo": c.url_catalogo, "etiqueta": c.etiqueta, "activa": c.activa}
+        for c in _get_store_catalogs_safe(store, db_session=db_session)
+        if c.activa
+    ]
     tienda_dict = {
         "id": store.id,
         "nombre": store.nombre,
         "url_base": store.url_base,
         "plataforma": store.plataforma or "desconocida",
+        "catalogos": catalogos_list,
     }
     db_manager = DatabaseManager()
     res = sincronizar_tienda(tienda_dict, db=db_manager)
@@ -1113,18 +1422,27 @@ def sync_all_stores(
 def export_stores_and_branches(
     db_session: Session = Depends(get_db_session),
 ) -> StoresExportResponse:
+    has_catalogos_table = True
+    try:
+        bind = db_session.get_bind()
+        table_names = set(inspect(bind).get_table_names())
+        has_catalogos_table = 'tienda_catalogos' in table_names
+    except Exception:
+        pass
+
+    stmt = select(Tienda).options(selectinload(Tienda.sucursales))
+    if has_catalogos_table:
+        stmt = stmt.options(selectinload(Tienda.catalogos))
+
     stores = (
-        db_session.scalars(
-            select(Tienda)
-            .options(selectinload(Tienda.sucursales))
-            .order_by(Tienda.nombre.asc())
-        )
+        db_session.scalars(stmt.order_by(Tienda.nombre.asc()))
         .unique()
         .all()
     )
 
     exported_stores: List[Dict[str, Any]] = []
     total_branches = 0
+    total_catalogs = 0
     sql_lines: List[str] = [
         "-- ============================================================================",
         "-- Exportación de Tostadurías y Sucursales - Cafesitios (Producción / Supabase)",
@@ -1134,8 +1452,11 @@ def export_stores_and_branches(
         "",
     ]
 
-    user_stores = db_session.scalars(select(UsuarioTienda)).all()
-    store_admin_map: Dict[int, str] = {u.tienda_id: u.usuario_id for u in user_stores}
+    try:
+        user_stores = db_session.scalars(select(UsuarioTienda)).all()
+        store_admin_map: Dict[int, str] = {u.tienda_id: u.usuario_id for u in user_stores}
+    except Exception:
+        store_admin_map = {}
 
     for s in stores:
         branches_data = []
@@ -1152,12 +1473,24 @@ def export_stores_and_branches(
                 }
             )
 
+        catalogs_data = []
+        for c in _get_store_catalogs_safe(s, db_session=db_session):
+            total_catalogs += 1
+            catalogs_data.append(
+                {
+                    "url_catalogo": c.url_catalogo,
+                    "etiqueta": c.etiqueta,
+                    "activa": bool(c.activa),
+                }
+            )
+
         admin_email = store_admin_map.get(s.id)
+        url_cat_principal = catalogs_data[0]["url_catalogo"] if catalogs_data else s.url_base
 
         exported_stores.append(
             {
                 "nombre": s.nombre,
-                "url_catalogo": s.url_base,
+                "url_catalogo": url_cat_principal,
                 "url_base": s.url_base,
                 "plataforma": s.plataforma or "desconocida",
                 "direccion": getattr(s, "direccion", None),
@@ -1166,6 +1499,7 @@ def export_stores_and_branches(
                 "longitud": s.longitud,
                 "activo": bool(s.activo),
                 "email_administrador": admin_email,
+                "catalogos": catalogs_data,
                 "sucursales": branches_data,
             }
         )
@@ -1193,6 +1527,17 @@ def export_stores_and_branches(
                 f"ON CONFLICT (usuario_id, tienda_id) DO UPDATE SET rol = 'STORE_ADMIN';"
             )
 
+        if has_catalogos_table:
+            sql_lines.append(
+                f"DELETE FROM tienda_catalogos WHERE tienda_id = (SELECT id FROM tiendas WHERE nombre = {_sql_literal(s.nombre)});"
+            )
+            for c in catalogs_data:
+                sql_lines.append(
+                    f"INSERT INTO tienda_catalogos (tienda_id, url_catalogo, etiqueta, activa) "
+                    f"VALUES ((SELECT id FROM tiendas WHERE nombre = {_sql_literal(s.nombre)}), "
+                    f"{_sql_literal(c['url_catalogo'])}, {_sql_literal(c['etiqueta'])}, {_sql_literal(c['activa'])});"
+                )
+
         if branches_data:
             sql_lines.append(
                 f"DELETE FROM sucursales_tienda WHERE tienda_id = (SELECT id FROM tiendas WHERE nombre = {_sql_literal(s.nombre)});"
@@ -1212,6 +1557,7 @@ def export_stores_and_branches(
         fecha_exportacion=datetime.now(timezone.utc).isoformat(),
         total_tiendas=len(exported_stores),
         total_sucursales=total_branches,
+        total_catalogos=total_catalogs,
         tiendas=exported_stores,
         sql_script="\n".join(sql_lines),
     )
@@ -1220,7 +1566,7 @@ def export_stores_and_branches(
 @administracion_router.post(
     "/tiendas/importar",
     status_code=status.HTTP_200_OK,
-    summary="Importar lote de tiendas y sucursales desde JSON exportado",
+    summary="Importar lote de tiendas, sucursales y catálogos desde JSON exportado",
 )
 @administracion_router.post("/stores/import", status_code=status.HTTP_200_OK, include_in_schema=False)
 @router.post(
@@ -1231,17 +1577,31 @@ def export_stores_and_branches(
 @router.post(
     "/stores/import",
     status_code=status.HTTP_200_OK,
-    summary="Importar lote de tiendas y sucursales desde JSON exportado",
+    summary="Importar lote de tiendas, sucursales y catálogos desde JSON exportado",
 )
 def import_stores_and_branches(
     payload: StoresImportRequest,
     db_session: Session = Depends(get_db_session),
 ) -> Dict[str, Any]:
     imported = 0
+    total_catalogos = 0
+    total_sucursales = 0
+    tiendas_afectadas: List[str] = []
+
     for store_req in payload.tiendas:
-        create_or_update_store(store_req, db_session=db_session)
+        saved_store = create_or_update_store(store_req, db_session=db_session)
         imported += 1
-    return {"status": "ok", "imported_stores": imported}
+        tiendas_afectadas.append(saved_store.nombre)
+        total_catalogos += len(saved_store.catalogos)
+        total_sucursales += len(saved_store.sucursales)
+
+    return {
+        "status": "ok",
+        "imported_stores": imported,
+        "total_catalogos": total_catalogos,
+        "total_sucursales": total_sucursales,
+        "tiendas_afectadas": tiendas_afectadas,
+    }
 
 
 @administracion_router.get(
