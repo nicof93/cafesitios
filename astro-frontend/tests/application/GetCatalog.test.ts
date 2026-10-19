@@ -61,5 +61,22 @@ describe('GetCatalogUseCase', () => {
     expect(result.items[0].nombre).toBe('Café de Prueba');
     expect(result.items[0].getBestVariant()?.precio_clp).toBe(12000);
   });
+
+  it('concatena múltiples tiendas en store_name cuando se envía el arreglo stores', async () => {
+    const mockHttp = {
+      get: vi.fn().mockResolvedValue({ data: [], total_items: 0 })
+    } as unknown as HttpClient;
+
+    const useCase = new GetCatalogUseCase(mockHttp);
+    await useCase.execute({
+      stores: ['Singular', 'We Are Four']
+    });
+
+    expect(mockHttp.get).toHaveBeenCalledWith('/api/v1/products', expect.objectContaining({
+      params: expect.objectContaining({
+        store_name: 'Singular,We Are Four'
+      })
+    }));
+  });
 });
 

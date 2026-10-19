@@ -33,6 +33,7 @@ from db.database import (
 from domain.search_normalizer import classify_product_category
 
 router = APIRouter(prefix="/api/v1/sync", tags=["Sincronización"])
+sincronizacion_router = APIRouter(prefix="/api/v1/sincronizacion", tags=["Sincronización"])
 sincronizaciones_router = APIRouter(
     prefix="/api/sincronizaciones",
     tags=["Sincronización y Analítica"],
@@ -96,6 +97,20 @@ def _normalizar_proceso(valor: Optional[str]) -> str:
     return str(valor).strip().title()[:60]
 
 
+@sincronizacion_router.get(
+    "/ultima",
+    response_model=LastSyncResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Obtener la fecha de la última sincronización exitosa",
+    description="Retorna la marca temporal de la última sincronización exitosa de productos ejecutada por el scraper.",
+)
+@sincronizacion_router.get("/last", response_model=LastSyncResponse, include_in_schema=False)
+@router.get(
+    "/ultima",
+    response_model=LastSyncResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 @router.get(
     "/last",
     response_model=LastSyncResponse,
@@ -712,3 +727,101 @@ for _ana_r in (analitica_router, analitica_v1_router):
         summary="Analítica y estadísticas globales del mercado de café",
         description="Retorna el precio promedio por kilo, tienda con mejor descuento promedio y distribución por nivel de tueste y proceso.",
     )
+
+# Endpoints canónicos en español (/api/v1/sincronizacion)
+sincronizacion_router.add_api_route(
+    "/resumen",
+    get_current_sync_summary,
+    methods=["GET"],
+    response_model=SyncCurrentSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Resumen de la última sincronización y variaciones de precio",
+    description="Retorna la fecha/hora de la última sincronización, métricas agregadas, productos nuevos y variaciones de precio.",
+)
+sincronizacion_router.add_api_route(
+    "/resumen-actual",
+    get_current_sync_summary,
+    methods=["GET"],
+    response_model=SyncCurrentSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+sincronizacion_router.add_api_route(
+    "/historial",
+    get_sync_history,
+    methods=["GET"],
+    response_model=PaginatedSyncHistoryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Historial paginado de ejecuciones de sincronización",
+    description="Retorna el listado paginado de logs de ejecución con fecha, hora, duración estimada, estado y conteos.",
+)
+sincronizacion_router.add_api_route(
+    "/mercado",
+    get_market_analytics,
+    methods=["GET"],
+    response_model=MarketAnalyticsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Analítica y estadísticas globales del mercado de café",
+    description="Retorna el precio promedio por kilo, tienda con mejor descuento promedio y distribución por nivel de tueste y proceso.",
+)
+
+# Endpoints canónicos y alias en inglés (/api/v1/sync)
+router.add_api_route(
+    "/summary",
+    get_current_sync_summary,
+    methods=["GET"],
+    response_model=SyncCurrentSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Current sync summary and price variations",
+    description="Returns latest sync time, aggregate metrics, new products and price changes.",
+)
+router.add_api_route(
+    "/resumen",
+    get_current_sync_summary,
+    methods=["GET"],
+    response_model=SyncCurrentSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+router.add_api_route(
+    "/resumen-actual",
+    get_current_sync_summary,
+    methods=["GET"],
+    response_model=SyncCurrentSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+router.add_api_route(
+    "/history",
+    get_sync_history,
+    methods=["GET"],
+    response_model=PaginatedSyncHistoryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Paginated sync execution logs history",
+    description="Returns list of execution logs.",
+)
+router.add_api_route(
+    "/historial",
+    get_sync_history,
+    methods=["GET"],
+    response_model=PaginatedSyncHistoryResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+router.add_api_route(
+    "/market",
+    get_market_analytics,
+    methods=["GET"],
+    response_model=MarketAnalyticsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Coffee market global analytics and statistics",
+    description="Returns average price per kg, best store discounts, and roasting/process distribution.",
+)
+router.add_api_route(
+    "/mercado",
+    get_market_analytics,
+    methods=["GET"],
+    response_model=MarketAnalyticsResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)

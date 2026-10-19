@@ -31,7 +31,7 @@ try {
       </div>
 
       <a 
-        href="/catalog?ofertas=true" 
+        href="/catalogo?ofertas=true" 
         class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 transition hover:underline"
       >
         <span>Ver todas las ofertas en catálogo</span>
@@ -121,14 +121,14 @@ try {
               <!-- Botones de Acción -->
               <div class="grid grid-cols-2 gap-2 pt-1">
                 <a 
-                  href={`/product/${item.producto_id}`}
+                  href={`/producto/${item.producto_id}`}
                   class="btn-oferta-detalle rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs py-2 text-center transition"
                   data-oferta-id={item.oferta_id}
                 >
                   Ver Detalle
                 </a>
                 <a 
-                  href={item.link_detalle?.startsWith('http') ? item.link_detalle : `/product/${item.producto_id}`}
+                  href={item.link_detalle?.startsWith('http') ? item.link_detalle : `/producto/${item.producto_id}`}
                   target={item.link_detalle?.startsWith('http') ? "_blank" : "_self"}
                   rel="noopener noreferrer"
                   class="btn-oferta-comprar rounded-xl bg-stone-900 hover:bg-emerald-900 text-white font-bold text-xs py-2 text-center transition shadow-2xs flex items-center justify-center gap-1"

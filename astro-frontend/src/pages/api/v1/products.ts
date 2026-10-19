@@ -8,7 +8,11 @@ export const GET: APIRoute = async ({ url }) => {
 
     url.searchParams.forEach((val, key) => {
       if (val !== undefined && val !== null && val !== '') {
-        queryParams[key] = val;
+        if (queryParams[key]) {
+          queryParams[key] = `${queryParams[key]},${val}`;
+        } else {
+          queryParams[key] = val;
+        }
       }
     });
 

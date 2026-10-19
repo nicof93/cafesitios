@@ -32,6 +32,7 @@ from db.database import Producto, ProductoNotaCata, Tienda, Variante
 from infrastructure.postgres_repository import PostgresCoffeeRepository
 
 router = APIRouter(prefix="/api/v1/products", tags=["Productos"])
+productos_router = APIRouter(prefix="/api/v1/productos", tags=["Productos"])
 ofertas_router = APIRouter(prefix="/api/productos", tags=["Ofertas"])
 
 _DESCRIPTION_TAGS = {
@@ -150,6 +151,20 @@ from core.normalizer import is_valid_tasting_note
 from scrapper.coffee_metadata import generar_resumen_corto
 
 
+@productos_router.get(
+    "/comparar",
+    response_model=CompareResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Comparativa directa side-by-side de productos",
+    description="Permite comparar hasta 4 productos con atributos técnicos, notas y perfil organoléptico."
+)
+@productos_router.get("/compare", response_model=CompareResponse, include_in_schema=False)
+@router.get(
+    "/comparar",
+    response_model=CompareResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False
+)
 @router.get(
     "/compare",
     response_model=CompareResponse,
@@ -222,6 +237,20 @@ def compare_products(
     )
 
 
+@productos_router.get(
+    "/recomendar",
+    response_model=RecommendationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Recomendador interactivo por perfil de taza / Quiz (CU-07)",
+    description="Calcula afinidad de cafés según método de extracción, perfil de sabor, acidez y tueste."
+)
+@productos_router.get("/recommend", response_model=RecommendationResponse, include_in_schema=False)
+@router.get(
+    "/recomendar",
+    response_model=RecommendationResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False
+)
 @router.get(
     "/recommend",
     response_model=RecommendationResponse,
@@ -280,6 +309,20 @@ def recommend_products(
     )
 
 
+@productos_router.get(
+    "/{product_id}/detalle",
+    response_model=ProductDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Obtener el detalle de un producto y todas sus variantes",
+    description="Retorna la ficha técnica detallada del café, notas de cata y el historial de precios por variante."
+)
+@productos_router.get("/{product_id}/detail", response_model=ProductDetailResponse, include_in_schema=False)
+@router.get(
+    "/{product_id}/detalle",
+    response_model=ProductDetailResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False
+)
 @router.get(
     "/{product_id}/detail",
     response_model=ProductDetailResponse,
@@ -509,6 +552,20 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
     }
 
 
+@productos_router.get(
+    "/{product_id}/coincidencias",
+    response_model=ProductMatchesResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Comparador de disponibilidad 'Comprar con...' (CU-04)",
+    description="Busca si el mismo grano se comercializa en otras tiendas bajo identidad estricta (RN-04)."
+)
+@productos_router.get("/{product_id}/matches", response_model=ProductMatchesResponse, include_in_schema=False)
+@router.get(
+    "/{product_id}/coincidencias",
+    response_model=ProductMatchesResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False
+)
 @router.get(
     "/{product_id}/matches",
     response_model=ProductMatchesResponse,
@@ -563,12 +620,31 @@ def get_product_matches(product_id: int, db_session: Session = Depends(get_db_se
     )
 
 
+@productos_router.get(
+    "",
+    response_model=PaginatedProductsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Catálogo de productos con filtros y ordenamiento",
+    description="Permite buscar y ordenar los cafés aplicando filtros por formato (gramos), tienda, precio o variedad."
+)
+@productos_router.get(
+    "/",
+    response_model=PaginatedProductsResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False
+)
+@productos_router.get(
+    "/cheapest",
+    response_model=PaginatedProductsResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False
+)
 @router.get(
     "",
     response_model=PaginatedProductsResponse,
     status_code=status.HTTP_200_OK,
-    summary="Obtener los cafés más baratos con filtros",
-    description="Permite buscar y ordenar los cafés más económicos aplicando filtros por formato (gramos), tienda, precio o variedad."
+    summary="Catálogo de productos con filtros y ordenamiento",
+    description="Permite buscar y ordenar los cafés aplicando filtros por formato (gramos), tienda, precio o variedad."
 )
 @router.get(
     "/",
@@ -591,9 +667,11 @@ def get_cheapest_coffee_products(
     offset: int = Query(0, ge=0, description="Desplazamiento / paginación para scroll infinito (offset)"),
     category: Optional[str] = Query("cafe", description="Filtrar por categoría: 'cafe' (predeterminado), 'no_cafe', o 'todos'"),
     only_available: bool = Query(True, description="Filtrar solo productos que tengan stock disponible"),
-    store_name: Optional[str] = Query(None, description="Filtrar por nombre de tienda (ej. 'Singular')"),
-    store: Optional[str] = Query(None, description="Alias de tienda (ej. 'Singular')"),
-    tienda: Optional[str] = Query(None, description="Alias en español para tienda"),
+    store_name: Optional[List[str]] = Query(None, description="Filtrar por nombre(s) de tienda (ej. 'Singular' o múltiples)"),
+    store: Optional[List[str]] = Query(None, description="Alias de tienda (ej. 'Singular')"),
+    tienda: Optional[List[str]] = Query(None, description="Alias en español para tienda"),
+    stores: Optional[List[str]] = Query(None, description="Múltiples tiendas separadas por coma o repetidas"),
+    tiendas: Optional[List[str]] = Query(None, description="Múltiples tiendas en español"),
     min_weight_g: Optional[int] = Query(None, ge=50, le=5000, description="Peso mínimo en gramos (ej. 200)"),
     max_weight_g: Optional[int] = Query(None, ge=50, le=5000, description="Peso máximo en gramos (ej. 300)"),
     search_query: Optional[str] = Query(None, description="Búsqueda por texto en el nombre del café (ej. 'Geisha')"),
@@ -612,8 +690,18 @@ def get_cheapest_coffee_products(
     db_session: Session = Depends(get_db_session)
 ) -> PaginatedProductsResponse:
     try:
-        if store_name is None:
-            store_name = store or tienda
+        raw_stores: List[str] = []
+        for param in (store_name, store, tienda, stores, tiendas):
+            if param:
+                if isinstance(param, list):
+                    for item in param:
+                        raw_stores.extend([s.strip() for s in item.split(",") if s.strip()])
+                elif isinstance(param, str):
+                    raw_stores.extend([s.strip() for s in param.split(",") if s.strip()])
+
+        selected_stores = list(dict.fromkeys(raw_stores))
+        store_filter_str = ",".join(selected_stores) if selected_stores else None
+
         if country is None:
             country = pais_origen
         if variety is None:
@@ -632,7 +720,7 @@ def get_cheapest_coffee_products(
             limit=limit,
             offset=offset,
             only_available=only_available,
-            store_name=store_name,
+            store_name=store_filter_str,
             min_weight_g=min_weight_g,
             max_weight_g=max_weight_g,
             search_query=search_query,
@@ -652,7 +740,7 @@ def get_cheapest_coffee_products(
             total_items = repository.count_cheapest_products(
                 sort_by=sort_by,
                 only_available=only_available,
-                store_name=store_name,
+                store_name=store_filter_str,
                 min_weight_g=min_weight_g,
                 max_weight_g=max_weight_g,
                 search_query=search_query,
@@ -704,12 +792,31 @@ def get_cheapest_coffee_products(
         )
 
 
+@productos_router.get(
+    "/ofertas-semana",
+    response_model=WeeklyPriceDropsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Mayores caídas de precio de la semana (Ofertas verificadas)",
+    description="Devuelve los cafés con mayores descuentos y rebajas reales verificadas en los últimos 7 días."
+)
+@productos_router.get(
+    "/caidas-semana",
+    response_model=WeeklyPriceDropsResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False
+)
 @router.get(
     "/ofertas-semana",
     response_model=WeeklyPriceDropsResponse,
     status_code=status.HTTP_200_OK,
     summary="Mayores caídas de precio de la semana (Ofertas verificadas)",
     description="Devuelve los cafés con mayores descuentos y rebajas reales verificadas en los últimos 7 días."
+)
+@router.get(
+    "/caidas-semana",
+    response_model=WeeklyPriceDropsResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False
 )
 @ofertas_router.get(
     "/ofertas-semana",

@@ -10,6 +10,7 @@ from db.database import Producto, SucursalTienda, Tienda, Variante
 from domain.search_normalizer import NON_COFFEE_KEYWORDS_SQL
 
 router = APIRouter(prefix="/api/v1/stores", tags=["Tiendas"])
+tiendas_router = APIRouter(prefix="/api/v1/tiendas", tags=["Tiendas"])
 
 # Coordenadas de referencia para comunas y ciudades de Chile ($0 USD geocoding)
 COMUNA_COORDINATES: Dict[str, tuple] = {
@@ -95,6 +96,19 @@ class StoresSummaryResponse(BaseModel):
     ubicacion_referencia: Optional[str] = None
 
 
+@tiendas_router.get(
+    "",
+    response_model=StoresSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Obtener tiendas con cantidad de productos y cercanía física (CU-05)",
+    description="Devuelve el catálogo de tiendas con orden por productos, nombre o cercanía geográfica pasiva."
+)
+@tiendas_router.get(
+    "/",
+    response_model=StoresSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False
+)
 @router.get(
     "",
     response_model=StoresSummaryResponse,

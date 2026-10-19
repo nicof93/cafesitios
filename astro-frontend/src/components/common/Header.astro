@@ -35,14 +35,14 @@ const showLocalAdmin = Environment.isLocalAdminEnabled(Astro.url);
     <!-- NAVEGACIÓN Y ACCIONES GLOBALES -->
     <nav class="flex items-center gap-1 sm:gap-2 text-xs font-medium text-stone-600" aria-label="Navegación principal">
       <a 
-        href="/catalog" 
+        href="/catalogo" 
         class="rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
       >
         Catálogo
       </a>
       
       <a 
-        href="/stores" 
+        href="/tiendas" 
         class="rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
       >
         Todas las Tiendas
@@ -58,46 +58,40 @@ const showLocalAdmin = Environment.isLocalAdminEnabled(Astro.url);
       </button>
 
       <a 
-        href="/bitacora" 
-        id="btn-open-recipes"
-        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 hover:text-stone-900 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-        title="Abrir Bitácora Barista de Recetas"
+        href="/mis-recetas" 
+        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+        title="Mis Recetas y Registro de Extracciones Barista"
       >
         <span aria-hidden="true">📖</span>
-        <span class="hidden sm:inline">Bitácora</span>
+        <span class="hidden sm:inline">Mis recetas</span>
+      </a>
+
+      <a 
+        href="/calibrador" 
+        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-stone-700 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+        title="Calibrador Sensorial de Café 2D (Dial-in Assistant)"
+      >
+        <span aria-hidden="true">🎯</span>
+        <span class="hidden sm:inline">Calibrador</span>
+      </a>
+
+      <a 
+        href="/recetas" 
+        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+        title="Guías de Preparación de Café de Especialidad"
+      >
+        <span aria-hidden="true">☕</span>
+        <span class="hidden sm:inline">Guías</span>
       </a>
 
       {showLocalAdmin && (
         <a 
-          href="/admin" 
-          class="local-admin-nav hidden inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-amber-800 bg-amber-50 hover:bg-amber-100 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 font-semibold"
-          title="Panel Administrativo Local (Tiendas, Sucursales y Moderación)"
+          href="http://localhost:4322/plataforma/" 
+          class="local-admin-nav hidden inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 font-semibold"
+          title="Abrir Plataforma de Administración y Bitácora Local"
         >
           <span aria-hidden="true">⚙️</span>
-          <span class="hidden sm:inline">Admin Local</span>
-        </a>
-      )}
-
-      {showAnalytics && (
-        <a 
-          href="/sincronizaciones" 
-          class="local-analytics-nav hidden inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-          title="Reporte de Sincronización y Analítica"
-        >
-          <span aria-hidden="true">📊</span>
-          <span class="hidden sm:inline">Sincronización</span>
-        </a>
-      )}
-
-      <!-- PILL DISCRETO DE SINCRONIZACIÓN -->
-      {showAnalytics && (
-        <a 
-          href="/sincronizaciones"
-          class="local-analytics-nav hidden lg:inline-flex items-center gap-1.5 rounded-full border border-stone-200/80 bg-white/80 hover:border-emerald-300 hover:bg-emerald-50/60 px-2.5 py-1 text-[10px] font-medium text-stone-500 hover:text-emerald-800 shadow-2xs ml-1 transition"
-          title="Ver Reporte de Sincronización y Analítica"
-        >
-          <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span id="header-sync-time" class="truncate max-w-[130px]">{lastSync}</span>
+          <span class="hidden sm:inline">Plataforma Admin</span>
         </a>
       )}
     </nav>

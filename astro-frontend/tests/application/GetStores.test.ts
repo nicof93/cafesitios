@@ -28,7 +28,7 @@ describe('GetStoresUseCase', () => {
       sortBy: 'name_asc'
     });
 
-    expect(mockHttp.get).toHaveBeenCalledWith('/api/v1/stores', {
+    expect(mockHttp.get).toHaveBeenCalledWith('/api/v1/tiendas', {
       params: {
         page: 1,
         page_size: 50,

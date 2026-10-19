@@ -4,6 +4,7 @@ import { HttpClient } from '../infrastructure/api/HttpClient';
 export interface CatalogFilterParams {
   searchQuery?: string;
   storeName?: string;
+  stores?: string[];
   process?: string;
   country?: string;
   variety?: string;
@@ -35,9 +36,13 @@ export class GetCatalogUseCase {
   constructor(private readonly http: HttpClient = new HttpClient()) {}
 
   async execute(params: CatalogFilterParams = {}): Promise<CatalogResult> {
+    const storeParam = params.stores && params.stores.length > 0
+      ? params.stores.join(',')
+      : params.storeName;
+
     const queryParams: Record<string, string | number | boolean | undefined> = {
       search_query: params.searchQuery,
-      store_name: params.storeName,
+      store_name: storeParam,
       process: params.process,
       country: params.country,
       variety: params.variety,

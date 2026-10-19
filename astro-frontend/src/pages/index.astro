@@ -11,7 +11,7 @@ import { HttpClient } from '../core/infrastructure/api/HttpClient';
 const searchParams = Astro.url.searchParams;
 const storeRedirect = searchParams.get('tienda') || searchParams.get('store_name') || searchParams.get('store');
 if (storeRedirect) {
-  return Astro.redirect(`/catalog?tienda=${encodeURIComponent(storeRedirect)}`);
+  return Astro.redirect(`/catalogo?tienda=${encodeURIComponent(storeRedirect)}`);
 }
 
 const catalogUseCase = new GetCatalogUseCase();
@@ -61,7 +61,7 @@ const fallbackHeroProduct = {
   formato_gramos: 250,
   precio_clp: 11000,
   precio_por_kilo: 44000,
-  url_detalle: '/catalog?q=Geisha'
+  url_detalle: '/catalogo?q=Geisha'
 };
 
 // Generar pool de candidatos para la rotación automática en el Hero cada 3 segundos
@@ -85,7 +85,7 @@ const heroCandidates = (featuredProducts && featuredProducts.length > 0)
         formato_gramos: bestVariant?.formato_gramos || 250,
         precio_clp: bestVariant?.precio_clp || 10000,
         precio_por_kilo: bestVariant?.precio_por_kilo || 40000,
-        url_detalle: p.id ? `/product/${p.id}` : '/catalog'
+        url_detalle: p.id ? `/producto/${p.id}` : '/catalogo'
       };
     })
   : [fallbackHeroProduct];
@@ -112,7 +112,7 @@ const jsonLdHome = {
       "publisher": { "@id": "https://cafesitios.cl/#organization" },
       "potentialAction": {
         "@type": "SearchAction",
-        "target": "https://cafesitios.cl/catalog?q={search_term_string}",
+        "target": "https://cafesitios.cl/catalogo?q={search_term_string}",
         "query-input": "required name=search_term_string"
       }
     }
@@ -162,7 +162,7 @@ const jsonLdHome = {
           <!-- Botones de Acción Inmediata -->
           <div class="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
             <a 
-              href="/catalog" 
+              href="/catalogo" 
               class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-2xl bg-stone-900 hover:bg-emerald-900 text-white font-bold text-sm sm:text-base px-7 py-4 transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5"
             >
               <span>Explorar Catálogo Beta</span>
@@ -170,7 +170,7 @@ const jsonLdHome = {
             </a>
 
             <a 
-              href="/stores" 
+              href="/tiendas" 
               class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-white hover:bg-stone-100 text-stone-800 font-semibold text-sm sm:text-base px-6 py-4 transition-all duration-200 border border-stone-200 shadow-2xs"
             >
               <span>Ver Mapa de Tiendas</span>
@@ -326,7 +326,7 @@ const jsonLdHome = {
         
         <!-- Tarjeta Frutos Rojos -->
         <a 
-          href="/catalog?notes=frutos+rojos" 
+          href="/catalogo?notes=frutos+rojos" 
           class="group rounded-3xl p-6 bg-gradient-to-br from-rose-50/60 to-white border border-rose-200/60 shadow-2xs hover:shadow-md hover:border-rose-300 transition-all duration-200 flex flex-col justify-between"
         >
           <div class="space-y-3">
@@ -345,7 +345,7 @@ const jsonLdHome = {
 
         <!-- Tarjeta Cítricos -->
         <a 
-          href="/catalog?notes=citrico" 
+          href="/catalogo?notes=citrico" 
           class="group rounded-3xl p-6 bg-gradient-to-br from-amber-50/60 to-white border border-amber-200/60 shadow-2xs hover:shadow-md hover:border-amber-300 transition-all duration-200 flex flex-col justify-between"
         >
           <div class="space-y-3">
@@ -364,7 +364,7 @@ const jsonLdHome = {
 
         <!-- Tarjeta Chocolate & Dulce -->
         <a 
-          href="/catalog?notes=chocolate" 
+          href="/catalogo?notes=chocolate" 
           class="group rounded-3xl p-6 bg-gradient-to-br from-amber-950/5 to-white border border-stone-200/80 shadow-2xs hover:shadow-md hover:border-stone-300 transition-all duration-200 flex flex-col justify-between"
         >
           <div class="space-y-3">
@@ -383,7 +383,7 @@ const jsonLdHome = {
 
         <!-- Tarjeta Florales -->
         <a 
-          href="/catalog?notes=floral" 
+          href="/catalogo?notes=floral" 
           class="group rounded-3xl p-6 bg-gradient-to-br from-emerald-50/60 to-white border border-emerald-200/60 shadow-2xs hover:shadow-md hover:border-emerald-300 transition-all duration-200 flex flex-col justify-between"
         >
           <div class="space-y-3">
@@ -423,7 +423,7 @@ const jsonLdHome = {
           </div>
 
           <a 
-            href="/catalog" 
+            href="/catalogo" 
             class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/70 px-4 py-2 rounded-xl transition"
           >
             <span>Ver los {totalProducts} cafés disponibles</span>
@@ -439,7 +439,7 @@ const jsonLdHome = {
 
         <div class="pt-4 text-center">
           <a 
-            href="/catalog" 
+            href="/catalogo" 
             class="inline-flex items-center gap-2 rounded-2xl bg-stone-900 hover:bg-emerald-900 text-white font-bold text-sm px-8 py-3.5 transition shadow-sm"
           >
             <span>Ir al Catálogo Completo con Filtros Avanzados</span>
@@ -565,7 +565,7 @@ const jsonLdHome = {
 
       <div class="pt-2 flex flex-wrap items-center justify-center gap-3">
         <a 
-          href="/catalog" 
+          href="/catalogo" 
           class="inline-flex items-center gap-2 rounded-2xl bg-stone-900 hover:bg-emerald-900 text-white font-bold text-sm px-6 py-3.5 transition shadow-2xs"
         >
           <span>Ir al Catálogo de Cafés</span>
