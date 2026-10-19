@@ -477,5 +477,44 @@ class TestAPI(unittest.TestCase):
             importlib.reload(main)
             main.app.dependency_overrides[get_db_session] = mock_get_db_session_override
 
+    def test_recipes_feature_flag_guard(self):
+        """Verifica que el endpoint de recetas responde 404 cuando ENABLE_RECIPES=false."""
+        import os
+        from db.config import settings
+
+        old_flag = os.environ.get("ENABLE_RECIPES")
+        # Crear sesión SQLite en memoria real para ManageRecipesUseCase
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(engine)
+        test_session = sessionmaker(bind=engine)()
+
+        def override_real_session():
+            yield test_session
+
+        app.dependency_overrides[get_db_session] = override_real_session
+
+        try:
+            # Caso 1: Deshabilitado -> 404
+            os.environ["ENABLE_RECIPES"] = "false"
+            res_disabled = client.get("/api/v1/recetas?dispositivo_uuid=test-uuid")
+            self.assertEqual(res_disabled.status_code, 404)
+
+            # Caso 2: Habilitado -> 200
+            os.environ["ENABLE_RECIPES"] = "true"
+            res_enabled = client.get("/api/v1/recetas?dispositivo_uuid=test-uuid")
+            self.assertEqual(res_enabled.status_code, 200)
+        finally:
+            app.dependency_overrides[get_db_session] = mock_get_db_session_override
+            test_session.close()
+            if old_flag is not None:
+                os.environ["ENABLE_RECIPES"] = old_flag
+            else:
+                os.environ.pop("ENABLE_RECIPES", None)
+
 if __name__ == "__main__":
     unittest.main()
+

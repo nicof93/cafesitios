@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { HttpClient } from '../core/infrastructure/api/HttpClient';
+import { FeatureFlags } from '../core/infrastructure/config/FeatureFlags';
 
 interface RawProduct {
   id: number;
@@ -74,7 +75,7 @@ export const GET: APIRoute = async () => {
     console.warn('[sitemap.xml] Error consultando API de productos para el sitemap:', err);
   }
 
-  // 3. Páginas públicas estáticas canónicas
+  // 3. Páginas públicas estáticas canónicas (respetando Feature Flags para SEO)
   const staticPages = [
     {
       loc: `${siteUrl}/`,
@@ -94,25 +95,34 @@ export const GET: APIRoute = async () => {
       changefreq: 'weekly',
       priority: '0.8'
     },
-    {
+  ];
+
+  if (FeatureFlags.isGuidesEnabled()) {
+    staticPages.push({
       loc: `${siteUrl}/recetas`,
       lastmod: today,
       changefreq: 'weekly',
       priority: '0.8'
-    },
-    {
+    });
+  }
+
+  if (FeatureFlags.isCalibratorEnabled()) {
+    staticPages.push({
       loc: `${siteUrl}/calibrador`,
       lastmod: today,
       changefreq: 'weekly',
       priority: '0.8'
-    },
-    {
+    });
+  }
+
+  if (FeatureFlags.isMyRecipesEnabled()) {
+    staticPages.push({
       loc: `${siteUrl}/mis-recetas`,
       lastmod: today,
       changefreq: 'weekly',
       priority: '0.8'
-    }
-  ];
+    });
+  }
 
   // 4. Construcción del XML conforme a los estándares de Google Search Console
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

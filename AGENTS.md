@@ -259,3 +259,20 @@ Toda modificación en el frontend (`astro-frontend/`) debe cumplir sin excepció
 1. **Commits Bajo Demanda:** NO generar commits automáticos salvo que el usuario lo solicite expresamente.
 2. **Formato:** Conventional Commits en español (`feat(scrapper): driver para jumpseller`, `fix(api): corregir filtro de precios`, `perf(db): indices compuestos`).
 3. **Protección de Ramas:** Nunca confirmar directamente sobre `main` o `master` si hay cambios remotos pendientes; trabajar en ramas de características (`feat/`, `fix/`).
+
+---
+
+## 12. Protocolo Obligatorio de Feature Flags (Nuevas Funcionalidades)
+
+Para garantizar lanzamientos graduales (Dark Launches), pruebas seguras en producción y control total del despliegue:
+
+1. **Invariante de Nueva Funcionalidad:** Toda nueva página, herramienta interactiva o módulo de negocio relevante **debe nacer protegido bajo un Feature Flag desacoplado**.
+2. **Convención de Nomenclatura:**
+   * **Frontend (`astro-frontend/`):** Prefijo `PUBLIC_ENABLE_<NOMBRE_EN_INGLES>` (ej. `PUBLIC_ENABLE_RECIPES`, `PUBLIC_ENABLE_CALIBRATOR`). Centralizado en `src/core/infrastructure/config/FeatureFlags.ts`.
+   * **Backend (`api/`):** Variable `ENABLE_<NOMBRE_EN_INGLES>` en `db/config.py` (`Settings`) y dependencia guard en `api/dependencies.py` si expone endpoints específicos.
+3. **Comportamiento en Inactividad (`flag = false`):**
+   * **Páginas Frontend:** Deben reescribir inmediatamente a `404` (`return Astro.rewrite('/404')`).
+   * **Navegación & UI:** Los enlaces en el header, botones de llamada a la acción y banners deben estar condicionados por el flag en tiempo de renderizado SSR.
+   * **Sitemap & SEO:** Las URLs desactivadas deben excluirse dinámicamente de `sitemap.xml.ts` para evitar indexación no deseada por motores de búsqueda.
+   * **Endpoints Backend:** Deben retornar `404 Not Found` limpio con mensaje descriptivo.
+4. **Valores Predeterminados:** Las funciones evaluadoras deben adoptar `default = true` salvo que la tarea especifique explícitamente lo contrario, permitiendo apagar selectivamente la funcionalidad mediante variables de entorno en Vercel, Render o `.env`.

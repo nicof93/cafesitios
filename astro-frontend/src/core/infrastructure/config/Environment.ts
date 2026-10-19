@@ -49,6 +49,34 @@ export class Environment {
     return this.isLocalhost(url);
   }
 
+  static isGuidesEnabled(): boolean {
+    const val = import.meta.env.PUBLIC_ENABLE_RECIPES ?? import.meta.env.ENABLE_RECIPES;
+    if (val === undefined || val === null || val === '') return true;
+    const str = String(val).trim().toLowerCase();
+    return str === 'true' || str === '1' || str === 'yes' || str === 'on';
+  }
+
+  static isCalibratorEnabled(): boolean {
+    const val = import.meta.env.PUBLIC_ENABLE_CALIBRATOR ?? import.meta.env.ENABLE_CALIBRATOR;
+    if (val === undefined || val === null || val === '') return true;
+    const str = String(val).trim().toLowerCase();
+    return str === 'true' || str === '1' || str === 'yes' || str === 'on';
+  }
+
+  static isMyRecipesEnabled(): boolean {
+    const val = import.meta.env.PUBLIC_ENABLE_MY_RECIPES ?? import.meta.env.ENABLE_MY_RECIPES;
+    if (val === undefined || val === null || val === '') return true;
+    const str = String(val).trim().toLowerCase();
+    return str === 'true' || str === '1' || str === 'yes' || str === 'on';
+  }
+
+  static isFlavorQuizEnabled(): boolean {
+    const val = import.meta.env.PUBLIC_ENABLE_FLAVOR_QUIZ ?? import.meta.env.ENABLE_FLAVOR_QUIZ;
+    if (val === undefined || val === null || val === '') return true;
+    const str = String(val).trim().toLowerCase();
+    return str === 'true' || str === '1' || str === 'yes' || str === 'on';
+  }
+
   static getGtmId(): string {
     return import.meta.env.PUBLIC_GTM_ID || '';
   }

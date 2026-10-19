@@ -8,6 +8,10 @@ interface Props {
 const { lastSync = "Al día" } = Astro.props;
 const showAnalytics = Environment.isAnalyticsEnabled(Astro.url);
 const showLocalAdmin = Environment.isLocalAdminEnabled(Astro.url);
+const showGuides = Environment.isGuidesEnabled();
+const showCalibrator = Environment.isCalibratorEnabled();
+const showMyRecipes = Environment.isMyRecipesEnabled();
+const showFlavorQuiz = Environment.isFlavorQuizEnabled();
 ---
 
 <header class="sticky top-0 z-30 border-b border-stone-200/70 bg-[#FCFBF7]/90 backdrop-blur-md transition-all">
@@ -48,41 +52,49 @@ const showLocalAdmin = Environment.isLocalAdminEnabled(Astro.url);
         Todas las Tiendas
       </a>
 
-      <button 
-        type="button" 
-        id="btn-open-quiz"
-        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-emerald-800 hover:bg-emerald-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-      >
-        <span aria-hidden="true">✨</span>
-        <span>Quiz de Sabor</span>
-      </button>
+      {showFlavorQuiz && (
+        <button 
+          type="button" 
+          id="btn-open-quiz"
+          class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-emerald-800 hover:bg-emerald-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+        >
+          <span aria-hidden="true">✨</span>
+          <span>Quiz de Sabor</span>
+        </button>
+      )}
 
-      <a 
-        href="/mis-recetas" 
-        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-        title="Mis Recetas y Registro de Extracciones Barista"
-      >
-        <span aria-hidden="true">📖</span>
-        <span class="hidden sm:inline">Mis recetas</span>
-      </a>
+      {showMyRecipes && (
+        <a 
+          href="/mis-recetas" 
+          class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+          title="Mis Recetas y Registro de Extracciones Barista"
+        >
+          <span aria-hidden="true">📖</span>
+          <span class="hidden sm:inline">Mis recetas</span>
+        </a>
+      )}
 
-      <a 
-        href="/calibrador" 
-        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-stone-700 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-        title="Calibrador Sensorial de Café 2D (Dial-in Assistant)"
-      >
-        <span aria-hidden="true">🎯</span>
-        <span class="hidden sm:inline">Calibrador</span>
-      </a>
+      {showCalibrator && (
+        <a 
+          href="/calibrador" 
+          class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-stone-700 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+          title="Calibrador Sensorial de Café 2D (Dial-in Assistant)"
+        >
+          <span aria-hidden="true">🎯</span>
+          <span class="hidden sm:inline">Calibrador</span>
+        </a>
+      )}
 
-      <a 
-        href="/recetas" 
-        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-        title="Guías de Preparación de Café de Especialidad"
-      >
-        <span aria-hidden="true">☕</span>
-        <span class="hidden sm:inline">Guías</span>
-      </a>
+      {showGuides && (
+        <a 
+          href="/recetas" 
+          class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+          title="Guías de Preparación de Café de Especialidad"
+        >
+          <span aria-hidden="true">☕</span>
+          <span class="hidden sm:inline">Guías</span>
+        </a>
+      )}
 
       {showLocalAdmin && (
         <a 

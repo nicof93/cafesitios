@@ -1,5 +1,13 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { FeatureFlags } from '../core/infrastructure/config/FeatureFlags';
+
+// Guard de Feature Flag para Guías
+if (!FeatureFlags.isGuidesEnabled()) {
+  return Astro.rewrite('/404');
+}
+
+const showCalibradorBanner = FeatureFlags.isCalibratorEnabled();
 
 const jsonLdRecetas = {
   "@context": "https://schema.org",
@@ -297,30 +305,32 @@ const metodos = [
     </section>
 
     <!-- BANNER DE ACCESO AL CALIBRADOR SENSORIAL DE CAFÉ IDEAL (DIAL-IN) -->
-    <section class="rounded-3xl border border-amber-200/80 bg-gradient-to-r from-[#FAF8F2] via-amber-50/60 to-emerald-50/70 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs">
-      <div class="space-y-2 max-w-2xl">
-        <div class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-0.5 text-xs font-bold text-amber-900 border border-amber-300">
-          <span>🎯</span>
-          <span>Nuevo: Dial-in Assistant</span>
+    {showCalibradorBanner && (
+      <section class="rounded-3xl border border-amber-200/80 bg-gradient-to-r from-[#FAF8F2] via-amber-50/60 to-emerald-50/70 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs">
+        <div class="space-y-2 max-w-2xl">
+          <div class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-0.5 text-xs font-bold text-amber-900 border border-amber-300">
+            <span>🎯</span>
+            <span>Nuevo: Dial-in Assistant</span>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">
+            ¿Tu café sabe agrio o amargo seco? Calibra tu receta en 2D
+          </h2>
+          <p class="text-xs sm:text-sm text-stone-600 leading-relaxed">
+            Sitúa el sabor percibido en el plano cartesiano y recibe ajustes automáticos en tiempo real de molienda, ratio, temperatura y tiempo hacia la Zona Ideal.
+          </p>
         </div>
-        <h2 class="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">
-          ¿Tu café sabe agrio o amargo seco? Calibra tu receta en 2D
-        </h2>
-        <p class="text-xs sm:text-sm text-stone-600 leading-relaxed">
-          Sitúa el sabor percibido en el plano cartesiano y recibe ajustes automáticos en tiempo real de molienda, ratio, temperatura y tiempo hacia la Zona Ideal.
-        </p>
-      </div>
 
-      <div class="flex-shrink-0">
-        <a
-          href="/calibrador"
-          class="inline-flex items-center gap-2 rounded-2xl bg-stone-900 hover:bg-emerald-900 text-white font-bold text-xs py-3.5 px-6 shadow-md hover:shadow-lg transition hover:-translate-y-0.5"
-        >
-          <span>Abrir Calibrador Dial-in</span>
-          <span>→</span>
-        </a>
-      </div>
-    </section>
+        <div class="flex-shrink-0">
+          <a
+            href="/calibrador"
+            class="inline-flex items-center gap-2 rounded-2xl bg-stone-900 hover:bg-emerald-900 text-white font-bold text-xs py-3.5 px-6 shadow-md hover:shadow-lg transition hover:-translate-y-0.5"
+          >
+            <span>Abrir Calibrador Dial-in</span>
+            <span>→</span>
+          </a>
+        </div>
+      </section>
+    )}
 
     <!-- GRILLA DE MÉTODOS DE EXTRACCIÓN -->
     <section class="space-y-6" aria-labelledby="metodos-heading">

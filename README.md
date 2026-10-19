@@ -162,6 +162,33 @@ Configura el secreto en tu repositorio de GitHub (`Settings -> Secrets and varia
 
 ---
 
+## 🚩 Estrategia de Feature Flags (Lanzamiento Controlado)
+
+Cafesitios utiliza un sistema desacoplado de Feature Flags para controlar el despliegue progresivo de funcionalidades tanto en el **Frontend (Astro)** como en el **Backend (FastAPI)**.
+
+Permite activar o desactivar páginas completas, enlaces en menús de navegación, botones de acción y rastreo en `sitemap.xml` para SEO sin necesidad de eliminar código.
+
+### Variables de Configuración
+
+| Variable de Entorno | Ámbito | Valor por Defecto | Descripción |
+| :--- | :--- | :--- | :--- |
+| `PUBLIC_ENABLE_RECIPES` | Frontend | `true` | Habilita o deshabilita la página `/recetas` (Guías Baristas) y sus enlaces en el header. Si está inactiva, retorna `404` limpio y se omite en el `sitemap.xml`. |
+| `ENABLE_RECIPES` | Backend | `true` | Habilita o restringe los endpoints de guardado y sincronización de recetas `/api/v1/recetas`. Si está inactivo, responde `404 Not Found`. |
+| `PUBLIC_ENABLE_CALIBRATOR` | Frontend | `true` | Habilita o deshabilita el Calibrador Sensorial 2D `/calibrador`, su acceso en el Header y el banner destacado en Guías. Si está inactivo, retorna `404` y se excluye del sitemap. |
+| `ENABLE_CALIBRATOR` | Backend | `true` | Flag en configuración del backend para control de dependencias asociadas al calibrador. |
+| `PUBLIC_ENABLE_MY_RECIPES` | Frontend | `true` | Controla la visualización del portal "Mis Recetas" local-first en el menú de navegación y sitemap. |
+| `PUBLIC_ENABLE_FLAVOR_QUIZ` | Frontend | `true` | Controla la visualización del botón interactivo "Quiz de Sabor" en la navegación y hero principal. |
+
+### Cómo activar o pausar un módulo:
+* **En desarrollo local:** Edita el archivo `astro-frontend/.env` o la raíz `.env`. Por ejemplo, para ocultar el calibrador antes del lanzamiento oficial:
+  ```env
+  PUBLIC_ENABLE_CALIBRATOR=false
+  ```
+* **En producción (Vercel / Render):**
+  Agrega o modifica la variable en el panel del servicio (`Settings -> Environment Variables`) y realiza un redespliegue sin reconstruir la base de código.
+
+---
+
 ## 📌 Endpoints Principales de la API
 
 La API cuenta con endpoints canónicos en español y alias transparentes en inglés para garantizar total retrocompatibilidad:

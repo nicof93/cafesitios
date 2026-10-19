@@ -6,6 +6,7 @@ import WeeklyPriceDropsSection from '../components/catalog/WeeklyPriceDropsSecti
 import { GetCatalogUseCase } from '../core/application/GetCatalog';
 import { GetStoresUseCase } from '../core/application/GetStores';
 import { HttpClient } from '../core/infrastructure/api/HttpClient';
+import { FeatureFlags } from '../core/infrastructure/config/FeatureFlags';
 
 // Si el usuario llega con parámetro de tienda en la URL principal, redirigir directo al catálogo filtrado
 const searchParams = Astro.url.searchParams;
@@ -13,6 +14,8 @@ const storeRedirect = searchParams.get('tienda') || searchParams.get('store_name
 if (storeRedirect) {
   return Astro.redirect(`/catalogo?tienda=${encodeURIComponent(storeRedirect)}`);
 }
+
+const showHeroQuiz = FeatureFlags.isFlavorQuizEnabled();
 
 const catalogUseCase = new GetCatalogUseCase();
 const storesUseCase = new GetStoresUseCase();
@@ -177,15 +180,17 @@ const jsonLdHome = {
               <span>📍</span>
             </a>
 
-            <button 
-              type="button" 
-              id="hero-quiz-trigger"
-              data-open-quiz
-              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-semibold text-sm sm:text-base px-5 py-4 transition border border-emerald-200/70"
-            >
-              <span>Quiz de Sabor</span>
-              <span>✨</span>
-            </button>
+            {showHeroQuiz && (
+              <button 
+                type="button" 
+                id="hero-quiz-trigger"
+                data-open-quiz
+                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-semibold text-sm sm:text-base px-5 py-4 transition border border-emerald-200/70"
+              >
+                <span>Quiz de Sabor</span>
+                <span>✨</span>
+              </button>
+            )}
           </div>
 
           <!-- Micro-Trust Bar -->

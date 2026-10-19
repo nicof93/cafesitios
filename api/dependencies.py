@@ -90,3 +90,12 @@ def require_local_analytics(request: Request) -> None:
             detail="Acceso denegado: El reporte de sincronización y analítica está disponible únicamente en entorno local (localhost).",
         )
 
+
+def require_recipes_enabled() -> None:
+    """Dependencia de feature flag: verifica si la API de recetas está habilitada."""
+    if not settings.is_recipes_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="La funcionalidad de recetas se encuentra deshabilitada temporalmente.",
+        )
+

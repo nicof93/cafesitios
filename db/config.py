@@ -56,5 +56,19 @@ class Settings:
             return raw_flag.strip().lower() in ("true", "1", "yes", "on")
         return True
 
+    @property
+    def is_recipes_enabled(self) -> bool:
+        raw_flag = os.getenv("ENABLE_RECIPES")
+        if raw_flag is not None and raw_flag.strip() != "":
+            return raw_flag.strip().lower() in ("true", "1", "yes", "on")
+        return True
+
+    @property
+    def is_calibrator_enabled(self) -> bool:
+        raw_flag = os.getenv("ENABLE_CALIBRATOR")
+        if raw_flag is not None and raw_flag.strip() != "":
+            return raw_flag.strip().lower() in ("true", "1", "yes", "on")
+        return True
+
 settings = Settings()
 
