@@ -13,14 +13,17 @@ from core.security_store_admin import (
     create_store_admin_token,
     get_client_ip,
     get_current_store_admin,
+    hash_store_password,
     log_store_action,
     verify_anti_bot_token,
+    verify_store_password,
 )
 from db.database import (
     AuditoriaAccionesTienda,
     DatabaseManager,
     HistorialPrecio,
     Producto,
+    Receta,
     Sincronizacion,
     SincronizacionLog,
     Tienda,
@@ -51,6 +54,12 @@ class StoreAdminLoginResponse(BaseModel):
     tienda_id: int
     tienda_nombre: str
     rol: str
+    debe_cambiar_password: bool = False
+
+
+class StoreChangePasswordRequest(BaseModel):
+    password_actual: Optional[str] = None
+    password_nuevo: str = Field(..., min_length=6, max_length=100)
 
 
 class StoreAdminProfileResponse(BaseModel):
@@ -65,6 +74,7 @@ class StoreAdminProfileResponse(BaseModel):
     estado_sincronizacion: Optional[str] = None
     total_productos: int = 0
     cooldown_sync_segundos: int = 0
+    logo_url: Optional[str] = None
 
 
 class StoreProductVariantInput(BaseModel):
@@ -166,6 +176,43 @@ class AuditLogsListResponse(BaseModel):
     registros: List[AuditLogItem]
 
 
+class StoreRecipeInput(BaseModel):
+    producto_id: int
+    nombre_receta: str = Field(..., min_length=2, max_length=150)
+    metodo: str = Field(..., min_length=2, max_length=100)
+    dosis_cafe_g: float = Field(..., gt=0)
+    agua_ml: float = Field(..., gt=0)
+    ratio: Optional[str] = Field(None, max_length=20)
+    molino_usado: Optional[str] = Field(None, max_length=100)
+    grosor_molienda: Optional[str] = Field(None, max_length=50)
+    temperatura_c: Optional[int] = Field(None, ge=40, le=100)
+    tiempo_total_s: Optional[int] = Field(None, ge=10, le=1800)
+    notas_catado: Optional[str] = None
+    es_borrador: bool = False
+    pasos: Optional[List[str]] = None
+
+
+class StoreRecipeOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    producto_id: Optional[int]
+    producto_nombre: Optional[str] = None
+    tienda_id: Optional[int]
+    nombre_receta: str
+    metodo: str
+    dosis_cafe_g: float
+    agua_ml: float
+    ratio: Optional[str] = None
+    molino_usado: Optional[str] = None
+    grosor_molienda: Optional[str] = None
+    temperatura_c: Optional[int] = None
+    tiempo_total_s: Optional[int] = None
+    notas_catado: Optional[str] = None
+    es_borrador: bool = False
+    pasos: Optional[List[str]] = None
+    fecha_creacion: datetime
+
+
 # --- ENDPOINTS ---
 
 @router.post(
@@ -226,6 +273,15 @@ def store_admin_login(
             detail="La tostaduría vinculada a esta cuenta está inactiva o no existe.",
         )
 
+    # Si el usuario tiene contraseña configurada, verificarla
+    if getattr(user_store, "password_hash", None):
+        if not payload.password or not verify_store_password(payload.password, user_store.password_hash):
+            anti_brute_force.record_login_failure(client_ip, identifier)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Contraseña incorrecta.",
+            )
+
     # Éxito: restablecer intentos fallidos
     anti_brute_force.record_login_success(client_ip, identifier)
 
@@ -256,7 +312,59 @@ def store_admin_login(
         tienda_id=tienda.id,
         tienda_nombre=tienda.nombre,
         rol=user_store.rol,
+        debe_cambiar_password=bool(getattr(user_store, "debe_cambiar_password", False)),
     )
+
+
+@router.post(
+    "/auth/cambiar-password",
+    summary="Cambiar la clave de acceso del administrador de tienda (1er ingreso o actualización)",
+)
+def change_store_admin_password(
+    payload: StoreChangePasswordRequest,
+    request: Request,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    user_store = db_session.scalars(
+        select(UsuarioTienda).where(
+            UsuarioTienda.usuario_id == ctx.usuario_id,
+            UsuarioTienda.tienda_id == ctx.tienda_id,
+        )
+    ).first()
+    if not user_store:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cuenta de administrador de tienda no encontrada.",
+        )
+
+    # Si ya tiene una contraseña previa, verificarla salvo que sea primer ingreso sin password_actual
+    if user_store.password_hash and payload.password_actual:
+        if not verify_store_password(payload.password_actual, user_store.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La contraseña actual provista es incorrecta.",
+            )
+
+    user_store.password_hash = hash_store_password(payload.password_nuevo.strip())
+    user_store.debe_cambiar_password = False
+    db_session.commit()
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="CAMBIO_PASSWORD",
+        entidad="usuarios_tienda",
+        entidad_id=ctx.tienda_id,
+        valores_nuevos={"debe_cambiar_password": False},
+        ip_origen=get_client_ip(request),
+    )
+
+    return {
+        "exito": True,
+        "mensaje": "Contraseña actualizada exitosamente. Ya puedes utilizar tu nueva clave de acceso.",
+    }
 
 
 @router.get(
@@ -296,6 +404,7 @@ def get_store_profile(
         estado_sincronizacion=last_sync_status,
         total_productos=total_prods,
         cooldown_sync_segundos=cooldown_secs,
+        logo_url=getattr(t, "logo_url", None),
     )
 
 
@@ -810,3 +919,178 @@ def list_store_audit_logs(
         per_page=per_page_num,
         registros=items,
     )
+
+
+# --- RECETAS OFICIALES DE LA TOSTADURÍA ---
+
+@router.get(
+    "/recetas",
+    response_model=List[StoreRecipeOutput],
+    summary="Listar recetas oficiales de la tostaduría para sus cafés",
+)
+def list_store_recipes(
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> List[StoreRecipeOutput]:
+    stmt = (
+        select(Receta, Producto.nombre.label("producto_nombre"))
+        .outerjoin(Producto, Receta.producto_id == Producto.id)
+        .where(Receta.tienda_id == ctx.tienda_id)
+        .order_by(Receta.fecha_creacion.desc())
+    )
+    results = db_session.execute(stmt).all()
+    output = []
+    for r, prod_nombre in results:
+        output.append(
+            StoreRecipeOutput(
+                id=r.id,
+                producto_id=r.producto_id,
+                producto_nombre=prod_nombre,
+                tienda_id=r.tienda_id,
+                nombre_receta=r.nombre_receta,
+                metodo=r.metodo,
+                dosis_cafe_g=float(r.dosis_cafe_g),
+                agua_ml=float(r.agua_ml),
+                ratio=r.ratio,
+                molino_usado=r.molino_usado,
+                grosor_molienda=r.grosor_molienda,
+                temperatura_c=r.temperatura_c,
+                tiempo_total_s=r.tiempo_total_s,
+                notas_catado=r.notas_catado,
+                es_borrador=bool(getattr(r, 'es_borrador', False)),
+                pasos=r.pasos if isinstance(r.pasos, list) else None,
+                fecha_creacion=r.fecha_creacion,
+            )
+        )
+    return output
+
+
+@router.post(
+    "/recetas",
+    response_model=StoreRecipeOutput,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear receta oficial para un café de la tostaduría",
+)
+def create_store_recipe(
+    payload: StoreRecipeInput,
+    request: Request,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> StoreRecipeOutput:
+    # Aislamiento multi-tenant estricto: el producto debe pertenecer a ctx.tienda_id
+    product = db_session.scalars(
+        select(Producto).where(Producto.id == payload.producto_id, Producto.tienda_id == ctx.tienda_id)
+    ).first()
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El producto no existe o no pertenece a tu tostaduría.",
+        )
+
+    ratio_calculado = payload.ratio
+    if not ratio_calculado and payload.dosis_cafe_g > 0:
+        ratio_val = round(payload.agua_ml / payload.dosis_cafe_g, 1)
+        ratio_calculado = f"1:{ratio_val}"
+
+    # Limpiar lista de pasos eliminando vacíos
+    pasos_limpios = (
+        [p.strip() for p in payload.pasos if p and p.strip()]
+        if payload.pasos else None
+    )
+
+    nueva_receta = Receta(
+        dispositivo_uuid=f"store-{ctx.tienda_id}",
+        producto_id=product.id,
+        tienda_id=ctx.tienda_id,
+        autor_tipo="tostaduria",
+        es_publica=not payload.es_borrador,
+        es_borrador=payload.es_borrador,
+        nombre_receta=payload.nombre_receta.strip(),
+        metodo=payload.metodo.strip(),
+        dosis_cafe_g=payload.dosis_cafe_g,
+        agua_ml=payload.agua_ml,
+        ratio=ratio_calculado,
+        molino_usado=payload.molino_usado.strip() if payload.molino_usado else None,
+        grosor_molienda=payload.grosor_molienda.strip() if payload.grosor_molienda else None,
+        temperatura_c=payload.temperatura_c,
+        tiempo_total_s=payload.tiempo_total_s,
+        notas_catado=payload.notas_catado.strip() if payload.notas_catado else None,
+        pasos=pasos_limpios,
+        reintentar=True,
+    )
+    db_session.add(nueva_receta)
+    db_session.flush()
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="CREAR_RECETA_PRODUCTO",
+        entidad="recetas",
+        entidad_id=nueva_receta.id,
+        valores_nuevos={
+            "nombre": nueva_receta.nombre_receta,
+            "producto_id": product.id,
+            "metodo": nueva_receta.metodo,
+            "es_borrador": nueva_receta.es_borrador,
+        },
+        ip_origen=get_client_ip(request),
+    )
+    db_session.commit()
+    db_session.refresh(nueva_receta)
+
+    return StoreRecipeOutput(
+        id=nueva_receta.id,
+        producto_id=nueva_receta.producto_id,
+        producto_nombre=product.nombre,
+        tienda_id=nueva_receta.tienda_id,
+        nombre_receta=nueva_receta.nombre_receta,
+        metodo=nueva_receta.metodo,
+        dosis_cafe_g=float(nueva_receta.dosis_cafe_g),
+        agua_ml=float(nueva_receta.agua_ml),
+        ratio=nueva_receta.ratio,
+        molino_usado=nueva_receta.molino_usado,
+        grosor_molienda=nueva_receta.grosor_molienda,
+        temperatura_c=nueva_receta.temperatura_c,
+        tiempo_total_s=nueva_receta.tiempo_total_s,
+        notas_catado=nueva_receta.notas_catado,
+        es_borrador=nueva_receta.es_borrador,
+        pasos=nueva_receta.pasos,
+        fecha_creacion=nueva_receta.fecha_creacion,
+    )
+
+
+@router.delete(
+    "/recetas/{receta_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Eliminar una receta oficial de la tostaduría",
+)
+def delete_store_recipe(
+    receta_id: int,
+    request: Request,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    receta = db_session.scalars(
+        select(Receta).where(Receta.id == receta_id, Receta.tienda_id == ctx.tienda_id)
+    ).first()
+    if not receta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Receta no encontrada o no pertenece a tu tostaduría.",
+        )
+
+    db_session.delete(receta)
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="ELIMINAR_RECETA_PRODUCTO",
+        entidad="recetas",
+        entidad_id=receta_id,
+        valores_previos={"nombre": receta.nombre_receta, "producto_id": receta.producto_id},
+        ip_origen=get_client_ip(request),
+    )
+    db_session.commit()
+    return {"status": "success", "message": "Receta eliminada correctamente."}
+

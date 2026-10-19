@@ -7,11 +7,22 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
     <!-- Header de Bienvenida y Acción de Sincronización -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-stone-200 shadow-xs">
       <div>
-        <div class="flex items-center gap-2">
-          <h1 class="text-xl sm:text-2xl font-black text-stone-900" id="dash-store-title">Mi Tostaduría</h1>
-          <span class="rounded-full bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 font-bold" id="dash-store-status">Activa</span>
+        <div class="flex items-center gap-3">
+          <img 
+            id="dash-store-logo" 
+            src="" 
+            alt="Logo de tostaduría" 
+            class="h-9 w-9 rounded-xl object-contain bg-stone-50 border border-stone-200 p-1 hidden shrink-0"
+          />
+          <span id="dash-store-logo-placeholder" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 text-base font-bold">
+            ☕
+          </span>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl sm:text-2xl font-black text-stone-900" id="dash-store-title">Mi Tostaduría</h1>
+            <span class="rounded-full bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 font-bold" id="dash-store-status">Activa</span>
+          </div>
         </div>
-        <p class="text-xs text-stone-500 mt-1">Panel de control de catálogo, sincronización y auditoría.</p>
+        <p class="text-xs text-stone-500 mt-1">Panel de control de catálogo, sincronización y auditoría (Favicon automático de solo lectura).</p>
       </div>
 
       <!-- BOTÓN DE SINCRONIZACIÓN VOLUNTARIA BAJO DEMANDA -->
@@ -217,6 +228,14 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           document.getElementById('kpi-total-products').textContent = data.total_productos;
           document.getElementById('kpi-platform').textContent = data.plataforma;
           document.getElementById('kpi-user-role').textContent = data.rol;
+
+          const logoImg = document.getElementById('dash-store-logo');
+          const logoPlaceholder = document.getElementById('dash-store-logo-placeholder');
+          if (logoImg && data.logo_url) {
+            logoImg.src = data.logo_url;
+            logoImg.classList.remove('hidden');
+            if (logoPlaceholder) logoPlaceholder.classList.add('hidden');
+          }
 
           if (data.ultima_sincronizacion) {
             const dt = new Date(data.ultima_sincronizacion);
