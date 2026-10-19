@@ -7,6 +7,32 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
   activeNav="dashboard"
   breadcrumb={[{ label: "Inicio", url: "/plataforma/" }, { label: "Dashboard" }]}
 >
+  <!-- BANNER DE MODERACIÓN DE CATÁLOGO (CONDICIONAL DINÁMICO) -->
+  <div id="banner-moderacion" class="hidden mb-6 rounded-2xl border border-amber-300 bg-amber-50/90 p-4 sm:p-5 shadow-xs">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="flex items-start gap-3.5">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-200 text-amber-900 text-xl font-bold">
+          🛡️
+        </span>
+        <div>
+          <h3 class="text-sm font-bold text-amber-950 flex items-center gap-2">
+            <span>Atención: Productos Pendientes de Moderación</span>
+            <span class="rounded-full bg-rose-600 text-white text-[11px] font-black px-2 py-0.5" id="banner-moderacion-badge">0</span>
+          </h3>
+          <p class="text-xs text-amber-800 mt-0.5">
+            Se han detectado productos sospechosos de no ser café de especialidad (accesorios, cursos o ítems no clasificados) visibles en el catálogo.
+          </p>
+        </div>
+      </div>
+      <a 
+        href="/plataforma/moderacion" 
+        class="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-amber-900 hover:bg-amber-950 text-white shadow-xs transition shrink-0"
+      >
+        <span>Revisar y Moderar Catálogo ➔</span>
+      </a>
+    </div>
+  </div>
+
   <!-- ENCABEZADO DE PÁGINA -->
   <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
@@ -15,7 +41,7 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
         <span>Panel de Control de la Plataforma</span>
       </h2>
       <p class="text-xs text-stone-500 mt-1">
-        Gestión integral de tiendas, moderación de catálogos y sincronización de datos.
+        Monitoreo de sincronizaciones de tiendas, catálogo de cafés y auditoría de ingesta.
       </p>
     </div>
 
@@ -28,7 +54,7 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
         <span>Ambientes</span>
       </a>
       <a 
-        href="/plataforma/administracion" 
+        href="/plataforma/tiendas" 
         class="btn-admin-primary shadow-xs"
       >
         <span>🏪</span>
@@ -64,15 +90,15 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
       </div>
     </div>
 
-    <!-- Info Box 3: Ambientes -->
-    <div class="info-box">
-      <div class="info-box-icon bg-sky-50 text-sky-800">
-        ⚙️
+    <!-- Info Box 3: Moderación -->
+    <div class="info-box" id="box-moderacion">
+      <div class="info-box-icon bg-rose-50 text-rose-800">
+        🛡️
       </div>
       <div class="info-box-content">
-        <span class="info-box-text">Ambientes BD</span>
-        <span class="info-box-number" id="kpi-ambientes">--</span>
-        <span class="text-[11px] text-stone-400 mt-0.5 block">Localhost, Supabase...</span>
+        <span class="info-box-text">Sin Moderar</span>
+        <span class="info-box-number" id="kpi-moderacion">0</span>
+        <span class="text-[11px] text-stone-400 mt-0.5 block" id="kpi-moderacion-sub">Sospechosos no-café</span>
       </div>
     </div>
 
@@ -84,161 +110,171 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
       <div class="info-box-content">
         <span class="info-box-text">Última Sincronización</span>
         <span class="info-box-number text-sm font-black" id="kpi-sync">Consultando...</span>
-        <span class="text-[11px] text-stone-400 mt-0.5 block" id="kpi-sync-sub">Fecha y hora</span>
+        <span class="text-[11px] text-stone-400 mt-0.5 block" id="kpi-sync-sub">Fecha y hora global</span>
       </div>
     </div>
 
   </div>
 
-  <!-- TARJETAS PRINCIPALES DEL DASHBOARD -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- SECCIÓN DE TIENDAS SINCRONIZADAS EN LA ÚLTIMA EJECUCIÓN -->
+  <div class="admin-card mb-6">
+    <div class="admin-card-header">
+      <div>
+        <h3 class="admin-card-title flex items-center gap-2">
+          <span>🔄</span>
+          <span>Estado de Sincronización por Tienda (Última Ejecución)</span>
+        </h3>
+        <p class="text-xs text-stone-400 mt-0.5">
+          Tiendas procesadas en la última corrida, detección de fallos y fecha de último éxito.
+        </p>
+      </div>
 
-    <!-- Card 1: Accesos Directos a Módulos (2 columnas en LG) -->
-    <div class="lg:col-span-2 space-y-6">
-      
-      <div class="admin-card">
-        <div class="admin-card-header">
-          <h3 class="admin-card-title">
-            <span>⚡</span>
-            <span>Módulos de la Plataforma</span>
-          </h3>
-          <div class="admin-card-tools">
-            <span class="text-xs text-stone-400">Modo Localhost</span>
-          </div>
-        </div>
+      <!-- Filtros de Pestaña -->
+      <div class="flex items-center gap-1.5 bg-stone-100 p-1 rounded-xl text-xs font-semibold">
+        <button 
+          type="button" 
+          class="tab-sync px-3 py-1 rounded-lg bg-white text-stone-900 shadow-2xs font-bold transition"
+          data-filter="all"
+        >
+          Todas (<span id="count-all">0</span>)
+        </button>
+        <button 
+          type="button" 
+          class="tab-sync px-3 py-1 rounded-lg text-rose-700 hover:text-rose-900 transition font-medium"
+          data-filter="failed"
+        >
+          ❌ Con Error (<span id="count-failed">0</span>)
+        </button>
+        <button 
+          type="button" 
+          class="tab-sync px-3 py-1 rounded-lg text-emerald-700 hover:text-emerald-900 transition font-medium"
+          data-filter="success"
+        >
+          ✅ Exitosas (<span id="count-success">0</span>)
+        </button>
+        <button 
+          type="button" 
+          class="tab-sync px-3 py-1 rounded-lg text-stone-500 hover:text-stone-700 transition font-medium"
+          data-filter="never"
+        >
+          ⏳ Pendientes (<span id="count-never">0</span>)
+        </button>
+      </div>
+    </div>
 
-        <div class="admin-card-body">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
-            <a 
-              href="/plataforma/administracion" 
-              class="group block p-4 rounded-xl border border-stone-200 bg-stone-50/60 hover:bg-emerald-50/60 hover:border-emerald-300 transition"
-            >
-              <div class="flex items-center gap-3">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 text-xl font-bold group-hover:scale-105 transition">
-                  🏪
-                </span>
-                <div>
-                  <h4 class="text-sm font-bold text-stone-900 group-hover:text-emerald-900">
-                    Tiendas y Sucursales
-                  </h4>
-                  <p class="text-xs text-stone-500 mt-0.5">
-                    Alta de tiendas, drivers y moderación no-café.
-                  </p>
-                </div>
-              </div>
-            </a>
+    <div class="admin-card-body">
+      <!-- Loading indicator -->
+      <div id="sync-loading" class="py-10 text-center text-stone-400 text-xs">
+        <span class="animate-spin text-lg inline-block mr-2">⏳</span>
+        Cargando estado de sincronizaciones...
+      </div>
 
-            <a 
-              href="/plataforma/administracion?tab=moderacion" 
-              class="group block p-4 rounded-xl border border-stone-200 bg-stone-50/60 hover:bg-emerald-50/60 hover:border-emerald-300 transition"
-            >
-              <div class="flex items-center gap-3">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 text-rose-800 text-xl font-bold group-hover:scale-105 transition">
-                  🛡️
-                </span>
-                <div>
-                  <h4 class="text-sm font-bold text-stone-900 group-hover:text-emerald-900">
-                    Moderación de Catálogo
-                  </h4>
-                  <p class="text-xs text-stone-500 mt-0.5">
-                    Detección y filtro de productos no-café.
-                  </p>
-                </div>
-              </div>
-            </a>
+      <!-- Empty state -->
+      <div id="sync-empty" class="hidden py-10 text-center text-stone-400 text-xs">
+        No hay tiendas que coincidan con el filtro seleccionado.
+      </div>
 
-            <a 
-              href="/plataforma/sincronizaciones" 
-              class="group block p-4 rounded-xl border border-stone-200 bg-stone-50/60 hover:bg-emerald-50/60 hover:border-emerald-300 transition"
-            >
-              <div class="flex items-center gap-3">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-800 text-xl font-bold group-hover:scale-105 transition">
-                  📈
-                </span>
-                <div>
-                  <h4 class="text-sm font-bold text-stone-900 group-hover:text-emerald-900">
-                    Sincronización y Analítica
-                  </h4>
-                  <p class="text-xs text-stone-500 mt-0.5">
-                    Logs de ejecución ETL y métricas de scraping.
-                  </p>
-                </div>
-              </div>
-            </a>
+      <!-- Grilla de Tiendas Sincronizadas -->
+      <div id="sync-grid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Renderizado dinámico vía JavaScript -->
+      </div>
+    </div>
+  </div>
 
-            <a 
-              href="/plataforma/ambientes" 
-              class="group block p-4 rounded-xl border border-stone-200 bg-stone-50/60 hover:bg-emerald-50/60 hover:border-emerald-300 transition"
-            >
-              <div class="flex items-center gap-3">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-800 text-xl font-bold group-hover:scale-105 transition">
-                  ⚙️
-                </span>
-                <div>
-                  <h4 class="text-sm font-bold text-stone-900 group-hover:text-emerald-900">
-                    Gestión de Ambientes
-                  </h4>
-                  <p class="text-xs text-stone-500 mt-0.5">
-                    Configuración de conexiones Localhost y Supabase.
-                  </p>
-                </div>
-              </div>
-            </a>
+  <!-- TARJETAS PRINCIPALES DEL DASHBOARD: ACCESOS DIRECTOS -->
+  <div class="space-y-6">
 
-          </div>
+    <!-- Card: Accesos Directos a Módulos (Ancho Completo) -->
+    <div class="admin-card">
+      <div class="admin-card-header">
+        <h3 class="admin-card-title">
+          <span>⚡</span>
+          <span>Módulos de la Plataforma</span>
+        </h3>
+        <div class="admin-card-tools">
+          <span class="text-xs text-stone-400">Modo Localhost</span>
         </div>
       </div>
 
-    </div>
-
-    <!-- Card 2: Estado del Ambiente Activo -->
-    <div class="space-y-6">
-      <div class="admin-card">
-        <div class="admin-card-header">
-          <h3 class="admin-card-title">
-            <span>🛡️</span>
-            <span>Ambiente Conectado</span>
-          </h3>
-        </div>
-
-        <div class="admin-card-body space-y-4">
-          <div class="p-3.5 rounded-xl border border-stone-200 bg-stone-50/70">
-            <div class="text-[10px] uppercase font-bold text-stone-400">Ambiente Seleccionado</div>
-            <div class="mt-1 flex items-center justify-between">
-              <span id="dash-env-name" class="font-bold text-stone-900 text-sm">PostgreSQL Local</span>
-              <span id="dash-env-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                LOCAL
+      <div class="admin-card-body">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          <a 
+            href="/plataforma/tiendas" 
+            class="group block p-4 rounded-xl border border-stone-200 bg-stone-50/60 hover:bg-emerald-50/60 hover:border-emerald-300 transition"
+          >
+            <div class="flex items-center gap-3">
+              <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 text-xl font-bold group-hover:scale-105 transition">
+                🏪
               </span>
+              <div>
+                <h4 class="text-sm font-bold text-stone-900 group-hover:text-emerald-900">
+                  Tiendas y Sucursales
+                </h4>
+                <p class="text-xs text-stone-500 mt-0.5">
+                  Alta de tiendas, drivers y colecciones.
+                </p>
+              </div>
             </div>
-            <p id="dash-env-desc" class="text-xs text-stone-500 mt-2">
-              Conexión activa a base de datos local.
-            </p>
-          </div>
+          </a>
 
-          <div class="text-xs text-stone-600 space-y-2">
-            <div class="flex items-center justify-between border-b border-stone-100 pb-1.5">
-              <span class="text-stone-400">Protección de Guardado:</span>
-              <span class="font-bold text-emerald-800">Activa (Pide Confirmación)</span>
+          <a 
+            href="/plataforma/moderacion" 
+            class="group block p-4 rounded-xl border border-stone-200 bg-stone-50/60 hover:bg-rose-50/60 hover:border-rose-300 transition"
+          >
+            <div class="flex items-center gap-3">
+              <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 text-rose-800 text-xl font-bold group-hover:scale-105 transition">
+                🛡️
+              </span>
+              <div>
+                <h4 class="text-sm font-bold text-stone-900 group-hover:text-rose-900">
+                  Moderación de Catálogo
+                </h4>
+                <p class="text-xs text-stone-500 mt-0.5">
+                  Detección y filtro de productos no-café.
+                </p>
+              </div>
             </div>
-            <div class="flex items-center justify-between border-b border-stone-100 pb-1.5">
-              <span class="text-stone-400">Host Permitido:</span>
-              <span class="font-mono text-[11px] text-stone-700">127.0.0.1 / localhost</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-stone-400">Prefijo URL:</span>
-              <span class="font-mono text-[11px] text-stone-700">/plataforma</span>
-            </div>
-          </div>
+          </a>
 
-          <div class="pt-2">
-            <a 
-              href="/plataforma/ambientes" 
-              class="block w-full text-center py-2 px-3 rounded-lg border border-stone-300 bg-white hover:bg-stone-50 text-xs font-bold text-stone-700 transition"
-            >
-              Configurar o Cambiar Ambiente ➔
-            </a>
-          </div>
+          <a 
+            href="/plataforma/sincronizaciones" 
+            class="group block p-4 rounded-xl border border-stone-200 bg-stone-50/60 hover:bg-purple-50/60 hover:border-purple-300 transition"
+          >
+            <div class="flex items-center gap-3">
+              <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-800 text-xl font-bold group-hover:scale-105 transition">
+                📈
+              </span>
+              <div>
+                <h4 class="text-sm font-bold text-stone-900 group-hover:text-purple-900">
+                  Sincronización y Analítica
+                </h4>
+                <p class="text-xs text-stone-500 mt-0.5">
+                  Logs de ejecución ETL y métricas de scraping.
+                </p>
+              </div>
+            </div>
+          </a>
+
+          <a 
+            href="/plataforma/ambientes" 
+            class="group block p-4 rounded-xl border border-stone-200 bg-stone-50/60 hover:bg-sky-50/60 hover:border-sky-300 transition"
+          >
+            <div class="flex items-center gap-3">
+              <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-800 text-xl font-bold group-hover:scale-105 transition">
+                ⚙️
+              </span>
+              <div>
+                <h4 class="text-sm font-bold text-stone-900 group-hover:text-sky-900">
+                  Gestión de Ambientes
+                </h4>
+                <p class="text-xs text-stone-500 mt-0.5">
+                  Configuración Localhost y Supabase.
+                </p>
+              </div>
+            </div>
+          </a>
+
         </div>
       </div>
     </div>
@@ -248,36 +284,230 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
   <script is:inline>
     (async function initDashboard() {
       const API_BASE = 'http://localhost:8000';
+      let currentFilter = 'all';
+      let cachedStores = [];
 
-      // Actualizar tarjeta de ambiente
-      function updateEnvCard() {
-        if (!window.plataformaState) return;
-        const env = window.plataformaState.getActiveEnv();
-        const nameEl = document.getElementById('dash-env-name');
-        const badgeEl = document.getElementById('dash-env-badge');
-        const descEl = document.getElementById('dash-env-desc');
-
-        if (nameEl) nameEl.textContent = env.nombre;
-        if (badgeEl) {
-          badgeEl.textContent = env.tipo.toUpperCase();
-          badgeEl.className = `px-2 py-0.5 rounded text-[10px] font-bold badge-env-${env.color_badge || 'amber'}`;
+      const fetchWithEnv = (url, opts = {}) => {
+        if (window.plataformaState && typeof window.plataformaState.fetchWithEnv === 'function') {
+          return window.plataformaState.fetchWithEnv(url, opts);
         }
-        if (descEl) descEl.textContent = env.descripcion || `Conectado a ${env.nombre}.`;
+        const headers = new Headers(opts.headers || {});
+        headers.set('X-Target-Environment', localStorage.getItem('plataforma_active_env') || 'local');
+        return fetch(url, { ...opts, headers });
+      };
+
+      function formatFecha(isoStr) {
+        if (!isoStr) return 'Nunca';
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return isoStr;
+        return d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' +
+               d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) + ' hrs';
       }
 
-      // Cargar KPIs del ambiente activo
-      async function loadMetrics() {
+      function getFaviconUrl(url) {
         try {
-          const res = await window.plataformaState.fetchWithEnv(`${API_BASE}/api/v1/administracion/estado`);
+          const domain = new URL(url).hostname;
+          return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function renderStoresGrid() {
+        const grid = document.getElementById('sync-grid');
+        const empty = document.getElementById('sync-empty');
+        if (!grid) return;
+
+        let filtered = cachedStores;
+        if (currentFilter === 'failed') {
+          filtered = cachedStores.filter(s => s.estado_ultimo === 'fallido');
+        } else if (currentFilter === 'success') {
+          filtered = cachedStores.filter(s => s.estado_ultimo === 'exitoso');
+        } else if (currentFilter === 'never') {
+          filtered = cachedStores.filter(s => s.estado_ultimo === 'nunca');
+        }
+
+        if (filtered.length === 0) {
+          grid.classList.add('hidden');
+          empty.classList.remove('hidden');
+          return;
+        }
+
+        empty.classList.add('hidden');
+        grid.classList.remove('hidden');
+
+        grid.innerHTML = filtered.map(store => {
+          const isFailed = store.estado_ultimo === 'fallido';
+          const isSuccess = store.estado_ultimo === 'exitoso';
+          const logoSrc = store.logo_url || getFaviconUrl(store.url_base);
+
+          let badgeClass = 'bg-stone-100 text-stone-600 border-stone-200';
+          let badgeText = 'Pendiente / Nunca';
+          let cardBorder = 'border-stone-200';
+
+          if (isSuccess) {
+            badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+            badgeText = '✅ Sincronizado';
+            cardBorder = 'border-emerald-200 hover:border-emerald-300';
+          } else if (isFailed) {
+            badgeClass = 'bg-rose-50 text-rose-800 border-rose-200';
+            badgeText = '❌ Falló';
+            cardBorder = 'border-rose-300 bg-rose-50/20';
+          }
+
+          return `
+            <div class="rounded-2xl border ${cardBorder} bg-white p-4 shadow-2xs flex flex-col justify-between space-y-3 transition">
+              <!-- Cabecera de la Tienda -->
+              <div>
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <img 
+                      src="${logoSrc || '/images/store-default.png'}" 
+                      alt="${store.nombre}" 
+                      class="h-8 w-8 rounded-lg object-contain bg-stone-50 border border-stone-200 p-0.5 shrink-0"
+                      onerror="this.onerror=null; this.src='https://www.google.com/s2/favicons?domain=google.com&sz=64';"
+                    />
+                    <div class="min-w-0">
+                      <h4 class="text-sm font-bold text-stone-900 truncate" title="${store.nombre}">
+                        ${store.nombre}
+                      </h4>
+                      <span class="text-[10px] uppercase font-semibold text-stone-400">
+                        ${store.plataforma || 'desconocida'}
+                      </span>
+                    </div>
+                  </div>
+                  <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold ${badgeClass} shrink-0">
+                    ${badgeText}
+                  </span>
+                </div>
+
+                <!-- Detalle de Fechas -->
+                <div class="mt-3 space-y-1 text-[11px] text-stone-600 border-t border-stone-100 pt-2.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-stone-400">Última Ejecución:</span>
+                    <span class="font-semibold text-stone-700">${formatFecha(store.fecha_ultimo)}</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-stone-400">Último Éxito:</span>
+                    <span class="font-semibold text-emerald-800">${formatFecha(store.ultima_sincronizacion_exitosa)}</span>
+                  </div>
+                </div>
+
+                <!-- CAJA DE ERROR DESTACADA SI FALLÓ -->
+                ${isFailed && store.detalle_error ? `
+                  <div class="mt-2.5 rounded-xl border border-rose-200 bg-rose-50 p-2.5 text-[11px] text-rose-900">
+                    <div class="font-bold flex items-center gap-1 text-rose-950 mb-0.5">
+                      <span>⚠️ Motivo del Fallo:</span>
+                    </div>
+                    <p class="font-mono text-[10px] break-words text-rose-800 leading-tight">
+                      ${store.detalle_error}
+                    </p>
+                  </div>
+                ` : ''}
+
+                <!-- MÉTRICAS DE PRODUCTOS SI FUE EXITOSA -->
+                ${isSuccess ? `
+                  <div class="mt-2 text-[10px] text-emerald-700 font-medium">
+                    +${store.productos_agregados || 0} nuevos · ${store.productos_actualizados || 0} actualizados
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- BOTÓN DE ACCIÓN RÁPIDA -->
+              <div class="pt-2 border-t border-stone-100 flex items-center justify-between">
+                <a 
+                  href="${store.url_base}" 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  class="text-[11px] text-stone-400 hover:text-stone-600 transition"
+                >
+                  Visitar web ↗
+                </a>
+                <button
+                  type="button"
+                  data-sync-id="${store.id}"
+                  data-sync-nombre="${store.nombre}"
+                  class="btn-sync-store inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold text-stone-700 bg-stone-100 hover:bg-emerald-50 hover:text-emerald-800 transition"
+                >
+                  <span>🔄</span>
+                  <span>Sincronizar</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Enganchar listeners para sincronizar individualmente
+        document.querySelectorAll('.btn-sync-store').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = btn.getAttribute('data-sync-id');
+            const nombre = btn.getAttribute('data-sync-nombre');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span><span>Sincronizando...</span>';
+            try {
+              const res = await fetchWithEnv(`${API_BASE}/api/v1/administracion/tiendas/${id}/sincronizar`, {
+                method: 'POST'
+              });
+              if (res.ok) {
+                alert(`✅ Tienda '${nombre}' sincronizada correctamente.`);
+                await loadMetrics();
+              } else {
+                const err = await res.json();
+                alert(`❌ Error al sincronizar '${nombre}': ${err.detail || err.error || 'Fallo desconocido'}`);
+              }
+            } catch (err) {
+              alert(`❌ Error de red sincronizando '${nombre}': ${err.message}`);
+            } finally {
+              btn.disabled = false;
+              btn.innerHTML = '<span>🔄</span><span>Sincronizar</span>';
+            }
+          });
+        });
+      }
+
+      // Configuración de Tabs de Filtro
+      document.querySelectorAll('.tab-sync').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab-sync').forEach(t => {
+            t.classList.remove('bg-white', 'text-stone-900', 'shadow-2xs', 'font-bold');
+            t.classList.add('font-medium');
+          });
+          tab.classList.add('bg-white', 'text-stone-900', 'shadow-2xs', 'font-bold');
+          tab.classList.remove('font-medium');
+          currentFilter = tab.getAttribute('data-filter');
+          renderStoresGrid();
+        });
+      });
+
+      // Cargar KPIs y Tiendas del ambiente activo
+      async function loadMetrics() {
+        const loading = document.getElementById('sync-loading');
+        if (loading) loading.classList.remove('hidden');
+
+        try {
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/administracion/estado`);
           if (res.ok) {
             const data = await res.json();
             const tiendasEl = document.getElementById('kpi-tiendas');
             const productosEl = document.getElementById('kpi-productos');
             const syncEl = document.getElementById('kpi-sync');
             const syncSubEl = document.getElementById('kpi-sync-sub');
+            const moderacionEl = document.getElementById('kpi-moderacion');
+            const bannerMod = document.getElementById('banner-moderacion');
+            const bannerBadge = document.getElementById('banner-moderacion-badge');
 
             if (tiendasEl) tiendasEl.textContent = data.total_tiendas ?? 0;
             if (productosEl) productosEl.textContent = data.total_productos ?? 0;
+
+            // Alerta de Moderación si hay productos no-café sospechosos
+            const sinModerar = data.productos_sin_moderar || 0;
+            if (moderacionEl) moderacionEl.textContent = sinModerar;
+            if (sinModerar > 0) {
+              if (bannerMod) bannerMod.classList.remove('hidden');
+              if (bannerBadge) bannerBadge.textContent = sinModerar;
+            } else {
+              if (bannerMod) bannerMod.classList.add('hidden');
+            }
 
             if (data.ultima_sincronizacion) {
               const d = new Date(data.ultima_sincronizacion);
@@ -285,7 +515,7 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
                 const fecha = d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
                 const hora = d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) + ' hrs';
                 if (syncEl) syncEl.textContent = fecha;
-                if (syncSubEl) syncSubEl.textContent = `${hora} • Éxito`;
+                if (syncSubEl) syncSubEl.textContent = `${hora} • Global`;
               } else {
                 if (syncEl) syncEl.textContent = data.ultima_sincronizacion;
               }
@@ -293,9 +523,32 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
               if (syncEl) syncEl.textContent = 'Sin registros';
               if (syncSubEl) syncSubEl.textContent = 'Nunca ejecutado';
             }
+
+            // Tiendas Resumen
+            cachedStores = data.tiendas_resumen || [];
+            
+            // Conteo de tabs
+            const countAll = cachedStores.length;
+            const countFailed = cachedStores.filter(s => s.estado_ultimo === 'fallido').length;
+            const countSuccess = cachedStores.filter(s => s.estado_ultimo === 'exitoso').length;
+            const countNever = cachedStores.filter(s => s.estado_ultimo === 'nunca').length;
+
+            const elAll = document.getElementById('count-all');
+            const elFailed = document.getElementById('count-failed');
+            const elSuccess = document.getElementById('count-success');
+            const elNever = document.getElementById('count-never');
+
+            if (elAll) elAll.textContent = countAll;
+            if (elFailed) elFailed.textContent = countFailed;
+            if (elSuccess) elSuccess.textContent = countSuccess;
+            if (elNever) elNever.textContent = countNever;
+
+            if (loading) loading.classList.add('hidden');
+            renderStoresGrid();
           }
         } catch (e) {
           console.warn('Error al cargar métricas de administración', e);
+          if (loading) loading.classList.add('hidden');
         }
 
         // Contar ambientes configurados
@@ -305,15 +558,12 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
       }
 
       window.addEventListener('plataforma:env-changed', () => {
-        updateEnvCard();
         loadMetrics();
       });
 
       setTimeout(() => {
-        updateEnvCard();
         loadMetrics();
-      }, 300);
+      }, 200);
     })();
   </script>
 </AdminLteLayout>
-

@@ -1,5 +1,24 @@
 import { ProductVariant, type ProductVariantProps } from './ProductVariant';
 
+export interface ProductRecipe {
+  id: number;
+  nombre_receta: string;
+  metodo: string;
+  dosis_cafe_g: number;
+  agua_ml: number;
+  ratio?: string;
+  molino_usado?: string;
+  grosor_molienda?: string;
+  temperatura_c?: number;
+  tiempo_total_s?: number;
+  notas_catado?: string;
+  pasos?: string[];
+  es_borrador?: boolean;
+  autor_tipo?: string;
+  tienda_nombre?: string;
+  fecha_creacion?: string;
+}
+
 export interface CoffeeProductProps {
   id: number;
   nombre: string;
@@ -23,6 +42,8 @@ export interface CoffeeProductProps {
   descripcion_resumida?: string;
   resumen_corto?: string;
   fecha_actualizacion?: string;
+  recetas?: ProductRecipe[];
+  oculto_catalogo?: boolean;
 }
 
 export class CoffeeProduct {
@@ -46,6 +67,8 @@ export class CoffeeProduct {
   readonly descripcion_resumida?: string;
   readonly resumen_corto?: string;
   readonly fecha_actualizacion?: string;
+  readonly recetas: ProductRecipe[];
+  readonly oculto_catalogo: boolean;
 
   constructor(props: CoffeeProductProps) {
     this.id = props.id;
@@ -54,6 +77,8 @@ export class CoffeeProduct {
     this.url_detalle = props.url_detalle;
     this.imagen = props.imagen || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop';
     this.categoria = props.categoria || 'cafe';
+    this.recetas = props.recetas || [];
+    this.oculto_catalogo = Boolean(props.oculto_catalogo);
 
     
     // Normalizar variantes (acepta array o variante única en listados o variantes_por_gramaje)

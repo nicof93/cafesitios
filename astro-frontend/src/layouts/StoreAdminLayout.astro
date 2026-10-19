@@ -4,11 +4,20 @@ import '../styles/global.css';
 
 interface Props {
   title?: string;
-  activeNav?: 'dashboard' | 'productos' | 'auditoria';
+  activeNav?: 'dashboard' | 'productos' | 'recetas' | 'auditoria';
 }
 
 const { title = "Panel de Tostaduría | Cafesitios Admin", activeNav = "dashboard" } = Astro.props;
 const apiBase = Environment.getApiBaseUrl();
+
+const navLabels: Record<string, string> = {
+  dashboard: "Dashboard",
+  productos: "Mis Productos",
+  recetas: "Recetas Oficiales",
+  auditoria: "Auditoría de Acciones",
+};
+
+const currentNavLabel = navLabels[activeNav] || "Dashboard";
 ---
 
 <!DOCTYPE html>
@@ -20,79 +29,346 @@ const apiBase = Environment.getApiBaseUrl();
   <title>{title}</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
 </head>
-<body class="h-full flex flex-col text-stone-900 antialiased font-sans" data-api-base={apiBase}>
-  <!-- HEADER ADMINISTRATIVO AISLADO -->
-  <header class="sticky top-0 z-40 bg-stone-900 border-b border-stone-800 text-white shadow-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between h-16">
-        <!-- Logo y Nombre de Tienda -->
-        <div class="flex items-center gap-3">
-          <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-600 text-white font-bold text-lg shadow-sm">
+<body class="h-full text-stone-900 antialiased font-sans bg-stone-50" data-api-base={apiBase}>
+
+  <!-- OVERLAY OSCURO PARA MÓVIL (CIERRA SIDEBAR AL CLICKEAR FUERA) -->
+  <div id="sidebar-backdrop" class="hidden fixed inset-0 z-30 bg-stone-950/60 backdrop-blur-xs transition-opacity lg:hidden" aria-hidden="true"></div>
+
+  <div class="app-wrapper">
+
+    <!-- 1. SIDEBAR IZQUIERDO ESTILO PLATAFORMA ADMIN -->
+    <aside id="main-sidebar" class="main-sidebar shadow-xl flex flex-col justify-between" aria-label="Navegación del Portal de Tostaduría">
+      <div>
+        <!-- Brand Logo Header -->
+        <div class="flex items-center gap-3 px-4 py-4 border-b border-stone-800 bg-stone-950/40">
+          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-white font-bold text-lg shadow-sm">
             ☕
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-black tracking-wider uppercase text-emerald-400">Portal Tostadurías</span>
-              <span class="rounded bg-stone-800 px-2 py-0.5 text-[10px] font-bold text-stone-300" id="header-store-badge">Cargando tienda...</span>
-            </div>
-            <div class="text-xs text-stone-400 font-mono hidden sm:block" id="header-store-url">Panel de Administración Multi-Inquilino</div>
+          </span>
+          <div class="brand-text min-w-0">
+            <h1 class="text-sm font-bold tracking-tight text-white m-0 truncate">Portal Tostadurías</h1>
+            <p class="text-[10px] font-medium text-emerald-400 m-0 truncate" id="sidebar-store-badge">Cargando tienda...</p>
           </div>
         </div>
 
-        <!-- Navegación Principal -->
-        <nav class="hidden md:flex items-center gap-1 text-xs font-semibold">
+        <!-- Perfil Breve / Estado de Sesión -->
+        <div class="px-4 py-3 border-b border-stone-800/80 flex items-center justify-between text-xs text-stone-400">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="h-2 w-2 shrink-0 rounded-full bg-emerald-400 animate-pulse" title="Sesión activa"></span>
+            <span class="font-medium text-stone-300 truncate max-w-[140px] text-[11px]" id="sidebar-user-email">admin@tostaduria.cl</span>
+          </div>
+          <span class="text-[9px] bg-stone-800 text-emerald-400 px-1.5 py-0.5 rounded font-mono font-bold shrink-0 sidebar-hide-collapsed" id="sidebar-user-role">STORE_ADMIN</span>
+        </div>
+
+        <!-- Menú de Navegación Vertical -->
+        <nav class="mt-3 px-2 space-y-1" aria-label="Navegación Vertical de Tostaduría">
           <a
             href="/admin-tienda/dashboard"
-            class={`px-3 py-2 rounded-lg transition ${activeNav === 'dashboard' ? 'bg-emerald-700 text-white font-bold' : 'text-stone-300 hover:text-white hover:bg-stone-800'}`}
+            class={`nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition ${
+              activeNav === 'dashboard'
+                ? 'bg-emerald-800 text-white shadow-sm'
+                : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+            }`}
+            title="Dashboard de Métricas"
           >
-            📊 Dashboard
+            <span class="text-base shrink-0" aria-hidden="true">📊</span>
+            <span class="nav-text">Dashboard</span>
           </a>
+
           <a
             href="/admin-tienda/productos"
-            class={`px-3 py-2 rounded-lg transition ${activeNav === 'productos' ? 'bg-emerald-700 text-white font-bold' : 'text-stone-300 hover:text-white hover:bg-stone-800'}`}
+            class={`nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition ${
+              activeNav === 'productos'
+                ? 'bg-emerald-800 text-white shadow-sm'
+                : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+            }`}
+            title="Gestión de Catálogo de Productos"
           >
-            📦 Mis Productos
+            <span class="text-base shrink-0" aria-hidden="true">📦</span>
+            <span class="nav-text">Mis Productos</span>
           </a>
+
+          <a
+            href="/admin-tienda/recetas"
+            class={`nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition ${
+              activeNav === 'recetas'
+                ? 'bg-emerald-800 text-white shadow-sm'
+                : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+            }`}
+            title="Recetas Oficiales del Tostador"
+          >
+            <span class="text-base shrink-0" aria-hidden="true">☕</span>
+            <span class="nav-text">Recetas Oficiales</span>
+          </a>
+
           <a
             href="/admin-tienda/auditoria"
-            class={`px-3 py-2 rounded-lg transition ${activeNav === 'auditoria' ? 'bg-emerald-700 text-white font-bold' : 'text-stone-300 hover:text-white hover:bg-stone-800'}`}
+            class={`nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition ${
+              activeNav === 'auditoria'
+                ? 'bg-emerald-800 text-white shadow-sm'
+                : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+            }`}
+            title="Bitácora de Auditoría y Cambios"
           >
-            🛡️ Auditoría
+            <span class="text-base shrink-0" aria-hidden="true">🛡️</span>
+            <span class="nav-text">Auditoría</span>
           </a>
-        </nav>
 
-        <!-- Usuario y Cerrar Sesión -->
-        <div class="flex items-center gap-3">
+          <button
+            type="button"
+            id="sidebar-btn-change-password"
+            class="nav-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-stone-300 hover:bg-stone-800 hover:text-white transition text-left"
+            title="Cambiar contraseña de tu cuenta"
+          >
+            <span class="text-base shrink-0" aria-hidden="true">🔑</span>
+            <span class="nav-text">Cambiar Contraseña</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Pie Fijo del Sidebar: Enlace a Sitio Público y Versión -->
+      <div class="p-2.5 border-t border-stone-800 text-xs text-stone-400 bg-stone-950/60 shrink-0 space-y-1">
+        <a
+          id="sidebar-store-url-link"
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-stone-300 hover:bg-stone-800 hover:text-white font-medium transition text-xs"
+          title="Ver Catálogo en el Sitio Público"
+        >
+          <span class="text-sm shrink-0" aria-hidden="true">🌐</span>
+          <span class="nav-text truncate" id="sidebar-store-url">Ver Sitio Público ↗</span>
+        </a>
+        <div class="flex items-center justify-between px-2.5 pt-1 text-[11px] text-stone-500 border-t border-stone-900 sidebar-hide-collapsed">
+          <span class="nav-text">Cafésitios Tienda</span>
+          <span class="text-[10px] font-mono text-emerald-500">v1.0</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 2. CONTENT WRAPPER -->
+    <div class="content-wrapper flex flex-col min-h-screen">
+
+      <!-- TOP NAVBAR -->
+      <header class="h-14 border-b border-stone-200 bg-[#FCFBF7]/90 backdrop-blur-md px-4 flex items-center justify-between sticky top-0 z-20">
+
+        <!-- Controles Izquierdos: Hamburguesa + Migas de Pan + Badge de Tienda -->
+        <div class="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            id="sidebar-toggle-btn"
+            class="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-600 hover:bg-stone-100 hover:text-stone-900 shadow-2xs transition shrink-0"
+            title="Colapsar / Expandir Barra Lateral"
+            aria-label="Alternar menú lateral"
+          >
+            <span class="text-sm font-bold">☰</span>
+          </button>
+
+          <!-- Migas de Pan -->
+          <nav class="hidden sm:flex items-center gap-1.5 text-xs text-stone-500 font-medium truncate" aria-label="Miga de pan">
+            <a href="/admin-tienda/dashboard" class="hover:text-emerald-800 transition">Inicio</a>
+            <span class="text-stone-300">/</span>
+            <span class="text-stone-800 font-semibold truncate">{currentNavLabel}</span>
+          </nav>
+
+          <!-- Badge de Tienda -->
+          <span class="hidden md:inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-bold text-emerald-800 truncate" id="header-store-badge">
+            Cargando tienda...
+          </span>
+          <span class="hidden" id="header-store-url">Panel Multi-Inquilino</span>
+        </div>
+
+        <!-- Controles Derechos: Usuario + Cambiar Contraseña + Cerrar Sesión -->
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
           <div class="text-right hidden sm:block">
-            <span class="block text-xs font-bold text-stone-200" id="header-user-email">admin@tostaduria.cl</span>
-            <span class="block text-[10px] text-emerald-400 font-semibold" id="header-user-role">STORE_ADMIN</span>
+            <span class="block text-xs font-bold text-stone-800 truncate max-w-[200px]" id="header-user-email">admin@tostaduria.cl</span>
+            <span class="block text-[10px] text-emerald-700 font-semibold" id="header-user-role">STORE_ADMIN</span>
           </div>
+
+          <button
+            type="button"
+            id="btn-open-change-password"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 hover:text-stone-900 px-3 py-1.5 text-xs font-bold text-stone-700 transition shadow-2xs"
+            title="Cambiar contraseña de tu cuenta"
+          >
+            <span>🔑</span>
+            <span class="hidden sm:inline">Cambiar Clave</span>
+          </button>
+
           <button
             type="button"
             id="btn-logout"
-            class="rounded-xl border border-stone-700 bg-stone-800 hover:bg-stone-700 px-3 py-1.5 text-xs font-bold text-stone-200 hover:text-white transition shadow-xs"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition shadow-2xs"
             title="Cerrar sesión"
           >
-            🚪 Salir
+            <span>🚪</span>
+            <span class="hidden sm:inline">Salir</span>
           </button>
         </div>
+
+      </header>
+
+      <!-- CONTENIDO DE LA PÁGINA -->
+      <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <slot />
+      </main>
+
+      <!-- FOOTER -->
+      <footer class="border-t border-stone-200 bg-white px-6 py-3 text-xs text-stone-500 flex flex-wrap items-center justify-between">
+        <div>
+          <strong class="text-stone-700">Cafésitios Portal de Tostadurías</strong> &copy; 2026. Todos los derechos reservados.
+        </div>
+        <div class="text-[11px] text-stone-400">
+          Panel de Administración Multi-Inquilino
+        </div>
+      </footer>
+
+    </div>
+
+  </div>
+
+  <!-- MODAL CAMBIAR CONTRASEÑA -->
+  <dialog id="modal-change-password" class="backdrop:bg-stone-950/60 backdrop:backdrop-blur-xs rounded-3xl p-0 border border-stone-200 shadow-2xl max-w-md w-full m-auto">
+    <div class="p-6 bg-white space-y-5">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-800 text-sm font-bold border border-amber-200">
+            🔑
+          </span>
+          <h3 class="text-base font-black text-stone-900">Cambiar Contraseña</h3>
+        </div>
+        <button type="button" id="btn-close-change-password" class="text-stone-400 hover:text-stone-700 text-base font-bold">✕</button>
       </div>
+
+      <form id="form-change-password" class="space-y-4">
+        <div id="pwd-feedback" class="hidden rounded-xl p-3 text-xs font-medium"></div>
+
+        <div>
+          <label for="input-pwd-actual" class="block text-xs font-bold text-stone-700 mb-1">
+            Contraseña Actual
+          </label>
+          <input
+            type="password"
+            id="input-pwd-actual"
+            name="password_actual"
+            class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none"
+            placeholder="Tu contraseña actual (opcional en primer ingreso)"
+            autocomplete="current-password"
+          />
+        </div>
+
+        <div>
+          <label for="input-pwd-nueva" class="block text-xs font-bold text-stone-700 mb-1">
+            Nueva Contraseña *
+          </label>
+          <input
+            type="password"
+            id="input-pwd-nueva"
+            name="password_nuevo"
+            required
+            minlength="6"
+            class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none"
+            placeholder="Mínimo 6 caracteres"
+            autocomplete="new-password"
+          />
+        </div>
+
+        <div>
+          <label for="input-pwd-confirmar" class="block text-xs font-bold text-stone-700 mb-1">
+            Confirmar Nueva Contraseña *
+          </label>
+          <input
+            type="password"
+            id="input-pwd-confirmar"
+            name="password_confirmar"
+            required
+            minlength="6"
+            class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none"
+            placeholder="Repite la nueva contraseña"
+            autocomplete="new-password"
+          />
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-stone-100">
+          <button
+            type="button"
+            id="btn-cancel-change-password"
+            class="rounded-xl px-4 py-2 text-xs font-bold text-stone-600 hover:bg-stone-100 transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            id="btn-submit-change-password"
+            class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 text-xs font-bold transition shadow-xs disabled:opacity-50"
+          >
+            <span>Guardar Contraseña</span>
+          </button>
+        </div>
+      </form>
     </div>
+  </dialog>
 
-    <!-- Navegación Móvil -->
-    <div class="md:hidden border-t border-stone-800 bg-stone-900/90 px-4 py-2 flex items-center justify-around text-xs font-semibold">
-      <a href="/admin-tienda/dashboard" class={activeNav === 'dashboard' ? 'text-emerald-400 font-bold' : 'text-stone-400'}>📊 Dashboard</a>
-      <a href="/admin-tienda/productos" class={activeNav === 'productos' ? 'text-emerald-400 font-bold' : 'text-stone-400'}>📦 Productos</a>
-      <a href="/admin-tienda/auditoria" class={activeNav === 'auditoria' ? 'text-emerald-400 font-bold' : 'text-stone-400'}>🛡️ Auditoría</a>
-    </div>
-  </header>
+  <!-- ESTILOS GLOBALES DE LA BARRA LATERAL (SIMILAR A PLATAFORMA ADMIN / ADMINLTE) -->
+  <style is:global>
+    .app-wrapper {
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
+    }
 
-  <!-- CONTENIDO DE LA PÁGINA -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <slot />
-  </main>
+    .main-sidebar {
+      width: 260px;
+      min-width: 260px;
+      background-color: #1c1917; /* stone-900 */
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 40;
+    }
 
-  <!-- SCRIPT BASE DE SESIÓN E INTERCEPTOR HTTP -->
+    /* En móvil: Drawer Off-Canvas deslizable */
+    @media (max-width: 1023px) {
+      .main-sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        transform: translateX(-100%);
+      }
+      .main-sidebar.sidebar-open {
+        transform: translateX(0);
+      }
+    }
+
+    /* En escritorio: Colapso elegante de 260px a 72px */
+    @media (min-width: 1024px) {
+      .main-sidebar.sidebar-collapsed {
+        width: 72px;
+        min-width: 72px;
+      }
+      .main-sidebar.sidebar-collapsed .nav-text,
+      .main-sidebar.sidebar-collapsed .brand-text,
+      .main-sidebar.sidebar-collapsed .sidebar-hide-collapsed {
+        display: none !important;
+      }
+      .main-sidebar.sidebar-collapsed .nav-link {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+      }
+    }
+
+    .content-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background-color: #fafaf9; /* stone-50 */
+    }
+  </style>
+
+  <!-- SCRIPT BASE DE SESIÓN, RESPONSIVIDAD E INTERCEPTOR HTTP -->
   <script is:inline>
     (function initStoreAdminSession() {
       const token = localStorage.getItem('store_admin_token');
@@ -103,20 +379,184 @@ const apiBase = Environment.getApiBaseUrl();
         return;
       }
 
-      // Cargar perfil en header
+      // Cargar perfil en header y sidebar
       const rawProfile = localStorage.getItem('store_admin_profile');
       if (rawProfile) {
         try {
           const profile = JSON.parse(rawProfile);
-          const badge = document.getElementById('header-store-badge');
-          const urlEl = document.getElementById('header-store-url');
-          const emailEl = document.getElementById('header-user-email');
-          const roleEl = document.getElementById('header-user-role');
-          if (badge) badge.textContent = profile.tienda_nombre || 'Mi Tostaduría';
-          if (urlEl) urlEl.textContent = profile.tienda_url || 'Catálogo Oficial';
-          if (emailEl) emailEl.textContent = profile.usuario_id || 'Administrador';
-          if (roleEl) roleEl.textContent = profile.rol || 'STORE_ADMIN';
+          const storeName = profile.tienda_nombre || 'Mi Tostaduría';
+          const storeUrl = profile.tienda_url || 'Catálogo Oficial';
+          const userEmail = profile.usuario_id || 'Administrador';
+          const userRole = profile.rol || 'STORE_ADMIN';
+
+          // Actualizar badges de tienda (header y sidebar)
+          const headerBadge = document.getElementById('header-store-badge');
+          const sidebarBadge = document.getElementById('sidebar-store-badge');
+          if (headerBadge) headerBadge.textContent = storeName;
+          if (sidebarBadge) sidebarBadge.textContent = storeName;
+
+          // Actualizar URLs de tienda
+          const headerUrlEl = document.getElementById('header-store-url');
+          const sidebarUrlEl = document.getElementById('sidebar-store-url');
+          const sidebarUrlLink = document.getElementById('sidebar-store-url-link');
+          if (headerUrlEl) headerUrlEl.textContent = storeUrl;
+          if (sidebarUrlEl) sidebarUrlEl.textContent = `${storeName} ↗`;
+          if (sidebarUrlLink && profile.tienda_url) {
+            sidebarUrlLink.href = profile.tienda_url;
+          }
+
+          // Actualizar datos de usuario
+          const headerEmailEl = document.getElementById('header-user-email');
+          const sidebarEmailEl = document.getElementById('sidebar-user-email');
+          const headerRoleEl = document.getElementById('header-user-role');
+          const sidebarRoleEl = document.getElementById('sidebar-user-role');
+          if (headerEmailEl) headerEmailEl.textContent = userEmail;
+          if (sidebarEmailEl) sidebarEmailEl.textContent = userEmail;
+          if (headerRoleEl) headerRoleEl.textContent = userRole;
+          if (sidebarRoleEl) sidebarRoleEl.textContent = userRole;
         } catch (_) {}
+      }
+
+      // Alternar barra lateral (Mobile Drawer y Desktop Collapse)
+      const toggleBtn = document.getElementById('sidebar-toggle-btn');
+      const sidebar = document.getElementById('main-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+
+      function closeMobileSidebar() {
+        if (sidebar) sidebar.classList.remove('sidebar-open');
+        if (backdrop) backdrop.classList.add('hidden');
+      }
+
+      if (backdrop) {
+        backdrop.addEventListener('click', closeMobileSidebar);
+      }
+
+      if (toggleBtn && sidebar) {
+        toggleBtn.addEventListener('click', () => {
+          if (window.innerWidth < 1024) {
+            const isOpen = sidebar.classList.toggle('sidebar-open');
+            if (backdrop) {
+              if (isOpen) {
+                backdrop.classList.remove('hidden');
+              } else {
+                backdrop.classList.add('hidden');
+              }
+            }
+          } else {
+            sidebar.classList.toggle('sidebar-collapsed');
+          }
+        });
+      }
+
+      // Gestión de Cambio de Contraseña
+      const pwdModal = document.getElementById('modal-change-password');
+      const btnOpenPwdHeader = document.getElementById('btn-open-change-password');
+      const btnOpenPwdSidebar = document.getElementById('sidebar-btn-change-password');
+      const btnClosePwd = document.getElementById('btn-close-change-password');
+      const btnCancelPwd = document.getElementById('btn-cancel-change-password');
+      const formPwd = document.getElementById('form-change-password');
+      const feedbackPwd = document.getElementById('pwd-feedback');
+      const submitBtnPwd = document.getElementById('btn-submit-change-password');
+
+      function showPwdFeedback(msg, isError = true) {
+        if (!feedbackPwd) return;
+        feedbackPwd.textContent = msg;
+        feedbackPwd.className = `rounded-xl p-3 text-xs font-medium ${
+          isError ? 'bg-rose-50 border border-rose-200 text-rose-800' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+        }`;
+        feedbackPwd.classList.remove('hidden');
+      }
+
+      function openChangePasswordModal() {
+        if (!pwdModal) return;
+        if (formPwd) formPwd.reset();
+        if (feedbackPwd) feedbackPwd.classList.add('hidden');
+        if (typeof pwdModal.showModal === 'function') {
+          pwdModal.showModal();
+        } else {
+          pwdModal.setAttribute('open', '');
+        }
+      }
+
+      function closeChangePasswordModal() {
+        if (!pwdModal) return;
+        if (typeof pwdModal.close === 'function') {
+          pwdModal.close();
+        } else {
+          pwdModal.removeAttribute('open');
+        }
+        if (formPwd) formPwd.reset();
+        if (feedbackPwd) feedbackPwd.classList.add('hidden');
+      }
+
+      if (btnOpenPwdHeader) btnOpenPwdHeader.addEventListener('click', openChangePasswordModal);
+      if (btnOpenPwdSidebar) btnOpenPwdSidebar.addEventListener('click', openChangePasswordModal);
+      if (btnClosePwd) btnClosePwd.addEventListener('click', closeChangePasswordModal);
+      if (btnCancelPwd) btnCancelPwd.addEventListener('click', closeChangePasswordModal);
+
+      if (formPwd) {
+        formPwd.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const pwdActual = document.getElementById('input-pwd-actual')?.value || '';
+          const pwdNueva = document.getElementById('input-pwd-nueva')?.value || '';
+          const pwdConf = document.getElementById('input-pwd-confirmar')?.value || '';
+
+          if (pwdNueva.length < 6) {
+            showPwdFeedback('La nueva contraseña debe tener al menos 6 caracteres.', true);
+            return;
+          }
+          if (pwdNueva !== pwdConf) {
+            showPwdFeedback('La confirmación de la contraseña no coincide.', true);
+            return;
+          }
+
+          if (submitBtnPwd) {
+            submitBtnPwd.disabled = true;
+            submitBtnPwd.textContent = 'Guardando...';
+          }
+
+          const mainEl = document.querySelector('body[data-api-base]');
+          let apiBase = mainEl ? (mainEl.getAttribute('data-api-base') || '').trim() : '';
+          if (!apiBase) {
+            apiBase = `http://${window.location.hostname}:8000`;
+          } else if (apiBase.includes('localhost') && window.location.hostname === '127.0.0.1') {
+            apiBase = apiBase.replace('localhost', '127.0.0.1');
+          } else if (apiBase.includes('127.0.0.1') && window.location.hostname === 'localhost') {
+            apiBase = apiBase.replace('127.0.0.1', 'localhost');
+          }
+
+          try {
+            const res = await fetch(`${apiBase}/api/v1/admin/tienda/auth/cambiar-password`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                password_actual: pwdActual || null,
+                password_nuevo: pwdNueva
+              })
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              showPwdFeedback(data.mensaje || '¡Contraseña actualizada con éxito!', false);
+              setTimeout(() => {
+                closeChangePasswordModal();
+              }, 1500);
+            } else {
+              const err = await res.json().catch(() => ({}));
+              showPwdFeedback(err.detail || 'Error al actualizar la contraseña.', true);
+            }
+          } catch (err) {
+            showPwdFeedback('Error de conexión al servidor.', true);
+          } finally {
+            if (submitBtnPwd) {
+              submitBtnPwd.disabled = false;
+              submitBtnPwd.textContent = 'Guardar Contraseña';
+            }
+          }
+        });
       }
 
       // Cerrar sesión

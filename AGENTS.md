@@ -81,13 +81,21 @@ cafe-sitios/
 
 Todos los comandos se ejecutan desde la raíz del proyecto.
 
-1. **Pruebas unitarias puntuales (Usar SIEMPRE preferentemente):**
+1. **Pruebas por Dominio / Módulo (Separación Canónica):**
    ```powershell
-   python -m unittest tests/test_database.py
-   python -m unittest tests/test_api.py
-   python -m unittest tests/test_multi_environment_admin.py
-   python -m unittest tests/test_store_admin_multi_tenant.py
-   python -m unittest tests/test_weekly_price_drops.py
+   # A. Backend - API REST, Base de Datos y Dominio (Python unittest)
+   python -m unittest discover -s tests/api
+   python -m unittest tests/api/test_store_admin_multi_tenant.py
+
+   # B. Backend - Scrapers, Ingesta y Drivers ETL (Python unittest)
+   python -m unittest discover -s tests/scrapper
+   python -m unittest tests/scrapper/test_woocommerce_driver.py
+
+   # C. Frontend - Pruebas Unitarias de Lógica y Componentes (Vitest)
+   cd astro-frontend; npm run test:unit
+
+   # D. Frontend - Pruebas End-to-End en Navegador Real (Playwright)
+   cd astro-frontend; npm run test:e2e
    ```
 2. **Migraciones con Alembic:**
    ```powershell
@@ -182,15 +190,21 @@ Todo diseño o modificación del esquema debe cumplir con estándares estrictos 
 
 ## 8. Pirámide de Pruebas y Quality Gates
 
-Todo código nuevo debe contar con cobertura automatizada antes de darse por completado:
+Todo código nuevo debe contar con cobertura automatizada antes de darse por completado, organizado en 4 suites independientes:
 
-1. **Pruebas Unitarias de Dominio (Cero I/O):**
-   * Pruebas puras que validan lógica matemática, normalizadores y clasificadores (`domain/`). Se ejecutan en milisegundos sin dependencias externas.
-2. **Pruebas de Repositorio e Integración (SQLite en Memoria):**
-   * Validan consultas complejas de base de datos, filtros de catálogo, ordenamientos y relaciones ORM.
-3. **Pruebas de API (`TestClient`):**
-   * Validan contratos HTTP, códigos de estado (200, 201, 400, 403, 404), RBAC y estructura de los DTOs de salida.
-4. **Regla de Oro:** Ningún PR, refactor o funcionalidad nueva se da por terminada sin su prueba unitaria específica en `tests/test_<modulo>.py`.
+1. **Backend - API REST y Persistencia (`tests/api/`):**
+   * Validan contratos HTTP de FastAPI (`TestClient`), códigos de estado (200, 201, 400, 403, 404), RBAC, autenticación, consultas ORM y migraciones Alembic.
+   * Ejecución: `python -m unittest discover -s tests/api`
+2. **Backend - Scrapers, Ingesta y Drivers ETL (`tests/scrapper/`):**
+   * Validan la extracción y normalización de productos, pesos, variantes y precios desde plataformas de eCommerce (Shopify, WooCommerce, Jumpseller, PrestaShop, Odoo, SumUp) usando mocks locales sin peticiones de red reales.
+   * Ejecución: `python -m unittest discover -s tests/scrapper`
+3. **Frontend - Pruebas Unitarias (`astro-frontend/tests/`):**
+   * Validan lógica de negocio cliente pura (modelos de dominio, adaptadores de LocalStorage, cálculo de molienda y ratios, comparador) con Vitest.
+   * Ejecución: `cd astro-frontend; npm run test:unit`
+4. **Frontend - Pruebas End-to-End (`astro-frontend/e2e/`):**
+   * Validan flujos completos de usuario en navegador real con Playwright (carga de catálogo, ficha de detalle, gráficos de precio, portal de tiendas y modales).
+   * Ejecución: `cd astro-frontend; npm run test:e2e`
+5. **Regla de Oro:** Ningún PR, refactor o funcionalidad nueva se da por terminada sin su prueba unitaria específica en su respectivo módulo.
 
 ---
 

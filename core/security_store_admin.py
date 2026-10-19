@@ -28,6 +28,32 @@ IS_PRODUCTION = os.getenv("ENVIRONMENT", "").strip().lower() in ("production", "
 security_bearer = HTTPBearer(auto_error=False)
 
 
+# --- HASHING Y VERIFICACIÓN SEGURA DE CONTRASEÑAS (PBKDF2-HMAC-SHA256) ---
+def hash_store_password(password: str) -> str:
+    """Genera hash seguro PBKDF2-HMAC-SHA256 con salt aleatorio de 16 bytes."""
+    if not password:
+        raise ValueError("La contraseña no puede estar vacía.")
+    salt = os.urandom(16)
+    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 100_000)
+    return f"pbkdf2:sha256:100000${salt.hex()}${key.hex()}"
+
+
+def verify_store_password(password: str, hashed: Optional[str]) -> bool:
+    """Verifica si la contraseña provista coincide con el hash almacenado."""
+    if not hashed or not password:
+        return False
+    try:
+        parts = hashed.split("$")
+        if len(parts) == 3 and parts[0] == "pbkdf2:sha256:100000":
+            salt = bytes.fromhex(parts[1])
+            expected_key = bytes.fromhex(parts[2])
+            key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 100_000)
+            return hmac.compare_digest(expected_key, key)
+    except Exception:
+        pass
+    return False
+
+
 # --- UTILIDADES JWT ESTÁNDAR (HS256) SIN DEPENDENCIAS EXTERNAS ---
 def _base64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("utf-8").rstrip("=")

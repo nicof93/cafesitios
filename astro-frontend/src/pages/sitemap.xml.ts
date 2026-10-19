@@ -69,7 +69,7 @@ export const GET: APIRoute = async () => {
     }).catch(() => null);
 
     if (catalogRes?.data && Array.isArray(catalogRes.data)) {
-      products = catalogRes.data;
+      products = catalogRes.data.filter((p: any) => !p.oculto_catalogo);
     }
   } catch (err) {
     console.warn('[sitemap.xml] Error consultando API de productos para el sitemap:', err);

@@ -17,15 +17,19 @@ export const GET: APIRoute = async ({ url }) => {
     });
 
     // Delegamos la consulta a la API de backend (FastAPI) a través de HttpClient
-    const response = await http.get('/api/v1/products', {
+    const response: any = await http.get('/api/v1/products', {
       params: queryParams
     });
+
+    if (response && Array.isArray(response.data)) {
+      response.data = response.data.filter((p: any) => !p.oculto_catalogo);
+    }
 
     return new Response(JSON.stringify(response), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60, s-maxage=300'
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300'
       }
     });
   } catch (error: any) {

@@ -5,7 +5,7 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from core.extractor import CoffeeAttributesExtractor, compute_description_hash
 from core.normalizer import SCAFlavorWheelNormalizer, calcular_precio_kilo

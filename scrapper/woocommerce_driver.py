@@ -18,13 +18,18 @@ def extraer_gramos(texto: Optional[str], default: int = 250) -> int:
         return int(valor * 1000) if unidad in ['k', 'kg', 'kgs', 'kilo', 'kilos'] else int(valor)
     return default
 
+from scrapper.base_driver import BaseDriver
+
 def calcular_precio_por_kilo(precio_clp: int, formato_gramos: int) -> float:
     """Calcula el precio proporcional por kilogramo."""
     if formato_gramos > 0 and precio_clp > 0:
-        return round((precio_clp / formato_gramos) * 1000, 2)
+        val = (precio_clp / formato_gramos) * 1000
+        if val >= 100000000.0:
+            val = 99999999.99
+        return round(val, 2)
     return 0.0
 
-class WooCommerceDriver:
+class WooCommerceDriver(BaseDriver):
     """Driver para consumir y normalizar productos de tiendas bajo la plataforma WooCommerce."""
 
     _GENERIC_SHOP_SEGMENTS = {
@@ -36,8 +41,7 @@ class WooCommerceDriver:
     }
 
     def __init__(self, nombre: str, url_base: str):
-        self.nombre = nombre
-        self.url_base = url_base
+        super().__init__(nombre=nombre, url_base=url_base, plataforma="woocommerce")
 
     @staticmethod
     def extraer_gramos(texto: Optional[str], default: int = 250) -> int:

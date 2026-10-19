@@ -99,6 +99,83 @@ class TestMultiEnvironmentAdmin(unittest.TestCase):
         self.assertIn("success", data)
         self.assertIn("latency_ms", data)
 
+    def test_admin_stores_with_target_environment_header(self):
+        """Verifica que el header X-Target-Environment permita consultar tiendas sin 500."""
+        res = self.client.get(
+            "/api/v1/admin/stores",
+            headers={"X-Target-Environment": "local"},
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("tiendas", data)
+        self.assertIn("total_tiendas", data)
+
+    def test_admin_status_with_target_environment_header(self):
+        """Verifica que el header X-Target-Environment permita consultar status administrativo."""
+        res = self.client.get(
+            "/api/v1/admin/status",
+            headers={"X-Target-Environment": "local"},
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("total_tiendas", data)
+
+    def test_admin_export_with_target_environment_header(self):
+        """Verifica que la exportación funcione con el header de ambiente."""
+        res = self.client.get(
+            "/api/v1/admin/stores/export",
+            headers={"X-Target-Environment": "local"},
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("tiendas", data)
+        self.assertIn("sql_script", data)
+
+    def test_admin_resilience_to_legacy_schema_without_catalogos_or_user_tables(self):
+        """Verifica que esquemas antiguos de BD (sin tabla tienda_catalogos ni usuarios_tienda) no rompan la API."""
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from db.database import Base, Tienda, SucursalTienda, Producto, Variante
+        from api.admin import list_admin_stores, export_stores_and_branches, _get_store_catalogs_safe
+
+        mem_engine = create_engine("sqlite:///:memory:")
+        # Crear únicamente un subconjunto mínimo de tablas (simulando esquemas antiguos)
+        Base.metadata.tables["tiendas"].create(mem_engine)
+        Base.metadata.tables["sucursales_tienda"].create(mem_engine)
+        Base.metadata.tables["productos"].create(mem_engine)
+        Base.metadata.tables["variantes"].create(mem_engine)
+
+        MemSession = sessionmaker(bind=mem_engine)
+        session = MemSession()
+
+        try:
+            store = Tienda(
+                nombre="Tostaduría Esquema Antiguo",
+                url_base="https://esquema-antiguo.cl",
+                plataforma="shopify",
+                activo=True,
+            )
+            session.add(store)
+            session.commit()
+
+            # 1. _get_store_catalogs_safe no debe disparar lazy-load ni fallar
+            catalogs = _get_store_catalogs_safe(store)
+            self.assertEqual(catalogs, [])
+
+            # 2. list_admin_stores debe responder con 200 (AdminStoresListResponse)
+            res_stores = list_admin_stores(db_session=session)
+            self.assertEqual(res_stores.total_tiendas, 1)
+            self.assertEqual(res_stores.tiendas[0].nombre, "Tostaduría Esquema Antiguo")
+            self.assertEqual(res_stores.tiendas[0].catalogos, [])
+
+            # 3. export_stores_and_branches debe exportar exitosamente
+            res_export = export_stores_and_branches(db_session=session)
+            self.assertEqual(len(res_export.tiendas), 1)
+            self.assertEqual(res_export.total_catalogos, 0)
+        finally:
+            session.close()
+            mem_engine.dispose()
+
 
 if __name__ == "__main__":
     unittest.main()

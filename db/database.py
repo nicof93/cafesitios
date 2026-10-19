@@ -4,9 +4,9 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from sqlalchemy import (
     create_engine, Column, Integer, String, Text, Boolean,
-    Numeric, DateTime, ForeignKey, UniqueConstraint, Index, inspect, text, Float, JSON, ARRAY
+    Numeric, DateTime, ForeignKey, UniqueConstraint, Index, inspect, text, Float, JSON, ARRAY, event
 )
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session, defer, defaultload, selectinload
 
 from db.config import settings
 
@@ -36,11 +36,29 @@ class Tienda(Base):
     latitud = Column(Numeric(10, 8), nullable=True)
     longitud = Column(Numeric(11, 8), nullable=True)
     comuna = Column(String(100), nullable=True)
+    logo_url = Column(String(500), nullable=True)
     fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
     fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
     productos = relationship("Producto", back_populates="tienda", cascade="all, delete-orphan")
     sincronizaciones = relationship("Sincronizacion", back_populates="tienda", cascade="all, delete-orphan")
     sucursales = relationship("SucursalTienda", back_populates="tienda", cascade="all, delete-orphan")
+    catalogos = relationship("TiendaCatalogo", back_populates="tienda", cascade="all, delete-orphan")
+
+
+class TiendaCatalogo(Base):
+    __tablename__ = 'tienda_catalogos'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tienda_id = Column(Integer, ForeignKey('tiendas.id', ondelete='CASCADE'), nullable=False, index=True)
+    url_catalogo = Column(Text, nullable=False)
+    etiqueta = Column(String(100), nullable=True)
+    activa = Column(Boolean, default=True, server_default='true', nullable=False)
+    creado_en = Column(DateTime, default=_utcnow, server_default=text("CURRENT_TIMESTAMP"), nullable=False)
+
+    tienda = relationship("Tienda", back_populates="catalogos")
+
+    __table_args__ = (
+        UniqueConstraint("tienda_id", "url_catalogo", name="uq_tienda_catalogo_url"),
+    )
 
 
 class SucursalTienda(Base):
@@ -72,6 +90,14 @@ class Producto(Base):
         UniqueConstraint('tienda_id', 'id_externo', name='uq_producto_tienda_id_externo'),
         Index('idx_productos_tienda_id', 'tienda_id'),
         Index('idx_productos_activo_oculto_cat', 'activo', 'oculto_catalogo', 'categoria'),
+        Index(
+            'idx_productos_visibles_catalogo',
+            'categoria',
+            'tienda_id',
+            'id',
+            postgresql_where=text("activo = TRUE AND oculto_catalogo = FALSE"),
+            sqlite_where=text("activo = 1 AND oculto_catalogo = 0"),
+        ),
     )
     id = Column(Integer, primary_key=True)
     tienda_id = Column(Integer, ForeignKey('tiendas.id'), nullable=False)
@@ -184,7 +210,10 @@ class Receta(Base):
     __tablename__ = 'recetas'
     id = Column(Integer, primary_key=True)
     dispositivo_uuid = Column(String(64), nullable=False, index=True)
-    producto_id = Column(Integer, ForeignKey('productos.id', ondelete='SET NULL'), nullable=True)
+    producto_id = Column(Integer, ForeignKey('productos.id', ondelete='SET NULL'), nullable=True, index=True)
+    tienda_id = Column(Integer, ForeignKey('tiendas.id', ondelete='CASCADE'), nullable=True, index=True)
+    autor_tipo = Column(String(50), nullable=False, default='barista', server_default='barista')
+    es_publica = Column(Boolean, nullable=False, default=True, server_default='true')
     nombre_receta = Column(String(150), nullable=False)
     metodo = Column(String(100), nullable=False)
     dosis_cafe_g = Column(Numeric(5, 2), nullable=False)
@@ -199,8 +228,11 @@ class Receta(Base):
     notas_catado = Column(Text, nullable=True)
     catacion_sca = Column(JSON, nullable=True)
     puntuacion_sca_total = Column(Numeric(5, 2), nullable=True)
+    es_borrador = Column(Boolean, nullable=False, default=False, server_default='false')
+    pasos = Column(JSON, nullable=True)
     fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
     producto = relationship("Producto")
+    tienda = relationship("Tienda")
 
 class SugerenciaFeedback(Base):
     __tablename__ = 'sugerencias_feedback'
@@ -266,6 +298,8 @@ class UsuarioTienda(Base):
     usuario_id = Column(String(36), nullable=False, index=True)
     tienda_id = Column(Integer, ForeignKey('tiendas.id', ondelete='CASCADE'), nullable=False, index=True)
     rol = Column(String(50), nullable=False, default='STORE_ADMIN', server_default='STORE_ADMIN')
+    password_hash = Column(String(255), nullable=True)
+    debe_cambiar_password = Column(Boolean, nullable=False, default=True, server_default='true')
     creado_en = Column(DateTime, nullable=False, default=_utcnow)
     tienda = relationship("Tienda")
     __table_args__ = (
@@ -286,6 +320,130 @@ class AuditoriaAccionesTienda(Base):
     ip_origen = Column(String(45), nullable=True)
     fecha_registro = Column(DateTime, nullable=False, default=_utcnow, index=True)
     tienda = relationship("Tienda")
+
+
+_engine_columns_cache: Dict[int, Dict[str, set]] = {}
+
+def engine_get_columns(engine, table_name: str) -> set:
+    """Verifica si columnas existen en una tabla del motor conectado (con caché por motor)."""
+    if engine is None:
+        return set()
+    engine_id = id(engine)
+    if engine_id not in _engine_columns_cache:
+        _engine_columns_cache[engine_id] = {}
+    if table_name not in _engine_columns_cache[engine_id]:
+        try:
+            cols = {c['name'] for c in inspect(engine).get_columns(table_name)}
+            _engine_columns_cache[engine_id][table_name] = cols
+        except Exception:
+            _engine_columns_cache[engine_id][table_name] = set()
+    return _engine_columns_cache[engine_id][table_name]
+
+def engine_has_tienda_column(engine, column_name: str) -> bool:
+    cols = engine_get_columns(engine, 'tiendas')
+    return not cols or column_name in cols
+
+
+@event.listens_for(Session, "do_orm_execute")
+def _handle_missing_columns_in_remote_schemas(orm_execute_state):
+    """Omite select de columnas añadidas en migraciones recientes si el motor remoto aún no las posee."""
+    if not orm_execute_state.is_select:
+        return
+    try:
+        bind = orm_execute_state.session.get_bind()
+        if bind is None:
+            return
+
+        col_desc = getattr(orm_execute_state.statement, "column_descriptions", None)
+        if not col_desc:
+            return
+
+        entities = [
+            d.get("entity")
+            for d in col_desc
+            if isinstance(d, dict) and d.get("expr") is d.get("entity")
+        ]
+
+        # 1. Tienda (logo_url)
+        tiendas_cols = engine_get_columns(bind, 'tiendas')
+        if tiendas_cols and "logo_url" not in tiendas_cols:
+            if Tienda in entities:
+                orm_execute_state.statement = orm_execute_state.statement.options(defer(Tienda.logo_url))
+            elif Producto in entities:
+                orm_execute_state.statement = orm_execute_state.statement.options(
+                    defaultload(Producto.tienda).defer(Tienda.logo_url)
+                )
+
+        # 2. UsuarioTienda (password_hash, debe_cambiar_password)
+        users_cols = engine_get_columns(bind, 'usuarios_tienda')
+        if users_cols:
+            if "password_hash" not in users_cols:
+                if UsuarioTienda in entities:
+                    orm_execute_state.statement = orm_execute_state.statement.options(defer(UsuarioTienda.password_hash))
+            if "debe_cambiar_password" not in users_cols:
+                if UsuarioTienda in entities:
+                    orm_execute_state.statement = orm_execute_state.statement.options(defer(UsuarioTienda.debe_cambiar_password))
+
+        # 3. Receta (tienda_id, autor_tipo, es_publica, es_borrador, pasos, catacion_sca, puntuacion_sca_total)
+        recetas_cols = engine_get_columns(bind, 'recetas')
+        if recetas_cols:
+            for r_col in [
+                "tienda_id", "autor_tipo", "es_publica", "es_borrador", "pasos", "catacion_sca", "puntuacion_sca_total"
+            ]:
+                if r_col not in recetas_cols and Receta in entities:
+                    orm_execute_state.statement = orm_execute_state.statement.options(defer(getattr(Receta, r_col)))
+    except Exception:
+        pass
+
+
+@event.listens_for(Tienda, "load")
+def _receive_tienda_load_fallback(target, context):
+    """Asigna None si logo_url no fue seleccionada por diferimiento en esquemas no migrados."""
+    if "logo_url" not in target.__dict__:
+        target.__dict__["logo_url"] = None
+
+
+@event.listens_for(UsuarioTienda, "load")
+def _receive_usuario_tienda_load_fallback(target, context):
+    """Asigna valores predeterminados seguros si columnas no migradas fueron diferidas."""
+    if "password_hash" not in target.__dict__:
+        target.__dict__["password_hash"] = None
+    if "debe_cambiar_password" not in target.__dict__:
+        target.__dict__["debe_cambiar_password"] = True
+
+
+@event.listens_for(Receta, "load")
+def _receive_receta_load_fallback(target, context):
+    """Asigna valores predeterminados seguros para recetas cargadas en esquemas antiguos."""
+    if "tienda_id" not in target.__dict__:
+        target.__dict__["tienda_id"] = None
+    if "autor_tipo" not in target.__dict__:
+        target.__dict__["autor_tipo"] = "barista"
+    if "es_publica" not in target.__dict__:
+        target.__dict__["es_publica"] = True
+    if "es_borrador" not in target.__dict__:
+        target.__dict__["es_borrador"] = False
+    if "pasos" not in target.__dict__:
+        target.__dict__["pasos"] = None
+    if "catacion_sca" not in target.__dict__:
+        target.__dict__["catacion_sca"] = None
+    if "puntuacion_sca_total" not in target.__dict__:
+        target.__dict__["puntuacion_sca_total"] = None
+
+
+MAX_PRECIO_POR_KILO = 99999999.99
+
+def _sanitize_precio_por_kilo(val: Any) -> float:
+    """Garantiza que precio_por_kilo quepa estrictamente en NUMERIC(10, 2) sin desbordamiento (< 10^8)."""
+    try:
+        num = float(val or 0.0)
+        if num >= 100000000.0:
+            return MAX_PRECIO_POR_KILO
+        if num < 0.0:
+            return 0.0
+        return round(num, 2)
+    except (ValueError, TypeError):
+        return 0.0
 
 
 class DatabaseManager:
@@ -354,45 +512,142 @@ class DatabaseManager:
     def listar_tiendas_activas(self) -> List[Dict[str, Any]]:
         session = self.SessionLocal()
         try:
+            has_catalogos_table = True
+            try:
+                table_names = set(inspect(self.engine).get_table_names())
+                has_catalogos_table = 'tienda_catalogos' in table_names
+            except Exception:
+                pass
+
+            query = session.query(Tienda)
+            if has_catalogos_table:
+                query = query.options(selectinload(Tienda.catalogos))
+
             tiendas = (
-                session.query(Tienda)
-                .filter(Tienda.activo.is_(True))
+                query.filter(Tienda.activo.is_(True))
                 .order_by(Tienda.nombre.asc())
                 .all()
             )
-            return [
-                {
+            result = []
+            for tienda in tiendas:
+                catalogos_list = []
+                if has_catalogos_table and getattr(tienda, 'catalogos', None):
+                    catalogos_list = [
+                        {
+                            'id': c.id,
+                            'url_catalogo': c.url_catalogo,
+                            'etiqueta': c.etiqueta,
+                            'activa': c.activa,
+                        }
+                        for c in tienda.catalogos if c.activa
+                    ]
+                result.append({
                     'id': tienda.id,
                     'nombre': tienda.nombre,
                     'url_base': tienda.url_base,
                     'plataforma': tienda.plataforma,
-                }
-                for tienda in tiendas
-            ]
+                    'logo_url': getattr(tienda, 'logo_url', None),
+                    'catalogos': catalogos_list,
+                })
+            return result
         finally:
             session.close()
 
     def obtener_tienda_por_id(self, tienda_id: int) -> Optional[Dict[str, Any]]:
         session = self.SessionLocal()
         try:
-            tienda = session.query(Tienda).filter(Tienda.id == tienda_id).first()
+            has_catalogos_table = True
+            try:
+                table_names = set(inspect(self.engine).get_table_names())
+                has_catalogos_table = 'tienda_catalogos' in table_names
+            except Exception:
+                pass
+
+            query = session.query(Tienda)
+            if has_catalogos_table:
+                query = query.options(selectinload(Tienda.catalogos))
+
+            tienda = query.filter(Tienda.id == tienda_id).first()
             if not tienda:
                 return None
+            catalogos_list = []
+            if has_catalogos_table and getattr(tienda, 'catalogos', None):
+                catalogos_list = [
+                    {
+                        'id': c.id,
+                        'url_catalogo': c.url_catalogo,
+                        'etiqueta': c.etiqueta,
+                        'activa': c.activa,
+                    }
+                    for c in tienda.catalogos if c.activa
+                ]
             return {
                 'id': tienda.id,
                 'nombre': tienda.nombre,
                 'url_base': tienda.url_base,
                 'plataforma': tienda.plataforma,
+                'logo_url': getattr(tienda, 'logo_url', None),
                 'activo': bool(tienda.activo),
+                'catalogos': catalogos_list,
             }
+        finally:
+            session.close()
+
+    def actualizar_catalogos_tienda(self, tienda_id: int, catalogos: List[Dict[str, Any]]) -> bool:
+        session = self.SessionLocal()
+        try:
+            session.query(TiendaCatalogo).filter(TiendaCatalogo.tienda_id == tienda_id).delete()
+            for cat in catalogos:
+                url = (cat.get('url_catalogo') or '').strip()
+                if not url:
+                    continue
+                session.add(TiendaCatalogo(
+                    tienda_id=tienda_id,
+                    url_catalogo=url,
+                    etiqueta=(cat.get('etiqueta') or '').strip() or None,
+                    activa=cat.get('activa', True),
+                ))
+            session.commit()
+            return True
+        except Exception as e:
+            session.rollback()
+            logging.error(f"Error actualizando catalogos de tienda {tienda_id}: {e}")
+            return False
+        finally:
+            session.close()
+
+    def actualizar_logo_tienda(self, tienda_id: int, logo_url: str) -> bool:
+        session = self.SessionLocal()
+        try:
+            tienda = session.query(Tienda).filter(Tienda.id == tienda_id).first()
+            if not tienda:
+                return False
+            tienda.logo_url = logo_url
+            session.commit()
+            return True
+        except Exception as e:
+            session.rollback()
+            logging.error(f"Error actualizando logo de tienda {tienda_id}: {e}")
+            return False
         finally:
             session.close()
 
     def listar_tiendas_no_sincronizadas(self) -> List[Dict[str, Any]]:
         session = self.SessionLocal()
         try:
+            has_catalogos_table = True
+            try:
+                table_names = set(inspect(self.engine).get_table_names())
+                has_catalogos_table = 'tienda_catalogos' in table_names
+            except Exception:
+                pass
+
+            query = session.query(Tienda)
+            if has_catalogos_table:
+                query = query.options(selectinload(Tienda.catalogos))
+
             tiendas_activas = (
-                session.query(Tienda)
+                query
                 .filter(Tienda.activo.is_(True))
                 .order_by(Tienda.nombre.asc())
                 .all()
@@ -415,11 +670,24 @@ class DatabaseManager:
                     is not None
                 )
                 if prod_count == 0 or not has_successful_sync:
+                    catalogos_list = []
+                    if has_catalogos_table and getattr(t, 'catalogos', None):
+                        catalogos_list = [
+                            {
+                                'id': c.id,
+                                'url_catalogo': c.url_catalogo,
+                                'etiqueta': c.etiqueta,
+                                'activa': c.activa,
+                            }
+                            for c in t.catalogos if c.activa
+                        ]
                     unsynced.append({
                         'id': t.id,
                         'nombre': t.nombre,
                         'url_base': t.url_base,
                         'plataforma': t.plataforma,
+                        'logo_url': getattr(t, 'logo_url', None),
+                        'catalogos': catalogos_list,
                     })
             return unsynced
         finally:
@@ -806,6 +1074,8 @@ class DatabaseManager:
                             continue
                         unique_variantes.add(clave_variante)
 
+                        kilo_saneado = _sanitize_precio_por_kilo(var_data.get('precio_por_kilo'))
+
                         variante_mapping = {
                             'producto_id': producto_id,
                             'id_variante_externo': var_data['id_variante_externo'],
@@ -815,7 +1085,7 @@ class DatabaseManager:
                             'precio_original_clp': var_data['precio_original_clp'],
                             'en_oferta': var_data['en_oferta'],
                             'descuento_porcentaje': var_data['descuento_porcentaje'],
-                            'precio_por_kilo': var_data['precio_por_kilo'],
+                            'precio_por_kilo': kilo_saneado,
                             'es_estimado': var_data.get('es_estimado', True),
                             'disponible': var_data['disponible'],
                             'fecha_creacion': fecha_actual,
@@ -872,7 +1142,7 @@ class DatabaseManager:
                                 'variante_id': variante_id,
                                 'precio_clp': var_data['precio_clp'],
                                 'precio_original_clp': var_data['precio_original_clp'],
-                                'precio_por_kilo': var_data['precio_por_kilo'],
+                                'precio_por_kilo': _sanitize_precio_por_kilo(var_data.get('precio_por_kilo')),
                                 'en_oferta': var_data['en_oferta'],
                                 'descuento_porcentaje': var_data['descuento_porcentaje'],
                                 'disponible': var_data['disponible'],
@@ -1008,7 +1278,7 @@ class DatabaseManager:
                                 tienda_id=tienda_id,
                                 precio_actual=of.get("precio_actual", 0),
                                 formato_gramos=of.get("formato_gramos", 250),
-                                precio_por_kilo=of.get("precio_por_kilo", 0.0),
+                                precio_por_kilo=_sanitize_precio_por_kilo(of.get("precio_por_kilo", 0.0)),
                                 es_estimado=of.get("es_estimado", True),
                                 link_detalle=link,
                                 disponible=of.get("disponible", True),
@@ -1019,7 +1289,7 @@ class DatabaseManager:
                             oferta.cafe_id = cafe.id
                             oferta.precio_actual = of.get("precio_actual", oferta.precio_actual)
                             oferta.formato_gramos = of.get("formato_gramos", oferta.formato_gramos)
-                            oferta.precio_por_kilo = of.get("precio_por_kilo", oferta.precio_por_kilo)
+                            oferta.precio_por_kilo = _sanitize_precio_por_kilo(of.get("precio_por_kilo", oferta.precio_por_kilo))
                             oferta.es_estimado = of.get("es_estimado", oferta.es_estimado)
                             oferta.disponible = of.get("disponible", oferta.disponible)
                             oferta.ultima_actualizacion = fecha_actual

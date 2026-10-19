@@ -24,4 +24,29 @@ class CoffeeProductDomain:
     descripcion: Optional[str]
     variante_mas_barata: VariantDomain
     categoria: str = 'cafe'
+    oculto_catalogo: bool = False
+
+
+@dataclass
+class TiendaCatalogoDomain:
+    id: Optional[int]
+    tienda_id: int
+    url_catalogo: str
+    etiqueta: Optional[str] = None
+    activa: bool = True
+
+
+@dataclass
+class TiendaDomain:
+    id: int
+    nombre: str
+    url_base: str
+    plataforma: str
+    activo: bool = True
+    catalogos: list[TiendaCatalogoDomain] = None
+
+    def __post_init__(self):
+        if self.catalogos is None:
+            self.catalogos = []
+
 

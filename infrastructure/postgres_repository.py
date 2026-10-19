@@ -232,6 +232,7 @@ class PostgresCoffeeRepository(ICoffeeRepository):
                 descripcion=prod.descripcion,
                 variante_mas_barata=variante_dom,
                 categoria=classify_product_category(prod.nombre),
+                oculto_catalogo=bool(getattr(prod, 'oculto_catalogo', False)),
             )
             productos_dominio.append(prod_dom)
 
@@ -241,7 +242,11 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         """Busca productos idénticos en otras tiendas bajo la regla de Identidad Estricta de Grano (RN-04)."""
         target = (
             self.session.query(Producto)
-            .filter(Producto.id == product_id, Producto.activo.is_(True))
+            .filter(
+                Producto.id == product_id,
+                Producto.activo.is_(True),
+                Producto.oculto_catalogo.is_(False),
+            )
             .first()
         )
         if not target or not target.pais_origen:
@@ -256,6 +261,7 @@ class PostgresCoffeeRepository(ICoffeeRepository):
                 Producto.id != target.id,
                 Producto.tienda_id != target.tienda_id,
                 Producto.activo.is_(True),
+                Producto.oculto_catalogo.is_(False),
                 Tienda.activo.is_(True),
                 Variante.disponible == True,
                 Producto.pais_origen.ilike(target.pais_origen),
@@ -310,7 +316,9 @@ class PostgresCoffeeRepository(ICoffeeRepository):
                     url_detalle=prod.url_detalle,
                     imagen=prod.imagen,
                     descripcion=prod.descripcion,
-                    variante_mas_barata=variante_dom
+                    variante_mas_barata=variante_dom,
+                    categoria=classify_product_category(prod.nombre),
+                    oculto_catalogo=bool(getattr(prod, 'oculto_catalogo', False)),
                 )
             )
         return matches

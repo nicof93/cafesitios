@@ -100,6 +100,42 @@ class TestProductMatches(unittest.TestCase):
         self.assertEqual(matches[0].tienda, "Tostaduría 2")
         self.assertEqual(matches[0].variante_mas_barata.precio_clp, 14000)
 
+    def test_hidden_products_are_never_returned_as_matches(self):
+        # Si un producto con match idéntico está oculto del catálogo, no debe aparecer como coincidencia
+        prod_base = Producto(
+            tienda=self.store1,
+            nombre="Colombia Pink Bourbon Base",
+            pais_origen="Colombia",
+            finca="La Huella",
+            variedad="Pink Bourbon",
+            proceso="Lavado",
+            url_detalle="https://t1.cl/pink",
+            oculto_catalogo=False,
+            variantes=[Variante(id_variante_externo="v_base", opcion="250g", formato_gramos=250, precio_clp=15000, precio_original_clp=15000, precio_por_kilo=60000, disponible=True)]
+        )
+        prod_hidden_match = Producto(
+            tienda=self.store2,
+            nombre="Colombia Pink Bourbon Oculto",
+            pais_origen="Colombia",
+            finca="La Huella",
+            variedad="Pink Bourbon",
+            proceso="Lavado",
+            url_detalle="https://t2.cl/pink-hidden",
+            oculto_catalogo=True,  # OCULTO
+            variantes=[Variante(id_variante_externo="v_hid", opcion="250g", formato_gramos=250, precio_clp=12000, precio_original_clp=12000, precio_por_kilo=48000, disponible=True)]
+        )
+        self.session.add_all([prod_base, prod_hidden_match])
+        self.session.commit()
+
+        repo = PostgresCoffeeRepository(self.session)
+        # 1. El producto oculto no debe aparecer en los matches del producto base
+        matches = repo.find_matching_products(prod_base.id)
+        self.assertEqual(len(matches), 0)
+
+        # 2. Si el producto de origen está oculto, no debe retornar matches
+        matches_from_hidden = repo.find_matching_products(prod_hidden_match.id)
+        self.assertEqual(len(matches_from_hidden), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

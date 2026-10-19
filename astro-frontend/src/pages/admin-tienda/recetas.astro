@@ -1,0 +1,598 @@
+---
+import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
+---
+
+<StoreAdminLayout title="Recetas Oficiales | Panel de Tostaduría" activeNav="recetas">
+  <div class="space-y-6">
+    <!-- ENCABEZADO Y ACCIÓN -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-stone-200 shadow-xs">
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl sm:text-2xl font-black text-stone-900">☕ Recetas Oficiales de Preparación</h1>
+          <span class="rounded-full bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 font-bold">Públicas en Sitio Web</span>
+        </div>
+        <p class="text-xs text-stone-500 mt-1">
+          Crea y publica guías de preparación recomendadas para tus cafés. Los clientes las verán en la ficha de cada producto.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        id="btn-open-modal"
+        class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-5 py-2.5 text-xs font-bold text-white transition shadow-sm"
+      >
+        <span>➕</span>
+        <span>Nueva Receta Oficial</span>
+      </button>
+    </div>
+
+    <!-- LISTADO DE RECETAS PUBLICADAS -->
+    <div class="rounded-2xl border border-stone-200 bg-white shadow-xs overflow-hidden">
+      <div class="p-4 sm:p-5 border-b border-stone-200 flex items-center justify-between">
+        <h2 class="text-sm font-bold text-stone-900">Recetas Publicadas para tus Cafés</h2>
+        <span class="text-xs text-stone-400" id="recipes-count">0 recetas</span>
+      </div>
+
+      <div id="recipes-loading" class="py-12 text-center text-stone-400 text-xs">
+        <span class="animate-spin text-lg inline-block mr-2">⏳</span>
+        Cargando recetas de la tostaduría...
+      </div>
+
+      <div id="recipes-empty" class="hidden py-12 text-center text-stone-400 text-xs space-y-2">
+        <div class="text-3xl">☕</div>
+        <p class="font-semibold text-stone-600">Aún no tienes recetas oficiales publicadas.</p>
+        <p class="text-stone-400 text-[11px]">Haz clic en "Nueva Receta Oficial" para agregar la guía de extracción recomendada para uno de tus cafés.</p>
+      </div>
+
+      <div id="recipes-grid" class="hidden p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Renderizado dinámico vía JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE CREACIÓN DE RECETA -->
+  <div id="modal-recipe" class="fixed inset-0 z-50 hidden bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl border border-stone-200 shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-6">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+        <h3 class="text-lg font-black text-stone-900 flex items-center gap-2">
+          <span>☕</span>
+          <span>Publicar Receta Oficial</span>
+        </h3>
+        <button type="button" id="btn-close-modal" class="text-stone-400 hover:text-stone-700 text-lg font-bold">✕</button>
+      </div>
+
+      <form id="form-recipe" class="space-y-4">
+        <!-- Selector de Producto -->
+        <div>
+          <label class="block text-xs font-bold text-stone-700 mb-1">Café de tu Catálogo *</label>
+          <select id="rec-producto-id" required class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none">
+            <option value="">Selecciona un café...</option>
+          </select>
+          <p class="text-[11px] text-stone-400 mt-1">La receta se publicará en la ficha técnica de este café.</p>
+        </div>
+
+        <!-- Nombre de la Receta -->
+        <div>
+          <label class="block text-xs font-bold text-stone-700 mb-1">Título de la Guía / Receta *</label>
+          <input 
+            type="text" 
+            id="rec-nombre" 
+            required 
+            placeholder="Ej: V60 Recomendado por Tostador (Extracción Frutal)" 
+            class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none"
+          />
+        </div>
+
+        <!-- Método y Ratio -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Método de Preparación *</label>
+            <select id="rec-metodo" required class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none">
+              <option value="V60">V60</option>
+              <option value="Aeropress">Aeropress</option>
+              <option value="Chemex">Chemex</option>
+              <option value="Espresso">Espresso</option>
+              <option value="Prensa Francesa">Prensa Francesa</option>
+              <option value="Kalita Wave">Kalita Wave</option>
+              <option value="Origami">Origami</option>
+              <option value="Cold Brew">Cold Brew</option>
+              <option value="Moka Italiana">Moka Italiana</option>
+              <option value="Clever">Clever</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Ratio (Café : Agua)</label>
+            <input 
+              type="text" 
+              id="rec-ratio" 
+              placeholder="Ej: 1:15" 
+              class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <!-- Dosis y Agua -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Dosis de Café (gramos) *</label>
+            <input 
+              type="number" 
+              id="rec-dosis" 
+              required 
+              step="0.5" 
+              min="5" 
+              max="200" 
+              value="18" 
+              class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Agua Total (ml) *</label>
+            <input 
+              type="number" 
+              id="rec-agua" 
+              required 
+              step="5" 
+              min="20" 
+              max="2000" 
+              value="270" 
+              class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <!-- Molienda y Molino -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Grosor de Molienda</label>
+            <select id="rec-molienda" class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none">
+              <option value="Media">Media</option>
+              <option value="Media-Fina">Media-Fina</option>
+              <option value="Fina">Fina</option>
+              <option value="Media-Gruesa">Media-Gruesa</option>
+              <option value="Gruesa">Gruesa</option>
+              <option value="Extra Fina">Extra Fina (Espresso)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Molino Usado / Clicks (Opcional)</label>
+            <input 
+              type="text" 
+              id="rec-molino" 
+              placeholder="Ej: Comandante C40 (24 clicks)" 
+              class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <!-- Temperatura y Tiempo -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Temperatura del Agua (°C)</label>
+            <input 
+              type="number" 
+              id="rec-temp" 
+              min="50" 
+              max="100" 
+              value="92" 
+              class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Tiempo de Extracción (segundos)</label>
+            <input 
+              type="number" 
+              id="rec-tiempo" 
+              min="10" 
+              max="1800" 
+              value="165" 
+              placeholder="Ej: 165s (2:45 min)" 
+              class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <!-- Paso a paso dinámico -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-bold text-stone-700">Guía de Preparación: Paso a Paso *</label>
+            <button
+              type="button"
+              id="btn-add-paso"
+              class="inline-flex items-center gap-1 rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition"
+            >
+              <span>+</span>
+              <span>Agregar paso</span>
+            </button>
+          </div>
+          <p class="text-[11px] text-stone-400">Describe ordenadamente los vertidos, tiempos o acciones clave.</p>
+          <div id="pasos-container" class="space-y-2">
+            <!-- Filas inyectadas por JS -->
+          </div>
+        </div>
+
+        <!-- Consejos del Tostador -->
+        <div>
+          <label class="block text-xs font-bold text-stone-700 mb-1">Consejos del Tostador / Notas de Cata (Opcional)</label>
+          <textarea 
+            id="rec-notas" 
+            rows="2" 
+            placeholder="Ej: Usar agua filtrada de mineralización suave para resaltar las notas frutales." 
+            class="w-full rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none"
+          ></textarea>
+        </div>
+
+        <!-- Opción de Borrador -->
+        <div class="rounded-xl border border-amber-200/80 bg-amber-50/40 p-3">
+          <label class="flex items-center gap-2.5 cursor-pointer select-none">
+            <input type="checkbox" id="rec-es-borrador" class="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500" />
+            <div>
+              <span class="block text-xs font-bold text-stone-800">Guardar como Borrador</span>
+              <span class="block text-[11px] text-stone-500">Permite guardar la receta sin publicarla en la ficha de producto hasta que esté lista</span>
+            </div>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+          <button type="button" id="btn-cancel-modal" class="rounded-xl border border-stone-200 px-4 py-2 text-xs font-bold text-stone-600 hover:bg-stone-50 transition">
+            Cancelar
+          </button>
+          <button type="submit" id="btn-submit-recipe" class="rounded-xl bg-emerald-700 hover:bg-emerald-800 px-5 py-2 text-xs font-bold text-white transition shadow-xs">
+            Guardar Receta
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script is:inline>
+    (function initStoreRecipes() {
+      const token = localStorage.getItem('store_admin_token');
+      if (!token) {
+        window.location.replace('/admin-tienda/login');
+        return;
+      }
+
+      const mainEl = document.querySelector('body[data-api-base]');
+      let apiBase = mainEl ? (mainEl.getAttribute('data-api-base') || '').trim() : '';
+      if (!apiBase) {
+        apiBase = `http://${window.location.hostname}:8000`;
+      } else if (apiBase.includes('localhost') && window.location.hostname === '127.0.0.1') {
+        apiBase = apiBase.replace('localhost', '127.0.0.1');
+      } else if (apiBase.includes('127.0.0.1') && window.location.hostname === 'localhost') {
+        apiBase = apiBase.replace('127.0.0.1', 'localhost');
+      }
+
+      const modal = document.getElementById('modal-recipe');
+      const btnOpen = document.getElementById('btn-open-modal');
+      const btnClose = document.getElementById('btn-close-modal');
+      const btnCancel = document.getElementById('btn-cancel-modal');
+      const form = document.getElementById('form-recipe');
+      const prodSelect = document.getElementById('rec-producto-id');
+
+      let productsCache = [];
+      let recipesCache = [];
+
+      const pasosContainer = document.getElementById('pasos-container');
+      const btnAddPaso = document.getElementById('btn-add-paso');
+
+      function updatePasosNumbers() {
+        if (!pasosContainer) return;
+        const rows = pasosContainer.querySelectorAll('.paso-row');
+        rows.forEach((row, idx) => {
+          const numSpan = row.querySelector('.paso-number');
+          if (numSpan) numSpan.textContent = `Paso ${idx + 1}`;
+          const removeBtn = row.querySelector('.btn-remove-paso');
+          if (removeBtn) {
+            removeBtn.style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+          }
+        });
+      }
+
+      function addPasoRow(val = '') {
+        if (!pasosContainer) return;
+        const count = pasosContainer.querySelectorAll('.paso-row').length + 1;
+        const row = document.createElement('div');
+        row.className = 'paso-row flex items-center gap-2';
+        row.innerHTML = `
+          <span class="paso-number text-xs font-bold text-stone-500 w-14 shrink-0">Paso ${count}</span>
+          <input 
+            type="text" 
+            class="paso-input flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-stone-900 focus:bg-white focus:border-emerald-500 focus:outline-none"
+            placeholder="Ej: Pre-infusión de 50g de agua por 40 segundos"
+            value="${val ? val.replace(/"/g, '&quot;') : ''}"
+          />
+          <button type="button" class="btn-remove-paso text-stone-400 hover:text-rose-600 px-2 text-sm font-bold transition" title="Eliminar paso">✕</button>
+        `;
+        row.querySelector('.btn-remove-paso')?.addEventListener('click', () => {
+          row.remove();
+          updatePasosNumbers();
+        });
+        pasosContainer.appendChild(row);
+        updatePasosNumbers();
+      }
+
+      if (btnAddPaso) {
+        btnAddPaso.addEventListener('click', () => addPasoRow(''));
+      }
+
+      function resetPasos() {
+        if (!pasosContainer) return;
+        pasosContainer.innerHTML = '';
+        addPasoRow('');
+        addPasoRow('');
+      }
+
+      // Control del Modal
+      function openModal() {
+        if (modal) modal.classList.remove('hidden');
+        resetPasos();
+        const checkBorrador = document.getElementById('rec-es-borrador');
+        if (checkBorrador) checkBorrador.checked = false;
+      }
+      function closeModal() {
+        if (modal) modal.classList.add('hidden');
+        if (form) form.reset();
+        resetPasos();
+      }
+
+      if (btnOpen) btnOpen.addEventListener('click', openModal);
+      if (btnClose) btnClose.addEventListener('click', closeModal);
+      if (btnCancel) btnCancel.addEventListener('click', closeModal);
+
+      // Auto-calcular ratio al cambiar dosis o agua
+      const inputDosis = document.getElementById('rec-dosis');
+      const inputAgua = document.getElementById('rec-agua');
+      const inputRatio = document.getElementById('rec-ratio');
+
+      function updateRatio() {
+        const d = parseFloat(inputDosis?.value || '0');
+        const a = parseFloat(inputAgua?.value || '0');
+        if (d > 0 && a > 0 && inputRatio) {
+          const r = Math.round((a / d) * 10) / 10;
+          inputRatio.value = `1:${r}`;
+        }
+      }
+      if (inputDosis) inputDosis.addEventListener('input', updateRatio);
+      if (inputAgua) inputAgua.addEventListener('input', updateRatio);
+
+      // Cargar productos de la tienda para el selector
+      async function loadStoreProducts() {
+        try {
+          const res = await fetch(`${apiBase}/api/v1/admin/tienda/productos?page=1&per_page=100`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            productsCache = data.productos || [];
+            if (prodSelect) {
+              prodSelect.innerHTML = '<option value="">Selecciona un café...</option>' +
+                productsCache.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+            }
+          }
+        } catch (e) {
+          console.error('Error cargando productos para recetas:', e);
+        }
+      }
+
+      // Cargar recetas de la tienda
+      async function loadStoreRecipes() {
+        const loading = document.getElementById('recipes-loading');
+        const empty = document.getElementById('recipes-empty');
+        const grid = document.getElementById('recipes-grid');
+        const count = document.getElementById('recipes-count');
+
+        if (loading) loading.classList.remove('hidden');
+        if (empty) empty.classList.add('hidden');
+        if (grid) grid.classList.add('hidden');
+
+        try {
+          const res = await fetch(`${apiBase}/api/v1/admin/tienda/recetas`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          if (res.status === 401) {
+            localStorage.removeItem('store_admin_token');
+            window.location.replace('/admin-tienda/login');
+            return;
+          }
+
+          if (res.ok) {
+            recipesCache = await res.json();
+            if (count) count.textContent = `${recipesCache.length} receta${recipesCache.length === 1 ? '' : 's'}`;
+
+            if (recipesCache.length === 0) {
+              if (empty) {
+                empty.innerHTML = `
+                  <div class="text-3xl">☕</div>
+                  <p class="font-semibold text-stone-600">Aún no tienes recetas oficiales publicadas.</p>
+                  <p class="text-stone-400 text-[11px]">Haz clic en "Nueva Receta Oficial" para agregar la guía de extracción recomendada para uno de tus cafés.</p>
+                `;
+                empty.classList.remove('hidden');
+              }
+              if (grid) grid.classList.add('hidden');
+              return;
+            }
+
+            if (empty) empty.classList.add('hidden');
+            if (grid) grid.classList.remove('hidden');
+
+            grid.innerHTML = recipesCache.map(r => `
+              <div class="rounded-2xl border ${r.es_borrador ? 'border-amber-200 bg-amber-50/25' : 'border-stone-200 bg-white'} p-5 shadow-2xs flex flex-col justify-between space-y-4">
+                <div>
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span class="rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold px-2 py-0.5">
+                        ${r.metodo}
+                      </span>
+                      ${r.es_borrador 
+                        ? '<span class="rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-black px-2 py-0.5">📝 Borrador</span>'
+                        : '<span class="rounded-full bg-emerald-100 border border-emerald-300 text-emerald-900 text-[10px] font-black px-2 py-0.5">✅ Publicada</span>'}
+                    </div>
+                    <button 
+                      type="button" 
+                      data-delete-id="${r.id}" 
+                      class="btn-delete-recipe text-stone-400 hover:text-rose-600 transition text-xs font-bold p-1"
+                      title="Eliminar receta"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+
+                  <h3 class="text-sm font-black text-stone-900 mt-2">${r.nombre_receta}</h3>
+                  <p class="text-xs font-bold text-emerald-700 mt-0.5">☕ ${r.producto_nombre || 'Café asociado'}</p>
+
+                  <!-- Métricas de Extracción -->
+                  <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-stone-100 text-[11px] text-stone-600">
+                    <div><span class="text-stone-400">Dosis / Agua:</span> <span class="font-bold">${r.dosis_cafe_g}g / ${r.agua_ml}ml</span></div>
+                    <div><span class="text-stone-400">Ratio:</span> <span class="font-bold">${r.ratio || 'N/A'}</span></div>
+                    <div><span class="text-stone-400">Molienda:</span> <span class="font-bold">${r.grosor_molienda || 'Media'}</span></div>
+                    <div><span class="text-stone-400">Temperatura:</span> <span class="font-bold">${r.temperatura_c ? r.temperatura_c + '°C' : 'N/A'}</span></div>
+                    ${r.tiempo_total_s ? `<div><span class="text-stone-400">Tiempo:</span> <span class="font-bold">${Math.floor(r.tiempo_total_s / 60)}:${String(r.tiempo_total_s % 60).padStart(2, '0')} min</span></div>` : ''}
+                    ${r.molino_usado ? `<div class="col-span-2 truncate"><span class="text-stone-400">Molino:</span> <span class="font-bold">${r.molino_usado}</span></div>` : ''}
+                  </div>
+
+                  ${r.pasos && Array.isArray(r.pasos) && r.pasos.length > 0 ? `
+                    <div class="mt-3 pt-2.5 border-t border-stone-100">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-stone-400 block mb-1">Paso a paso:</span>
+                      <ol class="space-y-1 text-[11px] text-stone-700 list-decimal list-inside pl-0.5">
+                        ${r.pasos.map(p => `<li class="leading-relaxed"><span class="text-stone-800">${p}</span></li>`).join('')}
+                      </ol>
+                    </div>
+                  ` : ''}
+
+                  ${r.notas_catado ? `
+                    <p class="mt-3 text-[11px] text-stone-500 bg-stone-50 p-2.5 rounded-xl border border-stone-100 italic">
+                      "${r.notas_catado}"
+                    </p>
+                  ` : ''}
+                </div>
+
+                <div class="text-[10px] text-stone-400 pt-2 border-t border-stone-100 flex items-center justify-between">
+                  <span>${r.es_borrador ? '📝 Solo visible en tu panel' : '🌐 Visible en ficha pública'}</span>
+                  <a href="/producto/${r.producto_id}" target="_blank" class="text-emerald-700 font-bold hover:underline">Ver en tienda ↗</a>
+                </div>
+              </div>
+            `).join('');
+
+            // Listeners para eliminar
+            document.querySelectorAll('.btn-delete-recipe').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-delete-id');
+                if (!confirm('¿Estás seguro de eliminar esta receta oficial?')) return;
+                try {
+                  const delRes = await fetch(`${apiBase}/api/v1/admin/tienda/recetas/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  if (delRes.ok) {
+                    await loadStoreRecipes();
+                  } else {
+                    alert('Error al eliminar receta.');
+                  }
+                } catch (e) {
+                  alert('Error de conexión.');
+                }
+              });
+            });
+          } else {
+            console.error('Error del servidor al listar recetas:', res.status);
+            if (empty) {
+              empty.innerHTML = `
+                <div class="text-3xl">⚠️</div>
+                <p class="font-semibold text-rose-600">Error al cargar recetas</p>
+                <p class="text-stone-400 text-[11px]">No se pudo cargar la lista de recetas (${res.status}). Intenta nuevamente.</p>
+                <button type="button" id="btn-retry-recipes" class="mt-2 inline-flex items-center gap-1 rounded-lg bg-stone-100 hover:bg-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition">🔄 Reintentar</button>
+              `;
+              empty.classList.remove('hidden');
+              document.getElementById('btn-retry-recipes')?.addEventListener('click', loadStoreRecipes);
+            }
+          }
+        } catch (e) {
+          console.error('Error cargando recetas:', e);
+          if (empty) {
+            empty.innerHTML = `
+              <div class="text-3xl">⚠️</div>
+              <p class="font-semibold text-rose-600">Error de conexión</p>
+              <p class="text-stone-400 text-[11px]">No se pudo conectar con el servidor. Revisa tu conexión y vuelve a intentar.</p>
+              <button type="button" id="btn-retry-recipes" class="mt-2 inline-flex items-center gap-1 rounded-lg bg-stone-100 hover:bg-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition">🔄 Reintentar</button>
+            `;
+            empty.classList.remove('hidden');
+            document.getElementById('btn-retry-recipes')?.addEventListener('click', loadStoreRecipes);
+          }
+        } finally {
+          if (loading) loading.classList.add('hidden');
+        }
+      }
+
+      // Enviar formulario
+      if (form) {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const btnSubmit = document.getElementById('btn-submit-recipe');
+          if (btnSubmit) {
+            btnSubmit.disabled = true;
+            btnSubmit.textContent = 'Publicando...';
+          }
+
+          const pasosInputs = Array.from(document.querySelectorAll('.paso-input'));
+          const pasos = pasosInputs
+            .map(input => input.value.trim())
+            .filter(Boolean);
+          const checkBorrador = document.getElementById('rec-es-borrador');
+          const esBorrador = checkBorrador ? checkBorrador.checked : false;
+
+          const payload = {
+            producto_id: parseInt(prodSelect?.value || '0', 10),
+            nombre_receta: document.getElementById('rec-nombre')?.value || '',
+            metodo: document.getElementById('rec-metodo')?.value || 'V60',
+            dosis_cafe_g: parseFloat(inputDosis?.value || '18'),
+            agua_ml: parseFloat(inputAgua?.value || '270'),
+            ratio: inputRatio?.value || null,
+            molino_usado: document.getElementById('rec-molino')?.value || null,
+            grosor_molienda: document.getElementById('rec-molienda')?.value || null,
+            temperatura_c: parseInt(document.getElementById('rec-temp')?.value || '92', 10),
+            tiempo_total_s: parseInt(document.getElementById('rec-tiempo')?.value || '165', 10),
+            notas_catado: document.getElementById('rec-notas')?.value || null,
+            es_borrador: esBorrador,
+            pasos: pasos.length > 0 ? pasos : null,
+          };
+
+          try {
+            const res = await fetch(`${apiBase}/api/v1/admin/tienda/recetas`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+              closeModal();
+              await loadStoreRecipes();
+            } else {
+              const err = await res.json();
+              alert(`Error al crear receta: ${err.detail || 'Verifica los campos ingresados.'}`);
+            }
+          } catch (err) {
+            alert(`Error de red: ${err.message}`);
+          } finally {
+            if (btnSubmit) {
+              btnSubmit.disabled = false;
+              btnSubmit.textContent = 'Publicar Receta Oficial';
+            }
+          }
+        });
+      }
+
+      loadStoreProducts();
+      loadStoreRecipes();
+    })();
+  </script>
+</StoreAdminLayout>
+

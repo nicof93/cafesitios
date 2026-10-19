@@ -5,12 +5,15 @@ from sqlalchemy.orm import sessionmaker
 
 from api.admin import (
     BranchInput,
+    CatalogInput,
     CatalogTestRequest,
     StoreCreateUpdateRequest,
+    StoresImportRequest,
     VisibilityUpdateRequest,
     BulkVisibilityUpdateRequest,
     create_or_update_store,
     export_stores_and_branches,
+    import_stores_and_branches,
     list_admin_stores,
     list_moderation_products,
     test_store_catalog,
@@ -67,10 +70,22 @@ class TestAdminAndFeatures(unittest.TestCase):
         self.assertTrue(is_valid_tasting_note("Caramelo"))
 
     def test_create_store_with_branches_and_export(self):
-        # 1. Register store with branches
+        # 1. Register store with multiple catalogs and branches
         payload = StoreCreateUpdateRequest(
             nombre="Café El Grano",
             url_catalogo="https://elgrano.cl/shop/cafe",
+            catalogos=[
+                CatalogInput(
+                    url_catalogo="https://elgrano.cl/shop/cafe",
+                    etiqueta="Granos de Especialidad",
+                    activa=True,
+                ),
+                CatalogInput(
+                    url_catalogo="https://elgrano.cl/shop/ediciones-limitadas",
+                    etiqueta="Ediciones Limitadas",
+                    activa=True,
+                ),
+            ],
             plataforma="woocommerce",
             direccion="Av. Providencia 1234",
             comuna="Providencia",
@@ -103,20 +118,64 @@ class TestAdminAndFeatures(unittest.TestCase):
         self.assertEqual(res.url_web, "https://elgrano.cl")
         self.assertEqual(res.url_catalogo, "https://elgrano.cl/shop/cafe")
         self.assertEqual(len(res.sucursales), 2)
+        self.assertEqual(len(res.catalogos), 2)
 
         # 2. List stores in admin
         list_res = list_admin_stores(db_session=self.session)
         self.assertEqual(list_res.total_tiendas, 1)
         self.assertEqual(list_res.tiendas[0].sitio_oficial, "https://elgrano.cl")
         self.assertEqual(len(list_res.tiendas[0].sucursales), 2)
+        self.assertEqual(len(list_res.tiendas[0].catalogos), 2)
 
         # 3. Export to production JSON & SQL
         export_res = export_stores_and_branches(db_session=self.session)
         self.assertEqual(export_res.total_tiendas, 1)
         self.assertEqual(export_res.total_sucursales, 2)
+        self.assertEqual(export_res.total_catalogos, 2)
         self.assertIn("INSERT INTO tiendas", export_res.sql_script)
         self.assertIn("INSERT INTO sucursales_tienda", export_res.sql_script)
+        self.assertIn("INSERT INTO tienda_catalogos", export_res.sql_script)
         self.assertIn("Café El Grano", export_res.sql_script)
+        self.assertEqual(len(export_res.tiendas[0]["catalogos"]), 2)
+
+        # 4. Import to another environment / clean store verification
+        import_payload = StoresImportRequest(
+            tiendas=[
+                StoreCreateUpdateRequest(
+                    nombre="Tostaduría Importada",
+                    url_catalogo="https://importada.cl/products.json",
+                    catalogos=[
+                        CatalogInput(
+                            url_catalogo="https://importada.cl/products.json",
+                            etiqueta="Catálogo General",
+                            activa=True,
+                        ),
+                    ],
+                    plataforma="shopify",
+                    direccion="Calle Import 99",
+                    comuna="Ñuñoa",
+                    activo=True,
+                    sucursales=[
+                        BranchInput(
+                            nombre="Sucursal Principal",
+                            direccion="Calle Import 99",
+                            comuna="Ñuñoa",
+                            activo=True,
+                        )
+                    ],
+                )
+            ]
+        )
+        import_res = import_stores_and_branches(payload=import_payload, db_session=self.session)
+        self.assertEqual(import_res["status"], "ok")
+        self.assertEqual(import_res["imported_stores"], 1)
+        self.assertEqual(import_res["total_catalogos"], 1)
+        self.assertEqual(import_res["total_sucursales"], 1)
+        self.assertIn("Tostaduría Importada", import_res["tiendas_afectadas"])
+
+        # Check that now list_admin_stores shows 2 stores
+        updated_list = list_admin_stores(db_session=self.session)
+        self.assertEqual(updated_list.total_tiendas, 2)
 
     def test_product_moderation_and_visibility(self):
         # Setup store and products (one coffee, one non-coffee accessory)

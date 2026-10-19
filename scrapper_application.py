@@ -14,24 +14,29 @@ if sys.platform == "win32":
         pass
 
 from typing import Any, Dict, List, Optional, Union
+from urllib.parse import urlparse
 
+from api.stores import extract_official_website
 from db.database import DatabaseManager
 from scrapper.coffee_metadata import (
     extract_coffee_characteristics,
     summarize_extraction_coverage,
     generar_resumen_corto,
 )
+import logging
 from core.extractor import CoffeeAttributesExtractor
+from scrapper.driver_factory import DriverFactory
 from scrapper.shopify_driver import ShopifyDriver
 from scrapper.woocommerce_driver import WooCommerceDriver
+from scrapper.jumpseller_driver import JumpsellerDriver
+from scrapper.prestashop_driver import PrestaShopDriver
+from scrapper.odoo_driver import OdooDriver
+from scrapper.sumup_driver import SumUpDriver
 
-drivers_por_plataforma = {
-    'shopify': ShopifyDriver,
-    'woocommerce': WooCommerceDriver,
-}
+drivers_por_plataforma = dict(DriverFactory._drivers)
 
 
-def consumir_productos_tienda(tienda):
+def consumir_productos_tienda(tienda: Dict[str, Any]) -> List[Dict[str, Any]]:
     plataforma = (tienda.get('plataforma') or '').strip().lower()
     if plataforma in drivers_por_plataforma:
         primary_driver = drivers_por_plataforma[plataforma]
@@ -43,18 +48,77 @@ def consumir_productos_tienda(tienda):
     else:
         raise ValueError(f"Plataforma no soportada: {tienda['plataforma']}")
 
-    errores = []
-    for driver_class in driver_classes:
-        driver = driver_class(nombre=tienda['nombre'], url_base=tienda['url_base'])
-        try:
-            return driver.consumir_productos()
-        except Exception as error:
-            errores.append(f"{driver_class.__name__}: {error}")
+    # Extraer URLs de catálogos si la tienda tiene múltiples colecciones
+    catalogos = tienda.get('catalogos') or []
+    urls_catalogos: List[str] = [
+        c['url_catalogo']
+        for c in catalogos
+        if isinstance(c, dict) and c.get('activa', True) and c.get('url_catalogo')
+    ]
+    if not urls_catalogos:
+        url_base = tienda.get('url_base')
+        if url_base:
+            urls_catalogos = [url_base]
 
-    raise RuntimeError(
-        f"No se pudo detectar una plataforma válida para '{tienda['nombre']}': "
-        + '; '.join(errores)
-    )
+    if not urls_catalogos:
+        return []
+
+    productos_por_clave: Dict[str, Dict[str, Any]] = {}
+
+    for url_cat in urls_catalogos:
+        productos_url = None
+        errores = []
+        for driver_class in driver_classes:
+            driver = driver_class(nombre=tienda['nombre'], url_base=url_cat)
+            try:
+                productos_url = driver.consumir_productos()
+                if productos_url is not None:
+                    break
+            except Exception as error:
+                errores.append(f"{driver_class.__name__}: {error}")
+
+        if productos_url is None:
+            if len(urls_catalogos) == 1:
+                raise RuntimeError(
+                    f"No se pudo detectar una plataforma válida para '{tienda['nombre']}' en {url_cat}: "
+                    + '; '.join(errores)
+                )
+            else:
+                logging.warning(
+                    f"[{tienda['nombre']}] Falló consumo de catálogo {url_cat}: {'; '.join(errores)}"
+                )
+                continue
+
+        # Deduplicar productos y combinar variantes entre colecciones
+        for p in productos_url:
+            clave = p.get('url_detalle') or p.get('id_externo') or p.get('nombre')
+            if not clave:
+                continue
+
+            if clave not in productos_por_clave:
+                productos_por_clave[clave] = p
+            else:
+                existente = productos_por_clave[clave]
+                variantes_existentes = existente.setdefault('variantes', [])
+                ids_vars_existentes = {
+                    v.get('id_variante_externo') or (v.get('formato_gramos'), v.get('opcion'))
+                    for v in variantes_existentes
+                }
+                for nueva_var in p.get('variantes', []):
+                    var_key = nueva_var.get('id_variante_externo') or (
+                        nueva_var.get('formato_gramos'),
+                        nueva_var.get('opcion'),
+                    )
+                    if var_key not in ids_vars_existentes:
+                        variantes_existentes.append(nueva_var)
+                        ids_vars_existentes.add(var_key)
+
+                if not existente.get('imagen') and p.get('imagen'):
+                    existente['imagen'] = p.get('imagen')
+                if not existente.get('descripcion') and p.get('descripcion'):
+                    existente['descripcion'] = p.get('descripcion')
+
+    return list(productos_por_clave.values())
 
 
 def sincronizar_tienda(
@@ -87,6 +151,19 @@ def sincronizar_tienda(
 
     tienda_id = tienda['id']
     nombre_tienda = tienda.get('nombre', f"Tienda #{tienda_id}")
+
+    # Resolución y persistencia de favicon/logo de la tienda si no está resuelto
+    if not tienda.get('logo_url'):
+        sitio_oficial = extract_official_website(tienda.get('url_base'))
+        if sitio_oficial:
+            try:
+                domain = urlparse(sitio_oficial).netloc
+                if domain:
+                    favicon_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
+                    db.actualizar_logo_tienda(tienda_id, favicon_url)
+                    tienda['logo_url'] = favicon_url
+            except Exception:
+                pass
 
     sincronizacion_id = None
     try:

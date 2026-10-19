@@ -1,0 +1,339 @@
+---
+import AdminLteLayout from '../layouts/AdminLteLayout.astro';
+
+const apiBaseUrl = "http://localhost:8000";
+---
+
+<AdminLteLayout 
+  title="Moderación de Catálogo | Plataforma Admin"
+  activeNav="moderacion"
+  breadcrumb={[{ label: "Inicio", url: "/plataforma/" }, { label: "Moderación de Catálogo" }]}
+>
+  <div class="space-y-6" data-api-base={apiBaseUrl}>
+    
+    <!-- CABECERA -->
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-stone-200/80 pb-6">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-black tracking-tight text-stone-900 flex items-center gap-2">
+          <span>🛡️</span>
+          <span>Moderación de Catálogo</span>
+        </h1>
+        <p class="mt-1 text-xs text-stone-500 max-w-2xl">
+          Filtra y oculta productos que no son café (poleras, imanes, relojes, tazas, vajilla, suscripciones, accesorios) para que no ensucien las búsquedas ni el comparador público.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button
+          type="button"
+          id="btn-bulk-hide-suspected"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-700 transition focus:outline-none focus:ring-2 focus:ring-rose-500"
+        >
+          <span>🚫</span>
+          <span>Ocultar Sospechosos Filtrados</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- KPIS Y RESUMEN DE MODERACIÓN -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div class="rounded-2xl border border-rose-200 bg-rose-50/50 p-5 shadow-xs">
+        <p class="text-xs font-bold uppercase tracking-wider text-rose-800">Sospechosos No-Café</p>
+        <p id="kpi-suspected" class="mt-2 text-3xl font-extrabold text-rose-900">0</p>
+        <p class="mt-1 text-[11px] text-rose-700">Poleras, imanes, relojes, tazas y accesorios detectados.</p>
+      </div>
+      <div class="rounded-2xl border border-amber-200 bg-amber-50/50 p-5 shadow-xs">
+        <p class="text-xs font-bold uppercase tracking-wider text-amber-800">Ocultos del Catálogo</p>
+        <p id="kpi-hidden" class="mt-2 text-3xl font-extrabold text-amber-900">0</p>
+        <p class="mt-1 text-[11px] text-amber-700">Productos deshabilitados para no aparecer en comparador ni filtros.</p>
+      </div>
+      <div class="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-xs">
+        <p class="text-xs font-bold uppercase tracking-wider text-emerald-800">Cafés Legítimos Visibles</p>
+        <p id="kpi-visible" class="mt-2 text-3xl font-extrabold text-emerald-900">0</p>
+        <p class="mt-1 text-[11px] text-emerald-700">Productos de café activos en la vista pública.</p>
+      </div>
+    </div>
+
+    <!-- FILTROS Y BÚSQUEDA -->
+    <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex rounded-xl bg-stone-100 p-1 text-xs font-semibold">
+            <button type="button" class="mod-filter-btn active rounded-lg bg-stone-900 px-3 py-1.5 text-white" data-mode="suspected">
+              Sospechosos No-Café
+            </button>
+            <button type="button" class="mod-filter-btn rounded-lg px-3 py-1.5 text-stone-700 hover:text-stone-900" data-mode="hidden">
+              Ocultos
+            </button>
+            <button type="button" class="mod-filter-btn rounded-lg px-3 py-1.5 text-stone-700 hover:text-stone-900" data-mode="visible">
+              Visibles
+            </button>
+            <button type="button" class="mod-filter-btn rounded-lg px-3 py-1.5 text-stone-700 hover:text-stone-900" data-mode="all">
+              Todos
+            </button>
+          </div>
+
+          <select
+            id="mod-store-filter"
+            class="rounded-xl border border-stone-300 px-3 py-1.5 text-xs text-stone-800 focus:border-emerald-600 focus:outline-none"
+          >
+            <option value="">Todas las tiendas</option>
+          </select>
+
+          <input
+            type="text"
+            id="mod-search-input"
+            placeholder="Buscar por nombre..."
+            class="rounded-xl border border-stone-300 px-3.5 py-1.5 text-xs text-stone-800 focus:border-emerald-600 focus:outline-none"
+          />
+        </div>
+
+        <div class="text-xs text-stone-500" id="mod-items-count">
+          Cargando productos...
+        </div>
+      </div>
+
+      <!-- TABLA DE PRODUCTOS PARA MODERACIÓN -->
+      <div class="mt-6 overflow-x-auto">
+        <table class="w-full text-left text-xs text-stone-600">
+          <thead class="bg-stone-100 text-stone-800 font-bold uppercase tracking-wider">
+            <tr>
+              <th class="px-4 py-3">Producto</th>
+              <th class="px-4 py-3">Tienda</th>
+              <th class="px-4 py-3">Precio / Kilo</th>
+              <th class="px-4 py-3">Motivo de Sospecha</th>
+              <th class="px-4 py-3 text-center">Estado</th>
+              <th class="px-4 py-3 text-center">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="moderation-table-body" class="divide-y divide-stone-100 font-medium">
+            <tr>
+              <td colspan="6" class="py-8 text-center text-stone-400">Cargando productos de moderación...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script is:inline>
+    (function initModerationPage() {
+      const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname) || window.location.hostname.endsWith('.local');
+      if (!isLocalhost) {
+        window.location.replace('/');
+        return;
+      }
+
+      const API_BASE = 'http://localhost:8000';
+
+      const fetchWithEnv = (url, opts = {}) => {
+        if (window.plataformaState && typeof window.plataformaState.fetchWithEnv === 'function') {
+          return window.plataformaState.fetchWithEnv(url, opts);
+        }
+        const headers = new Headers(opts.headers || {});
+        headers.set('X-Target-Environment', localStorage.getItem('plataforma_active_env') || 'local');
+        return fetch(url, { ...opts, headers });
+      };
+
+      let currentModMode = 'suspected';
+      let currentModStore = '';
+      let currentModSearch = '';
+      let cachedModerationItems = [];
+
+      // Cargar opciones del selector de tiendas
+      async function loadStoresFilter() {
+        const modStoreFilter = document.getElementById('mod-store-filter');
+        if (!modStoreFilter) return;
+        try {
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/stores`);
+          if (res.ok) {
+            const data = await res.json();
+            const tiendas = data.tiendas || [];
+            const currentVal = modStoreFilter.value;
+            modStoreFilter.innerHTML = '<option value="">Todas las tiendas</option>' + 
+              tiendas.map((t) => `<option value="${t.nombre}">${t.nombre}</option>`).join('');
+            modStoreFilter.value = currentVal;
+          }
+        } catch (e) {
+          console.error("Error al cargar tiendas para filtro de moderación:", e);
+        }
+      }
+
+      // Cargar productos de moderación
+      async function loadModerationProducts() {
+        const tbody = document.getElementById('moderation-table-body');
+        const countEl = document.getElementById('mod-items-count');
+        if (!tbody) return;
+
+        try {
+          const params = new URLSearchParams({
+            mode: currentModMode,
+            limit: '300',
+          });
+          if (currentModStore) params.set('store_name', currentModStore);
+          if (currentModSearch) params.set('q', currentModSearch);
+
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/products/moderation?${params.toString()}`);
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `Error HTTP ${res.status} al cargar productos`);
+          }
+          const data = await res.json();
+          cachedModerationItems = data.items || [];
+
+          // Actualizar KPIs
+          const kpiSuspected = document.getElementById('kpi-suspected');
+          const kpiHidden = document.getElementById('kpi-hidden');
+          const kpiVisible = document.getElementById('kpi-visible');
+          if (kpiSuspected) kpiSuspected.textContent = data.total_sospechosos || 0;
+          if (kpiHidden) kpiHidden.textContent = data.total_ocultos || 0;
+          if (kpiVisible) kpiVisible.textContent = data.total_visibles_cafe || 0;
+          if (countEl) countEl.textContent = `Mostrando ${cachedModerationItems.length} productos`;
+
+          if (!cachedModerationItems.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-stone-400">No se encontraron productos bajo el criterio seleccionado.</td></tr>';
+            return;
+          }
+
+          tbody.innerHTML = cachedModerationItems.map((item) => `
+            <tr class="hover:bg-stone-50/60 transition ${item.oculto_catalogo ? 'bg-stone-50/80 opacity-70' : ''}">
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-3">
+                  ${item.imagen 
+                    ? `<img src="${item.imagen}" alt="${item.nombre}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop';" class="h-10 w-10 rounded-lg object-contain bg-[#F4F3ED] border border-stone-200 p-0.5" />` 
+                    : '<div class="h-10 w-10 rounded-lg bg-stone-200 flex items-center justify-center text-xs">☕</div>'}
+                  <div>
+                    <a href="${item.url_detalle}" target="_blank" rel="noopener noreferrer" class="font-bold text-stone-900 hover:text-emerald-700 transition">
+                      ${item.nombre}
+                    </a>
+                    <span class="block text-[11px] text-stone-400">ID: #${item.id}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="px-4 py-3 font-semibold text-stone-700">${item.tienda}</td>
+              <td class="px-4 py-3">
+                <span class="font-bold text-stone-900">$${(item.precio_clp || 0).toLocaleString('es-CL')}</span>
+                <span class="block text-[10px] text-stone-400">$${(item.precio_por_kilo || 0).toLocaleString('es-CL')}/kg</span>
+              </td>
+              <td class="px-4 py-3">
+                ${item.es_sospechoso 
+                  ? `<span class="rounded-md bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-800">${item.motivo_sospecha || 'Posible no-café'}</span>`
+                  : '<span class="text-[11px] text-stone-400">Sin sospecha</span>'}
+              </td>
+              <td class="px-4 py-3 text-center">
+                ${item.oculto_catalogo
+                  ? '<span class="rounded-full bg-rose-100 px-2.5 py-0.5 text-[10px] font-bold text-rose-900">Oculto</span>'
+                  : '<span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-900">Visible</span>'}
+              </td>
+              <td class="px-4 py-3 text-center">
+                <button
+                  type="button"
+                  class="btn-toggle-visibility rounded-lg px-3 py-1.5 text-xs font-bold transition ${item.oculto_catalogo ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-rose-100 text-rose-800 hover:bg-rose-200'}"
+                  data-id="${item.id}"
+                  data-current="${item.oculto_catalogo}"
+                >
+                  ${item.oculto_catalogo ? '👁️ Restaurar' : '🚫 Ocultar'}
+                </button>
+              </td>
+            </tr>
+          `).join('');
+
+          // Enlazar botones toggle
+          document.querySelectorAll('.btn-toggle-visibility').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+              const id = btn.getAttribute('data-id');
+              const current = btn.getAttribute('data-current') === 'true';
+              btn.disabled = true;
+              try {
+                const patchRes = await fetchWithEnv(`${API_BASE}/api/v1/admin/products/${id}/visibility`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ oculto_catalogo: !current }),
+                });
+                if (!patchRes.ok) {
+                  const errData = await patchRes.json().catch(() => ({}));
+                  throw new Error(errData.detail || `Error HTTP ${patchRes.status} al actualizar visibilidad`);
+                }
+                loadModerationProducts();
+              } catch (err) {
+                alert(`Error: ${err.message}`);
+                btn.disabled = false;
+              }
+            });
+          });
+
+        } catch (err) {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-rose-600">Error: ${err.message}</td></tr>`;
+        }
+      }
+
+      // Filtros de modo (sospechosos, ocultos, visibles, todos)
+      document.querySelectorAll('.mod-filter-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.mod-filter-btn').forEach((b) => {
+            b.className = b === btn
+              ? 'mod-filter-btn active rounded-lg bg-stone-900 px-3 py-1.5 text-white'
+              : 'mod-filter-btn rounded-lg px-3 py-1.5 text-stone-700 hover:text-stone-900';
+          });
+          currentModMode = btn.getAttribute('data-mode') || 'suspected';
+          loadModerationProducts();
+        });
+      });
+
+      document.getElementById('mod-store-filter')?.addEventListener('change', (e) => {
+        currentModStore = e.target.value;
+        loadModerationProducts();
+      });
+
+      document.getElementById('mod-search-input')?.addEventListener('input', (e) => {
+        currentModSearch = (e.target.value || '').trim();
+        loadModerationProducts();
+      });
+
+      // Ocultar masivamente los sospechosos visibles
+      document.getElementById('btn-bulk-hide-suspected')?.addEventListener('click', async () => {
+        const suspectedVisibleIds = cachedModerationItems
+          .filter((i) => i.es_sospechoso && !i.oculto_catalogo)
+          .map((i) => i.id);
+
+        if (!suspectedVisibleIds.length) {
+          alert('No hay productos sospechosos visibles en este listado para ocultar.');
+          return;
+        }
+
+        if (!confirm(`¿Deseas ocultar ${suspectedVisibleIds.length} productos sospechosos del catálogo general?`)) {
+          return;
+        }
+
+        try {
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/products/bulk-visibility`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_ids: suspectedVisibleIds, oculto_catalogo: true }),
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `Error HTTP ${res.status} al ocultar en lote`);
+          }
+          alert(`${suspectedVisibleIds.length} productos ocultados del catálogo.`);
+          loadModerationProducts();
+        } catch (err) {
+          alert(`Error: ${err.message}`);
+        }
+      });
+
+      // Recargar al cambiar ambiente (localhost <-> supabase)
+      window.addEventListener('plataforma:env-changed', () => {
+        loadStoresFilter();
+        loadModerationProducts();
+      });
+
+      // Inicialización
+      loadStoresFilter();
+      loadModerationProducts();
+    })();
+  </script>
+</AdminLteLayout>
+
