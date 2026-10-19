@@ -9,6 +9,8 @@ from core.security_store_admin import (
     create_store_admin_token,
     decode_store_admin_token,
     get_current_store_admin,
+    hash_store_password,
+    verify_store_password,
     StoreAdminContext,
 )
 from db.database import (
@@ -246,6 +248,41 @@ class TestStoreAdminMultiTenant(unittest.TestCase):
         sync_audits = [a for a in audit.registros if a.accion == "INICIAR_SYNC"]
         self.assertTrue(len(sync_audits) >= 1)
         self.assertEqual(sync_audits[0].tienda_id, self.tienda_a.id)
+
+    def test_password_hashing_and_verification(self):
+        pw = "SuperClaveSecreta123!"
+        hashed = hash_store_password(pw)
+        self.assertTrue(hashed.startswith("pbkdf2:sha256:100000$"))
+        self.assertTrue(verify_store_password(pw, hashed))
+        self.assertFalse(verify_store_password("clave_errada", hashed))
+        self.assertFalse(verify_store_password(pw, None))
+
+    def test_login_with_password_hash_and_flag(self):
+        # Asignar password hasheado al usuario de Tienda A con debe_cambiar_password=True
+        self.user_admin_a.password_hash = hash_store_password("ClaveTemporal2026")
+        self.user_admin_a.debe_cambiar_password = True
+        self.session.commit()
+
+        req = DummyRequest(client_host="192.168.1.100")
+
+        # 1. Login con password incorrecto -> 401
+        with self.assertRaises(HTTPException) as cm:
+            store_admin_login(
+                payload=StoreAdminLoginRequest(email=self.user_admin_a.usuario_id, password="password_malo"),
+                request=req,
+                db_session=self.session,
+            )
+        self.assertEqual(cm.exception.status_code, 401)
+
+        # 2. Login con password correcto -> 200 y debe_cambiar_password=True
+        login_resp = store_admin_login(
+            payload=StoreAdminLoginRequest(email=self.user_admin_a.usuario_id, password="ClaveTemporal2026"),
+            request=req,
+            db_session=self.session,
+        )
+        self.assertTrue(login_resp.debe_cambiar_password)
+        self.assertEqual(login_resp.tienda_id, self.tienda_a.id)
+        self.assertEqual(login_resp.usuario_id, self.user_admin_a.usuario_id)
 
 
 if __name__ == "__main__":

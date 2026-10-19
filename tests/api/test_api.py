@@ -5,7 +5,7 @@ from datetime import datetime
 from fastapi.testclient import TestClient
 from fastapi import HTTPException
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from main import app
 from api.router import get_db_session, get_product_detail, get_stores_summary
@@ -26,8 +26,62 @@ from sqlalchemy.pool import StaticPool
 
 client = TestClient(app)
 
+_mock_engine = create_engine(
+    "sqlite://",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+
 class MockDatabaseSession:
-    pass
+    def get_bind(self):
+        return _mock_engine
+
+    def scalars(self, *args, **kwargs):
+        class MockScalars:
+            def first(self):
+                return None
+            def all(self):
+                return []
+        return MockScalars()
+
+    def execute(self, *args, **kwargs):
+        class MockResult:
+            def scalars(self):
+                return self
+            def first(self):
+                return None
+            def all(self):
+                return []
+        return MockResult()
+
+    def query(self, *args, **kwargs):
+        class MockQuery:
+            def filter(self, *args, **kwargs):
+                return self
+            def join(self, *args, **kwargs):
+                return self
+            def outerjoin(self, *args, **kwargs):
+                return self
+            def group_by(self, *args, **kwargs):
+                return self
+            def order_by(self, *args, **kwargs):
+                return self
+            def first(self):
+                return None
+            def all(self):
+                return []
+        return MockQuery()
+
+    def commit(self):
+        pass
+
+    def rollback(self):
+        pass
+
+    def close(self):
+        pass
+
+
 
 class MockCoffeeRepositoryForAPI:
     last_filters = {}
@@ -60,9 +114,15 @@ class MockCoffeeRepositoryForAPI:
 def mock_get_db_session_override():
     yield MockDatabaseSession()
 
-app.dependency_overrides[get_db_session] = mock_get_db_session_override
-
 class TestAPI(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        app.dependency_overrides[get_db_session] = mock_get_db_session_override
+
+    @classmethod
+    def tearDownClass(cls):
+        app.dependency_overrides.pop(get_db_session, None)
+
     def test_product_detail_returns_description_and_all_variants(self):
         engine = create_engine(
             "sqlite://",
@@ -514,6 +574,128 @@ class TestAPI(unittest.TestCase):
                 os.environ["ENABLE_RECIPES"] = old_flag
             else:
                 os.environ.pop("ENABLE_RECIPES", None)
+
+    def test_products_with_empty_query_params(self):
+        """Verifica que el scroll infinito y filtros con strings vacíos respondan 200 en lugar de 422."""
+        import api.router
+        original_repo = api.router.PostgresCoffeeRepository
+        api.router.PostgresCoffeeRepository = MockCoffeeRepositoryForAPI
+        try:
+            empty_params = {
+                "limit": "18",
+                "offset": "18",
+                "sort_by": "kilo",
+                "category": "cafe",
+                "search_query": "",
+                "store_name": "",
+                "country": "",
+                "process": "",
+                "variety": "",
+                "notes": "",
+                "min_price": "",
+                "max_price": "",
+            }
+            res = client.get("/api/v1/products", params=empty_params)
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertIn("data", data)
+            self.assertIsNone(api.router.PostgresCoffeeRepository.last_filters["country"])
+            self.assertIsNone(api.router.PostgresCoffeeRepository.last_filters["process"])
+            self.assertIsNone(api.router.PostgresCoffeeRepository.last_filters["min_price"])
+            self.assertIsNone(api.router.PostgresCoffeeRepository.last_filters["max_price"])
+        finally:
+            api.router.PostgresCoffeeRepository = original_repo
+
+    def test_hidden_products_are_completely_isolated_from_public_site(self):
+        """Verifica que un producto con oculto_catalogo=True no sea accesible en detalle, coincidencias, recetas ni comparador."""
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(engine)
+        test_session = sessionmaker(bind=engine)()
+
+        def override_session():
+            yield test_session
+
+        app.dependency_overrides[get_db_session] = override_session
+        try:
+            store = Tienda(id=99, nombre="Tostaduría Secreta", url_base="https://secreta.cl", activo=True)
+            prod_visible = Producto(
+                id=901,
+                tienda_id=99,
+                nombre="Café Visible Especial",
+                url_detalle="https://secreta.cl/visible",
+                activo=True,
+                oculto_catalogo=False,
+                pais_origen="Colombia",
+                variedad="Geisha",
+                proceso="Lavado",
+                variantes=[
+                    Variante(
+                        id=9011,
+                        producto_id=901,
+                        id_variante_externo="v-vis-1",
+                        opcion="250g",
+                        formato_gramos=250,
+                        precio_clp=15000,
+                        precio_original_clp=15000,
+                        precio_por_kilo=60000,
+                        disponible=True,
+                    )
+                ]
+            )
+            prod_hidden = Producto(
+                id=902,
+                tienda_id=99,
+                nombre="Polera No Café Oculta",
+                url_detalle="https://secreta.cl/polera",
+                activo=True,
+                oculto_catalogo=True,  # PRODUCTO OCULTO
+                pais_origen="Colombia",
+                variedad="Geisha",
+                proceso="Lavado",
+                variantes=[
+                    Variante(
+                        id=9021,
+                        producto_id=902,
+                        id_variante_externo="v-hid-1",
+                        opcion="Talla M",
+                        formato_gramos=250,
+                        precio_clp=20000,
+                        precio_original_clp=20000,
+                        precio_por_kilo=80000,
+                        disponible=True,
+                    )
+                ]
+            )
+            test_session.add_all([store, prod_visible, prod_hidden])
+            test_session.commit()
+
+            # 1. Detalle del producto oculto debe retornar 404
+            res_detail = client.get("/api/v1/products/902/detail")
+            self.assertEqual(res_detail.status_code, 404)
+
+            # 2. Coincidencias del producto oculto debe retornar 404
+            res_matches = client.get("/api/v1/products/902/matches")
+            self.assertEqual(res_matches.status_code, 404)
+
+            # 3. Recetas del producto oculto debe retornar 404
+            res_recipes = client.get("/api/v1/products/902/recipes")
+            self.assertEqual(res_recipes.status_code, 404)
+
+            # 4. Comparador no debe incluir el producto oculto
+            res_compare = client.get("/api/v1/products/compare?ids=901,902")
+            self.assertEqual(res_compare.status_code, 200)
+            compare_data = res_compare.json()
+            compared_ids = [p["id"] for p in compare_data.get("productos", [])]
+            self.assertIn(901, compared_ids)
+            self.assertNotIn(902, compared_ids)
+        finally:
+            app.dependency_overrides[get_db_session] = mock_get_db_session_override
+            test_session.close()
+            engine.dispose()
 
 if __name__ == "__main__":
     unittest.main()

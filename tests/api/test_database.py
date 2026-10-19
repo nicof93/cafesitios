@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from db.database import (
     Base,
@@ -265,7 +265,7 @@ class TestDatabaseManager(unittest.TestCase):
         from sqlalchemy import inspect, text
         from tempfile import TemporaryDirectory
 
-        project_root = Path(__file__).resolve().parent.parent
+        project_root = Path(__file__).resolve().parents[2]
         with TemporaryDirectory() as directory:
             database_path = Path(directory) / 'legacy.sqlite'
             database_url = f"sqlite:///{database_path.as_posix()}"
@@ -297,10 +297,11 @@ class TestDatabaseManager(unittest.TestCase):
                     ).scalar_one()
 
                 self.assertEqual(store_name, 'Tienda existente')
-                self.assertEqual(revision, '0015_perf_indexes_and_category')
+                self.assertEqual(revision, '0020_add_partial_index_visibles')
                 table_names = set(inspect(db.engine).get_table_names())
                 view_names = set(inspect(db.engine).get_view_names())
                 self.assertIn('vista_mayores_caidas_semana', view_names)
+                self.assertIn('tienda_catalogos', table_names)
                 self.assertIn('sincronizaciones', table_names)
                 self.assertIn('sincronizaciones_log', table_names)
                 self.assertIn('sucursales_tienda', table_names)
@@ -328,6 +329,7 @@ class TestDatabaseManager(unittest.TestCase):
                 self.assertIn('latitud', tienda_columns)
                 self.assertIn('longitud', tienda_columns)
                 self.assertIn('comuna', tienda_columns)
+                self.assertIn('logo_url', tienda_columns)
             finally:
                 db.engine.dispose()
 
@@ -335,7 +337,7 @@ class TestDatabaseManager(unittest.TestCase):
         from tempfile import TemporaryDirectory
         from sqlalchemy import inspect, text
 
-        project_root = Path(__file__).resolve().parent.parent
+        project_root = Path(__file__).resolve().parents[2]
         with TemporaryDirectory() as directory:
             database_url = f"sqlite:///{(Path(directory) / 'partial.sqlite').as_posix()}"
             db = DatabaseManager.__new__(DatabaseManager)
@@ -636,6 +638,61 @@ class TestDatabaseManager(unittest.TestCase):
                 url_detalle='https://cafecascanueces.cl/producto/classic-blend-espresso/'
             ).one()
             self.assertEqual(saved.tienda_id, store_b_id)
+        finally:
+            session.close()
+            engine.dispose()
+
+    def test_guardar_catalogo_clamps_overflow_precio_por_kilo(self):
+        """Verifica que variantes con precio_por_kilo exorbitante (>= 10^8) se limiten a 99999999.99 sin desbordar NUMERIC(10, 2)."""
+        engine = create_engine('sqlite:///:memory:')
+        Base.metadata.create_all(engine)
+        db = DatabaseManager(db_url='sqlite:///:memory:')
+        db.engine = engine
+        db.SessionLocal = sessionmaker(bind=engine)
+
+        session = db.SessionLocal()
+        store = Tienda(nombre='Tienda Overflows', url_base='https://overflow.cl', plataforma='shopify', activo=True)
+        session.add(store)
+        session.commit()
+        store_id = store.id
+        session.close()
+
+        # Producto con precio extremo que produciría un precio_por_kilo >= 10^8 (desborde en NUMERIC(10, 2))
+        extreme_product = {
+            'nombre': 'Máquina Industrial Espresso Probat',
+            'tienda': 'Tienda Overflows',
+            'id_externo': 'extreme-1',
+            'url_detalle': 'https://overflow.cl/products/maquina-probat',
+            'imagen': 'https://overflow.cl/img.jpg',
+            'descripcion': 'Máquina tostadora',
+            'disponible': True,
+            'categoria': 'maquinaria',
+            'variantes': [{
+                'id_variante_externo': 'var-probat-extreme',
+                'opcion': '1 Grupo',
+                'formato_gramos': 1,
+                'precio_clp': 150000000,
+                'precio_original_clp': 150000000,
+                'en_oferta': False,
+                'descuento_porcentaje': 0,
+                'precio_por_kilo': 150000000000.0,  # Excede 10^8
+                'disponible': True,
+            }],
+        }
+
+        # Guardar catálogo no debe fallar por desbordamiento numérico
+        counts = db.guardar_catalogo([extreme_product], tienda_id=store_id)
+        self.assertEqual(counts['agregados'], 1)
+
+        session = db.SessionLocal()
+        try:
+            saved_var = session.query(Variante).filter_by(id_variante_externo='var-probat-extreme').one()
+            self.assertLess(float(saved_var.precio_por_kilo), 10**8)
+            self.assertEqual(float(saved_var.precio_por_kilo), 99999999.99)
+
+            saved_hist = session.query(HistorialPrecio).filter_by(variante_id=saved_var.id).one()
+            self.assertLess(float(saved_hist.precio_por_kilo), 10**8)
+            self.assertEqual(float(saved_hist.precio_por_kilo), 99999999.99)
         finally:
             session.close()
             engine.dispose()

@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scrapper.woocommerce_driver import WooCommerceDriver
 
@@ -13,7 +13,7 @@ class TestWooCommerceDriver(unittest.TestCase):
             nombre="Café Altura",
             url_base="https://cafealtura.cl/wp-json/wc/store/v1/products"
         )
-        json_path = Path(__file__).resolve().parent.parent / "examples-by-ecommerce-platform" / "woocommerce.json"
+        json_path = Path(__file__).resolve().parents[2] / "examples-by-ecommerce-platform" / "woocommerce.json"
         with open(json_path, "r", encoding="utf-8") as f:
             self.sample_data = json.load(f)
 
