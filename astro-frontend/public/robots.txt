@@ -1,6 +1,15 @@
+# https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Allow: /
+
+# Exclusión de paneles privados y APIs internas
 Disallow: /api/
+Disallow: /admin
+Disallow: /admin-tienda/
+Disallow: /404
 
+# Host
+Host: https://cafesitios.cl
+
+# Sitemaps oficial para Google Search Console
 Sitemap: https://cafesitios.cl/sitemap.xml
-

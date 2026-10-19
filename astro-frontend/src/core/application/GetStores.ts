@@ -26,7 +26,7 @@ export class GetStoresUseCase {
       lon: params.lon
     };
 
-    const response = await this.http.get<RawStoresResponse>('/api/v1/stores', {
+    const response = await this.http.get<RawStoresResponse>('/api/v1/tiendas', {
       params: queryParams
     });
 

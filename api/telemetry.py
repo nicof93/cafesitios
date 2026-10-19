@@ -12,6 +12,7 @@ from api.schemas import TelemetryEventRequest, TelemetryEventResponse
 from application.manage_telemetry import ManageTelemetryUseCase
 
 router = APIRouter(prefix="/api/v1/telemetry", tags=["Telemetría"])
+telemetria_router = APIRouter(prefix="/api/v1/telemetria", tags=["Telemetría"])
 
 
 def _get_client_ip(request: Request) -> str:
@@ -21,6 +22,20 @@ def _get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "127.0.0.1"
 
 
+@telemetria_router.post(
+    "/evento",
+    response_model=TelemetryEventResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar evento de telemetría o clic saliente",
+    description="Almacena el evento anonimizando la dirección IP (cero captura de PII)."
+)
+@telemetria_router.post("/event", response_model=TelemetryEventResponse, include_in_schema=False)
+@router.post(
+    "/evento",
+    response_model=TelemetryEventResponse,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False
+)
 @router.post(
     "/event",
     response_model=TelemetryEventResponse,

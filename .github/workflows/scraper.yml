@@ -43,6 +43,7 @@ jobs:
       - name: Ejecutar Scraper y Pipeline de Ingesta en Cascada
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SKIP_DB_MIGRATIONS: "true"
           PYTHONUNBUFFERED: "1"
           OMP_NUM_THREADS: "2"
         run: |

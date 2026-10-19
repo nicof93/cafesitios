@@ -17,6 +17,7 @@ from api.schemas import FeedbackCreateRequest, FeedbackResponse
 from application.manage_feedback import FeedbackCreateDTO, ManageFeedbackUseCase
 
 router = APIRouter(prefix="/api/v1/feedback", tags=["Feedback"])
+sugerencias_router = APIRouter(prefix="/api/v1/sugerencias", tags=["Sugerencias"])
 
 _feedback_rate_limit: Dict[str, List[float]] = defaultdict(list)
 FEEDBACK_WINDOW_SECONDS = 3600  # 1 hora
@@ -42,6 +43,15 @@ def _check_feedback_rate_limit(client_ip: str) -> None:
     _feedback_rate_limit[client_ip].append(now)
 
 
+@sugerencias_router.post(
+    "",
+    response_model=FeedbackResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Enviar sugerencia o reporte de feedback (CU-11)",
+    description="Permite a los usuarios enviar retroalimentación cualitativa de forma segura y anónima."
+)
+@sugerencias_router.post("/", response_model=FeedbackResponse, include_in_schema=False)
+@sugerencias_router.post("/sugerencia", response_model=FeedbackResponse, include_in_schema=False)
 @router.post(
     "",
     response_model=FeedbackResponse,
@@ -49,6 +59,8 @@ def _check_feedback_rate_limit(client_ip: str) -> None:
     summary="Enviar sugerencia o reporte de feedback (CU-11)",
     description="Permite a los usuarios enviar retroalimentación cualitativa de forma segura y anónima."
 )
+@router.post("/", response_model=FeedbackResponse, include_in_schema=False)
+@router.post("/sugerencia", response_model=FeedbackResponse, include_in_schema=False)
 def submit_feedback(
     payload: FeedbackCreateRequest,
     request: Request,

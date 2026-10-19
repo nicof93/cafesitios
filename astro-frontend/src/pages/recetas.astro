@@ -1,0 +1,528 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { FeatureFlags } from '../core/infrastructure/config/FeatureFlags';
+
+// Guard de Feature Flag para Guías
+if (!FeatureFlags.isGuidesEnabled()) {
+  return Astro.rewrite('/404');
+}
+
+const showCalibradorBanner = FeatureFlags.isCalibratorEnabled();
+
+const jsonLdRecetas = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Guías de Preparación de Café de Especialidad",
+  "description": "Aprende a preparar café de especialidad con parámetros precisos de molienda, temperatura del agua y ratios para V60, Aeropress, Espresso, Chemex y Prensa Francesa.",
+  "image": "https://cafesitios.cl/images/og-recetas.jpg",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Elegir el método y ratio",
+      "text": "Selecciona el método de filtrado o inmersión y calcula la proporción café:agua adecuada (ej. 1:15 a 1:16 para V60)."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Ajustar la molienda",
+      "text": "Usa molienda media-fina para V60, fina para espresso, y gruesa para prensa francesa."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Controlar la temperatura y vertido",
+      "text": "Vierte agua entre 90°C y 94°C realizando una pre-infusión de 30 a 45 segundos para desgasificar el grano."
+    }
+  ]
+};
+
+const metodos = [
+  {
+    id: "v60",
+    nombre: "Hario V60",
+    tipo: "Filtrado por Goteo (Pour-Over)",
+    icono: "☕",
+    ratio: "1:15 a 1:16",
+    molienda: "Media-fina (similar a sal de mesa)",
+    temperatura: "92°C - 94°C",
+    tiempo: "2:30 - 3:00 min",
+    perfil: "Taza limpia, acidez brillante, notas florales y frutales muy definidas.",
+    descripcion: "El cono de 60 grados con estrías en espiral permite un flujo constante de agua y una extracción controlada, ideal para resaltar las notas de origen de cafés lavados y geishas."
+  },
+  {
+    id: "aeropress",
+    nombre: "AeroPress",
+    tipo: "Inmersión y Presión",
+    icono: "🧪",
+    ratio: "1:14 a 1:15",
+    molienda: "Media a media-fina",
+    temperatura: "88°C - 92°C",
+    tiempo: "1:30 - 2:00 min",
+    perfil: "Cuerpo medio-alto, dulzor pronunciado y acidez redonda y suave.",
+    descripcion: "La combinación de inmersión total con presión manual permite extraer dulzor y cuerpo sin asperezas. Muy versátil tanto en método tradicional como invertido."
+  },
+  {
+    id: "chemex",
+    nombre: "Chemex",
+    tipo: "Filtrado con Papel Grueso",
+    icono: "🏺",
+    ratio: "1:16 a 1:17",
+    molienda: "Media-gruesa (similar a sal de mar)",
+    temperatura: "93°C - 95°C",
+    tiempo: "3:30 - 4:30 min",
+    perfil: "Taza extremadamente limpia, libre de sedimentos y acidez cristalina.",
+    descripcion: "Su filtro de papel triple capa retiene la mayor cantidad de aceites y partículas suspendidas, produciendo una bebida liviana con perfil tipo té, excelente para cafés africanos."
+  },
+  {
+    id: "prensa-francesa",
+    nombre: "Prensa Francesa",
+    tipo: "Inmersión Total",
+    icono: "🫖",
+    ratio: "1:14 a 1:15",
+    molienda: "Gruesa (granos partidos visibles)",
+    temperatura: "94°C - 96°C",
+    tiempo: "4:00 - 5:00 min",
+    perfil: "Cuerpo pesado y untuoso, notas achocolatadas, especiadas y terrosas.",
+    descripcion: "Al no usar filtro de papel, los aceites naturales del café pasan directamente a la taza, aportando máxima textura y sensación en boca, ideal para tuestes medios y cafés de proceso natural."
+  },
+  {
+    id: "espresso",
+    nombre: "Espresso",
+    tipo: "Presión a 9 Bares",
+    icono: "⚡",
+    ratio: "1:2 (ej. 18g café -> 36g espresso)",
+    molienda: "Fina (polvo suave uniforme)",
+    temperatura: "92°C - 94°C",
+    tiempo: "25 - 30 segundos",
+    perfil: "Concentrado, crema dorada y densa, acidez viva y postgusto prolongado.",
+    descripcion: "Extracción forzada a alta presión que emulsiona los aceites aromáticos del café en una bebida corta e intensa, base de flat whites, capuchinos y lattes."
+  },
+  {
+    id: "cold-brew",
+    nombre: "Cold Brew",
+    tipo: "Maceración en Frío",
+    icono: "🧊",
+    ratio: "1:8 a 1:10 (concentrado)",
+    molienda: "Extra gruesa",
+    temperatura: "Agua fría o ambiente (18°C - 20°C)",
+    tiempo: "12 a 18 horas",
+    perfil: "Muy bajo en acidez, dulzor natural alto, notas a cacao y caramelo.",
+    descripcion: "Al extraer lentamente con agua fría, se evita la disolución de compuestos ácidos amargos. Es sumamente refrescante y puede conservarse refrigerado por hasta dos semanas."
+  }
+];
+---
+
+<BaseLayout
+  title="Guías de Preparación de Café de Especialidad | Cafesitios"
+  description="Aprende a preparar café de especialidad con guías paso a paso para V60, Aeropress, Espresso y Prensa Francesa. Calculadora de ratios y molienda ideal."
+  canonicalUrl="https://cafesitios.cl/recetas"
+  jsonLd={jsonLdRecetas}
+>
+  <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-10">
+
+    <!-- HERO Y BREADCRUMB -->
+    <header class="space-y-4 text-center max-w-3xl mx-auto">
+      <nav class="flex items-center justify-center gap-2 text-xs text-stone-500 font-medium" aria-label="Miga de pan">
+        <a href="/" class="hover:text-emerald-800 transition">Inicio</a>
+        <span>/</span>
+        <span class="text-stone-800 font-bold" aria-current="page">Guías de Preparación</span>
+      </nav>
+
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3.5 py-1 text-xs font-bold text-emerald-900 border border-emerald-300">
+        <span>📖</span>
+        <span>Guías Baristas para el Hogar</span>
+      </span>
+
+      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-stone-900 tracking-tight">
+        Cómo Preparar tu Café de Especialidad
+      </h1>
+      <p class="text-sm sm:text-base text-stone-600 leading-relaxed">
+        Domina los parámetros fundamentales de extracción: peso del grano, temperatura del agua, granulometría de molienda y tiempos de vertido para cada método.
+      </p>
+    </header>
+
+    <!-- CALCULADORA INTERACTIVA DE RATIO CAFÉ / AGUA -->
+    <section class="rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/70 via-white to-stone-50 p-6 sm:p-8 shadow-sm" aria-labelledby="calc-heading">
+      <div class="max-w-2xl mx-auto text-center space-y-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">Herramienta Interactiva Barista</span>
+        <h2 id="calc-heading" class="text-xl sm:text-2xl font-black text-stone-900">
+          Calculadora de Ratio y Rendimiento en Taza
+        </h2>
+        <p class="text-xs text-stone-600">
+          Calcula automáticamente ingresando <strong>el café que te queda</strong>, <strong>el agua que quieres verter</strong> o <strong>la cantidad de bebida final que deseas en tu taza</strong>.
+        </p>
+      </div>
+
+      <!-- SELECTOR Y CONFIGURACIÓN DEL RATIO -->
+      <div class="mt-6 max-w-3xl mx-auto p-4 rounded-2xl bg-white border border-stone-200 shadow-2xs space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+          <div>
+            <label for="calc-preset-metodo" class="block text-xs font-bold text-stone-700 mb-1">
+              Método / Ratio Predefinido:
+            </label>
+            <select id="calc-preset-metodo" class="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs font-semibold text-stone-800 focus:ring-2 focus:ring-emerald-600">
+              <option value="16" selected>V60 / Pour-Over Estándar (1:16)</option>
+              <option value="15">V60 Equilibrado (1:15)</option>
+              <option value="14">AeroPress / Taza Intensa (1:14)</option>
+              <option value="16.6">Chemex / Taza Cristalina (1:16.6)</option>
+              <option value="15">Prensa Francesa (1:15)</option>
+              <option value="17">Filtrado Suave / Tipo Té (1:17)</option>
+              <option value="2">Espresso Doble (1:2)</option>
+              <option value="8">Cold Brew Concentrado (1:8)</option>
+              <option value="custom">-- Ratio Personalizado --</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="calc-ratio-custom" class="block text-xs font-bold text-stone-700 mb-1">
+              Ratio de Extracción (1 parte de café : X partes de agua):
+            </label>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-extrabold text-stone-700 bg-stone-100 px-3 py-2 rounded-xl border border-stone-200">
+                1 :
+              </span>
+              <input 
+                id="calc-ratio-custom" 
+                type="number" 
+                step="0.1" 
+                min="1" 
+                max="30" 
+                value="16" 
+                class="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs font-extrabold text-emerald-900 focus:ring-2 focus:ring-emerald-600 font-mono"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 CAMPOS INTERCONECTADOS -->
+        <div class="pt-3 border-t border-stone-100 grid grid-cols-1 md:grid-cols-3 gap-4">
+          
+          <!-- CAMPO 1: CAFÉ -->
+          <div class="p-3.5 rounded-xl border border-stone-200 bg-stone-50/70 hover:border-emerald-300 transition">
+            <div class="flex items-center justify-between mb-1">
+              <label for="calc-cafe" class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+                <span>☕</span>
+                <span>Café a Usar</span>
+              </label>
+              <span class="text-[10px] text-stone-400 font-mono">Gramos</span>
+            </div>
+            <div class="relative">
+              <input 
+                id="calc-cafe" 
+                type="number" 
+                step="0.5" 
+                min="1" 
+                max="500" 
+                value="20" 
+                class="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-extrabold text-stone-900 focus:ring-2 focus:ring-emerald-600"
+                placeholder="Ej. 20"
+              />
+              <span class="absolute right-3 top-2.5 text-xs font-bold text-stone-400">g</span>
+            </div>
+            <span class="block text-[10px] text-stone-500 mt-1">
+              Ej: Si te quedan 10g en la bolsa.
+            </span>
+          </div>
+
+          <!-- CAMPO 2: AGUA A VERTER -->
+          <div class="p-3.5 rounded-xl border border-stone-200 bg-stone-50/70 hover:border-emerald-300 transition">
+            <div class="flex items-center justify-between mb-1">
+              <label for="calc-agua" class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+                <span>💧</span>
+                <span>Agua a Verter</span>
+              </label>
+              <span class="text-[10px] text-stone-400 font-mono">Mililitros / g</span>
+            </div>
+            <div class="relative">
+              <input 
+                id="calc-agua" 
+                type="number" 
+                step="1" 
+                min="5" 
+                max="5000" 
+                value="320" 
+                class="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-extrabold text-emerald-900 focus:ring-2 focus:ring-emerald-600 font-mono"
+                placeholder="Ej. 320"
+              />
+              <span class="absolute right-3 top-2.5 text-xs font-bold text-emerald-700">ml</span>
+            </div>
+            <span class="block text-[10px] text-stone-500 mt-1">
+              Agua total vertida con la tetera.
+            </span>
+          </div>
+
+          <!-- CAMPO 3: BEBIDA EN TAZA -->
+          <div class="p-3.5 rounded-xl border border-emerald-300/80 bg-emerald-50/50 hover:border-emerald-400 transition">
+            <div class="flex items-center justify-between mb-1">
+              <label for="calc-taza" class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                <span>🏆</span>
+                <span>Bebida en Taza</span>
+              </label>
+              <span class="text-[10px] text-emerald-700 font-mono font-bold">Rendimiento</span>
+            </div>
+            <div class="relative">
+              <input 
+                id="calc-taza" 
+                type="number" 
+                step="1" 
+                min="5" 
+                max="5000" 
+                value="290" 
+                class="w-full rounded-xl border border-emerald-300 bg-white px-3 py-2 text-sm font-black text-emerald-900 focus:ring-2 focus:ring-emerald-600 font-mono shadow-2xs"
+                placeholder="Ej. 290"
+              />
+              <span class="absolute right-3 top-2.5 text-xs font-bold text-emerald-800">ml</span>
+            </div>
+            <span class="block text-[10px] text-emerald-800 mt-1">
+              Líquido final listo para beber.
+            </span>
+          </div>
+
+        </div>
+
+        <!-- DESGLOSE BARISTA EXPLICATIVO -->
+        <div class="mt-4 p-4 rounded-xl border border-stone-200 bg-stone-50 text-xs text-stone-700 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-3 text-[11px] font-semibold border-b border-stone-200/70 pb-2">
+            <span class="inline-flex items-center gap-1.5">
+              <span>🌱</span>
+              <span>Pre-infusión (*Bloom*):</span>
+              <strong id="label-bloom" class="text-emerald-900 font-extrabold">60 ml</strong>
+              <span class="text-stone-400 font-normal">(3x café molido por 30-45s)</span>
+            </span>
+
+            <span class="inline-flex items-center gap-1.5">
+              <span>🧽</span>
+              <span>Agua retenida por el grano:</span>
+              <strong id="label-retencion" class="text-amber-900 font-extrabold">30 ml</strong>
+              <span class="text-stone-400 font-normal">(~1.5x peso del café)</span>
+            </span>
+          </div>
+
+          <p class="text-[11px] text-stone-500 leading-relaxed m-0">
+            💡 <strong>¿Por qué difiere el agua vertida de la bebida en taza?</strong> Los poros del café tostado absorben aproximadamente <strong>1.5 veces su peso en agua</strong>. Si viertes <strong id="desc-agua">320 ml</strong> de agua sobre <strong id="desc-cafe">20 g</strong> de café con un ratio de 1:<strong id="desc-ratio">16</strong>, el grano retendrá <strong id="desc-retencion">30 ml</strong>, obteniendo exactamente <strong id="desc-taza">290 ml</strong> de café en tu taza.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- BANNER DE ACCESO AL CALIBRADOR SENSORIAL DE CAFÉ IDEAL (DIAL-IN) -->
+    {showCalibradorBanner && (
+      <section class="rounded-3xl border border-amber-200/80 bg-gradient-to-r from-[#FAF8F2] via-amber-50/60 to-emerald-50/70 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs">
+        <div class="space-y-2 max-w-2xl">
+          <div class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-0.5 text-xs font-bold text-amber-900 border border-amber-300">
+            <span>🎯</span>
+            <span>Nuevo: Dial-in Assistant</span>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">
+            ¿Tu café sabe agrio o amargo seco? Calibra tu receta en 2D
+          </h2>
+          <p class="text-xs sm:text-sm text-stone-600 leading-relaxed">
+            Sitúa el sabor percibido en el plano cartesiano y recibe ajustes automáticos en tiempo real de molienda, ratio, temperatura y tiempo hacia la Zona Ideal.
+          </p>
+        </div>
+
+        <div class="flex-shrink-0">
+          <a
+            href="/calibrador"
+            class="inline-flex items-center gap-2 rounded-2xl bg-stone-900 hover:bg-emerald-900 text-white font-bold text-xs py-3.5 px-6 shadow-md hover:shadow-lg transition hover:-translate-y-0.5"
+          >
+            <span>Abrir Calibrador Dial-in</span>
+            <span>→</span>
+          </a>
+        </div>
+      </section>
+    )}
+
+    <!-- GRILLA DE MÉTODOS DE EXTRACCIÓN -->
+    <section class="space-y-6" aria-labelledby="metodos-heading">
+      <div class="border-b border-stone-200 pb-3 flex items-center justify-between">
+        <h2 id="metodos-heading" class="text-xl sm:text-2xl font-extrabold text-stone-900 tracking-tight">
+          Principales Métodos de Preparación
+        </h2>
+        <span class="text-xs text-stone-400 font-medium">6 Guías Detalladas</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {metodos.map((m) => (
+          <article class="flex flex-col justify-between rounded-3xl border border-stone-200/90 bg-white p-6 shadow-2xs hover:shadow-md hover:border-emerald-300 transition duration-150">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-100 text-2xl shadow-2xs">
+                  {m.icono}
+                </span>
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-stone-100 text-stone-700 border border-stone-200">
+                  {m.tipo}
+                </span>
+              </div>
+
+              <div>
+                <h3 class="text-lg font-bold text-stone-900">{m.nombre}</h3>
+                <p class="text-xs text-stone-600 mt-1 leading-relaxed">{m.descripcion}</p>
+              </div>
+
+              <div class="pt-2 border-t border-stone-100 space-y-2 text-xs">
+                <div class="flex items-center justify-between">
+                  <span class="text-stone-400">Ratio recomendado:</span>
+                  <span class="font-bold text-emerald-800">{m.ratio}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-stone-400">Molienda:</span>
+                  <span class="font-medium text-stone-800 text-right">{m.molienda}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-stone-400">Temperatura:</span>
+                  <span class="font-medium text-stone-800">{m.temperatura}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-stone-400">Tiempo de infusión:</span>
+                  <span class="font-bold text-stone-900">{m.tiempo}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-stone-100 bg-stone-50/80 -mx-6 -mb-6 p-4 rounded-b-3xl text-[11px] text-stone-600">
+              <strong class="text-stone-800">Perfil en taza:</strong> {m.perfil}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <!-- CALL TO ACTION HACIA EL CATÁLOGO -->
+    <section class="rounded-3xl border border-stone-200 bg-[#FCFBF7] p-8 text-center space-y-4">
+      <h3 class="text-xl font-black text-stone-900">
+        ¿Listo para poner en práctica tu método favorito?
+      </h3>
+      <p class="text-xs sm:text-sm text-stone-600 max-w-xl mx-auto">
+        Compara los mejores granos de café de especialidad tostados en Chile por origen, proceso de beneficio y precio por kilo.
+      </p>
+      <div>
+        <a 
+          href="/catalogo" 
+          class="inline-flex items-center gap-2 rounded-xl bg-emerald-800 px-6 py-3 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition"
+        >
+          <span>☕</span>
+          <span>Explorar Catálogo de Cafés</span>
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <script is:inline>
+    (function initBaristaRatioCalculator() {
+      const selectPreset = document.getElementById('calc-preset-metodo');
+      const inputRatio = document.getElementById('calc-ratio-custom');
+      const inputCafe = document.getElementById('calc-cafe');
+      const inputAgua = document.getElementById('calc-agua');
+      const inputTaza = document.getElementById('calc-taza');
+
+      const labelBloom = document.getElementById('label-bloom');
+      const labelRetencion = document.getElementById('label-retencion');
+      const descAgua = document.getElementById('desc-agua');
+      const descCafe = document.getElementById('desc-cafe');
+      const descRatio = document.getElementById('desc-ratio');
+      const descRetencion = document.getElementById('desc-retencion');
+      const descTaza = document.getElementById('desc-taza');
+
+      if (!inputRatio || !inputCafe || !inputAgua || !inputTaza) return;
+
+      const FACTOR_RETENCION = 1.5; // El café absorbe 1.5 veces su peso en agua
+      let lastEditedField = 'cafe'; // 'cafe' | 'agua' | 'taza'
+
+      function getRatio() {
+        const val = parseFloat(inputRatio.value);
+        return (!isNaN(val) && val > 0) ? val : 16;
+      }
+
+      function updateUI(cafeGramos, aguaVertida, tazaBebida, ratio) {
+        inputCafe.value = (Math.round(cafeGramos * 10) / 10).toString();
+        inputAgua.value = Math.round(aguaVertida).toString();
+        inputTaza.value = Math.round(tazaBebida).toString();
+
+        const retencion = Math.round(cafeGramos * FACTOR_RETENCION);
+        const bloom = Math.round(cafeGramos * 3);
+
+        if (labelBloom) labelBloom.textContent = `${bloom} ml`;
+        if (labelRetencion) labelRetencion.textContent = `${retencion} ml`;
+        if (descAgua) descAgua.textContent = `${Math.round(aguaVertida)} ml`;
+        if (descCafe) descCafe.textContent = `${Math.round(cafeGramos * 10) / 10} g`;
+        if (descRatio) descRatio.textContent = ratio.toString();
+        if (descRetencion) descRetencion.textContent = `${retencion} ml`;
+        if (descTaza) descTaza.textContent = `${Math.round(tazaBebida)} ml`;
+      }
+
+      // Caso 1: El usuario ingresa la cantidad de café que tiene
+      function calcFromCafe() {
+        lastEditedField = 'cafe';
+        const R = getRatio();
+        const C = parseFloat(inputCafe.value) || 0;
+        if (C <= 0) return;
+
+        const A = C * R;
+        const T = Math.max(0, A - (C * FACTOR_RETENCION));
+        updateUI(C, A, T, R);
+      }
+
+      // Caso 2: El usuario ingresa la bebida final que quiere en su taza
+      function calcFromTaza() {
+        lastEditedField = 'taza';
+        const R = getRatio();
+        const T = parseFloat(inputTaza.value) || 0;
+        if (T <= 0) return;
+
+        // T = C * (R - 1.5)  =>  C = T / (R - 1.5)
+        const divisor = R - FACTOR_RETENCION;
+        const C = divisor > 0 ? (T / divisor) : (T / R);
+        const A = C * R;
+        updateUI(C, A, T, R);
+      }
+
+      // Caso 3: El usuario ingresa el agua total que va a verter
+      function calcFromAgua() {
+        lastEditedField = 'agua';
+        const R = getRatio();
+        const A = parseFloat(inputAgua.value) || 0;
+        if (A <= 0) return;
+
+        // A = C * R  =>  C = A / R
+        const C = A / R;
+        const T = Math.max(0, A - (C * FACTOR_RETENCION));
+        updateUI(C, A, T, R);
+      }
+
+      // Cuando se cambia el preset del ratio
+      if (selectPreset) {
+        selectPreset.addEventListener('change', () => {
+          if (selectPreset.value !== 'custom') {
+            inputRatio.value = selectPreset.value;
+          }
+          recalculateFromLastEdited();
+        });
+      }
+
+      // Cuando se escribe un ratio libre
+      inputRatio.addEventListener('input', () => {
+        if (selectPreset) selectPreset.value = 'custom';
+        recalculateFromLastEdited();
+      });
+
+      function recalculateFromLastEdited() {
+        if (lastEditedField === 'taza') {
+          calcFromTaza();
+        } else if (lastEditedField === 'agua') {
+          calcFromAgua();
+        } else {
+          calcFromCafe();
+        }
+      }
+
+      inputCafe.addEventListener('input', calcFromCafe);
+      inputAgua.addEventListener('input', calcFromAgua);
+      inputTaza.addEventListener('input', calcFromTaza);
+
+      // Cálculo inicial predeterminado con 20g café a 1:16
+      calcFromCafe();
+    })();
+  </script>
+</BaseLayout>
+

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 
 class VariantResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -66,6 +66,9 @@ class ProductDetailResponse(BaseModel):
     id: int
     tienda: str
     tienda_url: str
+    tienda_sitio_oficial: Optional[str] = None
+    sitio_oficial: Optional[str] = None
+    tienda_catalogo_url: Optional[str] = None
     nombre: str
     descripcion: Optional[str] = None
     url_detalle: str
@@ -83,7 +86,9 @@ class ProductDetailResponse(BaseModel):
     cosecha: Optional[str] = None
     fermentacion_tipo: Optional[str] = None
     fermentacion_horas: Optional[float] = None
-    caracteristicas_fuente: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
+    descripcion_resumida: Optional[str] = None
+    resumen_corto: Optional[str] = None
+    caracteristicas_fuente: Dict[str, Any] = Field(default_factory=dict)
     notas_cata: List[ProductTastingNoteResponse] = Field(default_factory=list)
     variantes: List[ProductVariantDetailResponse]
 
@@ -107,12 +112,21 @@ class CompareProductItem(BaseModel):
     nombre: str
     tienda: str
     tienda_url: str
+    tienda_sitio_oficial: Optional[str] = None
+    tienda_catalogo_url: Optional[str] = None
     url_detalle: str
     imagen: Optional[str] = None
     proceso: Optional[str] = None
     pais_origen: Optional[str] = None
     finca: Optional[str] = None
     variedad: Optional[str] = None
+    tueste: Optional[str] = None
+    escala_agtron: Optional[int] = None
+    elevacion_min_msnm: Optional[int] = None
+    elevacion_max_msnm: Optional[int] = None
+    altura_msnm: Optional[str] = None
+    puntuacion_sca: Optional[float] = None
+    atributos_organolepticos: Dict[str, int] = Field(default_factory=dict)
     notas_cata: List[str] = []
     variantes_por_gramaje: List[CompareVariantItem]
 
@@ -140,6 +154,30 @@ class ProductMatchesResponse(BaseModel):
     producto_origen_id: int
     coincidencias: List[ProductMatchItem]
 
+# --- Mayores Caídas de Precio de la Semana (Ofertas Verificadas) ---
+class WeeklyPriceDropItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    oferta_id: int
+    producto_id: int
+    nombre_producto: str
+    tienda: str
+    url_tienda: Optional[str] = None
+    imagen_url: Optional[str] = None
+    formato_gramos: int
+    precio_anterior: int
+    precio_actual: int
+    precio_por_kilo: float
+    monto_rebaja: int
+    porcentaje_descuento: int
+    link_detalle: str
+    fecha_cambio: Optional[datetime] = None
+
+class WeeklyPriceDropsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total: int
+    dias_evaluados: int
+    ofertas: List[WeeklyPriceDropItem]
+
 # --- CU-07: Recomendador / Quiz ---
 class RecommendationItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -154,10 +192,14 @@ class RecommendationItem(BaseModel):
     tueste: Optional[str] = None
     precio_clp: int
     precio_por_kilo: float
+    formato_gramos: int = 250
     es_estimado: bool
     disponible: bool
     puntaje_coincidencia: int
+    match_score: float = 0.85
     motivo_recomendacion: str
+    notas_cata: List[str] = Field(default_factory=list)
+    variante: Optional[Dict[str, Any]] = None
 
 class RecommendationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -238,3 +280,124 @@ class TelemetryEventRequest(BaseModel):
 class TelemetryEventResponse(BaseModel):
     status: str
     event_id: int
+
+# --- Reporte de Sincronización y Analítica ---
+class SyncPriceChangeItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    variante_id: int
+    nombre: str
+    tienda: str
+    formato_gramos: int = 250
+    formato: str = "250g"
+    precio_anterior: int
+    precio_nuevo: int
+    precio_actual: int
+    diferencia_clp: int
+    porcentaje_variacion: float
+    precio_kilo_anterior: float = 0.0
+    precio_kilo_nuevo: float = 0.0
+    diferencia_kilo_clp: float = 0.0
+    tipo_cambio: Literal["SUBIO", "BAJO"]
+    url_detalle: str
+    fecha_cambio: Optional[datetime] = None
+
+class SyncNewProductItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    nombre: str
+    tienda: str
+    formato_gramos: int = 250
+    formato: str = "250g"
+    precio_clp: int
+    precio_por_kilo: float
+    origen: Optional[str] = None
+    proceso: Optional[str] = None
+    tueste: Optional[str] = None
+    url_detalle: str
+    imagen: Optional[str] = None
+    fecha_creacion: Optional[datetime] = None
+
+class SyncMetricsSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total_nuevos: int = 0
+    total_subieron_precio: int = 0
+    total_bajaron_precio: int = 0
+    total_cambios_precio: int = 0
+    porcentaje_variacion_global: float = 0.0
+    ahorro_total_clp: int = 0
+    porcentaje_ahorro_promedio: float = 0.0
+    total_ofertas_monitoreadas: int = 0
+    total_productos_catalogados: int = 0
+
+class SyncCurrentSummaryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    fecha_ultima_sincronizacion: Optional[datetime] = None
+    ultima_sincronizacion: Optional[datetime] = None
+    estado: str = "OK"
+    total_nuevos: int = 0
+    total_subieron_precio: int = 0
+    total_bajaron_precio: int = 0
+    total_cambios_precio: int = 0
+    porcentaje_variacion_global: float = 0.0
+    ahorro_total_clp: int = 0
+    porcentaje_ahorro_promedio: float = 0.0
+    total_ofertas_monitoreadas: int = 0
+    total_productos_catalogados: int = 0
+    metricas: SyncMetricsSummary = Field(default_factory=SyncMetricsSummary)
+    productos_nuevos: List[SyncNewProductItem] = Field(default_factory=list)
+    novedades: List[SyncNewProductItem] = Field(default_factory=list)
+    cambios_precio: List[SyncPriceChangeItem] = Field(default_factory=list)
+    productos_cambio_precio: List[SyncPriceChangeItem] = Field(default_factory=list)
+
+class SyncHistoryLogItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    fecha_ejecucion: datetime
+    fecha: str
+    hora: str
+    duracion_estimada_segundos: float = 0.0
+    duracion_estimada: str = "0.0s"
+    estado: str = "OK"
+    productos_nuevos: int = 0
+    productos_actualizados: int = 0
+    productos_con_cambio_precio: int = 0
+    mensaje_error: Optional[str] = None
+
+class PaginatedSyncHistoryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    page: int = 1
+    page_size: int = 20
+    total_items: int = 0
+    total_pages: int = 1
+    items: List[SyncHistoryLogItem] = Field(default_factory=list)
+    data: List[SyncHistoryLogItem] = Field(default_factory=list)
+    historial: List[SyncHistoryLogItem] = Field(default_factory=list)
+
+class MarketStoreDiscountSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    nombre: Optional[str] = None
+    descuento_promedio_porcentaje: float = 0.0
+    total_ofertas_descuento: int = 0
+    precio_promedio_kilo: float = 0.0
+    cantidad_productos: int = 0
+
+class MarketDistributionItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    categoria: str
+    cantidad: int
+    porcentaje: float
+    precio_promedio_kilo: float = 0.0
+
+class MarketAnalyticsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    precio_promedio_kilo: float = 0.0
+    precio_minimo_kilo: float = 0.0
+    precio_maximo_kilo: float = 0.0
+    precio_promedio_bolsa_clp: int = 0
+    total_variantes_analizadas: int = 0
+    total_tiendas_activas: int = 0
+    tienda_mejor_descuento: MarketStoreDiscountSummary = Field(default_factory=MarketStoreDiscountSummary)
+    tiendas_mas_competitivas: List[MarketStoreDiscountSummary] = Field(default_factory=list)
+    distribucion_tueste: List[MarketDistributionItem] = Field(default_factory=list)
+    distribucion_proceso: List[MarketDistributionItem] = Field(default_factory=list)

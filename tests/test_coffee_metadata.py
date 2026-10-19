@@ -107,6 +107,22 @@ class TestCoffeeMetadataExtraction(unittest.TestCase):
             ['chocolate', 'mora', 'panela'],
         )
 
+    def test_generar_resumen_corto_extracts_clean_caption(self):
+        from scrapper.coffee_metadata import generar_resumen_corto
+
+        res = generar_resumen_corto(
+            titulo="Guatemala Huehuetenango Honey",
+            descripcion="<p>Café de especialidad de altura.</p>",
+            notas=[{"nombre": "Chocolate"}, {"nombre": "Ciruela"}, {"nombre": "Caramelo"}],
+            proceso="Honey",
+            origen="Guatemala",
+        )
+        self.assertIn("Guatemala", res)
+        self.assertIn("Honey", res)
+        self.assertIn("chocolate, ciruela y caramelo", res.lower())
+        self.assertTrue(res.endswith("."))
+        self.assertLessEqual(len(res), 135)
+
 
 if __name__ == '__main__':
     unittest.main()

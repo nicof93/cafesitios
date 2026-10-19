@@ -17,7 +17,11 @@ export interface CoffeeProductProps {
   escala_agtron?: number;
   altura_msnm?: string;
   puntuacion_sca?: number;
+  atributos_organolepticos?: Record<string, number>;
+  variantes_por_gramaje?: any[];
   descripcion?: string;
+  descripcion_resumida?: string;
+  resumen_corto?: string;
   fecha_actualizacion?: string;
 }
 
@@ -37,7 +41,10 @@ export class CoffeeProduct {
   readonly escala_agtron?: number;
   readonly altura_msnm?: string;
   readonly puntuacion_sca?: number;
+  readonly atributos_organolepticos?: Record<string, number>;
   readonly descripcion?: string;
+  readonly descripcion_resumida?: string;
+  readonly resumen_corto?: string;
   readonly fecha_actualizacion?: string;
 
   constructor(props: CoffeeProductProps) {
@@ -49,9 +56,10 @@ export class CoffeeProduct {
     this.categoria = props.categoria || 'cafe';
 
     
-    // Normalizar variantes (acepta array o variante única en listados)
-    if (props.variantes && props.variantes.length > 0) {
-      this.variantes = props.variantes.map(v => new ProductVariant(v));
+    // Normalizar variantes (acepta array o variante única en listados o variantes_por_gramaje)
+    const rawVars = props.variantes || props.variantes_por_gramaje;
+    if (rawVars && rawVars.length > 0) {
+      this.variantes = rawVars.map(v => new ProductVariant(v));
     } else if (props.variante) {
       this.variantes = [new ProductVariant(props.variante)];
     } else {
@@ -81,7 +89,11 @@ export class CoffeeProduct {
     const maxAlt = (props as any).elevacion_max_msnm;
     this.altura_msnm = props.altura_msnm || (minAlt ? (maxAlt ? `${minAlt} - ${maxAlt} msnm` : `${minAlt} msnm`) : undefined);
     this.puntuacion_sca = props.puntuacion_sca;
+    this.atributos_organolepticos = props.atributos_organolepticos;
     this.descripcion = props.descripcion;
+    const descRes = props.descripcion_resumida || props.resumen_corto || (props as any).caracteristicas_fuente?.resumen_corto;
+    this.descripcion_resumida = descRes ? String(descRes).trim() : undefined;
+    this.resumen_corto = this.descripcion_resumida;
     this.fecha_actualizacion = props.fecha_actualizacion;
   }
 

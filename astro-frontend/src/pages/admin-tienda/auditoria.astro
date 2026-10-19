@@ -1,0 +1,212 @@
+---
+import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
+---
+
+<StoreAdminLayout title="Registro de Auditoría | Cafesitios Admin" activeNav="auditoria">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-stone-200 shadow-xs">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-black text-stone-900">Registro de Auditoría y Trazabilidad</h1>
+        <p class="text-xs text-stone-500 mt-1">Historial inmutable de acciones realizadas sobre tu tostaduría.</p>
+      </div>
+      <div>
+        <span class="rounded-full bg-stone-100 border border-stone-200 text-stone-700 px-3 py-1 text-xs font-bold" id="badge-total-logs">
+          Cargando registros...
+        </span>
+      </div>
+    </div>
+
+    <!-- TABLA DE AUDITORÍA -->
+    <div class="overflow-x-auto rounded-2xl border border-stone-200 bg-white shadow-xs">
+      <table class="w-full text-left text-xs text-stone-700">
+        <thead class="bg-stone-50/80 border-b border-stone-200 text-[11px] uppercase tracking-wider font-bold text-stone-500">
+          <tr>
+            <th class="px-4 py-3">Fecha y Hora</th>
+            <th class="px-4 py-3">Acción</th>
+            <th class="px-4 py-3">Entidad / ID</th>
+            <th class="px-4 py-3">Usuario</th>
+            <th class="px-4 py-3">IP Origen</th>
+            <th class="px-4 py-3 text-center">Detalle de Cambios</th>
+          </tr>
+        </thead>
+        <tbody id="audit-table-body" class="divide-y divide-stone-100">
+          <tr>
+            <td colspan="6" class="px-4 py-8 text-center text-stone-400">Cargando historial de auditoría...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- MODAL DE DETALLE DE AUDITORÍA (DIFF / JSON) -->
+    <div id="modal-audit-detail" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+      <div class="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between border-b border-stone-200 pb-3">
+          <div>
+            <h3 class="text-base font-bold text-stone-900" id="audit-modal-action">Detalle de Acción</h3>
+            <p class="text-[11px] text-stone-500" id="audit-modal-meta">Meta</p>
+          </div>
+          <button type="button" id="btn-close-audit-modal" class="text-stone-400 hover:text-stone-600 font-bold text-lg">✕</button>
+        </div>
+
+        <div class="overflow-y-auto flex-1 space-y-3 text-xs">
+          <div id="audit-prev-box">
+            <span class="block font-bold text-stone-700 mb-1">Valores Previos:</span>
+            <pre id="audit-prev-content" class="bg-stone-900 text-stone-300 p-3 rounded-xl font-mono text-[11px] overflow-x-auto"></pre>
+          </div>
+          <div id="audit-new-box">
+            <span class="block font-bold text-stone-700 mb-1">Valores Nuevos / Aplicados:</span>
+            <pre id="audit-new-content" class="bg-stone-900 text-emerald-400 p-3 rounded-xl font-mono text-[11px] overflow-x-auto"></pre>
+          </div>
+        </div>
+
+        <div class="flex justify-end pt-2 border-t border-stone-200">
+          <button type="button" id="btn-confirm-audit-modal" class="rounded-xl bg-stone-900 px-5 py-2 text-xs font-bold text-white hover:bg-stone-800">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    (function initStoreAudit() {
+      const token = localStorage.getItem('store_admin_token');
+      if (!token) {
+        window.location.replace('/admin-tienda/login');
+        return;
+      }
+
+      const mainEl = document.querySelector('body[data-api-base]');
+      let API_BASE = mainEl ? (mainEl.getAttribute('data-api-base') || '').trim() : '';
+      if (!API_BASE) {
+        API_BASE = `http://${window.location.hostname}:8000`;
+      } else if (API_BASE.includes('localhost') && window.location.hostname === '127.0.0.1') {
+        API_BASE = API_BASE.replace('localhost', '127.0.0.1');
+      } else if (API_BASE.includes('127.0.0.1') && window.location.hostname === 'localhost') {
+        API_BASE = API_BASE.replace('127.0.0.1', 'localhost');
+      }
+
+      const tbody = document.getElementById('audit-table-body');
+      const badgeTotal = document.getElementById('badge-total-logs');
+      const modal = document.getElementById('modal-audit-detail');
+      let cachedLogs = [];
+
+      function getBadgeForAction(action) {
+        switch (action) {
+          case 'CREAR_PRODUCTO':
+            return '<span class="rounded bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[10px]">🌱 CREAR PRODUCTO</span>';
+          case 'EDITAR_PRODUCTO':
+            return '<span class="rounded bg-sky-100 text-sky-800 font-bold px-2 py-0.5 text-[10px]">✏️ EDITAR PRODUCTO</span>';
+          case 'INICIAR_SYNC':
+            return '<span class="rounded bg-amber-100 text-amber-900 font-bold px-2 py-0.5 text-[10px]">🔄 SINCRONIZACIÓN</span>';
+          case 'LOGIN_EXITOSO':
+            return '<span class="rounded bg-purple-100 text-purple-800 font-bold px-2 py-0.5 text-[10px]">🔑 LOGIN</span>';
+          default:
+            return `<span class="rounded bg-stone-100 text-stone-700 font-bold px-2 py-0.5 text-[10px]">${action}</span>`;
+        }
+      }
+
+      function openModal(logItem) {
+        document.getElementById('audit-modal-action').innerHTML = `${getBadgeForAction(logItem.accion)} Acción #${logItem.id}`;
+        document.getElementById('audit-modal-meta').textContent = `Usuario: ${logItem.usuario_id} • IP: ${logItem.ip_origen || 'N/A'} • ${new Date(logItem.fecha_registro).toLocaleString('es-CL')}`;
+
+        const prevBox = document.getElementById('audit-prev-box');
+        const prevContent = document.getElementById('audit-prev-content');
+        if (logItem.valores_previos) {
+          prevBox?.classList.remove('hidden');
+          if (prevContent) prevContent.textContent = JSON.stringify(logItem.valores_previos, null, 2);
+        } else {
+          prevBox?.classList.add('hidden');
+        }
+
+        const newBox = document.getElementById('audit-new-box');
+        const newContent = document.getElementById('audit-new-content');
+        if (logItem.valores_nuevos) {
+          newBox?.classList.remove('hidden');
+          if (newContent) newContent.textContent = JSON.stringify(logItem.valores_nuevos, null, 2);
+        } else {
+          newBox?.classList.add('hidden');
+        }
+
+        if (modal) {
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+        }
+      }
+
+      function closeModal() {
+        if (modal) {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+        }
+      }
+
+      document.getElementById('btn-close-audit-modal')?.addEventListener('click', closeModal);
+      document.getElementById('btn-confirm-audit-modal')?.addEventListener('click', closeModal);
+
+      async function loadAuditLogs() {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/auditoria?per_page=100`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem('store_admin_token');
+            window.location.replace('/admin-tienda/login');
+            return;
+          }
+          if (!res.ok) throw new Error('Error al obtener registros de auditoría.');
+
+          const data = await res.json();
+          cachedLogs = data.registros || [];
+
+          if (badgeTotal) badgeTotal.textContent = `${data.total} Acciones Registradas`;
+
+          if (!cachedLogs.length) {
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-stone-400">No hay registros de auditoría disponibles para esta tienda.</td></tr>';
+            return;
+          }
+
+          if (tbody) {
+            tbody.innerHTML = cachedLogs.map((log) => {
+              const dt = new Date(log.fecha_registro).toLocaleString('es-CL');
+              return `
+                <tr class="hover:bg-stone-50/70 transition border-b border-stone-100">
+                  <td class="px-4 py-3 font-mono text-[11px] text-stone-500 whitespace-nowrap">${dt}</td>
+                  <td class="px-4 py-3">${getBadgeForAction(log.accion)}</td>
+                  <td class="px-4 py-3 font-semibold text-stone-800">
+                    <span class="uppercase text-[10px] text-stone-400 block">${log.entidad}</span>
+                    <span>ID #${log.entidad_id || 'N/A'}</span>
+                  </td>
+                  <td class="px-4 py-3 font-mono text-[11px] text-stone-500 truncate max-w-[140px]" title="${log.usuario_id}">${log.usuario_id}</td>
+                  <td class="px-4 py-3 font-mono text-[11px] text-stone-400">${log.ip_origen || '127.0.0.1'}</td>
+                  <td class="px-4 py-3 text-center">
+                    <button
+                      type="button"
+                      class="btn-view-diff rounded-lg border border-stone-300 bg-white hover:bg-stone-50 px-2.5 py-1 text-[11px] font-bold text-stone-700 shadow-xs"
+                      data-id="${log.id}"
+                    >
+                      🔍 Ver Cambios
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join('');
+
+            document.querySelectorAll('.btn-view-diff').forEach((b) => {
+              b.addEventListener('click', () => {
+                const id = parseInt(b.getAttribute('data-id'), 10);
+                const found = cachedLogs.find((x) => x.id === id);
+                if (found) openModal(found);
+              });
+            });
+          }
+        } catch (err) {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-rose-600 font-bold">${err.message}</td></tr>`;
+        }
+      }
+
+      loadAuditLogs();
+    })();
+  </script>
+</StoreAdminLayout>

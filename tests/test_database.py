@@ -297,9 +297,13 @@ class TestDatabaseManager(unittest.TestCase):
                     ).scalar_one()
 
                 self.assertEqual(store_name, 'Tienda existente')
-                self.assertEqual(revision, '0010_widen_tueste_column')
+                self.assertEqual(revision, '0015_perf_indexes_and_category')
                 table_names = set(inspect(db.engine).get_table_names())
+                view_names = set(inspect(db.engine).get_view_names())
+                self.assertIn('vista_mayores_caidas_semana', view_names)
                 self.assertIn('sincronizaciones', table_names)
+                self.assertIn('sincronizaciones_log', table_names)
+                self.assertIn('sucursales_tienda', table_names)
                 self.assertIn('estado_sincronizacion', table_names)
                 self.assertIn('recetas', table_names)
                 self.assertIn('sugerencias_feedback', table_names)
@@ -311,6 +315,7 @@ class TestDatabaseManager(unittest.TestCase):
                 }
                 self.assertEqual(product_columns['proceso'], 'TEXT')
                 self.assertEqual(product_columns['fermentacion_tipo'], 'TEXT')
+                self.assertIn('categoria', product_columns)
                 variante_columns = {
                     column['name']
                     for column in inspect(db.engine).get_columns('variantes')
@@ -583,6 +588,59 @@ class TestDatabaseManager(unittest.TestCase):
         product_calls = [m for name, m in fake_session.calls if name == 'productos']
         self.assertEqual(len(product_calls), 1)
 
+    def test_guardar_catalogo_evita_colision_url_detalle_entre_tiendas(self):
+        engine = create_engine('sqlite:///:memory:')
+        Base.metadata.create_all(engine)
+        db = DatabaseManager.__new__(DatabaseManager)
+        db.SessionLocal = sessionmaker(bind=engine)
+
+        session = db.SessionLocal()
+        store_a = Tienda(nombre='Cascanueces Arábica', url_base='https://cafecascanueces.cl/a')
+        store_b = Tienda(nombre='Cascanueces Classic', url_base='https://cafecascanueces.cl/b')
+        session.add_all([store_a, store_b])
+        session.commit()
+        store_a_id = store_a.id
+        store_b_id = store_b.id
+        session.close()
+
+        shared_item = {
+            'tienda': 'Cascanueces',
+            'id_externo': '12191',
+            'nombre': 'Classic Blend Espresso',
+            'url_detalle': 'https://cafecascanueces.cl/producto/classic-blend-espresso/',
+            'imagen': None,
+            'descripcion': 'Blend clásico',
+            'variantes': [{
+                'id_variante_externo': '12191-250',
+                'opcion': '250g',
+                'formato_gramos': 250,
+                'precio_clp': 9500,
+                'precio_original_clp': 9500,
+                'en_oferta': False,
+                'descuento_porcentaje': 0,
+                'precio_por_kilo': 38000.0,
+                'disponible': True,
+            }],
+        }
+
+        item_store_a = {**shared_item, 'tienda': 'Cascanueces Arábica'}
+        item_store_b = {**shared_item, 'tienda': 'Cascanueces Classic'}
+
+        db.guardar_catalogo([item_store_a], tienda_id=store_a_id)
+        counts = db.guardar_catalogo([item_store_b], tienda_id=store_b_id)
+        self.assertEqual(counts['actualizados'], 1)
+
+        session = db.SessionLocal()
+        try:
+            saved = session.query(Producto).filter_by(
+                url_detalle='https://cafecascanueces.cl/producto/classic-blend-espresso/'
+            ).one()
+            self.assertEqual(saved.tienda_id, store_b_id)
+        finally:
+            session.close()
+            engine.dispose()
+
 
 if __name__ == '__main__':
     unittest.main()
+

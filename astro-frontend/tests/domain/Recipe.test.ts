@@ -31,5 +31,24 @@ describe('Recipe Entity (CU-08)', () => {
     expect(recipe.gramos_agua).toBe(10);
     expect(recipe.calificacion).toBe(5); // Clamped to 5
   });
+
+  it('almacena correctamente los enlaces opcionales al catálogo y tienda oficial', () => {
+    const recipe = new Recipe({
+      id: 'rec-3',
+      cafe: 'Colombia Castillo (Holaste)',
+      metodo: 'Aeropress',
+      gramos_cafe: 18,
+      gramos_agua: 200,
+      calificacion: 4,
+      fecha: '2026-10-16T12:00:00Z',
+      producto_id: 42,
+      producto_url: 'https://holaste.cl/products/colombia-castillo',
+      tienda: 'Holaste'
+    });
+
+    expect(recipe.producto_id).toBe(42);
+    expect(recipe.producto_url).toBe('https://holaste.cl/products/colombia-castillo');
+    expect(recipe.tienda).toBe('Holaste');
+  });
 });
 

@@ -279,6 +279,23 @@ class TestAPI(unittest.TestCase):
         finally:
             api.router.PostgresCoffeeRepository = original_repo
 
+    def test_api_route_accepts_multiple_stores_filter(self):
+        import api.router
+        original_repo = api.router.PostgresCoffeeRepository
+        api.router.PostgresCoffeeRepository = MockCoffeeRepositoryForAPI
+        try:
+            # 1. Parámetros repetidos ?tienda=A&tienda=B
+            response = client.get("/api/v1/productos?tienda=Singular&tienda=We+Are+Four")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(api.router.PostgresCoffeeRepository.last_filters["store_name"], "Singular,We Are Four")
+
+            # 2. Parámetro separado por coma ?tienda=Singular,We Are Four
+            response2 = client.get("/api/v1/productos?tienda=Singular,We+Are+Four")
+            self.assertEqual(response2.status_code, 200)
+            self.assertEqual(api.router.PostgresCoffeeRepository.last_filters["store_name"], "Singular,We Are Four")
+        finally:
+            api.router.PostgresCoffeeRepository = original_repo
+
     def test_stores_summary_endpoint(self):
         response = client.get("/api/v1/stores?page=1&page_size=10&sort_by=product_count_desc")
         self.assertEqual(response.status_code, 200)
@@ -299,6 +316,33 @@ class TestAPI(unittest.TestCase):
             self.assertEqual(data["total_items"], 2)
             self.assertEqual(api.router.PostgresCoffeeRepository.last_filters["process"], "natural")
             self.assertEqual(api.router.PostgresCoffeeRepository.last_filters["country"], "Etiopía")
+        finally:
+            api.router.PostgresCoffeeRepository = original_repo
+
+    def test_spanish_endpoints_routes(self):
+        import api.router
+        original_repo = api.router.PostgresCoffeeRepository
+        api.router.PostgresCoffeeRepository = MockCoffeeRepositoryForAPI
+        try:
+            # 1. Catálogo en español: /api/v1/productos
+            res_productos = client.get("/api/v1/productos?limit=5")
+            self.assertEqual(res_productos.status_code, 200)
+            self.assertIn("data", res_productos.json())
+
+            # 2. Tiendas en español: /api/v1/tiendas
+            res_tiendas = client.get("/api/v1/tiendas?page=1&page_size=5")
+            self.assertEqual(res_tiendas.status_code, 200)
+            self.assertIn("items", res_tiendas.json())
+
+            # 3. Sincronización en español: /api/v1/sincronizacion/ultima
+            res_sync = client.get("/api/v1/sincronizacion/ultima")
+            self.assertEqual(res_sync.status_code, 200)
+            self.assertIn("last_sync", res_sync.json())
+
+            # 4. Administración en español: /api/v1/administracion/estado
+            res_admin = client.get("/api/v1/administracion/estado")
+            self.assertEqual(res_admin.status_code, 200)
+            self.assertTrue(res_admin.json()["enabled"])
         finally:
             api.router.PostgresCoffeeRepository = original_repo
 
@@ -433,5 +477,44 @@ class TestAPI(unittest.TestCase):
             importlib.reload(main)
             main.app.dependency_overrides[get_db_session] = mock_get_db_session_override
 
+    def test_recipes_feature_flag_guard(self):
+        """Verifica que el endpoint de recetas responde 404 cuando ENABLE_RECIPES=false."""
+        import os
+        from db.config import settings
+
+        old_flag = os.environ.get("ENABLE_RECIPES")
+        # Crear sesión SQLite en memoria real para ManageRecipesUseCase
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(engine)
+        test_session = sessionmaker(bind=engine)()
+
+        def override_real_session():
+            yield test_session
+
+        app.dependency_overrides[get_db_session] = override_real_session
+
+        try:
+            # Caso 1: Deshabilitado -> 404
+            os.environ["ENABLE_RECIPES"] = "false"
+            res_disabled = client.get("/api/v1/recetas?dispositivo_uuid=test-uuid")
+            self.assertEqual(res_disabled.status_code, 404)
+
+            # Caso 2: Habilitado -> 200
+            os.environ["ENABLE_RECIPES"] = "true"
+            res_enabled = client.get("/api/v1/recetas?dispositivo_uuid=test-uuid")
+            self.assertEqual(res_enabled.status_code, 200)
+        finally:
+            app.dependency_overrides[get_db_session] = mock_get_db_session_override
+            test_session.close()
+            if old_flag is not None:
+                os.environ["ENABLE_RECIPES"] = old_flag
+            else:
+                os.environ.pop("ENABLE_RECIPES", None)
+
 if __name__ == "__main__":
     unittest.main()
+

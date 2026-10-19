@@ -1,9 +1,17 @@
 ---
+import { Environment } from "../../core/infrastructure/config/Environment";
+
 interface Props {
   lastSync?: string;
 }
 
 const { lastSync = "Al día" } = Astro.props;
+const showAnalytics = Environment.isAnalyticsEnabled(Astro.url);
+const showLocalAdmin = Environment.isLocalAdminEnabled(Astro.url);
+const showGuides = Environment.isGuidesEnabled();
+const showCalibrator = Environment.isCalibratorEnabled();
+const showMyRecipes = Environment.isMyRecipesEnabled();
+const showFlavorQuiz = Environment.isFlavorQuizEnabled();
 ---
 
 <header class="sticky top-0 z-30 border-b border-stone-200/70 bg-[#FCFBF7]/90 backdrop-blur-md transition-all">
@@ -31,47 +39,90 @@ const { lastSync = "Al día" } = Astro.props;
     <!-- NAVEGACIÓN Y ACCIONES GLOBALES -->
     <nav class="flex items-center gap-1 sm:gap-2 text-xs font-medium text-stone-600" aria-label="Navegación principal">
       <a 
-        href="/catalog" 
+        href="/catalogo" 
         class="rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
       >
         Catálogo
       </a>
       
       <a 
-        href="/stores" 
+        href="/tiendas" 
         class="rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
       >
         Todas las Tiendas
       </a>
 
-      <button 
-        type="button" 
-        id="btn-open-quiz"
-        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-emerald-800 hover:bg-emerald-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-      >
-        <span aria-hidden="true">✨</span>
-        <span>Quiz de Sabor</span>
-      </button>
+      {showFlavorQuiz && (
+        <button 
+          type="button" 
+          id="btn-open-quiz"
+          class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-emerald-800 hover:bg-emerald-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+        >
+          <span aria-hidden="true">✨</span>
+          <span>Quiz de Sabor</span>
+        </button>
+      )}
 
-      <a 
-        href="/bitacora" 
-        id="btn-open-recipes"
-        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 hover:text-stone-900 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-        title="Abrir Bitácora Barista de Recetas"
-      >
-        <span aria-hidden="true">📖</span>
-        <span class="hidden sm:inline">Bitácora</span>
-      </a>
+      {showMyRecipes && (
+        <a 
+          href="/mis-recetas" 
+          class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+          title="Mis Recetas y Registro de Extracciones Barista"
+        >
+          <span aria-hidden="true">📖</span>
+          <span class="hidden sm:inline">Mis recetas</span>
+        </a>
+      )}
 
-      <!-- PILL DISCRETO DE SINCRONIZACIÓN -->
-      <div 
-        class="hidden lg:inline-flex items-center gap-1.5 rounded-full border border-stone-200/80 bg-white/80 px-2.5 py-1 text-[10px] font-medium text-stone-500 shadow-2xs ml-1"
-        title="Última sincronización de catálogo"
-      >
-        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="header-sync-time" class="truncate max-w-[130px]">{lastSync}</span>
-      </div>
+      {showCalibrator && (
+        <a 
+          href="/calibrador" 
+          class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-stone-700 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+          title="Calibrador Sensorial de Café 2D (Dial-in Assistant)"
+        >
+          <span aria-hidden="true">🎯</span>
+          <span class="hidden sm:inline">Calibrador</span>
+        </a>
+      )}
+
+      {showGuides && (
+        <a 
+          href="/recetas" 
+          class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+          title="Guías de Preparación de Café de Especialidad"
+        >
+          <span aria-hidden="true">☕</span>
+          <span class="hidden sm:inline">Guías</span>
+        </a>
+      )}
+
+      {showLocalAdmin && (
+        <a 
+          href="http://localhost:4322/plataforma/" 
+          class="local-admin-nav hidden inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 font-semibold"
+          title="Abrir Plataforma de Administración y Bitácora Local"
+        >
+          <span aria-hidden="true">⚙️</span>
+          <span class="hidden sm:inline">Plataforma Admin</span>
+        </a>
+      )}
     </nav>
 
   </div>
 </header>
+
+<script>
+  // Verificación estricta en el cliente para ocultar navegación local si se accede fuera de localhost
+  (function enforceLocalhostNav() {
+    const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname) || window.location.hostname.endsWith('.local');
+    if (isLocalhost) {
+      document.querySelectorAll('.local-admin-nav, .local-analytics-nav').forEach((el) => {
+        el.classList.remove('hidden');
+      });
+    } else {
+      document.querySelectorAll('.local-admin-nav, .local-analytics-nav').forEach((el) => {
+        el.remove();
+      });
+    }
+  })();
+</script>

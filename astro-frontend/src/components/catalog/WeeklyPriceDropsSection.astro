@@ -1,0 +1,210 @@
+---
+import { HttpClient } from '../../core/infrastructure/api/HttpClient';
+
+const http = new HttpClient();
+let ofertas: any[] = [];
+
+try {
+  const res = await http.get<{ ofertas: any[]; total: number }>('/api/v1/products/ofertas-semana?limit=12&dias=7');
+  if (res && res.ofertas) {
+    ofertas = res.ofertas.filter((o: any) => o.monto_rebaja > 0 && o.precio_actual < o.precio_anterior);
+  }
+} catch (error) {
+  console.warn('No se pudieron cargar las ofertas de la semana para el SSR:', error);
+}
+---
+
+{ofertas.length > 0 && (
+  <section class="space-y-6 py-4" id="seccion-ofertas-semana">
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-stone-200/80 pb-4">
+      <div>
+        <div class="inline-flex items-center gap-2 rounded-full bg-rose-50 border border-rose-200/80 px-3 py-1 text-xs font-black text-rose-700 shadow-2xs">
+          <span>🔥</span>
+          <span>Ofertas Verificadas de la Semana</span>
+        </div>
+        <h2 class="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight mt-2">
+          Mayores Caídas de Precio
+        </h2>
+        <p class="text-xs sm:text-sm text-stone-500 mt-1 max-w-xl">
+          Monitoreo en tiempo real de rebajas verdaderas en tostadurías de especialidad chilenas en los últimos 7 días.
+        </p>
+      </div>
+
+      <a 
+        href="/catalogo?ofertas=true" 
+        class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 transition hover:underline"
+      >
+        <span>Ver todas las ofertas en catálogo</span>
+        <span>→</span>
+      </a>
+    </div>
+
+    <!-- Carrusel en mobile y grilla en desktop (3 a 4 columnas) -->
+    <div class="flex sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto sm:overflow-visible pb-4 sm:pb-0 scroll-smooth snap-x snap-mandatory">
+      {ofertas.map((item) => {
+        const precio100g = Math.round((item.precio_actual / item.formato_gramos) * 100);
+        return (
+          <article 
+            class="snap-start shrink-0 w-[280px] sm:w-auto rounded-3xl bg-white border border-stone-200/90 shadow-2xs hover:shadow-md hover:border-emerald-300 transition-all duration-200 flex flex-col justify-between p-4 relative group"
+            data-oferta-card
+            data-producto-id={item.producto_id}
+            data-oferta-id={item.oferta_id}
+            data-nombre={item.nombre_producto}
+            data-tienda={item.tienda}
+            data-descuento={item.porcentaje_descuento}
+          >
+            <!-- Badge dinámico de Favorito cruzado con localStorage -->
+            <div 
+              class="hidden absolute -top-3 left-3 z-20 bg-amber-400 text-stone-950 text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-md border border-amber-300"
+              data-badge-favorito
+            >
+              ★ ¡Tu favorito bajó de precio!
+            </div>
+
+            <!-- Contenedor Superior: Imagen y Badges -->
+            <div class="space-y-3">
+              <div class="relative h-44 w-full rounded-2xl bg-stone-100 flex items-center justify-center overflow-hidden">
+                <img 
+                  src={item.imagen_url || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=300'} 
+                  alt={item.nombre_producto}
+                  loading="lazy"
+                  class="h-full w-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                  referrerpolicy="no-referrer"
+                  onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=300';"
+                />
+                
+                <!-- Badge de Descuento -->
+                <span class="absolute top-2.5 right-2.5 rounded-xl bg-rose-600 text-white text-[11px] font-black px-2.5 py-1 shadow-md">
+                  -{item.porcentaje_descuento}% OFF
+                </span>
+
+                <!-- Ahorro en CLP -->
+                <span class="absolute bottom-2.5 left-2.5 rounded-lg bg-white/95 backdrop-blur-xs text-rose-700 text-[10px] font-black px-2 py-0.5 shadow-2xs border border-rose-100">
+                  Ahorra ${item.monto_rebaja.toLocaleString('es-CL')}
+                </span>
+              </div>
+
+              <!-- Info del café -->
+              <div class="space-y-1">
+                <span class="block text-[11px] font-bold text-stone-500 uppercase tracking-wide truncate" title={item.tienda}>
+                  {item.tienda}
+                </span>
+                <h3 class="text-sm font-bold text-stone-900 group-hover:text-emerald-900 transition line-clamp-2 leading-snug" title={item.nombre_producto}>
+                  {item.nombre_producto}
+                </h3>
+              </div>
+            </div>
+
+            <!-- Precios y Métricas Normalizadas -->
+            <div class="pt-3 border-t border-stone-100 space-y-3 mt-3">
+              <div>
+                <div class="flex items-baseline gap-2">
+                  <span class="text-base sm:text-lg font-black text-emerald-800">
+                    ${item.precio_actual.toLocaleString('es-CL')}
+                  </span>
+                  <span class="text-xs font-semibold text-stone-400 line-through">
+                    ${item.precio_anterior.toLocaleString('es-CL')}
+                  </span>
+                  <span class="text-[10px] font-bold text-stone-500">
+                    ({item.formato_gramos}g)
+                  </span>
+                </div>
+                
+                <!-- Valores normalizados $/100g y $/kg -->
+                <div class="flex items-center gap-2 text-[10px] text-stone-500 font-medium mt-0.5">
+                  <span>${precio100g.toLocaleString('es-CL')}/100g</span>
+                  <span>•</span>
+                  <span class="font-bold text-stone-700">${item.precio_por_kilo.toLocaleString('es-CL')}/kg</span>
+                </div>
+              </div>
+
+              <!-- Botones de Acción -->
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <a 
+                  href={`/producto/${item.producto_id}`}
+                  class="btn-oferta-detalle rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs py-2 text-center transition"
+                  data-oferta-id={item.oferta_id}
+                >
+                  Ver Detalle
+                </a>
+                <a 
+                  href={item.link_detalle?.startsWith('http') ? item.link_detalle : `/producto/${item.producto_id}`}
+                  target={item.link_detalle?.startsWith('http') ? "_blank" : "_self"}
+                  rel="noopener noreferrer"
+                  class="btn-oferta-comprar rounded-xl bg-stone-900 hover:bg-emerald-900 text-white font-bold text-xs py-2 text-center transition shadow-2xs flex items-center justify-center gap-1"
+                  data-oferta-id={item.oferta_id}
+                >
+                  <span>Comprar</span>
+                  <span class="text-[10px]">↗</span>
+                </a>
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  </section>
+)}
+
+<script>
+  // =======================================================================
+  // CRUCE DINÁMICO CON FAVORITOS (localStorage['cafesitios_favoritos_v1'])
+  // =======================================================================
+  function checkFavoritesPriceDrops() {
+    try {
+      const raw = localStorage.getItem('cafesitios_favoritos_v1');
+      if (!raw) return;
+      const favoritos = JSON.parse(raw);
+      if (!Array.isArray(favoritos) || favoritos.length === 0) return;
+
+      const favIds = new Set(favoritos.map(f => Number(f.cafe_id || f.id)));
+
+      document.querySelectorAll('[data-oferta-card]').forEach(card => {
+        const prodId = Number(card.getAttribute('data-producto-id'));
+        if (prodId && favIds.has(prodId)) {
+          const badge = card.querySelector('[data-badge-favorito]');
+          badge?.classList.remove('hidden');
+          card.classList.add('ring-2', 'ring-amber-400', 'bg-amber-50/20');
+        }
+      });
+    } catch (e) {
+      console.warn('Error al verificar favoritos en ofertas:', e);
+    }
+  }
+
+  // =======================================================================
+  // TELEMETRÍA GTM / DATALAYER: clic_oferta_semana
+  // =======================================================================
+  function setupTelemetry() {
+    document.querySelectorAll('[data-oferta-card]').forEach(card => {
+      const ofertaId = Number(card.getAttribute('data-oferta-id'));
+      const nombre = card.getAttribute('data-nombre') || '';
+      const tienda = card.getAttribute('data-tienda') || '';
+      const descuento = Number(card.getAttribute('data-descuento') || 0);
+
+      const triggerEvent = () => {
+        if (typeof window !== 'undefined') {
+          (window as any).dataLayer = (window as any).dataLayer || [];
+          (window as any).dataLayer.push({
+            event: 'clic_oferta_semana',
+            oferta_id: ofertaId,
+            nombre_producto: nombre,
+            tienda: tienda,
+            porcentaje_descuento: descuento
+          });
+        }
+      };
+
+      card.querySelectorAll('.btn-oferta-detalle, .btn-oferta-comprar').forEach(btn => {
+        btn.addEventListener('click', triggerEvent);
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    checkFavoritesPriceDrops();
+    setupTelemetry();
+  });
+  checkFavoritesPriceDrops();
+  setupTelemetry();
+</script>

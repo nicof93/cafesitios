@@ -4,6 +4,7 @@ import type { Store } from '../../core/domain/models/Store';
 interface Props {
   stores?: Store[];
   selectedStore?: string;
+  selectedStores?: string[];
   initialSearch?: string;
   initialSort?: string;
   initialMinPrice?: string;
@@ -13,11 +14,13 @@ interface Props {
   initialVariety?: string;
   initialNotes?: string;
   initialCategory?: string;
+  hasNoCafeProducts?: boolean;
 }
 
 const {
   stores = [],
   selectedStore = '',
+  selectedStores = [],
   initialSearch = '',
   initialSort = 'kilo',
   initialMinPrice = '',
@@ -27,7 +30,15 @@ const {
   initialVariety = '',
   initialNotes = '',
   initialCategory = 'cafe',
+  hasNoCafeProducts = false,
 } = Astro.props;
+
+const currentSelectedStores = new Set<string>(
+  (selectedStores && selectedStores.length > 0
+    ? selectedStores
+    : (selectedStore ? selectedStore.split(',').map(s => s.trim()) : [])
+  ).filter(Boolean)
+);
 
 const sortedStores = [...stores].sort((a, b) => 
   a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
@@ -35,7 +46,7 @@ const sortedStores = [...stores].sort((a, b) =>
 
 const hasActiveFilters = Boolean(
   initialSearch || 
-  selectedStore || 
+  currentSelectedStores.size > 0 || 
   initialCountry || 
   initialProcess || 
   initialVariety || 
@@ -59,7 +70,7 @@ const hasActiveFilters = Boolean(
       </div>
       {hasActiveFilters && (
         <a 
-          href="/catalog" 
+          href="/catalogo" 
           class="text-xs font-medium text-emerald-700 hover:text-emerald-900 transition hover:underline"
         >
           Limpiar todo
@@ -67,7 +78,7 @@ const hasActiveFilters = Boolean(
       )}
     </div>
 
-    <form id="filters-form" method="GET" action="/catalog" class="space-y-5">
+    <form id="filters-form" method="GET" action="/catalogo" class="space-y-5">
       
       <!-- BUSCADOR SEMÁNTICO (CU-01 / RN-01) -->
       <div>
@@ -89,21 +100,25 @@ const hasActiveFilters = Boolean(
         </div>
       </div>
 
-      <!-- SELECTOR DE CATEGORÍA -->
-      <div>
-        <label for="catalog-category-select" class="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
-          Categoría
-        </label>
-        <select 
-          name="category"
-          id="catalog-category-select" 
-          class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-3 py-2 text-xs font-medium text-stone-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition"
-        >
-          <option value="cafe" selected={initialCategory === 'cafe'}>☕ Solo Café de Especialidad</option>
-          <option value="no_cafe" selected={initialCategory === 'no_cafe'}>🎁 Ropa, Cajas y Accesorios</option>
-          <option value="todos" selected={initialCategory === 'todos'}>🌐 Todo el Catálogo</option>
-        </select>
-      </div>
+      <!-- SELECTOR DE CATEGORÍA (Oculta categorías vacías como ropa y accesorios) -->
+      {(hasNoCafeProducts || initialCategory === 'no_cafe') && (
+        <div>
+          <label for="catalog-category-select" class="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
+            Categoría
+          </label>
+          <select 
+            name="category"
+            id="catalog-category-select" 
+            class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-3 py-2 text-xs font-medium text-stone-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition"
+          >
+            <option value="cafe" selected={initialCategory === 'cafe'}>☕ Solo Café de Especialidad</option>
+            {hasNoCafeProducts && (
+              <option value="no_cafe" selected={initialCategory === 'no_cafe'}>🎁 Ropa, Cajas y Accesorios</option>
+            )}
+            <option value="todos" selected={initialCategory === 'todos'}>🌐 Todo el Catálogo</option>
+          </select>
+        </div>
+      )}
 
       <!-- SELECTOR DE ORDENAMIENTO -->
       <div>
@@ -121,38 +136,61 @@ const hasActiveFilters = Boolean(
         </select>
       </div>
 
-      <!-- FILTRO DE TIENDAS (CHECKBOXES / RADIOS LIMPIOS) -->
+      <!-- FILTRO DE TIENDAS MULTI-SELECCIÓN (CHECKBOXES) -->
       {sortedStores.length > 0 && (
         <div class="border-t border-stone-100 pt-3">
-          <span class="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-2">
-            Tostadurías y Tiendas
-          </span>
-          <div class="max-h-48 overflow-y-auto space-y-1.5 pr-1 text-xs">
-            <label class="flex items-center justify-between text-stone-600 hover:text-stone-900 cursor-pointer select-none py-0.5 group">
-              <div class="flex items-center gap-2">
-                <input 
-                  type="radio" 
-                  name="store_name" 
-                  value="" 
-                  checked={!selectedStore}
-                  class="h-3.5 w-3.5 text-emerald-700 border-stone-300 focus:ring-emerald-500"
-                />
-                <span class="font-medium text-stone-700">Todos</span>
-              </div>
-            </label>
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-1.5">
+              <span class="block text-[11px] font-bold uppercase tracking-wider text-stone-400">
+                Tostadurías y Tiendas
+              </span>
+              {currentSelectedStores.size > 0 && (
+                <span class="inline-flex items-center justify-center bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+                  {currentSelectedStores.size}
+                </span>
+              )}
+            </div>
+            {currentSelectedStores.size > 0 && (
+              <button 
+                type="button" 
+                id="btn-clear-stores"
+                class="text-[10px] font-bold text-emerald-700 hover:text-emerald-950 hover:underline"
+                title="Desmarcar todas las tiendas seleccionadas"
+              >
+                Desmarcar
+              </button>
+            )}
+          </div>
+
+          <!-- Buscador interactivo de tiendas si hay más de 5 -->
+          {sortedStores.length > 5 && (
+            <div class="relative mb-2">
+              <input 
+                type="text" 
+                id="store-search-filter" 
+                placeholder="Buscar tostaduría..." 
+                class="w-full bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1 text-[11px] text-stone-700 placeholder-stone-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-600 transition"
+              />
+            </div>
+          )}
+
+          <div id="stores-checkbox-list" class="max-h-48 overflow-y-auto space-y-1 pr-1 text-xs">
             {sortedStores.map(store => {
-              const isSelected = selectedStore === store.nombre;
+              const isSelected = currentSelectedStores.has(store.nombre);
               return (
-                <label class="flex items-center justify-between text-stone-600 hover:text-stone-900 cursor-pointer select-none py-0.5 group">
+                <label 
+                  class="store-filter-item flex items-center justify-between text-stone-600 hover:text-stone-900 cursor-pointer select-none py-1 px-1 rounded-lg hover:bg-stone-50 transition group" 
+                  data-store-name={store.nombre.toLowerCase()}
+                >
                   <div class="flex items-center gap-2 min-w-0">
                     <input 
-                      type="radio" 
-                      name="store_name" 
+                      type="checkbox" 
+                      name="tienda" 
                       value={store.nombre}
                       checked={isSelected}
-                      class="h-3.5 w-3.5 text-emerald-700 border-stone-300 focus:ring-emerald-500"
+                      class="store-checkbox h-3.5 w-3.5 rounded border-stone-300 text-emerald-700 focus:ring-emerald-500 cursor-pointer"
                     />
-                    <span class={`truncate ${isSelected ? 'font-bold text-emerald-800' : ''}`}>
+                    <span class={`truncate ${isSelected ? 'font-bold text-emerald-900' : ''}`}>
                       {store.nombre}
                     </span>
                   </div>
@@ -323,5 +361,29 @@ const hasActiveFilters = Boolean(
     if (query) {
       AnalyticsTracker.trackSearch(query, sortBy);
     }
+  });
+
+  // Buscador interactivo de tiendas en el filtro
+  const storeFilterInput = document.getElementById('store-search-filter') as HTMLInputElement | null;
+  const storeItems = document.querySelectorAll('.store-filter-item');
+  storeFilterInput?.addEventListener('input', () => {
+    const term = storeFilterInput.value.toLowerCase().trim();
+    storeItems.forEach(item => {
+      const name = item.getAttribute('data-store-name') || '';
+      if (!term || name.includes(term)) {
+        (item as HTMLElement).classList.remove('hidden');
+      } else {
+        (item as HTMLElement).classList.add('hidden');
+      }
+    });
+  });
+
+  // Botón para desmarcar todas las tiendas y refrescar
+  const clearStoresBtn = document.getElementById('btn-clear-stores');
+  clearStoresBtn?.addEventListener('click', () => {
+    document.querySelectorAll<HTMLInputElement>('.store-checkbox').forEach(cb => {
+      cb.checked = false;
+    });
+    form?.requestSubmit();
   });
 </script>

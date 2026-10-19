@@ -70,7 +70,12 @@ export class LocalStorageAdapter {
     if (typeof window === 'undefined') return [];
     try {
       const recipes = this.getRecipes();
-      recipes.unshift(recipe);
+      const existingIdx = recipes.findIndex(r => r.id === recipe.id);
+      if (existingIdx >= 0) {
+        recipes[existingIdx] = recipe;
+      } else {
+        recipes.unshift(recipe);
+      }
       localStorage.setItem(this.KEY_RECIPES, JSON.stringify(recipes));
       return recipes;
     } catch (err) {

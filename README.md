@@ -1,81 +1,213 @@
-# Cafe-sitios ☕
+# Café-sitios ☕🇨🇱
 
-Plataforma de comparación y agregación de precios de café de especialidad en Chile.
+Plataforma de comparación, agregación de precios y directorio de café de especialidad en Chile.
 
-## Arquitectura
-- **Scraper Pipeline**: Ingesta masiva y normalización de precios/formatos ($/kg) desde tiendas Shopify.
-- **Base de Datos**: PostgreSQL con SQLAlchemy ORM, driver `psycopg3` e historial temporal de precios.
-- **Backend API**: FastAPI bajo Domain-Driven Design (DDD) y Nivel 2 de Madurez de Richardson.
+Café-sitios centraliza en tiempo real los catálogos de tostadores y tiendas de café en Chile, permitiendo a los amantes del café filtrar por origen, proceso, notas de cata y comparar precios estandarizados por kilo ($/kg), registrar extracciones en la bitácora del barista y acceder a paneles de gestión para tostadurías.
 
-## Estructura del Proyecto
-```
+---
+
+## 🏛️ Arquitectura del Sistema
+
+El proyecto sigue una arquitectura desacoplada basada en **Domain-Driven Design (DDD)** simplificado y principios *Twelve-Factor App*:
+
+* **Pipeline ETL / Scraper Asíncrono (`scrapper/`, `core/`):** Ingesta masiva desde tiendas Shopify (JSON endpoints) y WooCommerce (Store API + HTML fallback). Normaliza gramajes, precios CLP, calcula precio por kilo ($/kg) y extrae atributos botánicos estructurados (variedad, origen, finca, proceso, fermentación y notas de cata SCA).
+* **Base de Datos & Performance (`db/`, `migrations/`):** PostgreSQL (Supabase en producción) con SQLAlchemy 2.0 y Alembic. Optimizado con índices en Foreign Keys, índices compuestos de ordenación, aceleración GIN con `pg_trgm` para búsqueda textual y vistas materializadas concurrentes para métricas y variaciones de precio.
+* **Backend REST API (`api/`, `main.py`):** Desarrollado con FastAPI, tipado estricto con Pydantic v2, autenticación y panel multi-tenant (RBAC) para tostadurías con registro de auditoría.
+* **Frontend Web (`astro-frontend/`):** Aplicación de alto rendimiento construida en Astro (SSR/SSG) con Tailwind CSS, islas reactivas, optimización estricta de Core Web Vitals (LCP < 1.2s), SEO semántico y datos estructurados Schema.org.
+* **CI/CD Automatizado (`.github/workflows/`):** Desacoplamiento de migraciones de base de datos en merge a `main` y ejecución programada del scraper nocturno (03:00 AM UTC).
+
+---
+
+## 📁 Estructura del Repositorio
+
+```text
 cafe-sitios/
-├── .env
-├── requirements.txt
-├── application.py          # Script principal de escaneo e ingesta
-├── main.py                 # Servidor de FastAPI
-├── index.html              # Catálogo y acceso a fichas de producto
-├── stores.html             # Listado de tiendas
-├── product.html            # Detalle de producto e historial de precios
-├── db/                     # Configuración y modelos SQLAlchemy
-├── scrapper/               # Drivers de extracción (Shopify, etc.)
-├── domain/                 # Entidades e Interfaces de Dominio (DDD)
-├── infrastructure/         # Implementación de repositorios SQLAlchemy
-├── application/            # Casos de uso de la aplicación
-└── api/                    # Endpoints FastAPI y Schemas Pydantic
+├── .github/workflows/          # Automatizaciones CI/CD
+│   ├── database-migrations.yml # Migraciones automáticas de BD al hacer merge a main
+│   └── scraper.yml             # Scraper nocturno programado (03:00 AM UTC)
+├── api/                        # Capa HTTP (FastAPI)
+│   ├── router.py               # Orquestador de rutas públicas (/api/v1/...)
+│   ├── products.py             # Catálogo público, filtros y comparador
+│   ├── stores.py               # Directorio de tiendas y sucursales
+│   ├── admin_tienda.py         # Panel multi-inquilino para tostadurías (RBAC)
+│   └── schemas.py              # DTOs de entrada y salida Pydantic v2
+├── application/                # Casos de uso de negocio (orquestación)
+│   ├── get_cheapest_products.py
+│   ├── compare_products.py
+│   └── get_weekly_price_drops.py
+├── domain/                     # Entidades puras y contratos (CERO dependencias externas)
+│   ├── models.py               # Dataclasses del dominio
+│   ├── repositories.py         # Interfaces abstractas (ProductRepository)
+│   └── search_normalizer.py    # Sinónimos botánicos y clasificador de categorías
+├── infrastructure/             # Adaptadores E/S y persistencia
+│   └── postgres_repository.py  # Implementación SQLAlchemy 2.0 de repositorios
+├── db/                         # Conexión, configuración y modelos ORM
+│   ├── config.py               # Carga de variables de entorno (.env)
+│   └── database.py             # Modelos declarativos y DatabaseManager
+├── migrations/versions/        # Historial de migraciones con Alembic (0001 a 0015)
+├── scrapper/                   # Drivers de extracción (Shopify JSON, WooCommerce API)
+├── core/                       # Normalizadores y extractores de metadatos botánicos (SCA)
+├── astro-frontend/             # Frontend moderno en Astro + Tailwind CSS
+├── tests/                      # Suite de pruebas unitarias (módulo nativo unittest)
+├── scrapper_application.py     # Entrypoint del pipeline ETL / Sincronización
+├── main.py                     # Entrypoint de la API FastAPI
+└── AGENTS.md                   # Protocolo técnico y directivas de desarrollo para IA
 ```
 
-## Ejecución
-1. Instalar dependencias: `pip install -r requirements.txt`
-2. Aplicar migraciones: `alembic upgrade head`
-3. Ejecutar el scraper: `python scrapper_application.py`
-4. Iniciar la API: `python -m uvicorn main:app --reload`
-5. Ejecutar test: `python -m unittest discover tests`
+---
 
-### Despliegue del frontend en Vercel
+## 🚀 Puesta en Marcha Local
 
-Importe el repositorio en Vercel y configure `frontend-website` como **Root Directory**. Use `npm run build` como comando de build y `dist` como directorio de salida. El build genera `env-config.js` con estas variables de entorno:
+### 1. Requisitos Previos
+* Python 3.11+
+* Node.js 18+ (para el frontend Astro)
+* Base de datos PostgreSQL (local o instancia de Supabase)
 
-- `API_BASE_URL` (obligatoria): URL pública base de la API, sin `/api/v1` al final.
-- `GTM_ID` (opcional): identificador de Google Tag Manager (`GTM-...`).
-- `GA_MEASUREMENT_ID` (opcional): identificador de medición GA4 (`G-...`).
+### 2. Instalación de Dependencias
+```powershell
+# Clonar el repositorio
+git clone https://github.com/tu-usuario/cafe-sitios.git
+cd cafe-sitios
 
-Configure los valores de `API_BASE_URL` y los identificadores de analítica por separado para los entornos Preview/calidad y Production. Los identificadores de analítica pueden omitirse para desactivar esa integración en un entorno. Al ser variables usadas durante el build de un sitio estático, sus valores quedan incluidos en los archivos públicos generados; no use secretos en ellas.
+# Crear y activar entorno virtual
+python -m venv venv
+.\venv\Scripts\activate       # En Windows
+# source venv/bin/activate    # En Linux/macOS
 
-### Versionado de base de datos
-
-El esquema se versiona con Alembic. Al iniciar el scraper, una base heredada sin `alembic_version` se adopta automáticamente si contiene las tablas principales del esquema anterior; si falta la tabla auxiliar `estado_sincronizacion`, se crea antes de registrar el baseline. Luego se aplican las revisiones pendientes. Las bases vacías reciben todas las migraciones. Si se ejecutan migraciones manualmente sobre una base heredada, primero se debe marcar el baseline:
-
-```bash
-alembic stamp 0001_baseline
-alembic upgrade head
+# Instalar dependencias backend
+pip install -r requirements.txt
 ```
 
-En una base vacía basta con ejecutar `alembic upgrade head`. Cada fila de `sincronizaciones` representa una ejecución por tienda y almacena fechas, resultado, detalle de error y conteos de productos agregados, eliminados y actualizados.
-
-Tiendas, productos y variantes registran `fecha_creacion` y `fecha_actualizacion`; la fecha de creación se conserva en las sincronizaciones posteriores y la de actualización cambia cuando se modifica el registro. Los productos conservan además su `id_externo` de la tienda (ID de plataforma o SKU disponible), separado del ID interno de la base de datos, para reconocerlos aunque cambie su URL.
-
-El detalle abre una página propia (`product.html?id=<id>`), conserva el encabezado del catálogo y muestra la descripción HTML saneada, las variantes y un gráfico Chart.js con la evolución diaria del precio por variante. Su barra fija inferior muestra las notas de cata, enlaza al catálogo filtrado por proceso o país de origen e incluye el acceso de compra a la tienda. El endpoint `/api/v1/products/{id}/detail` devuelve el historial y estos atributos.
-
-El scraper consulta las tiendas con `activo = true` en la base de datos y usa sus campos `plataforma` y `url_base`; no crea ni actualiza registros de tienda durante la sincronización. Si una tienda heredada aún tiene `plataforma = 'desconocida'`, prueba los drivers soportados con su `url_base` sin modificar la tienda. Para desactivar o reactivar una tienda comercialmente, cambie su campo `activo`:
-
-```sql
-UPDATE tiendas SET activo = FALSE WHERE id = 1;
-UPDATE tiendas SET activo = TRUE WHERE id = 1;
+### 3. Configuración del Entorno (`.env`)
+Crea un archivo `.env` en la raíz del proyecto basado en las siguientes variables:
+```env
+DATABASE_URL=postgresql+psycopg://postgres:tu_password@tu_host:5432/postgres
+ENVIRONMENT=development
+ENABLE_DOCS=true
 ```
 
-Los productos que desaparecen de una tienda también se conservan: pasan a `activo = false`, junto con sus variantes e historial, y se reactivan si vuelven a aparecer.
+### 4. Migraciones de Base de Datos
+```powershell
+python -m alembic upgrade head
+```
 
-Durante la sincronización se extraen, mediante reglas y etiquetas en español/inglés, notas de cata, proceso, finca, variedad, elevación, cosecha y tipo/duración de fermentación. Las notas se normalizan y relacionan con productos a través de `notas_cata` y `producto_notas_cata`, para encontrar cafés con notas compartidas. Cada dato extraído conserva el fragmento de origen, nivel de confianza y versión de reglas. Si una descripción no aporta un dato, queda desconocido; no se infiere ni se inventa. La respuesta de `/api/v1/products/{id}/detail` incluye estos atributos y sus notas.
+### 5. Ejecución del Scraper
+```powershell
+# Modo normal (verifica e inicializa BD si hace falta):
+python scrapper_application.py
 
-La confianza es una señal heurística de extracción etiquetada, no una probabilidad calibrada. Cada sincronización informa en consola la cobertura detectada por atributo para identificar qué campos quedan sin reconocer antes de considerar un modelo de lenguaje.
+# Modo ultra-rápido (omite verificación DDL si ya ejecutaste migraciones):
+python scrapper_application.py --skip-migrations
+```
 
-## Links de interes
-- Documentación Interactiva (Swagger UI): http://localhost:8000/docs
-- Documentación ReDoc: http://localhost:8000/redoc
-- Healthcheck: http://localhost:8000/
-- Endpoint de Productos más Baratos: http://localhost:8000/api/v1/products?sort_by=kilo
-- Catálogo filtrado por proceso y origen: http://localhost:8000/api/v1/products?sort_by=kilo&process=natural&country=Etiop%C3%ADa
-- Listado paginado de tiendas: http://localhost:8000/api/v1/stores?page=1&page_size=10&sort_by=product_count_desc
-- Detalle de producto y variantes: http://localhost:8000/api/v1/products/1/detail
-- Última sincronización: http://localhost:8000/api/v1/sync/last
+### 6. Iniciar la API FastAPI
+```powershell
+python -m uvicorn main:app --reload --port 8000
+```
+La documentación interactiva estará disponible en:
+* Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
+* ReDoc: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
+### 7. Iniciar el Frontend (Astro)
+```powershell
+cd astro-frontend
+npm install
+npm run dev
+```
+El frontend estará corriendo en [http://localhost:4321](http://localhost:4321).
+
+---
+
+## 🧪 Pruebas Automatizadas
+
+Siguiendo el protocolo de calidad definido en `AGENTS.md`, las pruebas se ejecutan de manera focalizada con el módulo nativo `unittest`:
+
+```powershell
+# Pruebas de base de datos y migraciones
+python -m unittest tests/test_database.py
+
+# Pruebas de endpoints API y contratos HTTP
+python -m unittest tests/test_api.py
+
+# Pruebas de seguridad multi-tenant y roles de tienda
+python -m unittest tests/test_store_admin_multi_tenant.py
+
+# Pruebas de caídas de precio y ofertas
+python -m unittest tests/test_weekly_price_drops.py
+
+# Pruebas de drivers de scraping
+python -m unittest tests/test_woocommerce_driver.py
+python -m unittest tests/test_driver.py
+```
+
+---
+
+## ⚙️ Despliegue en Producción
+
+### Frontend (Vercel)
+1. Importa el repositorio en Vercel.
+2. Configura `astro-frontend` como **Root Directory**.
+3. Framework Preset: **Astro**.
+4. Variables de Entorno en Vercel:
+   - `PUBLIC_SITE_URL`: `https://cafesitios.cl`
+   - `PUBLIC_API_URL`: URL pública de tu API FastAPI (sin `/api/v1` al final).
+
+### Backend (Render / Railway / Koyeb)
+- Comando de inicio: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- Variable de entorno recomendada: `SKIP_DB_MIGRATIONS=true` (las migraciones se aplican automáticamente vía GitHub Actions al hacer merge).
+
+### CI/CD en GitHub Actions
+Configura el secreto en tu repositorio de GitHub (`Settings -> Secrets and variables -> Actions`):
+* `DATABASE_URL`: Cadena de conexión completa a tu base de datos de producción con driver psycopg3 (ej. `postgresql+psycopg://postgres.xxx:pass@aws-0-sa-east-1.pooler.supabase.com:6543/postgres`).
+
+---
+
+## 🚩 Estrategia de Feature Flags (Lanzamiento Controlado)
+
+Cafesitios utiliza un sistema desacoplado de Feature Flags para controlar el despliegue progresivo de funcionalidades tanto en el **Frontend (Astro)** como en el **Backend (FastAPI)**.
+
+Permite activar o desactivar páginas completas, enlaces en menús de navegación, botones de acción y rastreo en `sitemap.xml` para SEO sin necesidad de eliminar código.
+
+### Variables de Configuración
+
+| Variable de Entorno | Ámbito | Valor por Defecto | Descripción |
+| :--- | :--- | :--- | :--- |
+| `PUBLIC_ENABLE_RECIPES` | Frontend | `true` | Habilita o deshabilita la página `/recetas` (Guías Baristas) y sus enlaces en el header. Si está inactiva, retorna `404` limpio y se omite en el `sitemap.xml`. |
+| `ENABLE_RECIPES` | Backend | `true` | Habilita o restringe los endpoints de guardado y sincronización de recetas `/api/v1/recetas`. Si está inactivo, responde `404 Not Found`. |
+| `PUBLIC_ENABLE_CALIBRATOR` | Frontend | `true` | Habilita o deshabilita el Calibrador Sensorial 2D `/calibrador`, su acceso en el Header y el banner destacado en Guías. Si está inactivo, retorna `404` y se excluye del sitemap. |
+| `ENABLE_CALIBRATOR` | Backend | `true` | Flag en configuración del backend para control de dependencias asociadas al calibrador. |
+| `PUBLIC_ENABLE_MY_RECIPES` | Frontend | `true` | Controla la visualización del portal "Mis Recetas" local-first en el menú de navegación y sitemap. |
+| `PUBLIC_ENABLE_FLAVOR_QUIZ` | Frontend | `true` | Controla la visualización del botón interactivo "Quiz de Sabor" en la navegación y hero principal. |
+
+### Cómo activar o pausar un módulo:
+* **En desarrollo local:** Edita el archivo `astro-frontend/.env` o la raíz `.env`. Por ejemplo, para ocultar el calibrador antes del lanzamiento oficial:
+  ```env
+  PUBLIC_ENABLE_CALIBRATOR=false
+  ```
+* **En producción (Vercel / Render):**
+  Agrega o modifica la variable en el panel del servicio (`Settings -> Environment Variables`) y realiza un redespliegue sin reconstruir la base de código.
+
+---
+
+## 📌 Endpoints Principales de la API
+
+La API cuenta con endpoints canónicos en español y alias transparentes en inglés para garantizar total retrocompatibilidad:
+
+| Método | Endpoint Canónico (ES) | Alias Retrocompatible (EN) | Descripción |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/` | `/` | Healthcheck de la API. |
+| `GET` | `/api/v1/productos` | `/api/v1/products` (`/cheapest`) | Catálogo paginado con filtros de origen, proceso, variedad, rango de precio, notas y ordenamiento por `$/kg`. |
+| `GET` | `/api/v1/productos/comparar` | `/api/v1/products/compare` | Comparador side-by-side de hasta 4 cafés (atributos técnicos y organolépticos). |
+| `GET` | `/api/v1/productos/recomendar` | `/api/v1/products/recommend` | Recomendador interactivo / Quiz de afinidad por método de preparación y perfil. |
+| `GET` | `/api/v1/productos/{id}/detalle` | `/api/v1/products/{id}/detail` | Ficha técnica completa, variantes e historial temporal de precios. |
+| `GET` | `/api/v1/productos/ofertas-semana` | `/api/v1/products/ofertas-semana` | Mayores rebajas de precio verificadas en los últimos 7 días. |
+| `GET` | `/api/v1/tiendas` | `/api/v1/stores` | Directorio paginado de tostadurías activas y sucursales con cercanía geográfica. |
+| `GET` | `/api/v1/sincronizacion/ultima` | `/api/v1/sync/last` | Marca temporal y estado de la última sincronización del scraper. |
+| `GET` | `/api/v1/sincronizacion/resumen` | `/api/v1/sync/summary` | Resumen de novedades, productos agregados y variaciones de precio. |
+| `GET` | `/api/v1/sincronizacion/mercado` | `/api/v1/sync/market` | Estadísticas agregadas del mercado de café (precios promedio, distribución de tueste y procesos). |
+| `POST` | `/api/v1/sugerencias` | `/api/v1/feedback` | Envío anónimo y seguro de sugerencias con rate limiting y honeypot anti-bot. |
+| `POST` | `/api/v1/telemetria/evento` | `/api/v1/telemetry/event` | Registro anónimo de clics hacia tiendas externas e interacciones. |
+| `GET` | `/api/v1/recetas` | — | Guías y recetas interactivas de barismo según método de extracción. |
+| `POST` | `/api/v1/admin-tienda/login` | — | Autenticación multi-tenant (RBAC) para tostadurías asociadas. |
+| `GET/POST`| `/api/v1/admin-tienda/productos` | — | Gestión del catálogo de la tostaduría autenticada. |
+| `GET` | `/api/v1/administracion/tiendas` | `/api/v1/admin/stores` | Administración local de tostadurías, sincronización manual y moderación. |

@@ -1,7 +1,8 @@
 ---
+// CU-03: Comparador Avanzado Side-by-Side de Cafés y Selector Rápido
 ---
 
-<!-- CU-03: BARRA FLOTANTE DE COMPARACIÓN -->
+<!-- BARRA FLOTANTE DE COMPARACIÓN -->
 <div 
   id="compare-bar" 
   class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-stone-900/95 backdrop-blur text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-4 border border-stone-700 transition-all duration-300"
@@ -26,33 +27,82 @@
   </button>
 </div>
 
-<!-- CU-03: MODAL SIDE-BY-SIDE -->
+<!-- MODAL COMPARATIVO SIDE-BY-SIDE AVANZADO -->
 <dialog 
   id="compare-dialog" 
-  class="fixed inset-0 z-50 m-auto w-[95%] max-w-5xl rounded-3xl bg-white p-6 shadow-2xl border border-stone-200 backdrop:bg-stone-950/60 backdrop:backdrop-blur-sm"
+  class="fixed inset-0 z-50 m-auto w-[95%] max-w-6xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-stone-200 backdrop:bg-stone-950/60 backdrop:backdrop-blur-sm max-h-[90vh] overflow-y-auto"
 >
   <div class="flex items-center justify-between pb-4 border-b border-stone-200">
     <div>
-      <h3 class="text-lg font-bold text-slate-900">Comparativa Side-by-Side</h3>
-      <p class="text-xs text-slate-500">Compara hasta 4 cafés ordenados por conveniencia por kilo (RN-03)</p>
+      <h3 class="text-xl font-black text-stone-900 flex items-center gap-2">
+        <span>⚖️</span>
+        <span>Comparativa Técnica y Organoléptica de Cafés</span>
+      </h3>
+      <p class="text-xs text-stone-500 mt-0.5">
+        Contraste exhaustivo de precios, procedencia, tueste, notas sensoriales e intensidad organoléptica.
+      </p>
     </div>
     <button 
       type="button" 
       id="btn-close-compare-dialog"
-      class="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg"
+      class="text-stone-400 hover:text-stone-700 text-xl font-bold p-1 rounded-xl transition"
+      aria-label="Cerrar comparativa"
     >
       ✕
     </button>
   </div>
   
-  <div id="compare-dialog-content" class="mt-4 overflow-x-auto min-h-[220px] flex items-center justify-center">
-    <span class="text-xs text-slate-400">Cargando comparativa...</span>
+  <div id="compare-dialog-content" class="mt-6 overflow-x-auto min-h-[300px]">
+    <div class="flex items-center justify-center p-12 text-xs text-stone-400">
+      Cargando comparativa...
+    </div>
+  </div>
+</dialog>
+
+<!-- MODAL SELECTOR RÁPIDO PARA "COMPARAR CON OTRO CAFÉ" -->
+<dialog
+  id="compare-picker-dialog"
+  class="fixed inset-0 z-50 m-auto w-[92%] max-w-2xl rounded-3xl bg-white p-6 shadow-2xl border border-stone-200 backdrop:bg-stone-950/60 backdrop:backdrop-blur-sm max-h-[85vh] overflow-hidden"
+>
+  <div class="flex flex-col h-full max-h-[75vh]">
+    <div class="flex items-center justify-between pb-4 border-b border-stone-200">
+      <div>
+        <h3 class="text-lg font-bold text-stone-900 flex items-center gap-2">
+          <span>🔍</span>
+          <span>Selecciona un segundo café para contrastar</span>
+        </h3>
+        <p id="picker-base-name" class="text-xs text-emerald-800 font-semibold mt-0.5">
+          Café base fijado
+        </p>
+      </div>
+      <button 
+        type="button" 
+        id="btn-close-picker-dialog"
+        class="text-stone-400 hover:text-stone-700 text-xl font-bold p-1 rounded-xl transition"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div class="mt-4">
+      <input
+        type="text"
+        id="picker-search-input"
+        placeholder="Buscar café por nombre, origen, proceso o tienda..."
+        class="w-full rounded-xl border border-stone-300 px-4 py-2.5 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+      />
+    </div>
+
+    <div id="picker-results-list" class="mt-4 flex-1 overflow-y-auto space-y-2 pr-1 divide-y divide-stone-100">
+      <div class="p-8 text-center text-xs text-stone-400">Cargando catálogo para contrastar...</div>
+    </div>
   </div>
 </dialog>
 
 <script>
   import { CompareProductsUseCase } from '../../core/application/CompareProducts';
   import { AnalyticsTracker } from '../../core/infrastructure/analytics/AnalyticsTracker';
+  import { Environment } from '../../core/infrastructure/config/Environment';
 
   const compareUseCase = new CompareProductsUseCase();
   const selectedCompareIds = new Set<number>();
@@ -65,6 +115,15 @@
   const closeBtn = document.getElementById('btn-close-compare-dialog');
   const content = document.getElementById('compare-dialog-content');
 
+  const pickerDialog = document.getElementById('compare-picker-dialog') as HTMLDialogElement | null;
+  const pickerCloseBtn = document.getElementById('btn-close-picker-dialog');
+  const pickerSearchInput = document.getElementById('picker-search-input') as HTMLInputElement | null;
+  const pickerResultsList = document.getElementById('picker-results-list');
+  const pickerBaseNameLabel = document.getElementById('picker-base-name');
+
+  let baseProductId: number | null = null;
+  let cachedCatalog: any[] = [];
+
   function updateBar() {
     if (!bar || !countLabel) return;
     if (selectedCompareIds.size > 0) {
@@ -75,7 +134,7 @@
     }
   }
 
-  // Escuchar eventos globales de toggle de comparación desde las tarjetas de producto
+  // Escuchar eventos globales de toggle de comparación
   window.addEventListener('cafesitios:toggle-compare', (e: Event) => {
     const detail = (e as CustomEvent).detail;
     const { id, checked, name } = detail;
@@ -83,7 +142,6 @@
     if (checked) {
       if (selectedCompareIds.size >= 4) {
         alert('Puedes comparar un máximo de 4 cafés a la vez.');
-        // Desmarcar checkbox
         const cb = document.querySelector(`.compare-cb[data-id="${id}"]`) as HTMLInputElement | null;
         if (cb) cb.checked = false;
         return;
@@ -97,18 +155,113 @@
     updateBar();
   });
 
+  // Escuchar evento para abrir selector de comparación rápida fijando un café base
+  window.addEventListener('cafesitios:open-compare-selector', async (e: Event) => {
+    const detail = (e as CustomEvent).detail || {};
+    const { id, name } = detail;
+    if (!id) return;
+
+    baseProductId = Number(id);
+    selectedCompareIds.add(baseProductId);
+    updateBar();
+
+    if (pickerBaseNameLabel) {
+      pickerBaseNameLabel.textContent = `Café base fijado: "${name || '#' + id}"`;
+    }
+    if (pickerDialog) {
+      pickerDialog.showModal();
+      loadPickerCatalog();
+    }
+  });
+
+  async function loadPickerCatalog() {
+    if (!pickerResultsList) return;
+    if (cachedCatalog.length === 0) {
+      try {
+        const apiBase = Environment.getApiBaseUrl();
+        const res = await fetch(`${apiBase}/api/v1/products?limit=50&category=cafe&only_available=false`);
+        if (res.ok) {
+          const json = await res.json();
+          cachedCatalog = json.data || [];
+        }
+      } catch (err) {
+        console.warn('Error cargando catálogo para picker:', err);
+      }
+    }
+    renderPickerItems(pickerSearchInput?.value || '');
+  }
+
+  function renderPickerItems(search = '') {
+    if (!pickerResultsList) return;
+    const q = search.toLowerCase().trim();
+    const filtered = cachedCatalog.filter((item) => {
+      if (Number(item.id) === baseProductId) return false;
+      if (!q) return true;
+      return (
+        item.nombre?.toLowerCase().includes(q) ||
+        item.tienda?.toLowerCase().includes(q) ||
+        item.proceso?.toLowerCase().includes(q)
+      );
+    });
+
+    if (filtered.length === 0) {
+      pickerResultsList.innerHTML = '<div class="p-6 text-center text-xs text-stone-400">No se encontraron otros cafés con ese término.</div>';
+      return;
+    }
+
+    pickerResultsList.innerHTML = filtered.slice(0, 15).map((p) => {
+      const v = p.variante || {};
+      const precio = Number(v.precio_clp || 0);
+      const precioKilo = Number(v.precio_por_kilo || 0);
+      const formato = v.formato_gramos || 250;
+
+      return `
+        <div class="picker-item flex items-center justify-between p-3 rounded-xl hover:bg-emerald-50/60 cursor-pointer transition gap-3" data-id="${p.id}">
+          <div class="flex items-center gap-3">
+            <img src="${p.imagen || '/images/producto-referencial.jpg'}" alt="${p.nombre}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='/images/producto-referencial.jpg';" class="h-12 w-12 rounded-lg object-contain bg-[#F7F6F0] p-1 border border-stone-200" />
+            <div>
+              <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">${p.tienda}</span>
+              <h4 class="text-xs font-bold text-stone-900 line-clamp-1">${p.nombre}</h4>
+              <p class="text-[11px] text-stone-500">$${precio.toLocaleString('es-CL')} (${formato}g) &bull; <strong class="text-emerald-800">$${precioKilo.toLocaleString('es-CL')}/kg</strong></p>
+            </div>
+          </div>
+          <button type="button" class="shrink-0 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3 py-1.5 transition">
+            Comparar ➔
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    pickerResultsList.querySelectorAll('.picker-item').forEach((item) => {
+      item.addEventListener('click', () => {
+        const secondId = Number(item.getAttribute('data-id'));
+        if (secondId) {
+          selectedCompareIds.add(secondId);
+          updateBar();
+          pickerDialog?.close();
+          triggerBtn?.click();
+        }
+      });
+    });
+  }
+
+  pickerSearchInput?.addEventListener('input', (e) => {
+    renderPickerItems((e.target as HTMLInputElement).value);
+  });
+
   clearBtn?.addEventListener('click', () => {
     selectedCompareIds.clear();
-    document.querySelectorAll('.compare-cb').forEach(el => {
+    document.querySelectorAll('.compare-cb').forEach((el) => {
       (el as HTMLInputElement).checked = false;
     });
     updateBar();
   });
 
+  // Renderizar la comparativa exhaustiva
   triggerBtn?.addEventListener('click', async () => {
     if (selectedCompareIds.size === 0 || !dialog || !content) return;
     dialog.showModal();
-    content.innerHTML = '<span class="text-xs text-slate-400">Cargando comparativa...</span>';
+    content.innerHTML = '<div class="flex items-center justify-center p-12 text-xs text-stone-400 animate-pulse">Obteniendo variables técnicas y organolépticas...</div>';
 
     try {
       const ids = Array.from(selectedCompareIds);
@@ -116,57 +269,153 @@
       const productos = result.productos;
 
       if (productos.length === 0) {
-        content.innerHTML = '<p class="text-xs text-slate-500">No se encontraron cafés para comparar.</p>';
+        content.innerHTML = '<p class="text-xs text-stone-500 text-center py-8">No se encontraron cafés para comparar.</p>';
         return;
       }
 
-      // Menor precio por kilo
+      // Detectar menor precio por kilo
       const minKilo = Math.min(
-        ...productos.map(p => p.getBestVariant(true)?.precio_por_kilo || p.getBestVariant(false)?.precio_por_kilo || Infinity)
+        ...productos.map((p) => p.getBestVariant(true)?.precio_por_kilo || p.getBestVariant(false)?.precio_por_kilo || Infinity)
       );
 
-      let html = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${Math.min(productos.length, 4)} gap-4 w-full">`;
-      productos.forEach(p => {
+      let html = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${Math.min(productos.length, 4)} gap-6 w-full items-start">`;
+      
+      productos.forEach((p) => {
         const v = p.getBestVariant(true) || p.getBestVariant(false);
         const esGanador = v && v.precio_por_kilo === minKilo;
+        const attrs = (p as any).atributos_organolepticos || {};
+
         html += `
-          <div class="rounded-2xl border ${esGanador ? 'border-emerald-500 ring-2 ring-emerald-100 bg-emerald-50/20' : 'border-stone-200 bg-white'} p-4 flex flex-col justify-between">
-            <div class="space-y-3">
-              ${esGanador ? '<span class="inline-block bg-emerald-600 text-white text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full mb-1">⭐ Mejor precio / kg</span>' : ''}
-              <img src="${p.imagen}" alt="${p.nombre}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop';" class="w-full h-32 object-contain bg-[#F7F6F0] rounded-xl p-2">
-              <span class="inline-block bg-white border border-stone-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">${p.tienda}</span>
-              <h4 class="font-bold text-xs text-slate-900 line-clamp-2">${p.nombre}</h4>
+          <article class="rounded-3xl border ${esGanador ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50/15' : 'border-stone-200 bg-white'} p-5 shadow-xs flex flex-col justify-between space-y-5">
+            <div class="space-y-4">
               
-              <div class="border-t border-stone-100 pt-2 space-y-1">
-                <p class="text-[10px] uppercase font-bold text-slate-400">Precio / kg</p>
-                <p class="text-base font-extrabold ${esGanador ? 'text-emerald-700' : 'text-slate-800'}">
-                  $${(v?.precio_por_kilo || 0).toLocaleString('es-CL')}/kg
-                  ${v?.es_estimado ? '<span class="ml-1 text-[9px] font-bold text-amber-700 bg-amber-100 px-1 py-0.5 rounded">Estimado</span>' : ''}
-                </p>
-                <p class="text-xs font-semibold text-slate-600">Total: $${(v?.precio_clp || 0).toLocaleString('es-CL')} (${v?.formato_gramos || 250}g)</p>
-                ${p.origen ? `<p class="text-[10px] text-slate-500">🌍 Origen: ${p.origen}</p>` : ''}
-                ${p.proceso ? `<p class="text-[10px] text-slate-500">⚙️ Proceso: ${p.proceso}</p>` : ''}
+              <!-- BADGE GANADOR CONVENIENCIA -->
+              <div class="min-h-[24px]">
+                ${esGanador ? '<span class="inline-flex items-center gap-1 bg-emerald-600 text-white text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full shadow-2xs">⭐ Mejor Precio / Kilo</span>' : '<span class="text-[10px] text-stone-400 font-semibold uppercase">Opción de Catálogo</span>'}
               </div>
+
+              <!-- FOTO Y TIENDA -->
+              <div class="relative flex items-center justify-center bg-[#F7F6F0] rounded-2xl p-4 h-44 overflow-hidden border border-stone-100">
+                <img 
+                  src="${p.imagen || '/images/producto-referencial.jpg'}" 
+                  alt="${p.nombre}" 
+                  referrerpolicy="no-referrer" 
+                  onerror="this.onerror=null; this.src='/images/producto-referencial.jpg';" 
+                  class="h-full w-full object-contain drop-shadow-sm hover:scale-105 transition"
+                />
+                <a 
+                  href="/catalogo?tienda=${encodeURIComponent(p.tienda)}" 
+                  class="absolute top-3 left-3 bg-white/95 text-stone-800 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-2xs border border-stone-200 hover:text-emerald-800 transition"
+                  title="Ver catálogo de ${p.tienda}"
+                >
+                  ${p.tienda}
+                </a>
+              </div>
+
+              <!-- TÍTULO -->
+              <div>
+                <h4 class="font-bold text-sm text-stone-900 leading-snug line-clamp-2">${p.nombre}</h4>
+                <p class="text-[11px] text-stone-500 mt-1">${v?.disponible ? '<span class="text-emerald-700 font-bold">● En stock</span>' : '<span class="text-stone-400">○ Agotado</span>'}</p>
+              </div>
+
+              <!-- BLOQUE DE PRECIOS TRANSPARENTADOS -->
+              <div class="rounded-2xl bg-stone-50/80 p-3.5 border border-stone-200/60 space-y-1.5">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-stone-400">Precio / kg</span>
+                  <span class="text-base font-black ${esGanador ? 'text-emerald-700' : 'text-stone-900'}">
+                    $${(v?.precio_por_kilo || 0).toLocaleString('es-CL')}<span class="text-[10px] text-stone-500">/kg</span>
+                  </span>
+                </div>
+                <div class="flex items-baseline justify-between text-xs text-stone-600 border-t border-stone-200/40 pt-1.5">
+                  <span class="text-stone-500 font-medium">Bolsa (${v?.formato_gramos || 250}g):</span>
+                  <span class="font-extrabold text-stone-900">$${(v?.precio_clp || 0).toLocaleString('es-CL')} CLP</span>
+                </div>
+              </div>
+
+              <!-- ESPECIFICACIONES TÉCNICAS -->
+              <div class="space-y-2 text-xs border-t border-stone-100 pt-3">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-stone-400 font-medium">País / Origen:</span>
+                  <span class="font-bold text-stone-800">${p.origen || 'No especificado'}</span>
+                </div>
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-stone-400 font-medium">Proceso:</span>
+                  <span class="font-bold text-stone-800">${p.proceso || 'No especificado'}</span>
+                </div>
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-stone-400 font-medium">Variedad:</span>
+                  <span class="font-bold text-stone-800">${p.variedad || 'No especificada'}</span>
+                </div>
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-stone-400 font-medium">Tueste:</span>
+                  <span class="font-bold text-stone-800">${p.tueste || 'Medio'} ${p.escala_agtron ? `(#${p.escala_agtron})` : ''}</span>
+                </div>
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-stone-400 font-medium">Altitud:</span>
+                  <span class="font-bold text-stone-800">${p.altura_msnm || 'No registrada'}</span>
+                </div>
+                ${p.puntuacion_sca ? `
+                  <div class="flex items-center justify-between text-[11px] bg-amber-50 p-1.5 rounded-lg border border-amber-200 text-amber-900">
+                    <span class="font-bold">★ Calificación SCA:</span>
+                    <span class="font-black">${p.puntuacion_sca} pts</span>
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- NOTAS DE CATA -->
+              <div class="border-t border-stone-100 pt-3 space-y-1.5">
+                <span class="block text-[10px] font-bold uppercase tracking-wider text-stone-400">Notas de Cata</span>
+                <div class="flex flex-wrap gap-1">
+                  ${p.notas_cata && p.notas_cata.length ? p.notas_cata.map((n) => `<span class="rounded-md bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-stone-700">${n}</span>`).join('') : '<span class="text-[11px] text-stone-400 italic">No identificadas</span>'}
+                </div>
+              </div>
+
+              <!-- INTENSIDAD DE ATRIBUTOS ORGANOLÉPTICOS (ESCALA 1 A 10) -->
+              <div class="border-t border-stone-100 pt-3 space-y-2">
+                <span class="block text-[10px] font-bold uppercase tracking-wider text-stone-400">Intensidad Organoléptica (1-10)</span>
+                <div class="space-y-1.5 text-[11px]">
+                  ${['Acidez', 'Dulzor', 'Cuerpo', 'Frutal/Floral', 'Chocolate/Nuez', 'Balance'].map((axis) => {
+                    const val = attrs[axis] || 5;
+                    const pct = Math.min(100, Math.max(10, val * 10));
+                    return `
+                      <div>
+                        <div class="flex items-center justify-between text-[10px] text-stone-600 mb-0.5">
+                          <span class="font-medium">${axis}</span>
+                          <span class="font-bold text-stone-800">${val}/10</span>
+                        </div>
+                        <div class="h-1.5 w-full bg-stone-100 rounded-full overflow-hidden">
+                          <div class="h-full bg-emerald-600 rounded-full" style="width: ${pct}%"></div>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+
             </div>
-            <div class="mt-4 pt-3 border-t border-stone-100">
+
+            <!-- BOTÓN A LA TIENDA -->
+            <div class="pt-4 border-t border-stone-100">
               <a 
                 href="${p.url_detalle}" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                class="block w-full bg-slate-900 hover:bg-black text-white text-center font-bold text-xs py-2 rounded-xl transition"
+                class="flex items-center justify-center gap-1.5 w-full bg-stone-900 hover:bg-emerald-800 text-white text-center font-bold text-xs py-2.5 rounded-xl transition shadow-xs"
               >
-                Ir a la tienda ↗
+                <span>Ir a la tienda</span>
+                <span aria-hidden="true">↗</span>
               </a>
             </div>
-          </div>
+          </article>
         `;
       });
+
       html += `</div>`;
       content.innerHTML = html;
 
       AnalyticsTracker.trackCompareViewed(productos.length, ids);
-    } catch {
-      content.innerHTML = '<p class="text-xs text-red-500">Error al cargar la comparativa.</p>';
+    } catch (err) {
+      content.innerHTML = '<p class="text-xs text-rose-500 text-center py-8">Error al cargar la comparativa side-by-side.</p>';
     }
   });
 
@@ -174,5 +423,9 @@
   dialog?.addEventListener('click', (e) => {
     if (e.target === dialog) dialog.close();
   });
-</script>
 
+  pickerCloseBtn?.addEventListener('click', () => pickerDialog?.close());
+  pickerDialog?.addEventListener('click', (e) => {
+    if (e.target === pickerDialog) pickerDialog.close();
+  });
+</script>

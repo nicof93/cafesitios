@@ -15,11 +15,15 @@ from typing import Dict, List
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from api.dependencies import get_db_session
+from api.dependencies import get_db_session, require_recipes_enabled
 from api.schemas import RecipeCreateRequest, RecipeResponse
 from application.manage_recipes import ManageRecipesUseCase, RecetaCreateDTO
 
-router = APIRouter(prefix="/api/v1/recetas", tags=["Recetas"])
+router = APIRouter(
+    prefix="/api/v1/recetas",
+    tags=["Recetas"],
+    dependencies=[Depends(require_recipes_enabled)],
+)
 
 # Configuración de secreto de cliente
 APP_CLIENT_KEY = os.getenv("APP_CLIENT_KEY", "cafesitios-client-key-mvp-2026")

@@ -10,4 +10,10 @@
 frontend-website/dist/
 astro-frontend/dist/
 astro-frontend/.vercel/
+astro-frontend/.astro/
+plataforma-admin/dist/
+plataforma-admin/.astro/
+node_modules/
+**/node_modules/
+ambientes.json
 .vercel/

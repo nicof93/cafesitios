@@ -1,0 +1,144 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CalibradorCafe from '../components/CalibradorCafe.jsx';
+import { FeatureFlags } from '../core/infrastructure/config/FeatureFlags';
+
+// Guard de Feature Flag
+if (!FeatureFlags.isCalibratorEnabled()) {
+  return Astro.rewrite('/404');
+}
+
+const showGuides = FeatureFlags.isGuidesEnabled();
+
+const jsonLdCalibrador = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Calibrador Sensorial de Café Ideal (Dial-in Assistant)",
+  "applicationCategory": "LifestyleApplication",
+  "operatingSystem": "All",
+  "browserRequirements": "Requires JavaScript. Requires HTML5.",
+  "url": "https://cafesitios.cl/calibrador",
+  "description": "Herramienta interactiva para calibrar extracciones de café de especialidad mediante un plano cartesiano 2D, calculando correcciones de ratio, molienda, temperatura y tiempo hacia la Zona Ideal.",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "CLP"
+  }
+};
+---
+
+<BaseLayout
+  title="Calibrador de Café Ideal (Dial-in) | Cafesitios - Ajusta Molienda y Ratio en 2D"
+  description="Calibra tus extracciones de café hacia la Zona Ideal. Ubica el sabor en el plano 2D y recibe ajustes en tiempo real de molienda, ratio, temperatura y tiempo."
+  canonicalUrl="https://cafesitios.cl/calibrador"
+  jsonLd={jsonLdCalibrador}
+>
+  <div class="space-y-8 py-2">
+
+    <!-- BREADCRUMBS Y CABECERA SEMÁNTICA -->
+    <header class="space-y-4">
+      <nav class="flex items-center gap-2 text-xs text-stone-500 font-medium" aria-label="Miga de pan">
+        <a href="/" class="hover:text-emerald-800 transition">Inicio</a>
+        {showGuides && (
+          <>
+            <span>/</span>
+            <a href="/recetas" class="hover:text-emerald-800 transition">Guías</a>
+          </>
+        )}
+        <span>/</span>
+        <span class="text-stone-800 font-bold" aria-current="page">Calibrador Dial-in</span>
+      </nav>
+
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-200/80 pb-6">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-800 text-lg shadow-2xs">
+              🎯
+            </span>
+            <h1 class="text-2xl sm:text-4xl font-black text-stone-900 tracking-tight">
+              Calibrador Sensorial de Café Ideal
+            </h1>
+          </div>
+          <p class="text-xs sm:text-sm text-stone-500 mt-1 max-w-2xl leading-relaxed">
+            Asistente barista de dial-in interactivo. Corrige subextracción, sobreextracción o desbalances de concentración moviendo el vector de sabor en 2D.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <a
+            href="/mis-recetas"
+            class="inline-flex items-center gap-1.5 rounded-2xl border border-stone-200 bg-white hover:bg-stone-50 px-4 py-2.5 text-xs font-bold text-stone-700 transition shadow-2xs"
+          >
+            <span>📖</span>
+            <span>Ver Mis Recetas</span>
+          </a>
+          {showGuides && (
+            <a
+              href="/recetas"
+              class="inline-flex items-center gap-1.5 rounded-2xl bg-emerald-800 hover:bg-emerald-900 px-4 py-2.5 text-xs font-bold text-white transition shadow-2xs"
+            >
+              <span>☕</span>
+              <span>Guías de Métodos</span>
+            </a>
+          )}
+        </div>
+      </div>
+    </header>
+
+    <!-- COMPONENTE REACT CON HIDRATACIÓN CONTROLADA CLIENT:VISIBLE -->
+    <main>
+      <CalibradorCafe client:visible />
+    </main>
+
+    <!-- SECCIÓN EDUCATIVA / TEORÍA DEL DIAL-IN PARA SEO -->
+    <section class="mt-12 rounded-3xl bg-stone-100/70 p-6 sm:p-10 border border-stone-200/80 space-y-6">
+      <h2 class="text-xl sm:text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2">
+        <span>🔬</span>
+        <span>¿Cómo funciona el Control Sensorial de Extracción?</span>
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-stone-700 leading-relaxed">
+        <article class="space-y-2 bg-white p-5 rounded-2xl border border-stone-200/60 shadow-2xs">
+          <div class="font-black text-stone-900 text-sm flex items-center gap-1.5">
+            <span class="text-amber-700">1.</span>
+            <span>Eje Horizontal: Extracción (Yield %)</span>
+          </div>
+          <p>
+            Mide qué porcentaje del grano de café lograste disolver en el agua. Los ácidos cítricos y málicos se extraen primero (subextracción), seguidos por los azúcares y lípidos (dulzor balanceado), y finalmente los fenoles amargos y astringentes (sobreextracción).
+          </p>
+          <div class="pt-2 font-bold text-emerald-800">
+            Ajuste principal: Molienda (clicks) y Temperatura.
+          </div>
+        </article>
+
+        <article class="space-y-2 bg-white p-5 rounded-2xl border border-stone-200/60 shadow-2xs">
+          <div class="font-black text-stone-900 text-sm flex items-center gap-1.5">
+            <span class="text-amber-700">2.</span>
+            <span>Eje Vertical: Concentración (TDS %)</span>
+          </div>
+          <p>
+            Representa la fuerza o densidad de la bebida: qué porcentaje de la taza es café soluble y cuánto es agua pura. Una concentración muy alta saturará las papilas gustativas, mientras que una baja dará una sensación acuosa y vacía.
+          </p>
+          <div class="pt-2 font-bold text-emerald-800">
+            Ajuste principal: Proporción Café:Agua (Ratio).
+          </div>
+        </article>
+
+        <article class="space-y-2 bg-white p-5 rounded-2xl border border-stone-200/60 shadow-2xs">
+          <div class="font-black text-stone-900 text-sm flex items-center gap-1.5">
+            <span class="text-emerald-700">3.</span>
+            <span>La "Zona Ideal" (Golden Cup SCA)</span>
+          </div>
+          <p>
+            El centro del plano representa el estándar de la Specialty Coffee Association (SCA), donde la extracción ronda el 18% - 22% con un TDS del 1.15% al 1.45% en filtrados. En este punto la taza expresa la máxima fidelidad al origen del grano.
+          </p>
+          <div class="pt-2 font-bold text-emerald-800">
+            Objetivo: Dulzor pronunciado, acidez limpia y final sedoso.
+          </div>
+        </article>
+      </div>
+    </section>
+
+  </div>
+</BaseLayout>
+

@@ -37,21 +37,33 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         query = self.session.query(Variante, Producto, Tienda)\
             .join(Producto, Variante.producto_id == Producto.id)\
             .join(Tienda, Producto.tienda_id == Tienda.id)\
-            .filter(Producto.activo.is_(True), Tienda.activo.is_(True))
+            .filter(
+                Producto.activo.is_(True),
+                Producto.oculto_catalogo.is_(False),
+                Tienda.activo.is_(True),
+            )
 
         if category == "cafe":
-            non_coffee_clauses = [Producto.nombre.ilike(f"%{kw}%") for kw in NON_COFFEE_KEYWORDS_SQL]
-            query = query.filter(not_(or_(*non_coffee_clauses)))
+            query = query.filter(Producto.categoria == "cafe")
         elif category in ("no_cafe", "otros", "merch"):
-            non_coffee_clauses = [Producto.nombre.ilike(f"%{kw}%") for kw in NON_COFFEE_KEYWORDS_SQL]
-            query = query.filter(or_(*non_coffee_clauses))
+            query = query.filter(Producto.categoria != "cafe")
 
         if only_available:
             query = query.filter(Variante.disponible == True)
 
 
         if store_name:
-            query = query.filter(Tienda.nombre.ilike(f"%{store_name}%"))
+            if isinstance(store_name, str):
+                stores = [s.strip() for s in store_name.split(",") if s.strip()]
+            elif isinstance(store_name, (list, tuple, set)):
+                stores = [str(s).strip() for s in store_name if str(s).strip()]
+            else:
+                stores = [str(store_name).strip()]
+
+            if len(stores) == 1:
+                query = query.filter(Tienda.nombre.ilike(f"%{stores[0]}%"))
+            elif len(stores) > 1:
+                query = query.filter(or_(*[Tienda.nombre.ilike(f"%{s}%") for s in stores]))
 
         if process:
             proc_synonyms = get_synonym_group(process)

@@ -1,0 +1,644 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ProductCard from '../components/catalog/ProductCard.astro';
+import FiltersAside from '../components/catalog/FiltersAside.astro';
+import RecentlyViewed from '../components/catalog/RecentlyViewed.astro';
+import FavoritesAlertsBanner from '../components/catalog/FavoritesAlertsBanner.astro';
+import { GetCatalogUseCase } from '../core/application/GetCatalog';
+import { GetStoresUseCase } from '../core/application/GetStores';
+import { HttpClient } from '../core/infrastructure/api/HttpClient';
+
+// SSR: Obtener parámetros de búsqueda de la URL
+const url = new URL(Astro.request.url);
+const searchQuery = url.searchParams.get('q') || url.searchParams.get('search_query') || '';
+const sortBy = (url.searchParams.get('sort_by') as 'kilo' | 'unit' | 'created_desc') || 'kilo';
+// Soporte para selección múltiple de tiendas (ej. ?tienda=A&tienda=B o ?tienda=A,B o ?store_name=...)
+const rawStores = [
+  ...url.searchParams.getAll('tienda'),
+  ...url.searchParams.getAll('store_name'),
+  ...url.searchParams.getAll('stores'),
+  ...url.searchParams.getAll('tiendas'),
+  ...url.searchParams.getAll('store')
+];
+const selectedStores = Array.from(new Set(
+  rawStores.flatMap(s => s.split(',').map(item => item.trim())).filter(Boolean)
+));
+const storeName = selectedStores.join(',');
+const process = url.searchParams.get('process') || '';
+const country = url.searchParams.get('country') || '';
+const variety = url.searchParams.get('variety') || '';
+const notes = url.searchParams.get('notes') || '';
+const minPrice = url.searchParams.get('min_price') ? Number(url.searchParams.get('min_price')) : undefined;
+const maxPrice = url.searchParams.get('max_price') ? Number(url.searchParams.get('max_price')) : undefined;
+const isOfertas = url.searchParams.get('ofertas') === 'true' || url.searchParams.get('on_sale') === 'true';
+const category = (url.searchParams.get('categoria') || url.searchParams.get('category') || 'cafe') as 'cafe' | 'no_cafe' | 'todos';
+
+const catalogUseCase = new GetCatalogUseCase();
+const storesUseCase = new GetStoresUseCase();
+const http = new HttpClient();
+
+let items: any[] = [];
+let totalItems = 0;
+let stores: any[] = [];
+let lastSyncTime = 'Al día';
+let hasNoCafeProducts = false;
+
+try {
+  // Carga concurrente en servidor para velocidad máxima de SSR
+  const [catalogRes, storesRes, syncRes, weeklyRes, noCafeRes] = await Promise.allSettled([
+    catalogUseCase.execute({
+      searchQuery,
+      sortBy: sortBy === 'created_desc' ? 'kilo' : sortBy,
+      category,
+      storeName,
+      process,
+      country,
+      variety,
+      notes,
+      minPrice,
+      maxPrice,
+      limit: isOfertas ? 50 : 18,
+      offset: 0
+    }),
+    storesUseCase.execute({ pageSize: 50, sortBy: 'name_asc' }),
+    http.get<{ last_sync?: string }>('/api/v1/sync/last'),
+    isOfertas ? http.get<{ ofertas: any[]; total: number }>('/api/v1/products/ofertas-semana?limit=50&dias=7') : Promise.resolve(null),
+    catalogUseCase.execute({ category: 'no_cafe', limit: 1 })
+  ]);
+
+  if (catalogRes.status === 'fulfilled') {
+    items = catalogRes.value.items;
+    totalItems = catalogRes.value.total;
+  }
+  if (storesRes.status === 'fulfilled') {
+    stores = storesRes.value;
+  }
+  if (syncRes.status === 'fulfilled' && syncRes.value.last_sync) {
+    lastSyncTime = new Date(syncRes.value.last_sync).toLocaleString('es-CL', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    }) + ' hrs';
+  }
+
+  hasNoCafeProducts = noCafeRes.status === 'fulfilled' && (noCafeRes.value?.total > 0);
+
+  // Si se activó el filtro de ofertas, priorizar y aislar las caídas verificadas
+  if (isOfertas) {
+    if (weeklyRes.status === 'fulfilled' && weeklyRes.value?.ofertas?.length) {
+      const weeklyIds = new Set(weeklyRes.value.ofertas.map((o: any) => Number(o.producto_id)));
+      const filtered = items.filter(p => weeklyIds.has(Number(p.id)) || p.variante?.en_oferta);
+      if (filtered.length > 0) {
+        items = filtered;
+        totalItems = filtered.length;
+      }
+    } else {
+      items = items.filter(p => p.variante?.en_oferta);
+      totalItems = items.length;
+    }
+  }
+} catch (error) {
+  console.error('Error cargando catálogo en SSR:', error);
+}
+
+// Filtros activos estructurados para visualización limpia
+interface ActiveFilter {
+  label: string;
+  paramKey: string;
+}
+
+const activeFilters: ActiveFilter[] = [];
+if (isOfertas) activeFilters.push({ label: '🔥 Ofertas de la Semana', paramKey: 'ofertas' });
+if (searchQuery) activeFilters.push({ label: `"${searchQuery}"`, paramKey: 'q' });
+if (category && category !== 'cafe') {
+  activeFilters.push({ 
+    label: category === 'no_cafe' ? '🎁 Ropa / Accesorios' : '🌐 Todo el Catálogo', 
+    paramKey: 'category' 
+  });
+}
+if (selectedStores.length > 0) {
+  if (selectedStores.length === 1) {
+    activeFilters.push({ label: `Tienda: ${selectedStores[0]}`, paramKey: 'tienda' });
+  } else {
+    activeFilters.push({ label: `Tiendas (${selectedStores.length}): ${selectedStores.join(', ')}`, paramKey: 'tienda' });
+  }
+}
+if (country) activeFilters.push({ label: `Origen: ${country}`, paramKey: 'country' });
+if (process) activeFilters.push({ label: `Proceso: ${process}`, paramKey: 'process' });
+if (variety) activeFilters.push({ label: `Variedad: ${variety}`, paramKey: 'variety' });
+if (notes) activeFilters.push({ label: `Nota: ${notes}`, paramKey: 'notes' });
+if (minPrice || maxPrice) {
+  const p = [minPrice ? `$${minPrice.toLocaleString('es-CL')}` : '', maxPrice ? `$${maxPrice.toLocaleString('es-CL')}` : ''].filter(Boolean).join(' - ');
+  activeFilters.push({ label: `Precio: ${p}`, paramKey: 'price' });
+}
+
+// JSON-LD estructurado para SEO
+const jsonLdCatalog = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Catálogo de Café de Especialidad en Chile",
+  "description": "Lista de cafés de especialidad disponibles en tostadurías chilenas ordenados por $/kg y atributos botánicos.",
+  "numberOfItems": totalItems,
+  "itemListElement": items.slice(0, 10).map((prod, index) => ({
+    "@type": "ListItem",
+    "position": index + 1,
+    "item": {
+      "@type": "Product",
+      "name": prod.nombre,
+      "image": prod.imagen,
+      "brand": { "@type": "Brand", "name": prod.tienda },
+      "offers": {
+        "@type": "Offer",
+        "priceCurrency": "CLP",
+        "price": prod.variante?.precio_clp || 0,
+        "availability": prod.variante?.disponible ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        "url": prod.url_detalle
+      }
+    }
+  }))
+};
+---
+
+<BaseLayout 
+  title="Catálogo de Café de Especialidad en Chile | Precios por Kilo y Tiendas | Cafesitios"
+  description="Compara en tiempo real los precios por kilo ($/kg), orígenes, procesos y formatos de las principales tostadurías de café de especialidad en Chile."
+  canonicalUrl="https://cafesitios.cl/catalogo"
+  jsonLd={jsonLdCatalog}
+  lastSync={lastSyncTime}
+>
+  <div class="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)] gap-8 items-start">
+    
+    <!-- SIDEBAR UNIFICADO (Filtros facetados + Vistos recientemente) -->
+    <div class="space-y-6">
+      <FiltersAside 
+        stores={stores}
+        selectedStore={storeName}
+        selectedStores={selectedStores}
+        initialSearch={searchQuery}
+        initialSort={sortBy}
+        initialCategory={category}
+        initialMinPrice={minPrice ? String(minPrice) : ''}
+        initialMaxPrice={maxPrice ? String(maxPrice) : ''}
+        initialCountry={country}
+        initialProcess={process}
+        initialVariety={variety}
+        initialNotes={notes}
+        hasNoCafeProducts={hasNoCafeProducts}
+      />
+      <RecentlyViewed />
+    </div>
+
+    <!-- ÁREA PRINCIPAL DE CATÁLOGO -->
+    <section class="min-w-0 space-y-6">
+      
+      <!-- HERO / BANNER DTC SOBRIO -->
+      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-stone-900 via-stone-850 to-stone-900 p-6 sm:p-8 text-white shadow-sm border border-stone-800">
+        <div class="relative z-10 max-w-xl space-y-2">
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-950/80 border border-emerald-500/30 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+            <span>✨</span> Transparencia y Ahorro Inteligente
+          </span>
+          <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white leading-tight">
+            Encuentra el mejor precio por kilo ($/kg) en café de especialidad
+          </h1>
+          <p class="text-xs sm:text-sm text-stone-300 font-normal leading-relaxed">
+            Comparamos orígenes, procesos, notas y formatos de tostadurías chilenas para que compres informado al costo real por gramo.
+          </p>
+        </div>
+        
+        <!-- Elemento decorativo visual sutil -->
+        <div class="absolute -right-8 -bottom-10 opacity-10 pointer-events-none select-none text-9xl">
+          ☕
+        </div>
+      </div>
+
+      <!-- HEADER DE RESULTADOS Y ACTIVE FILTER TAGS -->
+      <div class="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200/80 shadow-2xs space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-sm font-bold text-stone-900">
+              {isOfertas ? '🔥 Mayores Bajas de Precio de la Semana' : category === 'no_cafe' ? '🎁 Ropa, Cajas y Accesorios' : activeFilters.length > 0 ? 'Cafés Filtrados' : 'Catálogo de Especialidad'}
+            </h2>
+            <p class="text-xs text-stone-400">
+              Mostrando <strong id="catalog-count-current" class="text-stone-700 font-semibold">{items.length}</strong> de <span id="catalog-count-total">{totalItems}</span> productos
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Chip / Botón de filtro rápido de Ofertas de la Semana -->
+            <a 
+              href={isOfertas ? "/catalogo" : "/catalogo?ofertas=true"}
+              class={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition shadow-2xs ${
+                isOfertas 
+                  ? "bg-rose-600 text-white hover:bg-rose-700" 
+                  : "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+              }`}
+              title="Filtrar cafés con caídas verificadas de precio en los últimos 7 días"
+            >
+              <span>🔥</span>
+              <span>Ofertas de la Semana</span>
+              {isOfertas ? <span>✕</span> : <span class="text-[10px] bg-rose-200/80 text-rose-900 px-1.5 py-0.2 rounded-full">Activar</span>}
+            </a>
+
+            {activeFilters.length > 0 && (
+              <a 
+                href="/catalogo" 
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 hover:text-emerald-950 bg-emerald-50/70 border border-emerald-100 px-3 py-1.5 rounded-xl transition"
+              >
+                <span>✕</span> Limpiar filtros
+              </a>
+            )}
+          </div>
+        </div>
+
+        <!-- TAGS DE FILTROS ACTIVOS -->
+        {activeFilters.length > 0 && (
+          <div class="flex flex-wrap gap-1.5 pt-2 border-t border-stone-100">
+            {activeFilters.map(filter => (
+              <span class="inline-flex items-center gap-1 rounded-lg bg-stone-100 text-stone-700 px-2.5 py-1 text-[11px] font-medium">
+                <span>{filter.label}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <!-- NOVEDADES DE FAVORITOS Y ALERTAS DE VARIACIÓN DE PRECIO -->
+      <FavoritesAlertsBanner />
+
+      <!-- GRILLA DE PRODUCTOS RESPONSIVE CON SCROLL INFINITO -->
+      {items.length === 0 ? (
+        <div class="bg-white p-12 text-center rounded-3xl border border-stone-200/70 text-slate-400 space-y-3 shadow-2xs">
+          <p class="text-3xl">☕</p>
+          <h3 class="text-sm font-bold text-stone-800">No encontramos productos que coincidan con estos filtros</h3>
+          <p class="text-xs text-stone-500 max-w-sm mx-auto">
+            Intenta eliminar algunos filtros en la barra lateral o cambiar de categoría.
+          </p>
+          <div class="pt-2">
+            <a 
+              href="/catalogo" 
+              class="inline-block bg-stone-900 hover:bg-emerald-900 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition"
+            >
+              Ver todo el catálogo
+            </a>
+          </div>
+        </div>
+      ) : (
+        <div 
+          id="products-grid" 
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6"
+          data-total={totalItems}
+          data-loaded={items.length}
+          data-sort={sortBy}
+          data-category={category}
+          data-search={searchQuery}
+          data-store={storeName}
+          data-country={country}
+          data-process={process}
+          data-variety={variety}
+          data-notes={notes}
+          data-min-price={minPrice || ''}
+          data-max-price={maxPrice || ''}
+        >
+          {items.map(product => (
+            <ProductCard product={product} />
+          ))}
+        </div>
+      )}
+
+      <!-- TRIGGER ELEMENT Y SPINNER PARA SCROLL INFINITO -->
+      <div id="infinite-scroll-sentinel" class="py-10 flex flex-col items-center justify-center min-h-[100px]">
+        
+        <!-- ESTADO DE CARGA VISUAL (SPINNER + FEEDBACK CLARO) -->
+        <div id="infinite-loading-spinner" class="hidden flex-col sm:flex-row items-center gap-3.5 bg-white border border-stone-200/90 shadow-sm px-6 py-4 rounded-2xl text-stone-700">
+          <div class="relative flex items-center justify-center">
+            <svg class="animate-spin h-6 w-6 text-emerald-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            <span class="absolute text-[10px]">☕</span>
+          </div>
+          <div class="text-center sm:text-left">
+            <p class="text-xs font-bold text-stone-900">
+              Cargando más cafés de especialidad...
+            </p>
+            <p class="text-[11px] text-stone-500 font-normal">
+              Consultando catálogo y tostadurías chilenas
+            </p>
+          </div>
+        </div>
+
+        <!-- ERROR STATE CON BOTÓN REINTENTAR -->
+        <div id="infinite-error-container" class="hidden flex-col items-center gap-2.5 bg-amber-50/80 border border-amber-200 px-6 py-4 rounded-2xl text-center max-w-md">
+          <p class="text-xs text-amber-900 font-medium">
+            ⚠️ No pudimos cargar más cafés en este momento.
+          </p>
+          <button 
+            type="button" 
+            id="infinite-retry-btn"
+            class="inline-flex items-center gap-1.5 text-xs font-bold bg-amber-800 hover:bg-amber-900 text-white px-4 py-1.5 rounded-xl transition shadow-2xs cursor-pointer"
+          >
+            <span>🔄 Reintentar cargar más</span>
+          </button>
+        </div>
+
+        <!-- MENSAJE DE FIN DE CATÁLOGO -->
+        <div id="infinite-end-msg" class={items.length >= totalItems && totalItems > 0 ? "flex flex-col items-center gap-2 text-center" : "hidden flex-col items-center gap-2 text-center"}>
+          <p class="text-stone-400 text-xs font-medium">
+            ☕ Has explorado todos los cafés disponibles para esta selección
+          </p>
+          <button 
+            type="button" 
+            id="scroll-to-top-btn"
+            class="text-[11px] font-semibold text-emerald-800 hover:text-emerald-950 underline underline-offset-2 cursor-pointer transition"
+          >
+            ↑ Volver al inicio de la página
+          </button>
+        </div>
+
+      </div>
+
+    </section>
+
+  </div>
+</BaseLayout>
+
+<script>
+  // SCROLL INFINITO BASADO EN INTERSECTION OBSERVER
+  const grid = document.getElementById('products-grid');
+  const sentinel = document.getElementById('infinite-scroll-sentinel');
+  const spinner = document.getElementById('infinite-loading-spinner');
+  const errorContainer = document.getElementById('infinite-error-container');
+  const retryBtn = document.getElementById('infinite-retry-btn');
+  const endMsg = document.getElementById('infinite-end-msg');
+  const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
+  const currentCountEl = document.getElementById('catalog-count-current');
+
+  if (scrollToTopBtn) {
+    scrollToTopBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  if (grid && sentinel) {
+    let isLoading = false;
+    let currentLoaded = parseInt(grid.getAttribute('data-loaded') || '0', 10);
+    const totalItems = parseInt(grid.getAttribute('data-total') || '0', 10);
+    const limit = 18;
+
+    const buildProductCardHtml = (prod: any) => {
+      const v = prod.variante || {};
+      const esRegalo = v.precio_clp === 0;
+      const esOferta = Boolean(v.en_oferta && !esRegalo);
+      const precioKilo = v.precio_por_kilo || 0;
+      const precioClp = v.precio_clp || 0;
+      const precioOrig = v.precio_original_clp || 0;
+      const formatoGramos = v.formato_gramos || 250;
+      const opcion = v.opcion || 'Grano';
+      const esEstimado = Boolean(v.es_estimado);
+      const imagen = prod.imagen || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop';
+      const formatClp = (num: number) => num.toLocaleString('es-CL');
+      const origen = prod.origen || prod.pais_origen || '';
+      const proceso = prod.proceso || '';
+      const notas = Array.isArray(prod.notas_cata) 
+        ? prod.notas_cata.map((n: any) => typeof n === 'string' ? n : (n.nombre || n.nota || '')).filter(Boolean)
+        : [];
+
+      return `
+        <article 
+          class="product-clickable-card group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-3.5 shadow-2xs transition-all duration-200 hover:border-emerald-300 hover:shadow-md cursor-pointer"
+          data-product-url="/producto/${prod.id}"
+        >
+          <div>
+            <div class="relative flex h-52 items-center justify-center overflow-hidden rounded-xl bg-[#F4F3ED] p-4 transition-colors group-hover:bg-[#EFECE3]">
+              <img 
+                src="${imagen || '/images/producto-referencial.jpg'}" 
+                alt="Café ${prod.nombre} - ${prod.tienda}" 
+                width="280"
+                height="208"
+                loading="lazy"
+                decoding="async"
+                referrerpolicy="no-referrer"
+                onerror="this.onerror=null; this.src='/images/producto-referencial.jpg';"
+                class="h-full w-full object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105 aspect-[4/3]"
+              />
+              <span class="absolute top-3 left-3 bg-white/95 backdrop-blur-xs text-stone-700 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-2xs border border-stone-200/50">
+                ${prod.tienda}
+              </span>
+              ${esRegalo ? `
+                <span class="absolute top-3 right-3 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-800 shadow-2xs">
+                  🎁 Muestra Gratis
+                </span>
+              ` : esOferta ? `
+                <span class="absolute top-3 right-3 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-900 shadow-2xs">
+                  -${v.descuento_porcentaje}% OFF
+                </span>
+              ` : ''}
+            </div>
+
+            <div class="pt-3.5 space-y-2">
+              <div class="flex flex-wrap items-center gap-1.5 text-[10px] font-medium text-stone-500">
+                <span class="rounded bg-stone-100 px-1.5 py-0.5 text-stone-700">
+                  ${formatoGramos}g &bull; ${opcion}
+                </span>
+                ${origen ? `
+                  <span class="rounded bg-stone-100/70 px-1.5 py-0.5 text-stone-600">
+                    🌍 ${origen}
+                  </span>
+                ` : ''}
+                ${proceso ? `
+                  <span class="rounded bg-stone-100/70 px-1.5 py-0.5 text-stone-600">
+                    ${proceso}
+                  </span>
+                ` : ''}
+              </div>
+
+              <h3 class="font-bold text-stone-900 text-sm leading-snug line-clamp-2 group-hover:text-emerald-800 transition">
+                <a href="/producto/${prod.id}" class="focus:outline-none focus-visible:underline">
+                  ${prod.nombre}
+                </a>
+              </h3>
+
+              ${notas.length > 0 ? `
+                <p class="text-[11px] text-stone-500 truncate" title="${notas.join(', ')}">
+                  <span class="font-semibold text-stone-400">Notas:</span> ${notas.slice(0, 3).join(', ')}
+                </p>
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-stone-100 space-y-3">
+            <div class="flex items-end justify-between gap-2">
+              <div>
+                <span class="block text-[10px] uppercase font-bold tracking-wider text-stone-400">
+                  Precio Formato (${formatoGramos}g)
+                </span>
+                ${esRegalo ? `
+                  <span class="inline-block px-2.5 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 font-extrabold text-sm">
+                    ¡Muestra Gratis!
+                  </span>
+                ` : `
+                  <div class="flex items-baseline gap-1.5">
+                    <span class="text-lg font-extrabold text-stone-900 tracking-tight">
+                      $${formatClp(precioClp)}
+                    </span>
+                    <span class="text-[11px] font-semibold text-stone-500">CLP</span>
+                    ${esOferta ? `
+                      <span class="text-[10px] text-stone-400 line-through">
+                        $${formatClp(precioOrig)}
+                      </span>
+                    ` : ''}
+                  </div>
+                `}
+              </div>
+
+              <div class="text-right">
+                <span class="block text-[9px] uppercase font-bold tracking-wider text-stone-400">
+                  Ref. $/kg
+                </span>
+                ${esRegalo ? `
+                  <span class="text-[11px] font-medium text-emerald-700">$0/kg</span>
+                ` : `
+                  <div class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-stone-100/90 border border-stone-200/60 text-stone-600">
+                    <span class="text-xs font-bold text-stone-700">
+                      $${formatClp(precioKilo)}
+                    </span>
+                    <span class="text-[9px] font-medium text-stone-400">/kg</span>
+                    ${esEstimado ? `
+                      <span class="ml-0.5 rounded bg-amber-100 text-amber-800 px-0.5 text-[7px] font-bold uppercase tracking-wider" title="Gramaje estimado por defecto (250g)">Est.</span>
+                    ` : ''}
+                  </div>
+                `}
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-xs pt-0.5">
+              <label class="inline-flex items-center gap-1.5 cursor-pointer text-stone-500 hover:text-stone-800 select-none py-1 px-0.5" onclick="event.stopPropagation();">
+                <input type="checkbox" class="compare-cb h-3.5 w-3.5 rounded border-stone-300 text-emerald-700 focus:ring-emerald-500" data-id="${prod.id}" data-name="${prod.nombre}" />
+                <span class="text-[11px] font-medium">+ Comparar</span>
+              </label>
+            </div>
+
+            <a 
+              href="${prod.url_detalle}" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              data-track-outbound="true"
+              data-store="${prod.tienda}"
+              data-product-name="${prod.nombre}"
+              data-price="${precioClp}"
+              onclick="event.stopPropagation();"
+              class="inline-flex items-center justify-center gap-1.5 w-full rounded-xl bg-stone-900 hover:bg-emerald-800 text-white font-semibold text-xs py-2.5 px-3 transition-colors duration-150 shadow-2xs"
+            >
+              <span>Comprar en tienda</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+        </article>
+      `;
+    };
+
+    const attachCardEvents = (container: HTMLElement) => {
+      container.querySelectorAll('.product-clickable-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+          const target = e.target as HTMLElement;
+          if (target.closest('a, button, input, label')) return;
+          const url = card.getAttribute('data-product-url');
+          if (url) window.location.href = url;
+        });
+      });
+
+      container.querySelectorAll('.compare-cb').forEach(input => {
+        input.addEventListener('change', (e) => {
+          const target = e.target as HTMLInputElement;
+          const id = target.getAttribute('data-id');
+          const name = target.getAttribute('data-name');
+          window.dispatchEvent(new CustomEvent('cafesitios:toggle-compare', {
+            detail: { id, name, checked: target.checked }
+          }));
+        });
+      });
+    };
+
+    const loadMoreProducts = async () => {
+      if (isLoading || currentLoaded >= totalItems) return;
+      isLoading = true;
+      
+      // Ocultar error previo si existe y mostrar spinner
+      errorContainer?.classList.add('hidden');
+      errorContainer?.classList.remove('flex');
+      spinner?.classList.remove('hidden');
+      spinner?.classList.add('flex');
+
+      try {
+        const params = new URLSearchParams({
+          limit: String(limit),
+          offset: String(currentLoaded),
+          sort_by: grid.getAttribute('data-sort') || 'kilo',
+          category: grid.getAttribute('data-category') || 'cafe',
+          search_query: grid.getAttribute('data-search') || '',
+          store_name: grid.getAttribute('data-store') || '',
+          country: grid.getAttribute('data-country') || '',
+          process: grid.getAttribute('data-process') || '',
+          variety: grid.getAttribute('data-variety') || '',
+          notes: grid.getAttribute('data-notes') || '',
+          min_price: grid.getAttribute('data-min-price') || '',
+          max_price: grid.getAttribute('data-max-price') || ''
+        });
+
+        const res = await fetch(`/api/v1/products?${params.toString()}`);
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        const json = await res.json();
+        const newProducts = json.data || json.items || [];
+
+        if (newProducts.length > 0) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = newProducts.map(buildProductCardHtml).join('');
+          
+          while (tempDiv.firstChild) {
+            const childNode = tempDiv.firstChild as HTMLElement;
+            grid.appendChild(childNode);
+          }
+
+          attachCardEvents(grid);
+          currentLoaded += newProducts.length;
+          grid.setAttribute('data-loaded', String(currentLoaded));
+          if (currentCountEl) currentCountEl.textContent = String(currentLoaded);
+        }
+
+        if (newProducts.length === 0 || currentLoaded >= totalItems) {
+          observer.disconnect();
+          endMsg?.classList.remove('hidden');
+          endMsg?.classList.add('flex');
+        }
+      } catch (err) {
+        console.error('Error cargando más productos en scroll infinito:', err);
+        errorContainer?.classList.remove('hidden');
+        errorContainer?.classList.add('flex');
+      } finally {
+        isLoading = false;
+        spinner?.classList.add('hidden');
+        spinner?.classList.remove('flex');
+      }
+    };
+
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => {
+        loadMoreProducts();
+      });
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !isLoading && currentLoaded < totalItems) {
+          loadMoreProducts();
+        }
+      });
+    }, {
+      rootMargin: '300px'
+    });
+
+    if (currentLoaded < totalItems) {
+      observer.observe(sentinel);
+    }
+  }
+</script>
+
