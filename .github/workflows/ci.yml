@@ -47,10 +47,12 @@ jobs:
         run: |
           echo "### Pruebas Fallidas" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          tail -n 100 test_results.log >> $GITHUB_STEP_SUMMARY
+          grep -E "(ERROR|FAIL):" test_results.log >> $GITHUB_STEP_SUMMARY || true
+          echo '---' >> $GITHUB_STEP_SUMMARY
+          tail -n 80 test_results.log >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          SUMMARY_MSG=$(tail -n 30 test_results.log | tr '\r\n' '  ')
-          echo "::error title=Traceback::$SUMMARY_MSG" 
+          ERR_NAMES=$(grep -E "(ERROR|FAIL):" test_results.log | tr '\r\n' '  ')
+          echo "::error title=Failing Tests::$ERR_NAMES" 
 
   # 2. Pruebas de Scrapers y Drivers ETL
   backend-scrapper-tests:
