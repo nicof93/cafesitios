@@ -9,7 +9,7 @@ Soporta equivalencias bidireccionales canónicas:
 
 import re
 import unicodedata
-from typing import List, Set
+from typing import List, Optional, Set
 
 SYNONYM_CLUSTERS = [
     {"geisha", "gesha"},

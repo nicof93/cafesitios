@@ -5,7 +5,6 @@ Revises: 0018_add_tienda_to_recetas
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.dialects import postgresql
 
 revision = '0019_pass_and_recipe_steps'
@@ -16,7 +15,7 @@ depends_on = None
 
 def upgrade():
     bind = op.get_bind()
-    inspector = Inspector.from_engine(bind)
+    inspector = sa.inspect(bind)
     is_postgres = bind.dialect.name == 'postgresql'
     json_type = postgresql.JSONB if is_postgres else sa.JSON
 
@@ -52,7 +51,7 @@ def upgrade():
 
 def downgrade():
     bind = op.get_bind()
-    inspector = Inspector.from_engine(bind)
+    inspector = sa.inspect(bind)
     tables = inspector.get_table_names()
 
     if 'usuarios_tienda' in tables:

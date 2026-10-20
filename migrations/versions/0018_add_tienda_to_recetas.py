@@ -5,7 +5,6 @@ Revises: 0017_add_tienda_catalogos
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.engine.reflection import Inspector
 
 revision = '0018_add_tienda_to_recetas'
 down_revision = '0017_add_tienda_catalogos'
@@ -67,7 +66,7 @@ def upgrade():
 
 def downgrade():
     bind = op.get_bind()
-    inspector = Inspector.from_engine(bind)
+    inspector = sa.inspect(bind)
     existing_columns = {col['name'] for col in inspector.get_columns('recetas')}
 
     if 'tienda_id' in existing_columns:
