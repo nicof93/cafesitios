@@ -49,6 +49,8 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           tail -n 100 test_results.log >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+          SUMMARY_MSG=$(tail -n 30 test_results.log | tr '\r\n' '  ')
+          echo "::error title=Traceback::$SUMMARY_MSG" 
 
   # 2. Pruebas de Scrapers y Drivers ETL
   backend-scrapper-tests:
