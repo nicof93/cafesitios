@@ -1,10 +1,39 @@
 import unittest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
 from main import app
+from db.database import Base, DatabaseManager
 from db.environments import EnvironmentManager
 
 
 class TestMultiEnvironmentAdmin(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(cls.engine)
+        cls.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=cls.engine)
+
+        cls.mock_db = DatabaseManager(db_url="sqlite://")
+        cls.mock_db.engine = cls.engine
+        cls.mock_db.SessionLocal = cls.SessionLocal
+        cls._orig_local = DatabaseManager._instances.get("local")
+        DatabaseManager._instances["local"] = cls.mock_db
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls._orig_local is not None:
+            DatabaseManager._instances["local"] = cls._orig_local
+        else:
+            DatabaseManager._instances.pop("local", None)
+        cls.engine.dispose()
+
     def setUp(self):
         self.client = TestClient(app)
 
