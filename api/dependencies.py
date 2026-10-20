@@ -99,3 +99,12 @@ def require_recipes_enabled() -> None:
             detail="La funcionalidad de recetas se encuentra deshabilitada temporalmente.",
         )
 
+
+
+def require_whatsapp_orders_enabled() -> None:
+    """Dependencia de feature flag: verifica si la API de pedidos por WhatsApp esta habilitada."""
+    if not settings.is_whatsapp_orders_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="La funcionalidad de pedidos por WhatsApp se encuentra deshabilitada temporalmente.",
+        )

@@ -1,5 +1,6 @@
 ---
 import type { CoffeeProduct } from '../../core/domain/models/CoffeeProduct';
+import { FeatureFlags } from '../../core/infrastructure/config/FeatureFlags';
 
 interface Props {
   product: CoffeeProduct;
@@ -15,6 +16,7 @@ const precioOriginalClp = bestVariant?.precio_original_clp || 0;
 const formatoGramos = bestVariant?.formato_gramos || 250;
 const opcion = bestVariant?.opcion || 'Grano';
 const esEstimado = bestVariant?.es_estimado || false;
+const showWhatsApp = FeatureFlags.isWhatsAppOrdersEnabled();
 ---
 
 <article 
@@ -180,7 +182,7 @@ const esEstimado = bestVariant?.es_estimado || false;
 
     <!-- BOTONES DE COMPRA Y ENCARGO POR WHATSAPP -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-      {product.tienda_telefono_whatsapp ? (
+      {(showWhatsApp && product.tienda_telefono_whatsapp) ? (
         <button
           type="button"
           class="btn-add-to-cart inline-flex items-center justify-center gap-1.5 w-full rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs py-2.5 px-3 transition-colors duration-150 shadow-2xs"
@@ -210,7 +212,7 @@ const esEstimado = bestVariant?.es_estimado || false;
         data-price={precioClp}
         onclick="event.stopPropagation();"
         class={`inline-flex items-center justify-center gap-1.5 w-full rounded-xl ${
-          product.tienda_telefono_whatsapp
+          (showWhatsApp && product.tienda_telefono_whatsapp)
             ? 'bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold'
             : 'bg-stone-900 hover:bg-emerald-800 text-white font-semibold'
         } text-xs py-2.5 px-3 transition-colors duration-150 shadow-2xs`}

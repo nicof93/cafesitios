@@ -53,12 +53,22 @@ export class FeatureFlags {
   /**
    * Snapshot con todos los flags activos para telemetría o renderizado condicional en UI
    */
+  /**
+   * Feature Flag: Preparador de pedidos por WhatsApp y carrito interactivo
+   * Controlado por PUBLIC_ENABLE_WHATSAPP_ORDERS o ENABLE_WHATSAPP_ORDERS
+   */
+  static isWhatsAppOrdersEnabled(): boolean {
+    const val = import.meta.env.PUBLIC_ENABLE_WHATSAPP_ORDERS ?? import.meta.env.ENABLE_WHATSAPP_ORDERS;
+    return this.parseFlag(val, true);
+  }
+
   static getAll(): Record<string, boolean> {
     return {
       guides: this.isGuidesEnabled(),
       calibrator: this.isCalibratorEnabled(),
       myRecipes: this.isMyRecipesEnabled(),
       flavorQuiz: this.isFlavorQuizEnabled(),
+      whatsAppOrders: this.isWhatsAppOrdersEnabled(),
     };
   }
 }

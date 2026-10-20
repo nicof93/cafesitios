@@ -12,11 +12,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
-from api.dependencies import get_db_session
+from api.dependencies import get_db_session, require_whatsapp_orders_enabled
 from db.database import PedidoWhatsApp, Tienda, _utcnow
 
-router = APIRouter(prefix="/api/v1/orders", tags=["Pedidos"])
-pedidos_router = APIRouter(prefix="/api/v1/pedidos", tags=["Pedidos"])
+router = APIRouter(prefix="/api/v1/orders", tags=["Pedidos"], dependencies=[Depends(require_whatsapp_orders_enabled)])
+pedidos_router = APIRouter(prefix="/api/v1/pedidos", tags=["Pedidos"], dependencies=[Depends(require_whatsapp_orders_enabled)])
 
 # Rate limiting en memoria (10 intentos por minuto por IP)
 _whatsapp_rate_limit: Dict[str, List[float]] = defaultdict(list)

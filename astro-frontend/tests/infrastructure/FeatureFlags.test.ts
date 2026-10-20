@@ -35,6 +35,17 @@ describe('FeatureFlags & Environment (Estrategia de Lanzamiento Controlado)', ()
     expect(Environment.isCalibratorEnabled()).toBe(false);
   });
 
+  it('controla el feature flag de pedidos por WhatsApp por defecto y con variable', () => {
+    vi.stubEnv('PUBLIC_ENABLE_WHATSAPP_ORDERS', undefined as any);
+    vi.stubEnv('ENABLE_WHATSAPP_ORDERS', undefined as any);
+    expect(FeatureFlags.isWhatsAppOrdersEnabled()).toBe(true);
+    expect(Environment.isWhatsAppOrdersEnabled()).toBe(true);
+
+    vi.stubEnv('PUBLIC_ENABLE_WHATSAPP_ORDERS', 'false');
+    expect(FeatureFlags.isWhatsAppOrdersEnabled()).toBe(false);
+    expect(Environment.isWhatsAppOrdersEnabled()).toBe(false);
+  });
+
   it('retorna snapshot completo con getAll()', () => {
     vi.stubEnv('PUBLIC_ENABLE_RECIPES', 'true');
     vi.stubEnv('PUBLIC_ENABLE_CALIBRATOR', 'false');
@@ -43,6 +54,7 @@ describe('FeatureFlags & Environment (Estrategia de Lanzamiento Controlado)', ()
     expect(flags.guides).toBe(true);
     expect(flags.calibrator).toBe(false);
     expect(flags.myRecipes).toBe(true);
+    expect(flags.whatsAppOrders).toBe(true);
   });
 });
 

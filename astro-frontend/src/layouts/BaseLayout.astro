@@ -29,6 +29,7 @@ const {
 
 const gtmId = Environment.getGtmId();
 const gaId = Environment.getGaMeasurementId();
+const showWhatsAppOrders = Environment.isWhatsAppOrdersEnabled();
 const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'https://cafesitios.cl').href;
 ---
 
@@ -100,6 +101,7 @@ const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'htt
   )}
 
   <!-- BANNER INFORMATIVO DE TRANSPARENCIA -->
+  {showWhatsAppOrders && (
   <div class="bg-stone-900 text-stone-200 text-[11px] sm:text-xs py-2 px-4 text-center border-b border-stone-800">
     <div class="max-w-7xl mx-auto flex items-center justify-center gap-1.5 leading-snug">
       <span aria-hidden="true">ℹ️</span>
@@ -108,6 +110,8 @@ const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'htt
       </span>
     </div>
   </div>
+
+  )}
 
   <Header lastSync={lastSync} />
 
@@ -121,7 +125,7 @@ const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'htt
   <CompareBarAndModal />
   <FlavorQuizModal />
   <FeedbackWidget />
-  <CartDrawer />
+  {showWhatsAppOrders && <CartDrawer />}
 
   <!-- SCRIPTS GLOBALES CLIENTE -->
   <script>

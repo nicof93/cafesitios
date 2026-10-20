@@ -70,5 +70,12 @@ class Settings:
             return raw_flag.strip().lower() in ("true", "1", "yes", "on")
         return True
 
+    @property
+    def is_whatsapp_orders_enabled(self) -> bool:
+        raw_flag = os.getenv("ENABLE_WHATSAPP_ORDERS")
+        if raw_flag is not None and raw_flag.strip() != "":
+            return raw_flag.strip().lower() in ("true", "1", "yes", "on")
+        return True
+
 settings = Settings()
 

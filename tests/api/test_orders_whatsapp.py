@@ -133,5 +133,17 @@ class TestWhatsAppOrdersAndAdmin(unittest.TestCase):
         self.assertIn("18%", metrics.texto_proyeccion)
 
 
-if __name__ == "__main__":
+    def test_whatsapp_orders_disabled_by_feature_flag(self):
+        import os
+        from fastapi import HTTPException
+        from api.dependencies import require_whatsapp_orders_enabled
+        os.environ['ENABLE_WHATSAPP_ORDERS'] = 'false'
+        try:
+            with self.assertRaises(HTTPException) as ctx:
+                require_whatsapp_orders_enabled()
+            self.assertEqual(ctx.exception.status_code, 404)
+        finally:
+            os.environ.pop('ENABLE_WHATSAPP_ORDERS', None)
+
+if __name__ == '__main__':
     unittest.main()
