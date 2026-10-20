@@ -39,7 +39,16 @@ jobs:
           SECRET_KEY: test-secret-key-for-ci
           PYTHONPATH: .
         run: |
-          python -m unittest discover -s tests/api -t .
+          set -o pipefail
+          python -m unittest discover -v -s tests/api -t . 2>&1 | tee test_results.log
+
+      - name: Reportar detalle de pruebas en Step Summary si falla
+        if: failure()
+        run: |
+          echo "### Pruebas Fallidas" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -n 100 test_results.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   # 2. Pruebas de Scrapers y Drivers ETL
   backend-scrapper-tests:
