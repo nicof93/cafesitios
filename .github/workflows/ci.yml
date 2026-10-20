@@ -31,14 +31,15 @@ jobs:
       - name: Instalar dependencias backend
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt httpx
 
       - name: Ejecutar pruebas de API REST y Backend
         env:
           ENVIRONMENT: test
           SECRET_KEY: test-secret-key-for-ci
+          PYTHONPATH: .
         run: |
-          python -m unittest discover -s tests/api
+          python -m unittest discover -s tests/api -t .
 
   # 2. Pruebas de Scrapers y Drivers ETL
   backend-scrapper-tests:
@@ -64,8 +65,9 @@ jobs:
       - name: Ejecutar pruebas de Scrapers y Drivers
         env:
           ENVIRONMENT: test
+          PYTHONPATH: .
         run: |
-          python -m unittest discover -s tests/scrapper
+          python -m unittest discover -s tests/scrapper -t .
 
   # 3. Pruebas Unitarias de Frontend (Vitest)
   frontend-unit-tests:

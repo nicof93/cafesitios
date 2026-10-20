@@ -1,11 +1,14 @@
 import sys
 from pathlib import Path
+
+_project_root = str(Path(__file__).resolve().parents[2])
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
+
 import unittest
 from datetime import datetime
 from fastapi.testclient import TestClient
 from fastapi import HTTPException
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from main import app
 from api.router import get_db_session, get_product_detail, get_stores_summary
