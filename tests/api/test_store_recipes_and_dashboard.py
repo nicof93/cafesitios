@@ -5,17 +5,37 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
 from main import app
-from db.database import DatabaseManager, Tienda, Producto, Variante, Receta, UsuarioTienda
+from api.dependencies import get_db_session
+from db.database import Base, Tienda, Producto, Variante, Receta, UsuarioTienda
 from core.security_store_admin import create_store_admin_token
 
 
 class TestStoreRecipesAndDashboard(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(cls.engine)
+        cls.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=cls.engine)
+
+        def override_get_db():
+            db = cls.SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app.dependency_overrides[get_db_session] = override_get_db
         cls.client = TestClient(app)
-        cls.db = DatabaseManager()
-        session = cls.db.SessionLocal()
+        session = cls.SessionLocal()
         try:
             # Crear o buscar tienda de prueba
             tienda = session.query(Tienda).filter(Tienda.nombre == "Tostaduría Recetas Test").first()
@@ -212,6 +232,12 @@ class TestStoreRecipesAndDashboard(unittest.TestCase):
         self.assertEqual(res_change.status_code, 200)
         data = res_change.json()
         self.assertTrue(data.get("exito"))
+
+
+    @classmethod
+    def tearDownClass(cls):
+        app.dependency_overrides.pop(get_db_session, None)
+        cls.engine.dispose()
 
 
 if __name__ == '__main__':
