@@ -851,6 +851,16 @@ const apiBaseUrl = "http://localhost:8000";
                 </button>
                 <button
                   type="button"
+                  class="btn-impersonate-store inline-flex items-center gap-1 rounded-lg border border-purple-300 bg-purple-50 px-2.5 py-1 text-xs font-bold text-purple-900 hover:bg-purple-100 transition shadow-xs"
+                  data-id="${store.id}"
+                  data-name="${store.nombre}"
+                  title="Abrir y auditar el panel administrativo de esta tostaduría"
+                >
+                  <span>👁️</span>
+                  <span>Ver Panel</span>
+                </button>
+                <button
+                  type="button"
                   class="btn-edit-store text-stone-600 hover:text-stone-900 font-bold px-2 py-1 text-xs transition"
                   data-store='${JSON.stringify(store).replace(/'/g, "&#39;")}'
                 >
@@ -860,6 +870,39 @@ const apiBaseUrl = "http://localhost:8000";
             </td>
           </tr>
         `).join('');
+
+        // Enlazar botones de ver panel de tostaduría (impersonación de superadministrador)
+        document.querySelectorAll('.btn-impersonate-store').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name') || 'Tienda';
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<span>⏳</span><span>Abriendo...</span>';
+            btn.disabled = true;
+
+            try {
+              const res = await fetchWithEnv(`${API_BASE}/api/v1/administracion/tiendas/${id}/impersonar`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+              });
+              if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'Error al generar sesión de inspección');
+              }
+              const data = await res.json();
+              if (data.redirect_url) {
+                window.open(data.redirect_url, '_blank');
+              } else {
+                alert('No se pudo generar el enlace de redirección.');
+              }
+            } catch (error) {
+              alert(`Error al abrir panel de ${name}: ${error.message}`);
+            } finally {
+              btn.innerHTML = originalHtml;
+              btn.disabled = false;
+            }
+          });
+        });
 
         // Enlazar botones de edición
         document.querySelectorAll('.btn-edit-store').forEach((btn) => {

@@ -15,6 +15,7 @@ from core.security_store_admin import (
 )
 from db.database import (
     AuditoriaAccionesTienda,
+    InteraccionClic,
     Base,
     Producto,
     Tienda,
@@ -283,6 +284,254 @@ class TestStoreAdminMultiTenant(unittest.TestCase):
         self.assertTrue(login_resp.debe_cambiar_password)
         self.assertEqual(login_resp.tienda_id, self.tienda_a.id)
         self.assertEqual(login_resp.usuario_id, self.user_admin_a.usuario_id)
+
+
+    def test_platform_superadmin_impersonation(self):
+        from core.security_store_admin import get_current_store_admin
+        from fastapi.security import HTTPAuthorizationCredentials
+        from api.admin_tienda import get_store_profile, list_store_products
+        from api.admin import impersonate_store_admin_endpoint
+
+        # 1. Generar token de suplantación usando el endpoint de administración
+        resp = impersonate_store_admin_endpoint(store_id=self.tienda_b.id, db_session=self.session)
+        self.assertTrue(resp.success)
+        self.assertEqual(resp.tienda_id, self.tienda_b.id)
+        self.assertEqual(resp.tienda_nombre, self.tienda_b.nombre)
+        self.assertIn("impersonate_token=", resp.redirect_url)
+        self.assertIn(f"tienda_id={self.tienda_b.id}", resp.redirect_url)
+
+        # 2. Verificar que una tienda inexistente retorne 404
+        with self.assertRaises(HTTPException) as cm_404:
+            impersonate_store_admin_endpoint(store_id=99999, db_session=self.session)
+        self.assertEqual(cm_404.exception.status_code, 404)
+
+        # 3. Validar resolución de contexto con el token de suplantación
+        req = DummyRequest(client_host="127.0.0.1")
+        creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=resp.token)
+        superadmin_ctx = get_current_store_admin(
+            request=req,
+            credentials=creds,
+            db_session=self.session,
+        )
+        self.assertEqual(superadmin_ctx.tienda_id, self.tienda_b.id)
+        self.assertEqual(superadmin_ctx.rol, "PLATFORM_SUPERADMIN")
+        self.assertEqual(superadmin_ctx.usuario_id, "superadmin@cafesitios.cl")
+
+        # 4. Probar que el contexto de superadmin puede consultar perfil y productos de Tienda B
+        profile = get_store_profile(ctx=superadmin_ctx, db_session=self.session)
+        self.assertEqual(profile.tienda_id, self.tienda_b.id)
+        self.assertEqual(profile.tienda_nombre, "Tostaduría B")
+
+        products_resp = list_store_products(
+            page=1,
+            per_page=10,
+            q=None,
+            oculto=None,
+            ctx=superadmin_ctx,
+            db_session=self.session,
+        )
+        self.assertEqual(products_resp.total, 1)
+        self.assertEqual(products_resp.productos[0].nombre, "Café Secreto Tienda B")
+
+
+    def test_store_profile_update(self):
+        from api.admin_tienda import update_store_profile, StoreProfileUpdateRequest
+
+        payload = StoreProfileUpdateRequest(
+            direccion="Av. Providencia 1234",
+            comuna="Providencia",
+            telefono_whatsapp="+56912345678",
+            logo_url="https://tienda-a.cl/logo.png",
+        )
+        updated_prof = update_store_profile(payload=payload, ctx=self.ctx_a, db_session=self.session)
+        self.assertEqual(updated_prof.tienda_id, self.tienda_a.id)
+        self.assertEqual(self.tienda_a.comuna, "Providencia")
+        self.assertEqual(self.tienda_a.telefono_whatsapp, "+56912345678")
+
+        # Verificar registro en auditoría
+        audits = self.session.query(AuditoriaAccionesTienda).filter_by(accion="UPDATE_PERFIL").all()
+        self.assertTrue(len(audits) >= 1)
+        self.assertEqual(audits[-1].tienda_id, self.tienda_a.id)
+
+    def test_store_catalogs_crud_and_isolation(self):
+        from api.admin_tienda import (
+            create_store_catalog,
+            list_store_catalogs,
+            delete_store_catalog,
+            StoreCatalogCreateRequest,
+        )
+
+        # 1. Tienda A crea catálogo
+        cat_req = StoreCatalogCreateRequest(url_catalogo="https://tienda-a.cl/cafe-especialidad", etiqueta="Línea Filtros")
+        created = create_store_catalog(payload=cat_req, ctx=self.ctx_a, db_session=self.session)
+        self.assertEqual(created.tienda_id, self.tienda_a.id)
+        self.assertEqual(created.url_catalogo, "https://tienda-a.cl/cafe-especialidad")
+
+        # 2. Tienda A lista catálogos
+        cats = list_store_catalogs(ctx=self.ctx_a, db_session=self.session)
+        self.assertEqual(len(cats), 1)
+        self.assertEqual(cats[0].id, created.id)
+
+        # 3. Tienda B lista catálogos (debe estar vacío para Tienda B)
+        cats_b = list_store_catalogs(ctx=self.ctx_b, db_session=self.session)
+        self.assertEqual(len(cats_b), 0)
+
+        # 4. Tienda B intenta borrar catálogo de Tienda A -> 404
+        with self.assertRaises(HTTPException) as cm_del:
+            delete_store_catalog(catalogo_id=created.id, ctx=self.ctx_b, db_session=self.session)
+        self.assertEqual(cm_del.exception.status_code, 404)
+
+        # 5. Tienda A borra su catálogo -> 200
+        del_resp = delete_store_catalog(catalogo_id=created.id, ctx=self.ctx_a, db_session=self.session)
+        self.assertTrue(del_resp["exito"])
+
+    def test_store_branches_crud_and_isolation(self):
+        from api.admin_tienda import (
+            create_store_branch,
+            list_store_branches,
+            update_store_branch,
+            delete_store_branch,
+            StoreBranchCreateUpdateRequest,
+        )
+
+        # 1. Tienda A crea sucursal
+        b_req = StoreBranchCreateUpdateRequest(nombre="Cafetería Central", direccion="Merced 345", comuna="Santiago")
+        created_b = create_store_branch(payload=b_req, ctx=self.ctx_a, db_session=self.session)
+        self.assertEqual(created_b.tienda_id, self.tienda_a.id)
+        self.assertEqual(created_b.comuna, "Santiago")
+
+        # 2. Tienda A lista sucursales
+        branches = list_store_branches(ctx=self.ctx_a, db_session=self.session)
+        self.assertEqual(len(branches), 1)
+
+        # 3. Tienda A actualiza sucursal
+        up_req = StoreBranchCreateUpdateRequest(nombre="Cafetería Central Renombrada", comuna="Santiago Centro")
+        updated_b = update_store_branch(sucursal_id=created_b.id, payload=up_req, ctx=self.ctx_a, db_session=self.session)
+        self.assertEqual(updated_b.nombre, "Cafetería Central Renombrada")
+
+        # 4. Tienda B intenta borrar sucursal de Tienda A -> 404
+        with self.assertRaises(HTTPException) as cm_del_b:
+            delete_store_branch(sucursal_id=created_b.id, ctx=self.ctx_b, db_session=self.session)
+        self.assertEqual(cm_del_b.exception.status_code, 404)
+
+        # 5. Tienda A borra su sucursal -> 200
+        del_b_resp = delete_store_branch(sucursal_id=created_b.id, ctx=self.ctx_a, db_session=self.session)
+        self.assertTrue(del_b_resp["exito"])
+
+
+    def test_store_telemetry_summary(self):
+        from api.admin_tienda import get_store_telemetry_summary
+
+        # Simular interacciones de telemetría para Tienda B
+        clic = InteraccionClic(
+            producto_id=self.prod_tienda_b.id,
+            tipo_evento="click_outbound_store",
+            ip_hash="fakehash123",
+        )
+        fav = InteraccionClic(
+            producto_id=self.prod_tienda_b.id,
+            tipo_evento="favorite_add",
+            ip_hash="fakehash123",
+        )
+        self.session.add_all([clic, fav])
+        self.session.commit()
+
+        telem = get_store_telemetry_summary(ctx=self.ctx_b, db_session=self.session)
+        self.assertEqual(telem.tienda_id, self.tienda_b.id)
+        self.assertEqual(telem.clics_salientes_totales, 1)
+        self.assertEqual(telem.total_favoritos_guardados, 1)
+        self.assertEqual(len(telem.top_cafes), 1)
+        self.assertEqual(telem.top_cafes[0].nombre, self.prod_tienda_b.nombre)
+
+    def test_store_profile_shipping_and_roast(self):
+        from api.admin_tienda import update_store_profile, get_store_profile, StoreProfileUpdateRequest
+
+        up_req = StoreProfileUpdateRequest(
+            envio_gratis_monto=25000,
+            retiro_en_tienda=True,
+            dias_tueste="Lunes y Jueves",
+            fecha_ultimo_tueste="2026-10-18",
+        )
+        profile = update_store_profile(payload=up_req, ctx=self.ctx_a, db_session=self.session)
+        self.assertEqual(profile.envio_gratis_monto, 25000)
+        self.assertTrue(profile.retiro_en_tienda)
+        self.assertEqual(profile.dias_tueste, "Lunes y Jueves")
+        self.assertEqual(profile.fecha_ultimo_tueste, "2026-10-18")
+
+        # Verificar persistencia en GET
+        fetched = get_store_profile(ctx=self.ctx_a, db_session=self.session)
+        self.assertEqual(fetched.envio_gratis_monto, 25000)
+        self.assertTrue(fetched.retiro_en_tienda)
+
+    def test_store_inconsistencies_inbox(self):
+        from api.admin_tienda import get_store_product_inconsistencies
+
+        # Crear un producto inconsistente en Tienda A: precio 0 y sin imagen
+        bad_prod = Producto(
+            tienda_id=self.tienda_a.id,
+            nombre="Café Raro Sin Imagen",
+            url_detalle="https://tienda-a.com/raro",
+            imagen=None,
+            categoria="cafe",
+            activo=True,
+        )
+        self.session.add(bad_prod)
+        self.session.flush()
+
+        bad_var = Variante(
+            producto_id=bad_prod.id,
+            id_variante_externo="bad-v1",
+            opcion="250g",
+            formato_gramos=0,
+            precio_clp=0,
+            precio_original_clp=0,
+            precio_por_kilo=0.0,
+            disponible=True,
+        )
+        self.session.add(bad_var)
+        self.session.commit()
+
+        inc_resp = get_store_product_inconsistencies(ctx=self.ctx_a, db_session=self.session)
+        self.assertGreaterEqual(inc_resp.total_inconsistencias, 1)
+        tipos = [i.tipo_inconsistencia for i in inc_resp.inconsistencias]
+        self.assertIn("SIN_IMAGEN", tipos)
+        self.assertIn("PRECIO_INVALIDO", tipos)
+
+    def test_store_benchmark_and_demand(self):
+        from api.admin_tienda import get_store_price_benchmark, get_store_unmet_demand
+
+        prod_a = Producto(
+            tienda_id=self.tienda_a.id,
+            nombre="Café Colombia Tienda A",
+            url_detalle="https://tienda-a.cl/colombia",
+            pais_origen="Colombia",
+            categoria="cafe",
+            activo=True,
+        )
+        self.session.add(prod_a)
+        self.session.flush()
+
+        var_a = Variante(
+            producto_id=prod_a.id,
+            id_variante_externo="prod-a-v1",
+            opcion="250g",
+            formato_gramos=250,
+            precio_clp=10000,
+            precio_original_clp=10000,
+            precio_por_kilo=40000.0,
+            disponible=True,
+        )
+        self.session.add(var_a)
+        self.session.commit()
+
+        benchmark = get_store_price_benchmark(ctx=self.ctx_a, db_session=self.session)
+        self.assertGreater(benchmark.precio_kilo_promedio_tienda, 0.0)
+        self.assertGreater(benchmark.precio_kilo_promedio_mercado, 0.0)
+        self.assertIn(benchmark.posicion_mercado, ["Muy Económico", "Competitivo", "Estándar de Mercado", "Segmento Premium"])
+
+        demand = get_store_unmet_demand(ctx=self.ctx_a, db_session=self.session)
+        self.assertIsInstance(demand.origenes_mas_buscados, list)
+        self.assertIsInstance(demand.oportunidades_catalogo, list)
 
 
 if __name__ == "__main__":
