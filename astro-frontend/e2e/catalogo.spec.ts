@@ -25,5 +25,31 @@ test.describe('Catálogo y Exploración Pública', () => {
       await expect(searchInput).toHaveValue('Geisha');
     }
   });
-});
 
+
+  test('los filtros de ofertas, tueste y descafeinado deben estar presentes', async ({ page }) => {
+    const pageErrors: Error[] = [];
+    page.on('pageerror', (err) => pageErrors.push(err));
+
+    await page.goto('/catalogo');
+
+    // 1. Checkbox de Solo Ofertas Verificadas
+    const checkOfertas = page.locator('input[name="en_oferta"]');
+    await expect(checkOfertas).toBeAttached();
+
+    // 2. Desplegar filtros avanzados si existe el drawer
+    const btnAdv = page.locator('#btn-toggle-adv-filters');
+    if (await btnAdv.isVisible()) {
+      await btnAdv.click();
+    }
+
+    // 3. Selector de nivel de tueste y checkbox descafeinado
+    const selectRoast = page.locator('select[name="roast"]');
+    const checkDecaf = page.locator('input[name="decaf"]');
+
+    await expect(selectRoast).toBeAttached();
+    await expect(checkDecaf).toBeAttached();
+
+    expect(pageErrors).toHaveLength(0);
+  });
+});

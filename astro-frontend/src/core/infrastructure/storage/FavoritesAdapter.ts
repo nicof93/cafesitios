@@ -15,6 +15,7 @@ export interface FavoriteItem {
   diferencia_precio?: number;
   porcentaje_variacion?: number;
   tipo_variacion?: 'BAJO' | 'SUBIO' | 'IGUAL';
+  volvio_disponible?: boolean;
 }
 
 const STORAGE_KEY = 'cafesitios_favoritos_v1';
@@ -143,6 +144,8 @@ export class FavoritesAdapter {
         }
       }
 
+      const volvioDisponible = fav.ultimo_stock_disponible === false && Boolean(disponibleActual);
+
       return {
         ...fav,
         precio_actual: precioActual,
@@ -151,6 +154,7 @@ export class FavoritesAdapter {
         diferencia_precio: diff,
         porcentaje_variacion: pct,
         tipo_variacion: tipo,
+        volvio_disponible: volvioDisponible,
       };
     });
   }

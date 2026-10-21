@@ -17,6 +17,33 @@ const formatoGramos = bestVariant?.formato_gramos || 250;
 const opcion = bestVariant?.opcion || 'Grano';
 const esEstimado = bestVariant?.es_estimado || false;
 const showWhatsApp = FeatureFlags.isWhatsAppOrdersEnabled();
+
+function buildOutboundUrl(rawUrl: string): string {
+  if (!rawUrl) return rawUrl;
+  try {
+    const parsed = new URL(rawUrl);
+    if (!parsed.searchParams.has('utm_source')) {
+      parsed.searchParams.set('utm_source', 'cafesitios.cl');
+      parsed.searchParams.set('utm_medium', 'referral');
+      parsed.searchParams.set('utm_campaign', 'catalog');
+    }
+    return parsed.toString();
+  } catch {
+    const sep = rawUrl.includes('?') ? '&' : '?';
+    return `${rawUrl}${sep}utm_source=cafesitios.cl&utm_medium=referral&utm_campaign=catalog`;
+  }
+}
+const outboundUrl = buildOutboundUrl(product.url_detalle);
+const hasFreeShipping = product.envio_gratis_monto ? precioClp >= product.envio_gratis_monto : false;
+const hasPickup = Boolean(product.retiro_en_tienda);
+let isFreshRoast = false;
+if (product.fecha_ultimo_tueste) {
+  try {
+    const roastDate = new Date(product.fecha_ultimo_tueste);
+    const diffDays = (Date.now() - roastDate.getTime()) / (1000 * 3600 * 24);
+    if (diffDays >= 0 && diffDays <= 14) isFreshRoast = true;
+  } catch {}
+}
 ---
 
 <article 
@@ -85,6 +112,21 @@ const showWhatsApp = FeatureFlags.isWhatsAppOrdersEnabled();
         {product.proceso && (
           <span class="rounded bg-stone-100/70 px-1.5 py-0.5 text-stone-600">
             {product.proceso}
+          </span>
+        )}
+        {hasFreeShipping && (
+          <span class="rounded bg-emerald-50 text-emerald-800 font-bold px-1.5 py-0.5 text-[9px] border border-emerald-200">
+            🚚 Envío Gratis
+          </span>
+        )}
+        {hasPickup && (
+          <span class="rounded bg-blue-50 text-blue-800 font-bold px-1.5 py-0.5 text-[9px] border border-blue-200">
+            🏬 Retiro Gratis
+          </span>
+        )}
+        {isFreshRoast && (
+          <span class="rounded bg-amber-50 text-amber-900 font-bold px-1.5 py-0.5 text-[9px] border border-amber-200">
+            🔥 Recién Tostado
           </span>
         )}
       </div>
@@ -203,7 +245,7 @@ const showWhatsApp = FeatureFlags.isWhatsAppOrdersEnabled();
       ) : null}
 
       <a 
-        href={product.url_detalle} 
+        href={outboundUrl} 
         target="_blank" 
         rel="noopener noreferrer"
         data-track-outbound="true"
