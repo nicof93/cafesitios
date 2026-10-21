@@ -23,6 +23,9 @@ class ICoffeeRepository(ABC):
         min_price_kilo: Optional[int] = None,
         max_price_kilo: Optional[int] = None,
         category: Optional[str] = "cafe",
+        en_oferta: Optional[bool] = None,
+        roast: Optional[str] = None,
+        decaf: Optional[bool] = None,
     ) -> List[CoffeeProductDomain]:
         pass
 
@@ -44,6 +47,9 @@ class ICoffeeRepository(ABC):
         min_price_kilo: Optional[int] = None,
         max_price_kilo: Optional[int] = None,
         category: Optional[str] = "cafe",
+        en_oferta: Optional[bool] = None,
+        roast: Optional[str] = None,
+        decaf: Optional[bool] = None,
     ) -> int:
         pass
 

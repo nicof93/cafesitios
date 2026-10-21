@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from sqlalchemy import (
-    create_engine, Column, Integer, String, Text, Boolean,
+    create_engine, Column, Integer, String, Text, Boolean, Date,
     Numeric, DateTime, ForeignKey, UniqueConstraint, Index, inspect, text, Float, JSON, ARRAY, event
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session, defer, defaultload, selectinload
@@ -38,6 +38,10 @@ class Tienda(Base):
     comuna = Column(String(100), nullable=True)
     logo_url = Column(String(500), nullable=True)
     telefono_whatsapp = Column(String(50), nullable=True)
+    envio_gratis_monto = Column(Integer, nullable=True)
+    retiro_en_tienda = Column(Boolean, nullable=False, default=False, server_default='false')
+    dias_tueste = Column(String(100), nullable=True)
+    fecha_ultimo_tueste = Column(Date, nullable=True)
     fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
     fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
     productos = relationship("Producto", back_populates="tienda", cascade="all, delete-orphan")

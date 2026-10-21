@@ -33,6 +33,9 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         min_price_kilo: Optional[int] = None,
         max_price_kilo: Optional[int] = None,
         category: Optional[str] = "cafe",
+        en_oferta: Optional[bool] = None,
+        roast: Optional[str] = None,
+        decaf: Optional[bool] = None,
     ):
         query = self.session.query(Variante, Producto, Tienda)\
             .join(Producto, Variante.producto_id == Producto.id)\
@@ -50,6 +53,22 @@ class PostgresCoffeeRepository(ICoffeeRepository):
 
         if only_available:
             query = query.filter(Variante.disponible == True)
+
+        if en_oferta is True:
+            query = query.filter(Variante.en_oferta == True)
+
+        if roast:
+            query = query.filter(Producto.tueste.ilike(f"%{roast}%"))
+
+        if decaf is True:
+            query = query.filter(
+                or_(
+                    Producto.nombre.ilike("%descafeinado%"),
+                    Producto.nombre.ilike("%decaf%"),
+                    Producto.proceso.ilike("%decaf%"),
+                    Producto.descripcion.ilike("%descafeinado%"),
+                )
+            )
 
 
         if store_name:
@@ -133,6 +152,9 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         min_price_kilo: Optional[int] = None,
         max_price_kilo: Optional[int] = None,
         category: Optional[str] = "cafe",
+        en_oferta: Optional[bool] = None,
+        roast: Optional[str] = None,
+        decaf: Optional[bool] = None,
     ) -> int:
         query = self._build_base_query(
             sort_by=sort_by,
@@ -150,6 +172,9 @@ class PostgresCoffeeRepository(ICoffeeRepository):
             min_price_kilo=min_price_kilo,
             max_price_kilo=max_price_kilo,
             category=category,
+            en_oferta=en_oferta,
+            roast=roast,
+            decaf=decaf,
         )
         return query.with_entities(func.count(distinct(Producto.id))).order_by(None).scalar() or 0
 
@@ -172,6 +197,9 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         min_price_kilo: Optional[int] = None,
         max_price_kilo: Optional[int] = None,
         category: Optional[str] = "cafe",
+        en_oferta: Optional[bool] = None,
+        roast: Optional[str] = None,
+        decaf: Optional[bool] = None,
     ) -> List[CoffeeProductDomain]:
         query = self._build_base_query(
             sort_by=sort_by,
@@ -189,6 +217,9 @@ class PostgresCoffeeRepository(ICoffeeRepository):
             min_price_kilo=min_price_kilo,
             max_price_kilo=max_price_kilo,
             category=category,
+            en_oferta=en_oferta,
+            roast=roast,
+            decaf=decaf,
         )
 
         precio_orden = Variante.precio_por_kilo if sort_by == "kilo" else Variante.precio_clp
@@ -235,6 +266,10 @@ class PostgresCoffeeRepository(ICoffeeRepository):
                 oculto_catalogo=bool(getattr(prod, 'oculto_catalogo', False)),
                 tienda_id=tienda.id,
                 tienda_telefono_whatsapp=getattr(tienda, 'telefono_whatsapp', None),
+                envio_gratis_monto=getattr(tienda, 'envio_gratis_monto', None),
+                retiro_en_tienda=bool(getattr(tienda, 'retiro_en_tienda', False)),
+                dias_tueste=getattr(tienda, 'dias_tueste', None),
+                fecha_ultimo_tueste=getattr(tienda, 'fecha_ultimo_tueste', None).isoformat() if getattr(tienda, 'fecha_ultimo_tueste', None) else None,
             )
             productos_dominio.append(prod_dom)
 

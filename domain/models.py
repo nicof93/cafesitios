@@ -27,6 +27,10 @@ class CoffeeProductDomain:
     oculto_catalogo: bool = False
     tienda_id: Optional[int] = None
     tienda_telefono_whatsapp: Optional[str] = None
+    envio_gratis_monto: Optional[int] = None
+    retiro_en_tienda: bool = False
+    dias_tueste: Optional[str] = None
+    fecha_ultimo_tueste: Optional[str] = None
 
 
 @dataclass
