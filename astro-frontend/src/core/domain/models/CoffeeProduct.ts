@@ -46,6 +46,13 @@ export interface CoffeeProductProps {
   tienda_telefono_whatsapp?: string;
   recetas?: ProductRecipe[];
   oculto_catalogo?: boolean;
+  envio_gratis_monto?: number;
+  retiro_en_tienda?: boolean;
+  dias_tueste?: string;
+  fecha_ultimo_tueste?: string;
+  precio_clp?: number;
+  precio_por_kilo?: number;
+  formato_gramos?: number;
 }
 
 export class CoffeeProduct {
@@ -73,6 +80,12 @@ export class CoffeeProduct {
   readonly fecha_actualizacion?: string;
   readonly recetas: ProductRecipe[];
   readonly oculto_catalogo: boolean;
+  readonly envio_gratis_monto?: number;
+  readonly retiro_en_tienda?: boolean;
+  readonly dias_tueste?: string;
+  readonly fecha_ultimo_tueste?: string;
+  readonly precio_clp?: number;
+  readonly precio_por_kilo?: number;
 
   constructor(props: CoffeeProductProps) {
     this.id = props.id;
@@ -85,6 +98,12 @@ export class CoffeeProduct {
     this.categoria = props.categoria || 'cafe';
     this.recetas = props.recetas || [];
     this.oculto_catalogo = Boolean(props.oculto_catalogo);
+    this.envio_gratis_monto = props.envio_gratis_monto;
+    this.retiro_en_tienda = props.retiro_en_tienda;
+    this.dias_tueste = props.dias_tueste;
+    this.fecha_ultimo_tueste = props.fecha_ultimo_tueste;
+    this.precio_clp = props.precio_clp;
+    this.precio_por_kilo = props.precio_por_kilo;
 
     
     // Normalizar variantes (acepta array o variante única en listados o variantes_por_gramaje)
@@ -93,6 +112,22 @@ export class CoffeeProduct {
       this.variantes = rawVars.map(v => new ProductVariant(v));
     } else if (props.variante) {
       this.variantes = [new ProductVariant(props.variante)];
+    } else if (props.precio_clp !== undefined) {
+      const g = props.formato_gramos || 250;
+      const pClp = Number(props.precio_clp) || 0;
+      const pKilo = Number(props.precio_por_kilo) || (g > 0 ? (pClp / g) * 1000 : 0);
+      this.variantes = [new ProductVariant({
+        id_externo: String(props.id),
+        opcion: `${g}g`,
+        formato_gramos: g,
+        precio_clp: pClp,
+        precio_original_clp: pClp,
+        en_oferta: false,
+        descuento_porcentaje: 0,
+        precio_por_kilo: pKilo,
+        disponible: true,
+        es_estimado: false,
+      })];
     } else {
       this.variantes = [];
     }

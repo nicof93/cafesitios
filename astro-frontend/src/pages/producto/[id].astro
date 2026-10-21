@@ -718,6 +718,8 @@ const captionText = product.descripcion_resumida
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {matches.map(m => {
             const mVar = m.getBestVariant(true) || m.getBestVariant(false);
+            const precioKilo = mVar?.precio_por_kilo || m.precio_por_kilo || (m as any).precio_por_kilo || 0;
+            const precioClp = mVar?.precio_clp ?? m.precio_clp ?? (m as any).precio_clp ?? 0;
             return (
               <a 
                 href={`/producto/${m.id}`}
@@ -738,8 +740,8 @@ const captionText = product.descripcion_resumida
                     {m.nombre}
                   </p>
                   <p class="text-xs font-extrabold text-emerald-800 mt-0.5">
-                    ${(mVar?.precio_por_kilo || 0).toLocaleString('es-CL')}/kg
-                    <span class="text-[10px] font-normal text-stone-400">(${mVar?.precio_clp.toLocaleString('es-CL')})</span>
+                    ${precioKilo.toLocaleString('es-CL')}/kg
+                    <span class="text-[10px] font-normal text-stone-400">(${precioClp.toLocaleString('es-CL')})</span>
                   </p>
                 </div>
               </a>

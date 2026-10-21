@@ -128,6 +128,17 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
             <input type="url" id="prod-url" placeholder="https://mitostaduria.cl/productos/..." class="w-full rounded-lg border border-stone-300 px-3 py-1.5 focus:border-emerald-600 focus:outline-none" />
           </div>
 
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-stone-700 mb-1">Puntaje SCA (0 - 100)</label>
+              <input type="number" id="prod-sca" step="0.25" min="70" max="100" placeholder="Ej. 86.5" class="w-full rounded-lg border border-stone-300 px-3 py-1.5 focus:border-emerald-600 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-stone-700 mb-1">Notas de Cata (separadas por coma)</label>
+              <input type="text" id="prod-notes" placeholder="Ej. Jazmín, Durazno, Miel" class="w-full rounded-lg border border-stone-300 px-3 py-1.5 focus:border-emerald-600 focus:outline-none" />
+            </div>
+          </div>
+
           <div>
             <label class="block font-semibold text-stone-700 mb-1">Descripción</label>
             <textarea id="prod-description" rows="2" placeholder="Notas de cata y descripción..." class="w-full rounded-lg border border-stone-300 px-3 py-1.5 focus:border-emerald-600 focus:outline-none"></textarea>
@@ -190,6 +201,8 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         document.getElementById('prod-image').value = prod ? (prod.imagen || '') : '';
         document.getElementById('prod-url').value = prod ? (prod.url_detalle || '') : '';
         document.getElementById('prod-description').value = prod ? (prod.descripcion || '') : '';
+        document.getElementById('prod-sca').value = prod && prod.sca_score ? prod.sca_score : '';
+        document.getElementById('prod-notes').value = prod && prod.notas_cata && prod.notas_cata.length ? prod.notas_cata.join(', ') : '';
         document.getElementById('prod-active').checked = prod ? prod.activo : true;
         document.getElementById('prod-hidden').checked = prod ? prod.oculto_catalogo : false;
 
@@ -271,8 +284,12 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
                 <div class="text-[10px] text-stone-400">${p.finca || ''}</div>
               </td>
               <td class="px-4 py-3 text-stone-600">
-                <div>${p.proceso || 'Sin proceso'}</div>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span>${p.proceso || 'Sin proceso'}</span>
+                  ${p.sca_score ? `<span class="rounded bg-amber-100 text-amber-900 font-extrabold px-1.5 py-0.2 text-[10px]">SCA ${p.sca_score}</span>` : ''}
+                </div>
                 <div class="text-[10px] text-stone-400">${p.tueste ? 'Tueste ' + p.tueste : ''}</div>
+                ${p.notas_cata && p.notas_cata.length ? `<div class="text-[10px] text-stone-500 italic truncate max-w-[180px]">${p.notas_cata.join(', ')}</div>` : ''}
               </td>
               <td class="px-4 py-3">
                 <span class="font-bold text-stone-900">${precio}</span>
@@ -318,6 +335,10 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         const image = document.getElementById('prod-image')?.value;
         const url = document.getElementById('prod-url')?.value;
         const desc = document.getElementById('prod-description')?.value;
+        const scaRaw = document.getElementById('prod-sca')?.value;
+        const sca = scaRaw ? parseFloat(scaRaw) : null;
+        const notesRaw = document.getElementById('prod-notes')?.value;
+        const notes = notesRaw ? notesRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
         const price = parseInt(document.getElementById('prod-price')?.value, 10);
         const grams = parseInt(document.getElementById('prod-grams')?.value, 10);
         const active = document.getElementById('prod-active')?.checked;
@@ -333,6 +354,8 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           variedad: variety || null,
           proceso: process || null,
           tueste: roast || null,
+          sca_score: sca,
+          notas_cata: notes,
           activo: active,
           oculto_catalogo: hidden,
           variantes: [

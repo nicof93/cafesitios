@@ -17,6 +17,9 @@ export interface CatalogFilterParams {
   offset?: number;
   category?: string;
   onlyAvailable?: boolean;
+  enOferta?: boolean;
+  roast?: string;
+  decaf?: boolean;
 }
 
 export interface CatalogResult {
@@ -53,7 +56,10 @@ export class GetCatalogUseCase {
       limit: params.limit || 30,
       offset: params.offset || 0,
       category: params.category !== undefined ? params.category : 'cafe',
-      only_available: params.onlyAvailable !== undefined ? params.onlyAvailable : true
+      only_available: params.onlyAvailable !== undefined ? params.onlyAvailable : true,
+      en_oferta: params.enOferta,
+      roast: params.roast,
+      decaf: params.decaf
     };
 
 

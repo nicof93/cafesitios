@@ -15,6 +15,9 @@ interface Props {
   initialNotes?: string;
   initialCategory?: string;
   hasNoCafeProducts?: boolean;
+  initialEnOferta?: boolean;
+  initialRoast?: string;
+  initialDecaf?: boolean;
 }
 
 const {
@@ -31,6 +34,9 @@ const {
   initialNotes = '',
   initialCategory = 'cafe',
   hasNoCafeProducts = false,
+  initialEnOferta = false,
+  initialRoast = '',
+  initialDecaf = false,
 } = Astro.props;
 
 const currentSelectedStores = new Set<string>(
@@ -54,7 +60,10 @@ const hasActiveFilters = Boolean(
   initialMinPrice || 
   initialMaxPrice ||
   (initialCategory && initialCategory !== 'cafe') ||
-  (initialSort && initialSort !== 'kilo')
+  (initialSort && initialSort !== 'kilo') ||
+  initialEnOferta ||
+  initialRoast ||
+  initialDecaf
 );
 ---
 
@@ -98,6 +107,21 @@ const hasActiveFilters = Boolean(
             🔍
           </span>
         </div>
+      </div>
+
+      <!-- FILTRO DE OFERTAS VERIFICADAS (CU-09) -->
+      <div class="bg-amber-50/70 p-3 rounded-xl border border-amber-200/80">
+        <label class="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-amber-950">
+          <input 
+            type="checkbox" 
+            name="en_oferta" 
+            id="filter-en-oferta" 
+            value="true"
+            checked={initialEnOferta}
+            class="h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+          />
+          <span>🔥 Solo Ofertas Verificadas</span>
+        </label>
       </div>
 
       <!-- SELECTOR DE CATEGORÍA (Oculta categorías vacías como ropa y accesorios) -->
@@ -247,6 +271,37 @@ const hasActiveFilters = Boolean(
               placeholder="Lavado, Natural, Anaeróbico..." 
               class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
             />
+          </div>
+
+          <!-- NIVEL DE TUESTE -->
+          <div>
+            <label for="input-roast" class="block text-[10px] font-bold uppercase text-stone-400 mb-1">
+              Nivel de Tueste
+            </label>
+            <select
+              name="roast"
+              id="input-roast"
+              class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs text-stone-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
+            >
+              <option value="" selected={!initialRoast}>Todos los tuestes</option>
+              <option value="Claro" selected={initialRoast.toLowerCase() === 'claro'}>Claro (Filtros & Frutales)</option>
+              <option value="Medio" selected={initialRoast.toLowerCase() === 'medio'}>Medio (Equilibrado)</option>
+              <option value="Oscuro" selected={initialRoast.toLowerCase() === 'oscuro'}>Oscuro (Espresso & Con leche)</option>
+            </select>
+          </div>
+
+          <!-- DESCAFEINADO -->
+          <div class="pt-1">
+            <label class="flex items-center gap-2 cursor-pointer select-none text-xs text-stone-700 hover:text-stone-900">
+              <input 
+                type="checkbox" 
+                name="decaf" 
+                value="true" 
+                checked={initialDecaf}
+                class="h-3.5 w-3.5 rounded border-stone-300 text-emerald-700 focus:ring-emerald-500 cursor-pointer"
+              />
+              <span class="font-semibold text-stone-800">☕ Solo Descafeinado (Swiss Water)</span>
+            </label>
           </div>
 
           <!-- VARIEDAD -->

@@ -3,7 +3,7 @@ import math
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc, text
 from sqlalchemy.orm import Session, selectinload
 
 from api.dependencies import get_db_session
@@ -22,21 +22,91 @@ from db.database import (
     AuditoriaAccionesTienda,
     DatabaseManager,
     HistorialPrecio,
+    InteraccionClic,
     PedidoWhatsApp,
     Producto,
     Receta,
     Sincronizacion,
     SincronizacionLog,
+    SucursalTienda,
     Tienda,
+    TiendaCatalogo,
     UsuarioTienda,
     Variante,
 )
 from scrapper_application import sincronizar_tienda
+from api.admin import CatalogTestRequest, CatalogTestResponse, test_store_catalog
+
 
 router = APIRouter(prefix="/api/v1/admin/tienda", tags=["Admin Tienda Multi-Inquilino"])
 
 
 # --- DTOs Pydantic v2 ---
+class TopCoffeeInterestItem(BaseModel):
+    producto_id: int
+    nombre: str
+    total_clics: int
+
+
+class StoreTelemetrySummaryResponse(BaseModel):
+    tienda_id: int
+    clics_salientes_totales: int
+    total_favoritos_guardados: int
+    apariciones_comparador: int
+    top_cafes: List[TopCoffeeInterestItem] = Field(default_factory=list)
+
+
+# --- DTOs de Catálogos y Sucursales para Tienda (Fase 2) ---
+class StoreCatalogItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    tienda_id: int
+    url_catalogo: str
+    etiqueta: Optional[str] = None
+    activa: bool = True
+    creado_en: Optional[datetime] = None
+
+
+class StoreCatalogCreateRequest(BaseModel):
+    url_catalogo: str = Field(..., min_length=4, max_length=500)
+    etiqueta: Optional[str] = Field(None, max_length=100)
+
+
+class StoreProfileUpdateRequest(BaseModel):
+    direccion: Optional[str] = Field(None, max_length=255)
+    comuna: Optional[str] = Field(None, max_length=100)
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
+    logo_url: Optional[str] = Field(None, max_length=500)
+    telefono_whatsapp: Optional[str] = Field(None, max_length=50)
+    envio_gratis_monto: Optional[int] = None
+    retiro_en_tienda: Optional[bool] = None
+    dias_tueste: Optional[str] = Field(None, max_length=100)
+    fecha_ultimo_tueste: Optional[str] = None
+
+
+class StoreBranchItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    tienda_id: int
+    nombre: str
+    direccion: Optional[str] = None
+    comuna: Optional[str] = None
+    region: Optional[str] = None
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
+    activo: bool = True
+
+
+class StoreBranchCreateUpdateRequest(BaseModel):
+    nombre: str = Field(..., min_length=1, max_length=150)
+    direccion: Optional[str] = Field(None, max_length=255)
+    comuna: Optional[str] = Field(None, max_length=100)
+    region: Optional[str] = Field(None, max_length=100)
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
+    activo: bool = True
+
 class StoreAdminLoginRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     email: str = Field(..., min_length=3, max_length=150)
@@ -77,6 +147,43 @@ class StoreAdminProfileResponse(BaseModel):
     cooldown_sync_segundos: int = 0
     logo_url: Optional[str] = None
     telefono_whatsapp: Optional[str] = None
+    envio_gratis_monto: Optional[int] = None
+    retiro_en_tienda: bool = False
+    dias_tueste: Optional[str] = None
+    fecha_ultimo_tueste: Optional[str] = None
+
+
+class StoreInconsistencyItem(BaseModel):
+    producto_id: int
+    nombre: str
+    tipo_inconsistencia: str
+    detalle: str
+    url_detalle: Optional[str] = None
+
+
+class StoreInconsistenciesResponse(BaseModel):
+    total_inconsistencias: int
+    inconsistencias: List[StoreInconsistencyItem]
+
+
+class BenchmarkOriginItem(BaseModel):
+    origen: str
+    precio_kilo_promedio_tienda: float
+    precio_kilo_promedio_mercado: float
+    diferencia_porcentaje: float
+
+
+class StoreBenchmarkResponse(BaseModel):
+    precio_kilo_promedio_tienda: float
+    precio_kilo_promedio_mercado: float
+    diferencia_porcentaje: float
+    posicion_mercado: str
+    desglose_por_origen: List[BenchmarkOriginItem]
+
+
+class StoreUnmetDemandResponse(BaseModel):
+    origenes_mas_buscados: List[Dict[str, Any]]
+    oportunidades_catalogo: List[str]
 
 
 class StoreWhatsAppConfigRequest(BaseModel):
@@ -121,6 +228,8 @@ class StoreProductInput(BaseModel):
     variedad: Optional[str] = None
     proceso: Optional[str] = None
     tueste: Optional[str] = None
+    sca_score: Optional[float] = None
+    notas_cata: List[str] = Field(default_factory=list)
     activo: bool = True
     oculto_catalogo: bool = False
     variantes: List[StoreProductVariantInput] = Field(default_factory=list)
@@ -153,6 +262,8 @@ class StoreProductOutput(BaseModel):
     variedad: Optional[str] = None
     proceso: Optional[str] = None
     tueste: Optional[str] = None
+    sca_score: Optional[float] = None
+    notas_cata: List[str] = Field(default_factory=list)
     activo: bool
     oculto_catalogo: bool
     variantes: List[StoreProductVariantOutput] = Field(default_factory=list)
@@ -430,6 +541,10 @@ def get_store_profile(
         cooldown_sync_segundos=cooldown_secs,
         logo_url=getattr(t, "logo_url", None),
         telefono_whatsapp=getattr(t, "telefono_whatsapp", None),
+        envio_gratis_monto=getattr(t, "envio_gratis_monto", None),
+        retiro_en_tienda=bool(getattr(t, "retiro_en_tienda", False)),
+        dias_tueste=getattr(t, "dias_tueste", None),
+        fecha_ultimo_tueste=getattr(t, "fecha_ultimo_tueste", None).isoformat() if getattr(t, "fecha_ultimo_tueste", None) else None,
     )
 
 
@@ -499,6 +614,7 @@ def list_store_products(
             )
             for v in (p.variantes or [])
         ]
+        c_fuente = p.caracteristicas_fuente or {}
         items.append(
             StoreProductOutput(
                 id=p.id,
@@ -512,6 +628,8 @@ def list_store_products(
                 variedad=p.variedad,
                 proceso=p.proceso,
                 tueste=p.tueste,
+                sca_score=c_fuente.get('sca_score'),
+                notas_cata=c_fuente.get('notas_cata') or [],
                 activo=bool(p.activo),
                 oculto_catalogo=bool(p.oculto_catalogo),
                 variantes=variantes_dto,
@@ -545,6 +663,12 @@ def create_store_product(
 
     from domain.search_normalizer import classify_product_category
 
+    caract_init = {}
+    if payload.sca_score is not None:
+        caract_init['sca_score'] = payload.sca_score
+    if payload.notas_cata is not None:
+        caract_init['notas_cata'] = payload.notas_cata
+
     prod = Producto(
         tienda_id=ctx.tienda_id,
         nombre=payload.nombre.strip(),
@@ -557,6 +681,7 @@ def create_store_product(
         variedad=payload.variedad,
         proceso=payload.proceso,
         tueste=payload.tueste,
+        caracteristicas_fuente=caract_init,
         activo=payload.activo,
         oculto_catalogo=payload.oculto_catalogo,
     )
@@ -640,6 +765,7 @@ def create_store_product(
         for v in variantes_creadas
     ]
 
+    c_fuente_creado = prod.caracteristicas_fuente or {}
     return StoreProductOutput(
         id=prod.id,
         tienda_id=prod.tienda_id,
@@ -652,6 +778,8 @@ def create_store_product(
         variedad=prod.variedad,
         proceso=prod.proceso,
         tueste=prod.tueste,
+        sca_score=c_fuente_creado.get('sca_score'),
+        notas_cata=c_fuente_creado.get('notas_cata') or [],
         activo=bool(prod.activo),
         oculto_catalogo=bool(prod.oculto_catalogo),
         variantes=variantes_dto,
@@ -716,6 +844,13 @@ def update_store_product(
     prod.tueste = payload.tueste
     prod.activo = payload.activo
     prod.oculto_catalogo = payload.oculto_catalogo
+
+    caract = dict(prod.caracteristicas_fuente or {})
+    if payload.sca_score is not None:
+        caract["sca_score"] = payload.sca_score
+    if payload.notas_cata is not None:
+        caract["notas_cata"] = payload.notas_cata
+    prod.caracteristicas_fuente = caract
 
     # Actualizar o insertar variantes si se especifican
     if payload.variantes:
@@ -797,6 +932,7 @@ def update_store_product(
         for v in (prod.variantes or [])
     ]
 
+    c_fuente_upd = prod.caracteristicas_fuente or {}
     return StoreProductOutput(
         id=prod.id,
         tienda_id=prod.tienda_id,
@@ -809,6 +945,8 @@ def update_store_product(
         variedad=prod.variedad,
         proceso=prod.proceso,
         tueste=prod.tueste,
+        sca_score=c_fuente_upd.get('sca_score'),
+        notas_cata=c_fuente_upd.get('notas_cata') or [],
         activo=bool(prod.activo),
         oculto_catalogo=bool(prod.oculto_catalogo),
         variantes=variantes_dto,
@@ -1220,3 +1358,606 @@ def get_store_whatsapp_metrics(
     )
 
 
+# --- FASE 2: GESTIÓN DE CATÁLOGOS, PROBADOR Y SUCURSALES ---
+
+@router.put(
+    "/perfil",
+    response_model=StoreAdminProfileResponse,
+    summary="Actualizar información de marca, ubicación y contacto de la tostaduría",
+)
+def update_store_profile(
+    payload: StoreProfileUpdateRequest,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> StoreAdminProfileResponse:
+    t = ctx.tienda
+    previos = {
+        "direccion": t.direccion,
+        "comuna": t.comuna,
+        "latitud": float(t.latitud) if t.latitud else None,
+        "longitud": float(t.longitud) if t.longitud else None,
+        "logo_url": t.logo_url,
+        "telefono_whatsapp": t.telefono_whatsapp,
+    }
+
+    if payload.direccion is not None:
+        t.direccion = payload.direccion.strip() or None
+    if payload.comuna is not None:
+        t.comuna = payload.comuna.strip() or None
+    if payload.latitud is not None:
+        t.latitud = payload.latitud
+    if payload.longitud is not None:
+        t.longitud = payload.longitud
+    if payload.logo_url is not None:
+        t.logo_url = payload.logo_url.strip() or None
+    if payload.telefono_whatsapp is not None:
+        t.telefono_whatsapp = payload.telefono_whatsapp.strip() or None
+    if payload.envio_gratis_monto is not None:
+        t.envio_gratis_monto = payload.envio_gratis_monto if payload.envio_gratis_monto > 0 else None
+    if payload.retiro_en_tienda is not None:
+        t.retiro_en_tienda = bool(payload.retiro_en_tienda)
+    if payload.dias_tueste is not None:
+        t.dias_tueste = payload.dias_tueste.strip() or None
+    if payload.fecha_ultimo_tueste is not None:
+        if payload.fecha_ultimo_tueste.strip():
+            from datetime import date
+            t.fecha_ultimo_tueste = date.fromisoformat(payload.fecha_ultimo_tueste.strip())
+        else:
+            t.fecha_ultimo_tueste = None
+
+    t.fecha_actualizacion = datetime.now(timezone.utc).replace(tzinfo=None)
+    db_session.commit()
+    db_session.refresh(t)
+
+    nuevos = {
+        "direccion": t.direccion,
+        "comuna": t.comuna,
+        "latitud": float(t.latitud) if t.latitud else None,
+        "longitud": float(t.longitud) if t.longitud else None,
+        "logo_url": t.logo_url,
+        "telefono_whatsapp": t.telefono_whatsapp,
+    }
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=t.id,
+        usuario_id=ctx.usuario_id,
+        accion="UPDATE_PERFIL",
+        entidad="tiendas",
+        entidad_id=t.id,
+        valores_previos=previos,
+        valores_nuevos=nuevos,
+        ip_origen=ctx.ip_origen,
+    )
+
+    return get_store_profile(ctx=ctx, db_session=db_session)
+
+
+@router.get(
+    "/catalogos",
+    response_model=List[StoreCatalogItem],
+    summary="Listar URLs de catálogo y colecciones configuradas para la tostaduría",
+)
+def list_store_catalogs(
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> List[StoreCatalogItem]:
+    cats = db_session.scalars(
+        select(TiendaCatalogo)
+        .where(TiendaCatalogo.tienda_id == ctx.tienda_id)
+        .order_by(TiendaCatalogo.id.asc())
+    ).all()
+    return [StoreCatalogItem.model_validate(c) for c in cats]
+
+
+@router.post(
+    "/catalogos",
+    response_model=StoreCatalogItem,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar una nueva URL de colección para scraping de la tostaduría",
+)
+def create_store_catalog(
+    payload: StoreCatalogCreateRequest,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> StoreCatalogItem:
+    url_limpia = payload.url_catalogo.strip()
+    nuevo = TiendaCatalogo(
+        tienda_id=ctx.tienda_id,
+        url_catalogo=url_limpia,
+        etiqueta=payload.etiqueta.strip() if payload.etiqueta else None,
+        activa=True,
+    )
+    db_session.add(nuevo)
+    db_session.commit()
+    db_session.refresh(nuevo)
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="CREATE_CATALOGO",
+        entidad="tienda_catalogos",
+        entidad_id=nuevo.id,
+        valores_previos=None,
+        valores_nuevos={"url_catalogo": nuevo.url_catalogo, "etiqueta": nuevo.etiqueta},
+        ip_origen=ctx.ip_origen,
+    )
+    return StoreCatalogItem.model_validate(nuevo)
+
+
+@router.delete(
+    "/catalogos/{catalogo_id}",
+    summary="Eliminar una URL de colección de la tostaduría",
+)
+def delete_store_catalog(
+    catalogo_id: int,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    cat = db_session.scalars(
+        select(TiendaCatalogo).where(
+            TiendaCatalogo.id == catalogo_id,
+            TiendaCatalogo.tienda_id == ctx.tienda_id,
+        )
+    ).first()
+    if not cat:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Catálogo con ID {catalogo_id} no encontrado en tu tostaduría.",
+        )
+
+    prev = {"url_catalogo": cat.url_catalogo, "etiqueta": cat.etiqueta}
+    db_session.delete(cat)
+    db_session.commit()
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="DELETE_CATALOGO",
+        entidad="tienda_catalogos",
+        entidad_id=catalogo_id,
+        valores_previos=prev,
+        valores_nuevos=None,
+        ip_origen=ctx.ip_origen,
+    )
+    return {"exito": True, "eliminado_id": catalogo_id}
+
+
+@router.post(
+    "/catalogos/probar",
+    response_model=CatalogTestResponse,
+    summary="Probar en seco (dry-run) si una nueva URL de colección es legible con los drivers",
+)
+def test_new_catalog_url(
+    payload: StoreCatalogCreateRequest,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+) -> CatalogTestResponse:
+    test_req = CatalogTestRequest(
+        nombre=ctx.tienda.nombre,
+        url_catalogo=payload.url_catalogo.strip(),
+        plataforma=ctx.tienda.plataforma or "auto",
+    )
+    return test_store_catalog(test_req)
+
+
+# --- CRUD DE SUCURSALES FÍSICAS DE LA TOSTADURÍA ---
+
+@router.get(
+    "/sucursales",
+    response_model=List[StoreBranchItem],
+    summary="Listar sucursales y cafeterías físicas pertenecientes a la tostaduría",
+)
+def list_store_branches(
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> List[StoreBranchItem]:
+    branches = db_session.scalars(
+        select(SucursalTienda)
+        .where(SucursalTienda.tienda_id == ctx.tienda_id)
+        .order_by(SucursalTienda.id.asc())
+    ).all()
+    return [StoreBranchItem.model_validate(b) for b in branches]
+
+
+@router.post(
+    "/sucursales",
+    response_model=StoreBranchItem,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar una nueva sucursal o cafetería física para la tostaduría",
+)
+def create_store_branch(
+    payload: StoreBranchCreateUpdateRequest,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> StoreBranchItem:
+    nueva = SucursalTienda(
+        tienda_id=ctx.tienda_id,
+        nombre=payload.nombre.strip(),
+        direccion=payload.direccion.strip() if payload.direccion else None,
+        comuna=payload.comuna.strip() if payload.comuna else None,
+        region=payload.region.strip() if payload.region else None,
+        latitud=payload.latitud,
+        longitud=payload.longitud,
+        activo=payload.activo,
+    )
+    db_session.add(nueva)
+    db_session.commit()
+    db_session.refresh(nueva)
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="CREATE_SUCURSAL",
+        entidad="sucursales_tienda",
+        entidad_id=nueva.id,
+        valores_previos=None,
+        valores_nuevos={"nombre": nueva.nombre, "comuna": nueva.comuna},
+        ip_origen=ctx.ip_origen,
+    )
+    return StoreBranchItem.model_validate(nueva)
+
+
+@router.put(
+    "/sucursales/{sucursal_id}",
+    response_model=StoreBranchItem,
+    summary="Actualizar los datos de una sucursal física de la tostaduría",
+)
+def update_store_branch(
+    sucursal_id: int,
+    payload: StoreBranchCreateUpdateRequest,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> StoreBranchItem:
+    suc = db_session.scalars(
+        select(SucursalTienda).where(
+            SucursalTienda.id == sucursal_id,
+            SucursalTienda.tienda_id == ctx.tienda_id,
+        )
+    ).first()
+    if not suc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Sucursal con ID {sucursal_id} no encontrada en tu tostaduría.",
+        )
+
+    prev = {"nombre": suc.nombre, "direccion": suc.direccion, "comuna": suc.comuna}
+    suc.nombre = payload.nombre.strip()
+    suc.direccion = payload.direccion.strip() if payload.direccion else None
+    suc.comuna = payload.comuna.strip() if payload.comuna else None
+    suc.region = payload.region.strip() if payload.region else None
+    suc.latitud = payload.latitud
+    suc.longitud = payload.longitud
+    suc.activo = payload.activo
+    suc.fecha_actualizacion = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    db_session.commit()
+    db_session.refresh(suc)
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="UPDATE_SUCURSAL",
+        entidad="sucursales_tienda",
+        entidad_id=suc.id,
+        valores_previos=prev,
+        valores_nuevos={"nombre": suc.nombre, "direccion": suc.direccion, "comuna": suc.comuna},
+        ip_origen=ctx.ip_origen,
+    )
+    return StoreBranchItem.model_validate(suc)
+
+
+@router.delete(
+    "/sucursales/{sucursal_id}",
+    summary="Eliminar una sucursal física de la tostaduría",
+)
+def delete_store_branch(
+    sucursal_id: int,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    suc = db_session.scalars(
+        select(SucursalTienda).where(
+            SucursalTienda.id == sucursal_id,
+            SucursalTienda.tienda_id == ctx.tienda_id,
+        )
+    ).first()
+    if not suc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Sucursal con ID {sucursal_id} no encontrada en tu tostaduría.",
+        )
+
+    prev = {"nombre": suc.nombre, "comuna": suc.comuna}
+    db_session.delete(suc)
+    db_session.commit()
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="DELETE_SUCURSAL",
+        entidad="sucursales_tienda",
+        entidad_id=sucursal_id,
+        valores_previos=prev,
+        valores_nuevos=None,
+        ip_origen=ctx.ip_origen,
+    )
+    return {"exito": True, "eliminado_id": sucursal_id}
+
+
+@router.get(
+    "/telemetria/resumen",
+    response_model=StoreTelemetrySummaryResponse,
+    summary="Resumen de telemetría comercial: clics salientes, favoritos y top cafés con mayor demanda",
+)
+def get_store_telemetry_summary(
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> StoreTelemetrySummaryResponse:
+    clics_outbound = db_session.scalar(
+        select(func.count(InteraccionClic.id))
+        .join(Producto, InteraccionClic.producto_id == Producto.id)
+        .where(
+            Producto.tienda_id == ctx.tienda_id,
+            InteraccionClic.tipo_evento.ilike("%outbound%"),
+        )
+    ) or 0
+
+    favoritos = db_session.scalar(
+        select(func.count(InteraccionClic.id))
+        .join(Producto, InteraccionClic.producto_id == Producto.id)
+        .where(
+            Producto.tienda_id == ctx.tienda_id,
+            InteraccionClic.tipo_evento.ilike("%favorite%"),
+        )
+    ) or 0
+
+    comparador = db_session.scalar(
+        select(func.count(InteraccionClic.id))
+        .join(Producto, InteraccionClic.producto_id == Producto.id)
+        .where(
+            Producto.tienda_id == ctx.tienda_id,
+            InteraccionClic.tipo_evento.ilike("%compare%"),
+        )
+    ) or 0
+
+    top_rows = db_session.execute(
+        select(
+            Producto.id,
+            Producto.nombre,
+            func.count(InteraccionClic.id).label("total_clics")
+        )
+        .join(InteraccionClic, Producto.id == InteraccionClic.producto_id)
+        .where(Producto.tienda_id == ctx.tienda_id)
+        .group_by(Producto.id, Producto.nombre)
+        .order_by(func.count(InteraccionClic.id).desc())
+        .limit(3)
+    ).all()
+
+    top_cafes = [
+        TopCoffeeInterestItem(producto_id=r[0], nombre=r[1], total_clics=r[2])
+        for r in top_rows
+    ]
+
+    return StoreTelemetrySummaryResponse(
+        tienda_id=ctx.tienda_id,
+        clics_salientes_totales=int(clics_outbound),
+        total_favoritos_guardados=int(favoritos),
+        apariciones_comparador=int(comparador),
+        top_cafes=top_cafes,
+    )
+
+
+@router.get(
+    "/productos/inconsistencias",
+    response_model=StoreInconsistenciesResponse,
+    summary="Bandeja de inconsistencias de scraping para la tienda (precios $0, gramajes dudosos, no café)",
+)
+def get_store_product_inconsistencies(
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> StoreInconsistenciesResponse:
+    prods = db_session.scalars(
+        select(Producto)
+        .options(selectinload(Producto.variantes))
+        .where(Producto.tienda_id == ctx.tienda_id)
+    ).all()
+
+    inconsistencias: List[StoreInconsistencyItem] = []
+    for p in prods:
+        if p.categoria and p.categoria != "cafe":
+            inconsistencias.append(
+                StoreInconsistencyItem(
+                    producto_id=p.id,
+                    nombre=p.nombre,
+                    tipo_inconsistencia="CATEGORIA_NO_CAFE",
+                    detalle=f"Categorizado como '{p.categoria}' en lugar de café de especialidad.",
+                    url_detalle=p.url_detalle,
+                )
+            )
+        if not p.imagen:
+            inconsistencias.append(
+                StoreInconsistencyItem(
+                    producto_id=p.id,
+                    nombre=p.nombre,
+                    tipo_inconsistencia="SIN_IMAGEN",
+                    detalle="El producto no posee imagen de empaque o portada.",
+                    url_detalle=p.url_detalle,
+                )
+            )
+        if not p.variantes:
+            inconsistencias.append(
+                StoreInconsistencyItem(
+                    producto_id=p.id,
+                    nombre=p.nombre,
+                    tipo_inconsistencia="SIN_VARIANTES",
+                    detalle="El producto no tiene ningún formato o precio registrado.",
+                    url_detalle=p.url_detalle,
+                )
+            )
+        else:
+            for v in p.variantes:
+                if (v.precio_clp or 0) <= 0:
+                    inconsistencias.append(
+                        StoreInconsistencyItem(
+                            producto_id=p.id,
+                            nombre=p.nombre,
+                            tipo_inconsistencia="PRECIO_INVALIDO",
+                            detalle=f"Variante '{v.opcion}' tiene precio $0 CLP.",
+                            url_detalle=p.url_detalle,
+                        )
+                    )
+                if (v.formato_gramos or 0) <= 0 or (v.formato_gramos or 0) > 10000:
+                    inconsistencias.append(
+                        StoreInconsistencyItem(
+                            producto_id=p.id,
+                            nombre=p.nombre,
+                            tipo_inconsistencia="GRAMAJE_DUDOSO",
+                            detalle=f"Variante '{v.opcion}' registra {v.formato_gramos}g fuera del rango típico.",
+                            url_detalle=p.url_detalle,
+                        )
+                    )
+
+    return StoreInconsistenciesResponse(
+        total_inconsistencias=len(inconsistencias),
+        inconsistencias=inconsistencias,
+    )
+
+
+@router.get(
+    "/analitica/benchmark",
+    response_model=StoreBenchmarkResponse,
+    summary="Benchmark privado de precios frente a la mediana y promedio del mercado nacional",
+)
+def get_store_price_benchmark(
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> StoreBenchmarkResponse:
+    tienda_avg_kilo = db_session.scalar(
+        select(func.avg(Variante.precio_por_kilo))
+        .join(Producto, Variante.producto_id == Producto.id)
+        .where(
+            Producto.tienda_id == ctx.tienda_id,
+            Producto.activo.is_(True),
+            Producto.categoria == "cafe",
+            Variante.disponible.is_(True),
+            Variante.precio_por_kilo > 0,
+        )
+    ) or 0.0
+
+    mercado_avg_kilo = db_session.scalar(
+        select(func.avg(Variante.precio_por_kilo))
+        .join(Producto, Variante.producto_id == Producto.id)
+        .where(
+            Producto.activo.is_(True),
+            Producto.categoria == "cafe",
+            Variante.disponible.is_(True),
+            Variante.precio_por_kilo > 0,
+        )
+    ) or 0.0
+
+    tienda_val = round(float(tienda_avg_kilo), 2)
+    mercado_val = round(float(mercado_avg_kilo), 2)
+    diff_pct = 0.0
+    if mercado_val > 0:
+        diff_pct = round(((tienda_val - mercado_val) / mercado_val) * 100, 1)
+
+    if diff_pct < -10:
+        posicion = "Muy Económico"
+    elif diff_pct < 0:
+        posicion = "Competitivo"
+    elif diff_pct <= 15:
+        posicion = "Estándar de Mercado"
+    else:
+        posicion = "Segmento Premium"
+
+    origenes_tienda = db_session.execute(
+        select(Producto.pais_origen, func.avg(Variante.precio_por_kilo))
+        .join(Variante, Variante.producto_id == Producto.id)
+        .where(
+            Producto.tienda_id == ctx.tienda_id,
+            Producto.activo.is_(True),
+            Producto.pais_origen.is_not(None),
+            Variante.disponible.is_(True),
+            Variante.precio_por_kilo > 0,
+        )
+        .group_by(Producto.pais_origen)
+    ).all()
+
+    desglose = []
+    for origen, avg_t in origenes_tienda:
+        avg_m = db_session.scalar(
+            select(func.avg(Variante.precio_por_kilo))
+            .join(Producto, Variante.producto_id == Producto.id)
+            .where(
+                Producto.pais_origen == origen,
+                Producto.activo.is_(True),
+                Variante.disponible.is_(True),
+                Variante.precio_por_kilo > 0,
+            )
+        ) or avg_t
+        t_orig = round(float(avg_t), 2)
+        m_orig = round(float(avg_m), 2)
+        diff_orig = round(((t_orig - m_orig) / m_orig) * 100, 1) if m_orig > 0 else 0.0
+        desglose.append(
+            BenchmarkOriginItem(
+                origen=origen,
+                precio_kilo_promedio_tienda=t_orig,
+                precio_kilo_promedio_mercado=m_orig,
+                diferencia_porcentaje=diff_orig,
+            )
+        )
+
+    return StoreBenchmarkResponse(
+        precio_kilo_promedio_tienda=tienda_val,
+        precio_kilo_promedio_mercado=mercado_val,
+        diferencia_porcentaje=diff_pct,
+        posicion_mercado=posicion,
+        desglose_por_origen=desglose,
+    )
+
+
+@router.get(
+    "/analitica/demanda",
+    response_model=StoreUnmetDemandResponse,
+    summary="Análisis de demanda no cubierta y orígenes populares en búsqueda",
+)
+def get_store_unmet_demand(
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> StoreUnmetDemandResponse:
+    mis_origenes = set(
+        db_session.scalars(
+            select(Producto.pais_origen)
+            .where(
+                Producto.tienda_id == ctx.tienda_id,
+                Producto.activo.is_(True),
+                Producto.pais_origen.is_not(None),
+            )
+            .distinct()
+        ).all()
+    )
+
+    top_mercado = db_session.execute(
+        select(Producto.pais_origen, func.count(Producto.id).label("total"))
+        .where(
+            Producto.activo.is_(True),
+            Producto.pais_origen.is_not(None),
+            Producto.categoria == "cafe",
+        )
+        .group_by(Producto.pais_origen)
+        .order_by(text("total DESC"))
+        .limit(8)
+    ).all()
+
+    origenes_lista = [{"origen": o, "productos_en_mercado": c} for o, c in top_mercado if o]
+    oportunidades = [o for o, _ in top_mercado if o and o not in mis_origenes][:4]
+
+    return StoreUnmetDemandResponse(
+        origenes_mas_buscados=origenes_lista,
+        oportunidades_catalogo=oportunidades,
+    )

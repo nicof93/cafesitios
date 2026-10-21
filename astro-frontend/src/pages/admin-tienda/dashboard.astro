@@ -67,6 +67,48 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       </div>
     </div>
 
+    <!-- FASE 3: TELEMETRÍA COMERCIAL E INTENCIÓN DE COMPRA (2.2) -->
+    <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-6">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+        <div>
+          <div class="flex items-center gap-2 text-base font-bold text-stone-900">
+            <span>📈</span>
+            <span>Telemetría Comercial e Intención de Compra</span>
+          </div>
+          <p class="text-xs text-stone-500 mt-0.5">Demanda real derivada desde Cafesitios hacia tu e-commerce.</p>
+        </div>
+        <span class="rounded-full bg-purple-100 text-purple-900 px-2.5 py-0.5 text-xs font-bold">Tiempo Real</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="p-4 rounded-xl bg-purple-50/50 border border-purple-200/60 space-y-1">
+          <span class="text-[10px] uppercase font-bold text-purple-700">Clics Salientes a tu Tienda</span>
+          <div class="text-2xl font-black text-purple-950" id="telem-outbound-clicks">0</div>
+          <p class="text-[11px] text-purple-800/80">Usuarios derivados a comprar</p>
+        </div>
+
+        <div class="p-4 rounded-xl bg-rose-50/50 border border-rose-200/60 space-y-1">
+          <span class="text-[10px] uppercase font-bold text-rose-700">Cafés en Favoritos</span>
+          <div class="text-2xl font-black text-rose-950" id="telem-favorites">0</div>
+          <p class="text-[11px] text-rose-800/80">Guardados por compradores</p>
+        </div>
+
+        <div class="p-4 rounded-xl bg-teal-50/50 border border-teal-200/60 space-y-1">
+          <span class="text-[10px] uppercase font-bold text-teal-700">En Matriz Comparativa</span>
+          <div class="text-2xl font-black text-teal-950" id="telem-compare">0</div>
+          <p class="text-[11px] text-teal-800/80">Apariciones cara a cara</p>
+        </div>
+      </div>
+
+      <!-- Top Cafés con Mayor Demanda -->
+      <div class="space-y-2">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-stone-700">Top 3 Cafés con Mayor Interés</h4>
+        <div id="telem-top-cafes-container" class="space-y-2">
+          <div class="text-xs text-stone-400 italic">Cargando métricas de interés...</div>
+        </div>
+      </div>
+    </div>
+
     <!-- SECCIÓN WHATSAPP COMMERCE: CONTACTO, MÉTRICAS Y PROYECCIÓN FINANCIERA -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Configuración WhatsApp de Ventas -->
@@ -226,6 +268,345 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       </div>
     </div>
 
+    <!-- FASE 2: GESTIÓN DE COLECCIONES DE SCRAPING Y PROBADOR EN SECO -->
+    <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-stone-100 pb-4">
+        <div>
+          <div class="flex items-center gap-2 text-base font-bold text-stone-900">
+            <span>🛒</span>
+            <span>URLs de Catálogo y Colecciones de Scraping</span>
+          </div>
+          <p class="text-xs text-stone-500 mt-1">
+            Administra los enlaces de tu e-commerce que el motor de Cafesitios escanea automáticamente (ej. /collections/grano, /cafe-kilo).
+          </p>
+        </div>
+      </div>
+
+      <!-- Formulario para agregar y probar nueva URL -->
+      <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-stone-700">Añadir o Probar Nueva Colección</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+          <div class="sm:col-span-7 space-y-1">
+            <label class="block text-[11px] font-semibold text-stone-600">URL del Catálogo o Colección *</label>
+            <input
+              type="url"
+              id="input-new-catalog-url"
+              placeholder="https://mitienda.cl/collections/cafe-de-especialidad"
+              class="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs text-stone-800 placeholder-stone-400 focus:border-emerald-600 focus:outline-none"
+            />
+          </div>
+          <div class="sm:col-span-3 space-y-1">
+            <label class="block text-[11px] font-semibold text-stone-600">Etiqueta (opcional)</label>
+            <input
+              type="text"
+              id="input-new-catalog-label"
+              placeholder="Línea Filtros"
+              class="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs text-stone-800 placeholder-stone-400 focus:border-emerald-600 focus:outline-none"
+            />
+          </div>
+          <div class="sm:col-span-2 flex gap-2">
+            <button
+              type="button"
+              id="btn-test-catalog-url"
+              class="flex-1 inline-flex items-center justify-center gap-1 rounded-xl border border-purple-300 bg-purple-50 hover:bg-purple-100 px-3 py-2 text-xs font-bold text-purple-900 transition shadow-xs"
+              title="Probar en seco si la URL es legible antes de guardarla"
+            >
+              <span>🧪</span>
+              <span>Probar</span>
+            </button>
+            <button
+              type="button"
+              id="btn-add-catalog-url"
+              class="flex-1 inline-flex items-center justify-center gap-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-3 py-2 text-xs font-bold text-white transition shadow-xs"
+              title="Guardar URL de colección"
+            >
+              <span>+</span>
+              <span>Guardar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lista de URLs registradas -->
+      <div id="catalogs-list-container" class="space-y-2">
+        <div class="text-xs text-stone-400 italic">Cargando colecciones registradas...</div>
+      </div>
+    </div>
+
+    <!-- FASE 2: PERFIL DE MARCA Y CAFETERÍAS / SUCURSALES FÍSICAS -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Formulario de Perfil de Marca -->
+      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+        <div class="border-b border-stone-100 pb-3">
+          <div class="flex items-center gap-2 text-base font-bold text-stone-900">
+            <span>🏷️</span>
+            <span>Perfil de Marca y Ubicación Principal</span>
+          </div>
+          <p class="text-xs text-stone-500 mt-1">Configuración visible en el directorio público y fichas de producto.</p>
+        </div>
+
+        <form id="form-store-profile" class="space-y-3 text-xs">
+          <div>
+            <label class="block font-semibold text-stone-700 mb-1">Dirección Matriz / Tostaduría</label>
+            <input type="text" id="prof-direccion" placeholder="Av. Providencia 1234" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-stone-700 mb-1">Comuna</label>
+              <input type="text" id="prof-comuna" placeholder="Providencia" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-stone-700 mb-1">WhatsApp de Ventas (+56)</label>
+              <input type="text" id="prof-whatsapp" placeholder="+56912345678" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+            </div>
+          </div>
+          <div>
+            <label class="block font-semibold text-stone-700 mb-1">URL de Logotipo (PNG/SVG transparente)</label>
+            <input type="url" id="prof-logo-url" placeholder="https://mitienda.cl/logo.png" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-stone-700 mb-1">Monto Mínimo Envío Gratis ($)</label>
+              <input type="number" id="prof-envio-gratis" placeholder="Ej. 30000" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+            </div>
+            <div class="flex items-center pt-5">
+              <label class="inline-flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="prof-retiro-tienda" class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+                <span class="font-semibold text-stone-700">Ofrece Retiro en Tienda</span>
+              </label>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-stone-700 mb-1">Días de Tueste Habitual</label>
+              <input type="text" id="prof-dias-tueste" placeholder="Ej. Martes y Jueves" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-stone-700 mb-1">Fecha Último Tueste</label>
+              <input type="date" id="prof-fecha-tueste" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+            </div>
+          </div>
+          <div class="flex justify-end pt-2">
+            <button type="submit" id="btn-save-profile" class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-2 text-xs font-bold text-white transition shadow-xs">
+              <span>💾</span>
+              <span>Guardar Perfil</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Sucursales y Cafeterías Físicas (Geolocalización) -->
+      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+          <div>
+            <div class="flex items-center gap-2 text-base font-bold text-stone-900">
+              <span>📍</span>
+              <span>Cafeterías y Puntos de Retiro</span>
+            </div>
+            <p class="text-xs text-stone-500 mt-1">Alimenta el ordenamiento por cercanía GPS en el directorio de tiendas.</p>
+          </div>
+          <button
+            type="button"
+            id="btn-open-branch-modal"
+            class="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition shadow-xs"
+          >
+            <span>+</span>
+            <span>Añadir Local</span>
+          </button>
+        </div>
+
+        <div id="branches-list-container" class="space-y-2">
+          <div class="text-xs text-stone-400 italic">Cargando sucursales...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FASE 4: BANDEJA DE INCONSISTENCIAS DE SCRAPING -->
+    <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+        <div class="flex items-center gap-2 text-base font-bold text-stone-900">
+          <span>⚠️</span>
+          <span>Bandeja de Inconsistencias de Scraping</span>
+          <span id="inconsistencies-badge" class="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-900">0 detectadas</span>
+        </div>
+        <a href="/admin-tienda/productos" class="text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline">
+          Corregir en Catálogo →
+        </a>
+      </div>
+      <p class="text-xs text-stone-500">
+        Productos detectados con posibles anomalías (precios en $0, gramajes fuera de rango, ítems que no son café o falta de imagen).
+      </p>
+      <div id="inconsistencies-list-container" class="space-y-2 max-h-56 overflow-y-auto">
+        <p class="text-xs text-stone-400 italic py-2">Sin inconsistencias detectadas. Tu catálogo está en perfecto estado.</p>
+      </div>
+    </div>
+
+    <!-- FASE 4: BENCHMARK PRIVADO DE PRECIOS & DEMANDA NO CUBIERTA -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      <!-- Benchmark Privado -->
+      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+        <div class="border-b border-stone-100 pb-3">
+          <div class="flex items-center gap-2 text-base font-bold text-stone-900">
+            <span>📊</span>
+            <span>Benchmark Privado de Precios ($/kg)</span>
+          </div>
+          <p class="text-xs text-stone-500 mt-1">Comparación anónima de tus precios por kilo frente al promedio del mercado nacional.</p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3 text-center">
+          <div class="rounded-xl border border-stone-100 bg-stone-50/70 p-3">
+            <span class="block text-[10px] font-bold uppercase text-stone-400">Tu Tostaduría</span>
+            <span class="text-base font-extrabold text-stone-900" id="bench-store-avg">$0/kg</span>
+          </div>
+          <div class="rounded-xl border border-stone-100 bg-stone-50/70 p-3">
+            <span class="block text-[10px] font-bold uppercase text-stone-400">Promedio Mercado</span>
+            <span class="text-base font-extrabold text-stone-700" id="bench-market-avg">$0/kg</span>
+          </div>
+          <div class="rounded-xl border border-stone-100 bg-stone-50/70 p-3">
+            <span class="block text-[10px] font-bold uppercase text-stone-400">Posicionamiento</span>
+            <span class="text-xs font-bold text-emerald-800" id="bench-posicion">Analizando...</span>
+          </div>
+        </div>
+
+        <div>
+          <span class="text-[11px] font-bold text-stone-600 block mb-2">Desglose por Origen:</span>
+          <div id="bench-origins-container" class="space-y-1.5 text-xs">
+            <div class="text-stone-400 text-xs italic">Cargando desglose de orígenes...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Demanda Insatisfecha y Oportunidades -->
+      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+        <div class="border-b border-stone-100 pb-3">
+          <div class="flex items-center gap-2 text-base font-bold text-stone-900">
+            <span>🎯</span>
+            <span>Oportunidades de Catálogo y Demanda</span>
+          </div>
+          <p class="text-xs text-stone-500 mt-1">Orígenes más cotizados por usuarios en Cafesitios que aún no tienes publicados.</p>
+        </div>
+
+        <div>
+          <span class="text-[11px] font-bold text-stone-600 block mb-1.5">Orígenes Recomendados para Incorporar:</span>
+          <div id="demand-opportunities-container" class="flex flex-wrap gap-2 text-xs">
+            <span class="text-stone-400 text-xs italic">Analizando mercado...</span>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-stone-100">
+          <span class="text-[11px] font-bold text-stone-600 block mb-2">Top Orígenes más buscados en Chile:</span>
+          <div id="demand-top-origins-container" class="space-y-1.5 text-xs">
+            <div class="text-stone-400 text-xs italic">Cargando orígenes...</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FASE 4: WIDGET EMBEBIBLE "VERIFICADO EN CAFESITIOS" -->
+    <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+        <div class="flex items-center gap-2 text-base font-bold text-stone-900">
+          <span>✨</span>
+          <span>Sello Oficial "Verificado en Cafesitios" (Widget)</span>
+        </div>
+        <span class="rounded-full bg-emerald-100 text-emerald-900 px-2.5 py-0.5 text-[10px] font-bold">Badge DTC</span>
+      </div>
+      <p class="text-xs text-stone-500">
+        Inserta este badge en el footer o cabecera de tu tienda online para generar confianza en tus clientes y respaldar tus precios transparentes.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center gap-4 bg-stone-50 p-4 rounded-xl border border-stone-200">
+        <!-- Vista previa -->
+        <div class="shrink-0 flex items-center justify-center p-3 bg-white rounded-lg border border-stone-200 shadow-2xs">
+          <div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#1c1917;color:#fff;border-radius:10px;font-family:sans-serif;font-size:11px;font-weight:bold;">
+            <span>☕</span>
+            <span>Verificado en Cafesitios</span>
+          </div>
+        </div>
+
+        <!-- Código para copiar -->
+        <div class="flex-1 w-full space-y-1">
+          <div class="relative">
+            <textarea
+              id="widget-embed-code"
+              readonly
+              rows="2"
+              class="w-full font-mono text-[11px] bg-white border border-stone-300 rounded-lg p-2 text-stone-700 select-all focus:outline-none"
+            >&lt;a href="https://cafesitios.cl" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#1c1917;color:#fff;border-radius:10px;font-family:sans-serif;font-size:11px;font-weight:bold;text-decoration:none;"&gt;&lt;span&gt;☕&lt;/span&gt;&lt;span&gt;Verificado en Cafesitios&lt;/span&gt;&lt;/a&gt;</textarea>
+          </div>
+          <button
+            type="button"
+            id="btn-copy-widget"
+            class="inline-flex items-center gap-1.5 rounded-lg bg-stone-800 hover:bg-stone-900 text-white px-3 py-1 text-xs font-bold transition shadow-2xs"
+          >
+            <span>📋</span>
+            <span id="btn-copy-widget-text">Copiar Código HTML</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL DE PROBADOR DE CATÁLOGO (DRY-RUN) -->
+    <div id="modal-test-catalog-result" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+      <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-stone-200 pb-3">
+          <h3 class="text-base font-bold text-stone-900" id="test-catalog-result-title">Resultado de Prueba de Catálogo</h3>
+          <button type="button" id="btn-close-test-catalog" class="text-stone-400 hover:text-stone-600 font-bold text-lg">✕</button>
+        </div>
+        <div id="test-catalog-result-body" class="p-4 rounded-xl bg-stone-50 text-xs text-stone-700 space-y-2">
+          <!-- Inyectado dinámicamente -->
+        </div>
+        <div class="flex justify-end pt-2">
+          <button
+            type="button"
+            id="btn-confirm-test-catalog"
+            class="rounded-xl bg-stone-900 px-5 py-2 text-xs font-bold text-white hover:bg-stone-800 transition"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL PARA CREAR SUCURSAL -->
+    <div id="modal-branch" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+      <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-stone-200 pb-3">
+          <h3 class="text-base font-bold text-stone-900">Nueva Cafetería o Sucursal</h3>
+          <button type="button" id="btn-close-branch-modal" class="text-stone-400 hover:text-stone-600 font-bold text-lg">✕</button>
+        </div>
+        <form id="form-branch" class="space-y-3 text-xs">
+          <div>
+            <label class="block font-semibold text-stone-700 mb-1">Nombre del Local *</label>
+            <input type="text" id="branch-nombre" required placeholder="Cafetería Lastarria" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block font-semibold text-stone-700 mb-1">Dirección *</label>
+            <input type="text" id="branch-direccion" required placeholder="José Victorino Lastarria 288" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-stone-700 mb-1">Comuna *</label>
+              <input type="text" id="branch-comuna" required placeholder="Santiago" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-stone-700 mb-1">Región</label>
+              <input type="text" id="branch-region" placeholder="Metropolitana" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+            </div>
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" id="btn-cancel-branch" class="rounded-xl border border-stone-300 px-4 py-2 font-semibold text-stone-700 hover:bg-stone-100 transition">Cancelar</button>
+            <button type="submit" class="rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-2 font-bold text-white transition shadow-xs">Guardar Local</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+
     <!-- MODAL DE RESULTADO DE SINCRONIZACIÓN -->
     <div id="modal-sync-feedback" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
       <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
@@ -323,6 +704,325 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       document.getElementById('btn-close-sync-feedback')?.addEventListener('click', closeFeedbackModal);
       document.getElementById('btn-confirm-sync-feedback')?.addEventListener('click', closeFeedbackModal);
 
+
+      // --- FASE 2: GESTIÓN DE CATÁLOGOS, PROBADOR Y SUCURSALES ---
+      const catalogsContainer = document.getElementById('catalogs-list-container');
+      const inputCatalogUrl = document.getElementById('input-new-catalog-url');
+      const inputCatalogLabel = document.getElementById('input-new-catalog-label');
+      const btnTestCatalog = document.getElementById('btn-test-catalog-url');
+      const btnAddCatalog = document.getElementById('btn-add-catalog-url');
+      const modalTestCatalog = document.getElementById('modal-test-catalog-result');
+      const testCatalogBody = document.getElementById('test-catalog-result-body');
+      const btnCloseTestCatalog = document.getElementById('btn-close-test-catalog');
+      const btnConfirmTestCatalog = document.getElementById('btn-confirm-test-catalog');
+
+      const branchesContainer = document.getElementById('branches-list-container');
+      const btnOpenBranchModal = document.getElementById('btn-open-branch-modal');
+      const modalBranch = document.getElementById('modal-branch');
+      const btnCloseBranchModal = document.getElementById('btn-close-branch-modal');
+      const btnCancelBranch = document.getElementById('btn-cancel-branch');
+      const formBranch = document.getElementById('form-branch');
+
+      const formProfile = document.getElementById('form-store-profile');
+      const profDireccion = document.getElementById('prof-direccion');
+      const profComuna = document.getElementById('prof-comuna');
+      const profWhatsapp = document.getElementById('prof-whatsapp');
+      const profLogoUrl = document.getElementById('prof-logo-url');
+      const profEnvioGratis = document.getElementById('prof-envio-gratis');
+      const profRetiroTienda = document.getElementById('prof-retiro-tienda');
+      const profDiasTueste = document.getElementById('prof-dias-tueste');
+      const profFechaTueste = document.getElementById('prof-fecha-tueste');
+
+      async function loadCatalogs() {
+        if (!catalogsContainer) return;
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/catalogos`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) throw new Error('Error al cargar catálogos');
+          const cats = await res.json();
+          if (cats.length === 0) {
+            catalogsContainer.innerHTML = '<p class="text-xs text-stone-400 italic py-2">No hay colecciones adicionales configuradas. Se usa la URL base por defecto.</p>';
+            return;
+          }
+          catalogsContainer.innerHTML = cats.map(c => `
+            <div class="flex items-center justify-between p-3 rounded-xl border border-stone-200 bg-stone-50 text-xs">
+              <div class="min-w-0 flex-1 pr-3">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-stone-800 truncate">${c.etiqueta || 'Colección'}</span>
+                  <span class="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.2 rounded font-semibold">Activa</span>
+                </div>
+                <p class="text-[11px] text-stone-500 font-mono truncate mt-0.5">${c.url_catalogo}</p>
+              </div>
+              <button
+                type="button"
+                class="btn-delete-catalog text-rose-600 hover:text-rose-800 font-bold text-xs p-1 rounded hover:bg-rose-50 transition"
+                data-id="${c.id}"
+                title="Eliminar URL"
+              >
+                🗑️
+              </button>
+            </div>
+          `).join('');
+
+          document.querySelectorAll('.btn-delete-catalog').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              const id = btn.getAttribute('data-id');
+              if (!confirm('¿Seguro que deseas eliminar esta URL de colección?')) return;
+              try {
+                const delRes = await fetch(`${API_BASE}/api/v1/admin/tienda/catalogos/${id}`, {
+                  method: 'DELETE',
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (delRes.ok) loadCatalogs();
+              } catch (_) {
+                alert('Error al eliminar catálogo');
+              }
+            });
+          });
+        } catch (_) {
+          catalogsContainer.innerHTML = '<p class="text-xs text-rose-500 py-2">Error al cargar catálogos.</p>';
+        }
+      }
+
+      async function loadBranches() {
+        if (!branchesContainer) return;
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/sucursales`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) throw new Error('Error al cargar sucursales');
+          const branches = await res.json();
+          if (branches.length === 0) {
+            branchesContainer.innerHTML = '<p class="text-xs text-stone-400 italic py-2">No hay locales ni cafeterías físicas registradas.</p>';
+            return;
+          }
+          branchesContainer.innerHTML = branches.map(b => `
+            <div class="flex items-center justify-between p-3 rounded-xl border border-stone-200 bg-stone-50 text-xs">
+              <div>
+                <span class="font-bold text-stone-800">${b.nombre}</span>
+                <p class="text-[11px] text-stone-500">📍 ${b.direccion || 'Sin dirección'}, ${b.comuna || ''}</p>
+              </div>
+              <button
+                type="button"
+                class="btn-delete-branch text-rose-600 hover:text-rose-800 font-bold text-xs p-1 rounded hover:bg-rose-50 transition"
+                data-id="${b.id}"
+                title="Eliminar local"
+              >
+                🗑️
+              </button>
+            </div>
+          `).join('');
+
+          document.querySelectorAll('.btn-delete-branch').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              const id = btn.getAttribute('data-id');
+              if (!confirm('¿Seguro que deseas eliminar esta cafetería física?')) return;
+              try {
+                const delRes = await fetch(`${API_BASE}/api/v1/admin/tienda/sucursales/${id}`, {
+                  method: 'DELETE',
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (delRes.ok) loadBranches();
+              } catch (_) {
+                alert('Error al eliminar sucursal');
+              }
+            });
+          });
+        } catch (_) {
+          branchesContainer.innerHTML = '<p class="text-xs text-rose-500 py-2">Error al cargar sucursales.</p>';
+        }
+      }
+
+      btnAddCatalog?.addEventListener('click', async () => {
+        const url = inputCatalogUrl?.value.trim();
+        const etiqueta = inputCatalogLabel?.value.trim();
+        if (!url) {
+          alert('Ingresa una URL válida');
+          return;
+        }
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/catalogos`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ url_catalogo: url, etiqueta: etiqueta || null })
+          });
+          if (!res.ok) throw new Error('Error al registrar catálogo');
+          if (inputCatalogUrl) inputCatalogUrl.value = '';
+          if (inputCatalogLabel) inputCatalogLabel.value = '';
+          loadCatalogs();
+        } catch (e) {
+          alert(e.message);
+        }
+      });
+
+      btnTestCatalog?.addEventListener('click', async () => {
+        const url = inputCatalogUrl?.value.trim();
+        if (!url) {
+          alert('Ingresa primero la URL que deseas probar');
+          return;
+        }
+        btnTestCatalog.disabled = true;
+        btnTestCatalog.innerHTML = '<span>⏳</span><span>Probando...</span>';
+
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/catalogos/probar`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ url_catalogo: url })
+          });
+          const data = await res.json();
+          if (modalTestCatalog && testCatalogBody) {
+            testCatalogBody.innerHTML = `
+              <div class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <span class="${data.legible ? 'text-emerald-700 font-bold' : 'text-rose-700 font-bold'}">
+                    ${data.legible ? '✅ Catálogo Legible' : '❌ No Legible'}
+                  </span>
+                  <span class="text-stone-400 font-mono text-[11px]">Plataforma: ${data.plataforma_detectada || data.plataforma_solicitada}</span>
+                </div>
+                <p class="text-stone-700">${data.mensaje}</p>
+                <div class="bg-white p-3 rounded-lg border border-stone-200 mt-2">
+                  <span class="font-bold text-stone-800">Total productos detectados:</span> ${data.total_productos_detectados}
+                  ${data.primer_producto ? `
+                    <div class="mt-2 pt-2 border-t border-stone-100">
+                      <span class="font-semibold text-stone-600">Muestra primer producto:</span>
+                      <p class="font-bold text-stone-900">${data.primer_producto.nombre} - $${(data.primer_producto.precio_clp || 0).toLocaleString('es-CL')}</p>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+            modalTestCatalog.classList.remove('hidden');
+            modalTestCatalog.classList.add('flex');
+          }
+        } catch (_) {
+          alert('Error al probar catálogo.');
+        } finally {
+          btnTestCatalog.disabled = false;
+          btnTestCatalog.innerHTML = '<span>🧪</span><span>Probar</span>';
+        }
+      });
+
+      btnCloseTestCatalog?.addEventListener('click', () => {
+        modalTestCatalog?.classList.add('hidden');
+        modalTestCatalog?.classList.remove('flex');
+      });
+      btnConfirmTestCatalog?.addEventListener('click', () => {
+        modalTestCatalog?.classList.add('hidden');
+        modalTestCatalog?.classList.remove('flex');
+      });
+
+      btnOpenBranchModal?.addEventListener('click', () => {
+        modalBranch?.classList.remove('hidden');
+        modalBranch?.classList.add('flex');
+      });
+      btnCloseBranchModal?.addEventListener('click', () => {
+        modalBranch?.classList.add('hidden');
+        modalBranch?.classList.remove('flex');
+      });
+      btnCancelBranch?.addEventListener('click', () => {
+        modalBranch?.classList.add('hidden');
+        modalBranch?.classList.remove('flex');
+      });
+
+      formBranch?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nombre = document.getElementById('branch-nombre')?.value.trim();
+        const direccion = document.getElementById('branch-direccion')?.value.trim();
+        const comuna = document.getElementById('branch-comuna')?.value.trim();
+        const region = document.getElementById('branch-region')?.value.trim();
+
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/sucursales`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ nombre, direccion, comuna, region, activo: true })
+          });
+          if (!res.ok) throw new Error('Error al registrar sucursal');
+          formBranch.reset();
+          modalBranch?.classList.add('hidden');
+          modalBranch?.classList.remove('flex');
+          loadBranches();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+
+      formProfile?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/perfil`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              direccion: profDireccion?.value.trim() || null,
+              comuna: profComuna?.value.trim() || null,
+              telefono_whatsapp: profWhatsapp?.value.trim() || null,
+              logo_url: profLogoUrl?.value.trim() || null,
+              envio_gratis_monto: profEnvioGratis?.value ? parseInt(profEnvioGratis.value, 10) : null,
+              retiro_en_tienda: profRetiroTienda?.checked || false,
+              dias_tueste: profDiasTueste?.value.trim() || null,
+              fecha_ultimo_tueste: profFechaTueste?.value || null,
+            })
+          });
+          if (!res.ok) throw new Error('Error al actualizar perfil');
+          alert('✅ Perfil de tienda actualizado exitosamente.');
+          loadProfile();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+
+
+      async function loadTelemetrySummary() {
+        const outboundEl = document.getElementById('telem-outbound-clicks');
+        const favEl = document.getElementById('telem-favorites');
+        const compEl = document.getElementById('telem-compare');
+        const topContainer = document.getElementById('telem-top-cafes-container');
+        if (!outboundEl) return;
+
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/telemetria/resumen`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+          outboundEl.textContent = data.clics_salientes_totales;
+          if (favEl) favEl.textContent = data.total_favoritos_guardados;
+          if (compEl) compEl.textContent = data.apariciones_comparador;
+
+          if (topContainer) {
+            if (data.top_cafes.length === 0) {
+              topContainer.innerHTML = '<p class="text-xs text-stone-400 italic py-1">Sin registros de interacción suficientes aún.</p>';
+            } else {
+              topContainer.innerHTML = data.top_cafes.map((c, i) => `
+                <div class="flex items-center justify-between p-2.5 rounded-xl border border-stone-100 bg-stone-50 text-xs">
+                  <div class="flex items-center gap-2">
+                    <span class="flex h-5 w-5 items-center justify-center rounded-full bg-purple-100 text-purple-900 font-bold text-[10px]">${i + 1}</span>
+                    <span class="font-bold text-stone-800">${c.nombre}</span>
+                  </div>
+                  <span class="text-purple-900 font-bold bg-purple-100/70 px-2 py-0.5 rounded text-[11px]">${c.total_clics} clics</span>
+                </div>
+              `).join('');
+            }
+          }
+        } catch (_) {}
+      }
+
+
       async function loadProfile() {
         try {
           const res = await fetch(`${API_BASE}/api/v1/admin/tienda/perfil`, {
@@ -363,6 +1063,21 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           if (data.cooldown_sync_segundos > 0) {
             startCooldownTimer(data.cooldown_sync_segundos);
           }
+
+          if (profDireccion && data.direccion) profDireccion.value = data.direccion;
+          if (profComuna && data.comuna) profComuna.value = data.comuna;
+          if (profWhatsapp && data.telefono_whatsapp) profWhatsapp.value = data.telefono_whatsapp;
+          if (profLogoUrl && data.logo_url) profLogoUrl.value = data.logo_url;
+          if (profEnvioGratis && data.envio_gratis_monto) profEnvioGratis.value = data.envio_gratis_monto;
+          if (profRetiroTienda) profRetiroTienda.checked = Boolean(data.retiro_en_tienda);
+          if (profDiasTueste && data.dias_tueste) profDiasTueste.value = data.dias_tueste;
+          if (profFechaTueste && data.fecha_ultimo_tueste) profFechaTueste.value = data.fecha_ultimo_tueste;
+          loadCatalogs();
+          loadBranches();
+          loadTelemetrySummary();
+          loadInconsistencies();
+          loadBenchmark();
+          loadUnmetDemand();
 
           // Pre-cargar número de WhatsApp en el formulario
           const inputPhone = document.getElementById('input-whatsapp-phone');
@@ -554,6 +1269,115 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         } finally {
           syncSpinner?.classList.add('hidden');
           syncIcon?.classList.remove('hidden');
+        }
+      });
+
+
+      async function loadInconsistencies() {
+        const badge = document.getElementById('inconsistencies-badge');
+        const container = document.getElementById('inconsistencies-list-container');
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/productos/inconsistencias`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+          if (badge) badge.textContent = `${data.total_inconsistencias} detectada${data.total_inconsistencias !== 1 ? 's' : ''}`;
+          if (container) {
+            if (data.inconsistencias.length === 0) {
+              container.innerHTML = '<p class="text-xs text-stone-400 italic py-2">Sin inconsistencias detectadas. Tu catálogo está en perfecto estado.</p>';
+            } else {
+              container.innerHTML = data.inconsistencias.map(inc => `
+                <div class="flex items-center justify-between p-2.5 rounded-xl border border-amber-200 bg-amber-50/50 text-xs">
+                  <div>
+                    <span class="font-bold text-stone-900">${inc.nombre}</span>
+                    <p class="text-[11px] text-amber-800">${inc.detalle}</p>
+                  </div>
+                  <span class="rounded bg-amber-200 text-amber-950 font-bold px-2 py-0.5 text-[10px] uppercase">${inc.tipo_inconsistencia}</span>
+                </div>
+              `).join('');
+            }
+          }
+        } catch (_) {}
+      }
+
+      async function loadBenchmark() {
+        const storeAvgEl = document.getElementById('bench-store-avg');
+        const marketAvgEl = document.getElementById('bench-market-avg');
+        const posEl = document.getElementById('bench-posicion');
+        const originsContainer = document.getElementById('bench-origins-container');
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/analitica/benchmark`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+          if (storeAvgEl) storeAvgEl.textContent = `$${Math.round(data.precio_kilo_promedio_tienda).toLocaleString('es-CL')}/kg`;
+          if (marketAvgEl) marketAvgEl.textContent = `$${Math.round(data.precio_kilo_promedio_mercado).toLocaleString('es-CL')}/kg`;
+          if (posEl) posEl.textContent = data.posicion_mercado;
+
+          if (originsContainer) {
+            if (data.desglose_por_origen.length === 0) {
+              originsContainer.innerHTML = '<p class="text-xs text-stone-400 italic py-1">Registra orígenes en tus cafés para ver la comparativa de mercado.</p>';
+            } else {
+              originsContainer.innerHTML = data.desglose_por_origen.map(o => `
+                <div class="flex items-center justify-between p-2 rounded-lg bg-stone-50 border border-stone-100">
+                  <span class="font-bold text-stone-800">${o.origen}</span>
+                  <div class="flex items-center gap-2">
+                    <span class="text-stone-600 font-semibold">$${Math.round(o.precio_kilo_promedio_tienda).toLocaleString('es-CL')}</span>
+                    <span class="text-[10px] text-stone-400">vs $${Math.round(o.precio_kilo_promedio_mercado).toLocaleString('es-CL')}</span>
+                    <span class="text-[10px] font-bold ${o.diferencia_porcentaje <= 0 ? 'text-emerald-700' : 'text-rose-700'}">${o.diferencia_porcentaje > 0 ? '+' : ''}${o.diferencia_porcentaje}%</span>
+                  </div>
+                </div>
+              `).join('');
+            }
+          }
+        } catch (_) {}
+      }
+
+      async function loadUnmetDemand() {
+        const oppContainer = document.getElementById('demand-opportunities-container');
+        const topContainer = document.getElementById('demand-top-origins-container');
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/analitica/demanda`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+          if (oppContainer) {
+            if (data.oportunidades_catalogo.length === 0) {
+              oppContainer.innerHTML = '<span class="text-xs text-emerald-700 font-bold">¡Tu tostaduría cubre los orígenes más solicitados!</span>';
+            } else {
+              oppContainer.innerHTML = data.oportunidades_catalogo.map(op => `
+                <span class="rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold px-3 py-1 text-xs">
+                  🌱 ${op}
+                </span>
+              `).join('');
+            }
+          }
+
+          if (topContainer) {
+            topContainer.innerHTML = data.origenes_mas_buscados.map(o => `
+              <div class="flex items-center justify-between p-2 rounded-lg bg-stone-50 border border-stone-100">
+                <span class="font-bold text-stone-800">🌍 ${o.origen}</span>
+                <span class="text-stone-500 font-semibold text-[11px]">${o.productos_en_mercado} variedades en mercado</span>
+              </div>
+            `).join('');
+          }
+        } catch (_) {}
+      }
+
+      // Copiar código del Widget
+      document.getElementById('btn-copy-widget')?.addEventListener('click', () => {
+        const textarea = document.getElementById('widget-embed-code');
+        const btnText = document.getElementById('btn-copy-widget-text');
+        if (textarea) {
+          textarea.select();
+          navigator.clipboard.writeText(textarea.value);
+          if (btnText) {
+            btnText.textContent = '¡Código Copiado!';
+            setTimeout(() => { btnText.textContent = 'Copiar Código HTML'; }, 2500);
+          }
         }
       });
 

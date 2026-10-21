@@ -270,11 +270,31 @@ def get_current_store_admin(
 
     usuario_id = payload.get("sub") or payload.get("usuario_id")
     tienda_id = payload.get("tienda_id")
+    rol = payload.get("rol", "STORE_ADMIN")
+    client_ip = get_client_ip(request)
 
     if not usuario_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token no contiene identificador de usuario válido.",
+        )
+
+    # Soporte para suplantación / impersonación desde la administración de plataforma (Superadmin)
+    if rol == "PLATFORM_SUPERADMIN" and tienda_id:
+        tienda = db_session.scalars(
+            select(Tienda).where(Tienda.id == int(tienda_id))
+        ).first()
+        if not tienda:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="La tostaduría solicitada para inspección no fue encontrada.",
+            )
+        return StoreAdminContext(
+            usuario_id=str(usuario_id),
+            tienda_id=tienda.id,
+            rol="PLATFORM_SUPERADMIN",
+            tienda=tienda,
+            ip_origen=client_ip,
         )
 
     # Validar que el usuario esté vinculado en usuarios_tienda

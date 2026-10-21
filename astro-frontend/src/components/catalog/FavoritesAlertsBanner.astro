@@ -120,7 +120,9 @@
     if (itemsRow) {
       itemsRow.innerHTML = evaluated.map((fav) => {
         let variationBadge = '';
-        if (fav.tipo_variacion === 'BAJO') {
+        if (fav.volvio_disponible) {
+          variationBadge = `<span class="rounded bg-teal-100 text-teal-900 px-1.5 py-0.5 text-[9px] font-extrabold">✨ Volvió a stock</span>`;
+        } else if (fav.tipo_variacion === 'BAJO') {
           variationBadge = `<span class="rounded bg-emerald-100 text-emerald-800 px-1.5 py-0.5 text-[9px] font-extrabold">📉 Bajó $${Math.abs(fav.diferencia_precio || 0).toLocaleString('es-CL')}</span>`;
         } else if (fav.tipo_variacion === 'SUBIO') {
           variationBadge = `<span class="rounded bg-rose-100 text-rose-800 px-1.5 py-0.5 text-[9px] font-extrabold">📈 Subió $${(fav.diferencia_precio || 0).toLocaleString('es-CL')}</span>`;

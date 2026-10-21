@@ -95,5 +95,23 @@ describe('CoffeeProduct Entity', () => {
 
     expect(product.notas_cata).toEqual(['Jazmín', 'frutos-rojos', 'Caramelo']);
   });
+
+  it('sintetiza una variante válida cuando recibe precios directos (como en sustitutos/matches)', () => {
+    const product = new CoffeeProduct({
+      id: 30,
+      nombre: 'Colombia Huila Sustituto',
+      tienda: 'Otra Tienda',
+      url_detalle: 'https://otratienda.cl/huila',
+      precio_clp: 11990,
+      precio_por_kilo: 47960,
+      formato_gramos: 250,
+    });
+
+    const best = product.getBestVariant(true);
+    expect(best).toBeDefined();
+    expect(best?.precio_clp).toBe(11990);
+    expect(best?.precio_por_kilo).toBe(47960);
+    expect(best?.formato_gramos).toBe(250);
+  });
 });
 

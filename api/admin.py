@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from api.dependencies import get_db_session, require_local_admin
 from api.stores import extract_official_website
-from core.security_store_admin import hash_store_password
+from core.security_store_admin import create_store_admin_token, hash_store_password
+import os
 from db.database import (
     DatabaseManager,
     Producto,
@@ -48,6 +49,15 @@ administracion_router = APIRouter(
 
 
 # --- DTOs de Tiendas y Sucursales ---
+
+class StoreImpersonationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    success: bool
+    tienda_id: int
+    tienda_nombre: str
+    token: str
+    redirect_url: str
+
 class BranchInput(BaseModel):
     id: Optional[int] = None
     nombre: str = Field(..., min_length=1, max_length=150)
@@ -1946,3 +1956,54 @@ def test_environment_endpoint(env_id: str) -> Dict[str, Any]:
     result = EnvironmentManager.test_connection(env_id)
     return result
 
+
+# --- ENDPOINT DE IMPERSONACIÓN / VISTA DE TIENDA DESDE PLATAFORMA ADMIN ---
+@administracion_router.post(
+    "/tiendas/{store_id}/impersonar",
+    response_model=StoreImpersonationResponse,
+    summary="Generar sesión de suplantación para acceder al panel de una tienda desde plataforma admin",
+)
+@administracion_router.post(
+    "/stores/{store_id}/impersonate",
+    response_model=StoreImpersonationResponse,
+    include_in_schema=False,
+)
+@router.post(
+    "/tiendas/{store_id}/impersonar",
+    response_model=StoreImpersonationResponse,
+    include_in_schema=False,
+)
+@router.post(
+    "/stores/{store_id}/impersonate",
+    response_model=StoreImpersonationResponse,
+    include_in_schema=False,
+)
+def impersonate_store_admin_endpoint(
+    store_id: int,
+    db_session: Session = Depends(get_db_session),
+) -> StoreImpersonationResponse:
+    store = db_session.get(Tienda, store_id)
+    if not store:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tienda con ID {store_id} no encontrada.",
+        )
+
+    # Genera token JWT firmado con rol PLATFORM_SUPERADMIN para la tienda específica
+    token = create_store_admin_token(
+        usuario_id="superadmin@cafesitios.cl",
+        tienda_id=store.id,
+        rol="PLATFORM_SUPERADMIN",
+        expires_in_seconds=7200,  # 2 horas de validez
+    )
+
+    frontend_base = os.getenv("FRONTEND_URL", "http://localhost:4321").rstrip("/")
+    redirect_url = f"{frontend_base}/admin-tienda/dashboard?impersonate_token={token}&tienda_id={store.id}"
+
+    return StoreImpersonationResponse(
+        success=True,
+        tienda_id=store.id,
+        tienda_nombre=store.nombre,
+        token=token,
+        redirect_url=redirect_url,
+    )

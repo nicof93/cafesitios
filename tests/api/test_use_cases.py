@@ -231,5 +231,73 @@ class TestUseCases(unittest.TestCase):
             session.close()
             engine.dispose()
 
+    def test_repository_filter_en_oferta(self):
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(engine)
+        session = sessionmaker(bind=engine)()
+        try:
+            store = Tienda(nombre="Singular Ofertas", url_base="https://singular.example")
+            prod_normal = Producto(
+                tienda=store,
+                nombre="Café Precio Regular",
+                url_detalle="https://singular.example/regular",
+                variantes=[
+                    Variante(
+                        id_variante_externo="reg-250",
+                        opcion="250g",
+                        formato_gramos=250,
+                        precio_clp=12000,
+                        precio_original_clp=12000,
+                        en_oferta=False,
+                        descuento_porcentaje=0,
+                        precio_por_kilo=48000,
+                        disponible=True,
+                    )
+                ]
+            )
+            prod_oferta = Producto(
+                tienda=store,
+                nombre="Café Mega Descuento",
+                url_detalle="https://singular.example/oferta",
+                variantes=[
+                    Variante(
+                        id_variante_externo="of-250",
+                        opcion="250g",
+                        formato_gramos=250,
+                        precio_clp=9000,
+                        precio_original_clp=12000,
+                        en_oferta=True,
+                        descuento_porcentaje=25,
+                        precio_por_kilo=36000,
+                        disponible=True,
+                    )
+                ]
+            )
+            session.add_all([store, prod_normal, prod_oferta])
+            session.commit()
+
+            repo = PostgresCoffeeRepository(session=session)
+            
+            # Sin filtro de oferta retorna ambos (2)
+            all_prods = repo.get_cheapest_products(en_oferta=None)
+            self.assertEqual(len(all_prods), 2)
+
+            # Con filtro en_oferta=True retorna únicamente el de oferta (1)
+            only_ofertas = repo.get_cheapest_products(en_oferta=True)
+            self.assertEqual(len(only_ofertas), 1)
+            self.assertEqual(only_ofertas[0].nombre, "Café Mega Descuento")
+            self.assertTrue(only_ofertas[0].variante_mas_barata.en_oferta)
+
+            # Conteo filtrado
+            count_ofertas = repo.count_cheapest_products(en_oferta=True)
+            self.assertEqual(count_ofertas, 1)
+        finally:
+            session.close()
+
+
 if __name__ == "__main__":
     unittest.main()
