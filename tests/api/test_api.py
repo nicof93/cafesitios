@@ -540,6 +540,51 @@ class TestAPI(unittest.TestCase):
             importlib.reload(main)
             main.app.dependency_overrides[get_db_session] = mock_get_db_session_override
 
+    def test_cors_and_proxy_for_official_domain_in_production(self):
+        """Verifica que solicitudes originadas en https://www.cafesitios.cl reciban cabeceras CORS en producción."""
+        import os
+        import importlib
+        import main
+
+        old_render = os.environ.get("RENDER")
+        try:
+            os.environ["RENDER"] = "true"
+            importlib.reload(main)
+            main.app.dependency_overrides[get_db_session] = mock_get_db_session_override
+            prod_client = TestClient(main.app)
+
+            # GET con Origin oficial de producción (sin x-vercel-id)
+            res = prod_client.get(
+                "/api/v1/sync/last",
+                headers={"Origin": "https://www.cafesitios.cl"}
+            )
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(
+                res.headers.get("access-control-allow-origin"),
+                "https://www.cafesitios.cl"
+            )
+
+            # Preflight OPTIONS con Origin oficial de producción
+            res_opt = prod_client.options(
+                "/api/v1/products/compare?ids=1,2",
+                headers={
+                    "Origin": "https://www.cafesitios.cl",
+                    "Access-Control-Request-Method": "GET"
+                }
+            )
+            self.assertEqual(res_opt.status_code, 200)
+            self.assertEqual(
+                res_opt.headers.get("access-control-allow-origin"),
+                "https://www.cafesitios.cl"
+            )
+        finally:
+            if old_render is not None:
+                os.environ["RENDER"] = old_render
+            else:
+                os.environ.pop("RENDER", None)
+            importlib.reload(main)
+            main.app.dependency_overrides[get_db_session] = mock_get_db_session_override
+
     def test_recipes_feature_flag_guard(self):
         """Verifica que el endpoint de recetas responde 404 cuando ENABLE_RECIPES=false."""
         import os

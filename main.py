@@ -85,33 +85,31 @@ local_origins = [
     "https://admin.cafesitios.vercel.app",
 ]
 
+official_origins = [
+    "https://cafesitios.cl",
+    "https://www.cafesitios.cl",
+    "https://admin.cafesitios.cl",
+    "https://admin.cafesitios.vercel.app",
+]
+
 if raw_origins:
-    allow_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+    configured_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+    if is_production:
+        allow_origins = list(dict.fromkeys(official_origins + configured_origins))
+    else:
+        allow_origins = configured_origins
 elif is_production:
-    # En producción publicada sin orígenes configurados, incluir subdominios oficiales
-    allow_origins = [
-        "https://cafesitios.cl",
-        "https://www.cafesitios.cl",
-        "https://admin.cafesitios.cl",
-        "https://admin.cafesitios.vercel.app",
-    ]
+    allow_origins = list(official_origins)
 else:
-    # Entorno local de desarrollo
     allow_origins = list(local_origins)
 
-# En desarrollo cuando no hay orígenes explícitos fijados, permitimos regex para cualquier puerto en localhost
-allow_origin_regex = (
-    r"^https?://([a-zA-Z0-9-]+\.)?(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$" if (not is_production and not raw_origins) else None
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allow_origins,
-    allow_origin_regex=allow_origin_regex,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Regex para soportar localhost en desarrollo (cuando no hay ALLOWED_ORIGINS fijado) y subdominios oficiales/vercel en producción
+if is_production:
+    allow_origin_regex = r"^https://([a-zA-Z0-9-]+\.)*(cafesitios\.cl|vercel\.app)(:\d+)?$"
+else:
+    allow_origin_regex = (
+        r"^https?://([a-zA-Z0-9-]+\.)?(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$" if not raw_origins else None
+    )
 
 proxy_secret = os.getenv("PROXY_SECRET", "").strip()
 
@@ -126,31 +124,32 @@ async def verify_proxy_origin(request: Request, call_next):
     ):
         return await call_next(request)
 
-    # 1. Si se configuró PROXY_SECRET, validar la firma
-    if proxy_secret:
-        incoming_secret = request.headers.get("x-proxy-secret", "").strip()
-        if incoming_secret == proxy_secret:
-            return await call_next(request)
-        return JSONResponse(
-            status_code=status.HTTP_403_FORBIDDEN,
-            content={"detail": "Acceso no autorizado. Firma de proxy inválida."}
-        )
+    # 1. Si se configuró PROXY_SECRET y se recibe cabecera con secreto válido
+    incoming_secret = request.headers.get("x-proxy-secret", "").strip() if proxy_secret else ""
+    has_valid_secret = bool(proxy_secret and incoming_secret == proxy_secret)
 
     # 2. Detección de peticiones a través del proxy de Vercel o de dominios autorizados
     vercel_id = request.headers.get("x-vercel-id")
     forwarded_host = request.headers.get("x-forwarded-host", "")
     origin = request.headers.get("origin", "")
+    referer = request.headers.get("referer", "")
 
     is_from_vercel = bool(vercel_id) or ("vercel.app" in forwarded_host)
 
     allowed_origin_match = False
     if allow_origins:
         allowed_origin_match = any(
-            origin.startswith(allowed.rstrip("/")) or forwarded_host == allowed.split("://")[-1].rstrip("/")
+            (origin and origin.startswith(allowed.rstrip("/")))
+            or (referer and referer.startswith(allowed.rstrip("/")))
+            or (forwarded_host and forwarded_host == allowed.split("://")[-1].rstrip("/"))
             for allowed in allow_origins
         )
 
-    if is_from_vercel or allowed_origin_match:
+    if not allowed_origin_match and allow_origin_regex:
+        import re
+        allowed_origin_match = bool(origin and re.match(allow_origin_regex, origin)) or bool(referer and re.match(allow_origin_regex, referer))
+
+    if has_valid_secret or is_from_vercel or allowed_origin_match:
         return await call_next(request)
 
     return JSONResponse(
@@ -159,6 +158,18 @@ async def verify_proxy_origin(request: Request, call_next):
             "detail": "Acceso directo a la API no permitido. Las solicitudes deben originarse a través del frontend oficial."
         }
     )
+
+
+# CORSMiddleware se agrega al final para ser la capa más externa (outermost middleware)
+# envolviendo todas las respuestas y garantizando cabeceras Access-Control-Allow-Origin
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allow_origins,
+    allow_origin_regex=allow_origin_regex,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Routers canónicos en español y alias en inglés
 app.include_router(productos_router)
