@@ -202,6 +202,96 @@ test.describe('Portal de Administración de Tiendas', () => {
     // Verificar que no ocurrieron errores de sintaxis o runtime de JavaScript en la página
     expect(pageErrors).toHaveLength(0);
   });
+
+
+  test('el dashboard debe renderizar las secciones de inconsistencias, benchmark, demanda y widget con campos de despacho y tueste', async ({ page }) => {
+    const pageErrors: Error[] = [];
+    page.on('pageerror', (err) => pageErrors.push(err));
+
+    await page.route('**/api/v1/admin/tienda/perfil', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          tienda_id: 1,
+          tienda_nombre: 'Café Singular Test',
+          tienda_url: 'https://singularcoffee.cl',
+          total_productos: 12,
+          plataforma: 'Shopify',
+          rol: 'STORE_ADMIN',
+          ultima_sincronizacion: new Date().toISOString(),
+          estado_sincronizacion: 'exitoso',
+          envio_gratis_monto: 30000,
+          retiro_en_tienda: true,
+          dias_tueste: 'Martes y Jueves',
+          fecha_ultimo_tueste: '2026-10-18',
+        }),
+      });
+    });
+
+    await page.route('**/api/v1/admin/tienda/productos/inconsistencias', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          total_inconsistencias: 0,
+          inconsistencias: [],
+        }),
+      });
+    });
+
+    await page.route('**/api/v1/admin/tienda/analitica/benchmark', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          precio_kilo_promedio_tienda: 38000.0,
+          precio_kilo_promedio_mercado: 40000.0,
+          diferencia_porcentaje: -5.0,
+          posicion_mercado: 'Competitivo',
+          desglose_por_origen: [
+            { origen: 'Colombia', precio_kilo_promedio_tienda: 36000, precio_kilo_promedio_mercado: 39000, diferencia_porcentaje: -7.7 }
+          ],
+        }),
+      });
+    });
+
+    await page.route('**/api/v1/admin/tienda/analitica/demanda', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          origenes_mas_buscados: [{ origen: 'Etiopía', productos_en_mercado: 24 }],
+          oportunidades_catalogo: ['Kenia', 'Guatemala'],
+        }),
+      });
+    });
+
+    await page.addInitScript(() => {
+      localStorage.setItem('store_admin_token', 'test-token-jwt');
+    });
+
+    await page.goto('/admin-tienda/dashboard');
+
+    // 1. Verificar campos comerciales de perfil
+    await expect(page.locator('#prof-envio-gratis')).toBeAttached();
+    await expect(page.locator('#prof-retiro-tienda')).toBeAttached();
+    await expect(page.locator('#prof-dias-tueste')).toBeAttached();
+    await expect(page.locator('#prof-fecha-tueste')).toBeAttached();
+
+    // 2. Verificar sección de inconsistencias
+    await expect(page.locator('#inconsistencies-badge')).toBeVisible();
+
+    // 3. Verificar sección de benchmark y demanda
+    await expect(page.locator('#bench-store-avg')).toBeVisible();
+    await expect(page.locator('#bench-market-avg')).toBeVisible();
+    await expect(page.locator('#demand-opportunities-container')).toBeVisible();
+
+    // 4. Verificar widget oficial embebible
+    const widgetTextarea = page.locator('#widget-embed-code');
+    await expect(widgetTextarea).toBeVisible();
+    await expect(widgetTextarea).toHaveValue(/Verificado en Cafesitios/i);
+
+    expect(pageErrors).toHaveLength(0);
+  });
 });
-
-

@@ -148,6 +148,26 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
     <!-- 2. CONTENT WRAPPER -->
     <div class="content-wrapper flex flex-col min-h-screen">
 
+      <!-- BANNER DE SUPERADMINISTRADOR DE PLATAFORMA (IMPERSONACIÓN) -->
+      <div id="superadmin-impersonation-banner" class="hidden bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 text-white px-4 py-2 text-xs font-semibold flex items-center justify-between border-b border-purple-800 shadow-sm z-30">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-sm shrink-0">👑</span>
+          <span class="truncate">
+            <strong>Modo Inspección de Plataforma:</strong> Estás visualizando el panel como <span id="superadmin-store-name" class="text-purple-200 underline font-bold">Tostaduría</span>.
+          </span>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <a
+            id="superadmin-return-link"
+            href="http://localhost:4322/plataforma/tiendas"
+            class="inline-flex items-center gap-1 rounded-lg bg-purple-700 hover:bg-purple-600 px-3 py-1 text-[11px] font-bold text-white transition shadow-xs"
+          >
+            <span>←</span>
+            <span>Volver a Plataforma</span>
+          </a>
+        </div>
+      </div>
+
       <!-- TOP NAVBAR -->
       <header class="h-14 border-b border-stone-200 bg-[#FCFBF7]/90 backdrop-blur-md px-4 flex items-center justify-between sticky top-0 z-20">
 
@@ -370,13 +390,45 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
 
   <!-- SCRIPT BASE DE SESIÓN, RESPONSIVIDAD E INTERCEPTOR HTTP -->
   <script is:inline>
-    (function initStoreAdminSession() {
+    (async function initStoreAdminSession() {
+      const apiBase = document.body.getAttribute('data-api-base') || '';
+
+      // 0. Si viene token de suplantación desde la consola de Plataforma Admin
+      const urlParams = new URLSearchParams(window.location.search);
+      const impToken = urlParams.get('impersonate_token');
+      if (impToken) {
+        localStorage.setItem('store_admin_token', impToken);
+        localStorage.setItem('is_platform_impersonation', 'true');
+        // Obtener y almacenar inmediatamente el perfil de la tienda suplantada
+        try {
+          const res = await fetch(`${apiBase}/api/v1/admin/tienda/perfil`, {
+            headers: { 'Authorization': `Bearer ${impToken}` }
+          });
+          if (res.ok) {
+            const prof = await res.json();
+            localStorage.setItem('store_admin_profile', JSON.stringify(prof));
+          }
+        } catch (_) {}
+
+        // Limpiar query params de la barra de direcciones sin recargar
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+
       const token = localStorage.getItem('store_admin_token');
       const isLoginPage = window.location.pathname.includes('/login');
 
       if (!token && !isLoginPage) {
         window.location.replace('/admin-tienda/login');
         return;
+      }
+
+      // Activar banner de superadministrador si corresponde
+      const isImpersonating = localStorage.getItem('is_platform_impersonation') === 'true';
+      const superadminBanner = document.getElementById('superadmin-impersonation-banner');
+      const superadminStoreName = document.getElementById('superadmin-store-name');
+      if (isImpersonating && superadminBanner) {
+        superadminBanner.classList.remove('hidden');
       }
 
       // Cargar perfil en header y sidebar
@@ -394,6 +446,7 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
           const sidebarBadge = document.getElementById('sidebar-store-badge');
           if (headerBadge) headerBadge.textContent = storeName;
           if (sidebarBadge) sidebarBadge.textContent = storeName;
+          if (superadminStoreName) superadminStoreName.textContent = storeName;
 
           // Actualizar URLs de tienda
           const headerUrlEl = document.getElementById('header-store-url');
