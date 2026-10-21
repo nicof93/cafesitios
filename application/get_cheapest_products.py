@@ -25,6 +25,9 @@ class GetCheapestProductsUseCase:
         min_price_kilo: Optional[int] = None,
         max_price_kilo: Optional[int] = None,
         category: Optional[str] = "cafe",
+        en_oferta: Optional[bool] = None,
+        roast: Optional[str] = None,
+        decaf: Optional[bool] = None,
     ) -> List[CoffeeProductDomain]:
 
         return self.repository.get_cheapest_products(
@@ -45,5 +48,8 @@ class GetCheapestProductsUseCase:
             min_price_kilo=min_price_kilo,
             max_price_kilo=max_price_kilo,
             category=category,
+            en_oferta=en_oferta,
+            roast=roast,
+            decaf=decaf,
         )
 

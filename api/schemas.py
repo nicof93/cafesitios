@@ -26,6 +26,10 @@ class CheapestProductResponse(BaseModel):
     imagen: Optional[str] = None
     categoria: str = "cafe"
     oculto_catalogo: bool = False
+    envio_gratis_monto: Optional[int] = None
+    retiro_en_tienda: bool = False
+    dias_tueste: Optional[str] = None
+    fecha_ultimo_tueste: Optional[str] = None
     variante: VariantResponse
 
 
@@ -173,6 +177,7 @@ class ProductMatchItem(BaseModel):
     diferencia_precio_clp: int
     diferencia_kilo_clp: float
     es_mas_barato: bool
+    variante: Optional[VariantResponse] = None
 
 class ProductMatchesResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

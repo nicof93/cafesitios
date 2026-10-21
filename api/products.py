@@ -705,6 +705,18 @@ def get_product_matches(product_id: int, db_session: Session = Depends(get_db_se
         var = m.variante_mas_barata
         diff_precio = var.precio_clp - origin_price
         diff_kilo = var.precio_por_kilo - origin_kilo
+        var_dto = VariantResponse(
+            id_externo=var.id_externo,
+            opcion=var.opcion,
+            formato_gramos=var.formato_gramos,
+            precio_clp=var.precio_clp,
+            precio_original_clp=var.precio_original_clp,
+            en_oferta=var.en_oferta,
+            descuento_porcentaje=var.descuento_porcentaje,
+            precio_por_kilo=var.precio_por_kilo,
+            disponible=var.disponible,
+            es_estimado=var.es_estimado,
+        )
         coincidencias.append(
             ProductMatchItem(
                 id=m.id,
@@ -718,6 +730,7 @@ def get_product_matches(product_id: int, db_session: Session = Depends(get_db_se
                 diferencia_precio_clp=diff_precio,
                 diferencia_kilo_clp=round(diff_kilo, 2),
                 es_mas_barato=(diff_kilo < 0),
+                variante=var_dto,
             )
         )
 
@@ -774,6 +787,7 @@ def get_cheapest_coffee_products(
     offset: int = Query(0, ge=0, description="Desplazamiento / paginación para scroll infinito (offset)"),
     category: Optional[str] = Query("cafe", description="Filtrar por categoría: 'cafe' (predeterminado), 'no_cafe', o 'todos'"),
     only_available: bool = Query(True, description="Filtrar solo productos que tengan stock disponible"),
+    en_oferta: Optional[bool] = Query(None, description="Filtrar solo productos en oferta verificada (precio_original > precio)"),
     store_name: Optional[List[str]] = Query(None, description="Filtrar por nombre(s) de tienda (ej. 'Singular' o múltiples)"),
     store: Optional[List[str]] = Query(None, description="Alias de tienda (ej. 'Singular')"),
     tienda: Optional[List[str]] = Query(None, description="Alias en español para tienda"),
@@ -794,6 +808,10 @@ def get_cheapest_coffee_products(
     notes: Optional[str] = Query(None, max_length=255, description="Filtrar por nota de cata"),
     notas_cata: Optional[str] = Query(None, max_length=255, description="Alias en español para nota de cata"),
     tasting_notes: Optional[str] = Query(None, max_length=255, description="Alias de nota de cata"),
+    roast: Optional[str] = Query(None, max_length=255, description="Filtrar por nivel de tueste (Claro, Medio, Oscuro)"),
+    tueste_filtro: Optional[str] = Query(None, alias="tueste", max_length=255, description="Alias de nivel de tueste"),
+    decaf: Optional[bool] = Query(None, description="Filtrar solo café descafeinado"),
+    descafeinado: Optional[bool] = Query(None, alias="descafeinado", description="Alias de café descafeinado"),
     db_session: Session = Depends(get_db_session)
 ) -> PaginatedProductsResponse:
     try:
@@ -834,6 +852,8 @@ def get_cheapest_coffee_products(
         clean_country = _to_clean_str(country or pais_origen)
         clean_variety = _to_clean_str(variety or variedad)
         clean_notes = _to_clean_str(notes or notas_cata or tasting_notes)
+        clean_roast = _to_clean_str(roast or tueste_filtro)
+        clean_decaf = decaf if decaf is not None else descafeinado
         clean_min_price = _to_clean_int(min_price)
         clean_max_price = _to_clean_int(max_price)
         clean_min_price_kilo = _to_clean_int(min_price_kilo)
@@ -864,27 +884,52 @@ def get_cheapest_coffee_products(
             min_price_kilo=clean_min_price_kilo,
             max_price_kilo=clean_max_price_kilo,
             category=categoria_filtro,
+            en_oferta=en_oferta,
+            roast=clean_roast,
+            decaf=clean_decaf,
         )
 
         total_items = len(productos_dominio)
         if hasattr(repository, "count_cheapest_products"):
-            total_items = repository.count_cheapest_products(
-                sort_by=sort_by,
-                only_available=only_available,
-                store_name=store_filter_str,
-                min_weight_g=min_weight_g,
-                max_weight_g=max_weight_g,
-                search_query=clean_search_query,
-                min_price=clean_min_price,
-                max_price=clean_max_price,
-                process=clean_process,
-                country=clean_country,
-                variety=clean_variety,
-                tasting_notes=clean_notes,
-                min_price_kilo=clean_min_price_kilo,
-                max_price_kilo=clean_max_price_kilo,
-                category=categoria_filtro,
-            )
+            try:
+                total_items = repository.count_cheapest_products(
+                    sort_by=sort_by,
+                    only_available=only_available,
+                    store_name=store_filter_str,
+                    min_weight_g=min_weight_g,
+                    max_weight_g=max_weight_g,
+                    search_query=clean_search_query,
+                    min_price=clean_min_price,
+                    max_price=clean_max_price,
+                    process=clean_process,
+                    country=clean_country,
+                    variety=clean_variety,
+                    tasting_notes=clean_notes,
+                    min_price_kilo=clean_min_price_kilo,
+                    max_price_kilo=clean_max_price_kilo,
+                    category=categoria_filtro,
+                    en_oferta=en_oferta,
+                    roast=clean_roast,
+                    decaf=clean_decaf,
+                )
+            except TypeError:
+                total_items = repository.count_cheapest_products(
+                    sort_by=sort_by,
+                    only_available=only_available,
+                    store_name=store_filter_str,
+                    min_weight_g=min_weight_g,
+                    max_weight_g=max_weight_g,
+                    search_query=clean_search_query,
+                    min_price=clean_min_price,
+                    max_price=clean_max_price,
+                    process=clean_process,
+                    country=clean_country,
+                    variety=clean_variety,
+                    tasting_notes=clean_notes,
+                    min_price_kilo=clean_min_price_kilo,
+                    max_price_kilo=clean_max_price_kilo,
+                    category=categoria_filtro,
+                )
 
         items_dto = [
             CheapestProductResponse(
@@ -897,6 +942,10 @@ def get_cheapest_coffee_products(
                 imagen=prod.imagen,
                 categoria=getattr(prod, 'categoria', 'cafe'),
                 oculto_catalogo=bool(getattr(prod, 'oculto_catalogo', False)),
+                envio_gratis_monto=getattr(prod, 'envio_gratis_monto', None),
+                retiro_en_tienda=bool(getattr(prod, 'retiro_en_tienda', False)),
+                dias_tueste=getattr(prod, 'dias_tueste', None),
+                fecha_ultimo_tueste=getattr(prod, 'fecha_ultimo_tueste', None),
                 variante=VariantResponse(
                     id_externo=prod.variante_mas_barata.id_externo,
                     opcion=prod.variante_mas_barata.opcion,
