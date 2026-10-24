@@ -23,8 +23,10 @@ from db.database import (
     DatabaseManager,
     HistorialPrecio,
     InteraccionClic,
+    NotaCata,
     PedidoWhatsApp,
     Producto,
+    ProductoNotaCata,
     Receta,
     Sincronizacion,
     SincronizacionLog,
@@ -1961,3 +1963,275 @@ def get_store_unmet_demand(
         origenes_mas_buscados=origenes_lista,
         oportunidades_catalogo=oportunidades,
     )
+
+
+# --- DTOs y Endpoints de Moderación de Notas de Cata (Fase 3) ---
+class StoreProductNoteItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    nota_id: int
+    nombre: str
+    clave_normalizada: str
+    texto_origen: str
+    confianza: float
+    estado: str
+    es_fuera_de_rueda: bool
+
+
+class StoreProductNotesResponse(BaseModel):
+    producto_id: int
+    producto_nombre: str
+    total_notas: int
+    notas: List[StoreProductNoteItem] = Field(default_factory=list)
+
+
+class StoreNoteActionRequest(BaseModel):
+    nota_id: Optional[int] = None
+    clave_normalizada: Optional[str] = None
+
+
+class StoreNoteCreateRequest(BaseModel):
+    nombre: str = Field(..., min_length=2, max_length=100)
+
+
+@router.get(
+    "/productos/{producto_id}/notas",
+    response_model=StoreProductNotesResponse,
+    summary="Listar notas de cata (confirmadas, sugeridas y fuera de rueda) de un producto",
+)
+def get_store_product_notes(
+    producto_id: int,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> StoreProductNotesResponse:
+    prod = db_session.get(Producto, producto_id)
+    if not prod or prod.tienda_id != ctx.tienda_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Producto con ID {producto_id} no encontrado en su tienda.",
+        )
+
+    relations = db_session.scalars(
+        select(ProductoNotaCata)
+        .options(selectinload(ProductoNotaCata.nota))
+        .where(ProductoNotaCata.producto_id == prod.id)
+    ).all()
+
+    items = []
+    for r in relations:
+        if not r.nota:
+            continue
+        items.append(
+            StoreProductNoteItem(
+                nota_id=r.nota.id,
+                nombre=r.nota.nombre,
+                clave_normalizada=r.nota.clave_normalizada,
+                texto_origen=r.texto_origen,
+                confianza=r.confianza,
+                estado=getattr(r, "estado", "confirmada") or "confirmada",
+                es_fuera_de_rueda=bool(getattr(r, "es_fuera_de_rueda", False)),
+            )
+        )
+
+    return StoreProductNotesResponse(
+        producto_id=prod.id,
+        producto_nombre=prod.nombre,
+        total_notas=len(items),
+        notas=items,
+    )
+
+
+@router.post(
+    "/productos/{producto_id}/notas/confirmar",
+    summary="Confirmar una nota de cata sugerida",
+)
+def confirm_store_product_note(
+    producto_id: int,
+    payload: StoreNoteActionRequest,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    prod = db_session.get(Producto, producto_id)
+    if not prod or prod.tienda_id != ctx.tienda_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Producto con ID {producto_id} no encontrado en su tienda.",
+        )
+
+    query = select(ProductoNotaCata).options(selectinload(ProductoNotaCata.nota)).where(ProductoNotaCata.producto_id == prod.id)
+    if payload.nota_id:
+        query = query.where(ProductoNotaCata.nota_id == payload.nota_id)
+    elif payload.clave_normalizada:
+        query = query.join(NotaCata, ProductoNotaCata.nota_id == NotaCata.id).where(NotaCata.clave_normalizada == payload.clave_normalizada)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debe proporcionar nota_id o clave_normalizada.",
+        )
+
+    rel = db_session.scalar(query)
+    if not rel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nota no encontrada asociada a este producto.",
+        )
+
+    estado_previo = rel.estado
+    rel.estado = "confirmada"
+    rel.confianza = 1.0
+
+    auditoria = AuditoriaAccionesTienda(
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="CONFIRMAR_NOTA_CATA",
+        entidad="producto_notas_cata",
+        entidad_id=prod.id,
+        valores_previos={"nota_id": rel.nota_id, "estado": estado_previo},
+        valores_nuevos={"nota_id": rel.nota_id, "estado": "confirmada"},
+    )
+    db_session.add(auditoria)
+    db_session.commit()
+
+    return {
+        "exito": True,
+        "mensaje": f"Nota '{rel.nota.nombre if rel.nota else rel.nota_id}' confirmada exitosamente.",
+        "nota_id": rel.nota_id,
+        "estado": "confirmada",
+    }
+
+
+@router.post(
+    "/productos/{producto_id}/notas/descartar",
+    summary="Descartar una nota de cata sugerida o no deseada",
+)
+def discard_store_product_note(
+    producto_id: int,
+    payload: StoreNoteActionRequest,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    prod = db_session.get(Producto, producto_id)
+    if not prod or prod.tienda_id != ctx.tienda_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Producto con ID {producto_id} no encontrado en su tienda.",
+        )
+
+    query = select(ProductoNotaCata).options(selectinload(ProductoNotaCata.nota)).where(ProductoNotaCata.producto_id == prod.id)
+    if payload.nota_id:
+        query = query.where(ProductoNotaCata.nota_id == payload.nota_id)
+    elif payload.clave_normalizada:
+        query = query.join(NotaCata, ProductoNotaCata.nota_id == NotaCata.id).where(NotaCata.clave_normalizada == payload.clave_normalizada)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debe proporcionar nota_id o clave_normalizada.",
+        )
+
+    rel = db_session.scalar(query)
+    if not rel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nota no encontrada asociada a este producto.",
+        )
+
+    estado_previo = rel.estado
+    rel.estado = "descartada"
+
+    auditoria = AuditoriaAccionesTienda(
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="DESCARTAR_NOTA_CATA",
+        entidad="producto_notas_cata",
+        entidad_id=prod.id,
+        valores_previos={"nota_id": rel.nota_id, "estado": estado_previo},
+        valores_nuevos={"nota_id": rel.nota_id, "estado": "descartada"},
+    )
+    db_session.add(auditoria)
+    db_session.commit()
+
+    return {
+        "exito": True,
+        "mensaje": f"Nota '{rel.nota.nombre if rel.nota else rel.nota_id}' descartada exitosamente.",
+        "nota_id": rel.nota_id,
+        "estado": "descartada",
+    }
+
+
+@router.post(
+    "/productos/{producto_id}/notas",
+    summary="Añadir manualmente una nota de cata confirmada para un producto",
+)
+def add_store_product_note(
+    producto_id: int,
+    payload: StoreNoteCreateRequest,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    prod = db_session.get(Producto, producto_id)
+    if not prod or prod.tienda_id != ctx.tienda_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Producto con ID {producto_id} no encontrado en su tienda.",
+        )
+
+    from core.normalizer import is_valid_tasting_note, SCAFlavorWheelNormalizer, sanitize_text
+
+    nom_limpio = payload.nombre.strip()
+    if not is_valid_tasting_note(nom_limpio):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El descriptor ingresado no es válido como nota de cata (evite números, encabezados o frases largas).",
+        )
+
+    clave = sanitize_text(nom_limpio).replace(" ", "-")
+    nota = db_session.scalar(select(NotaCata).where(NotaCata.clave_normalizada == clave))
+    if not nota:
+        nota = NotaCata(clave_normalizada=clave, nombre=nom_limpio.capitalize())
+        db_session.add(nota)
+        db_session.flush()
+
+    sca_match = SCAFlavorWheelNormalizer.normalizar_nota(nom_limpio)
+    es_fuera = sca_match is None
+
+    rel = db_session.scalar(
+        select(ProductoNotaCata).where(
+            ProductoNotaCata.producto_id == prod.id,
+            ProductoNotaCata.nota_id == nota.id,
+        )
+    )
+    if rel:
+        rel.estado = "confirmada"
+        rel.confianza = 1.0
+    else:
+        rel = ProductoNotaCata(
+            producto_id=prod.id,
+            nota_id=nota.id,
+            texto_origen="Agregado manualmente por tostaduría",
+            confianza=1.0,
+            version_extractor="manual_store_admin",
+            estado="confirmada",
+            es_fuera_de_rueda=es_fuera,
+        )
+        db_session.add(rel)
+
+    auditoria = AuditoriaAccionesTienda(
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="AGREGAR_NOTA_CATA",
+        entidad="producto_notas_cata",
+        entidad_id=prod.id,
+        valores_previos=None,
+        valores_nuevos={"nota_id": nota.id, "nombre": nota.nombre, "es_fuera_de_rueda": es_fuera},
+    )
+    db_session.add(auditoria)
+    db_session.commit()
+
+    return {
+        "exito": True,
+        "mensaje": f"Nota '{nota.nombre}' agregada y confirmada exitosamente.",
+        "nota_id": nota.id,
+        "nombre": nota.nombre,
+        "clave_normalizada": nota.clave_normalizada,
+        "estado": "confirmada",
+        "es_fuera_de_rueda": es_fuera,
+    }

@@ -153,11 +153,16 @@ class Producto(Base):
 
 class ProductoNotaCata(Base):
     __tablename__ = 'producto_notas_cata'
+    __table_args__ = (
+        Index('idx_producto_notas_estado', 'producto_id', 'estado'),
+    )
     producto_id = Column(Integer, ForeignKey('productos.id'), primary_key=True)
     nota_id = Column(Integer, ForeignKey('notas_cata.id'), primary_key=True)
     texto_origen = Column(Text, nullable=False)
     confianza = Column(Float, nullable=False)
     version_extractor = Column(String(50), nullable=False)
+    estado = Column(String(20), nullable=False, default='confirmada', server_default='confirmada')
+    es_fuera_de_rueda = Column(Boolean, nullable=False, default=False, server_default='false')
     producto = relationship("Producto", back_populates="notas_cata")
     nota = relationship("NotaCata", back_populates="productos")
 
@@ -1084,8 +1089,10 @@ class DatabaseManager:
                                     'producto_id': product_id,
                                     'nota_id': notas_ids[note['clave_normalizada']],
                                     'texto_origen': note['texto_origen'],
-                                    'confianza': note['confianza'],
+                                    'confianza': note.get('confianza', 0.9),
                                     'version_extractor': note.get('version_extractor', 'unknown'),
+                                    'estado': note.get('estado', 'confirmada'),
+                                    'es_fuera_de_rueda': bool(note.get('es_fuera_de_rueda', False)),
                                 }
                                 for note in product_notes
                             ],

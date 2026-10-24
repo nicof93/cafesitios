@@ -294,4 +294,94 @@ test.describe('Portal de Administración de Tiendas', () => {
 
     expect(pageErrors).toHaveLength(0);
   });
+
+  test('en mis productos permite abrir el modal de notas y moderar notas sugeridas', async ({ page }) => {
+    const pageErrors: Error[] = [];
+    page.on('pageerror', (err) => pageErrors.push(err));
+
+    await page.addInitScript(() => {
+      localStorage.setItem('store_admin_token', 'test-token-jwt');
+    });
+
+    // Mock productos
+    await page.route('**/api/v1/admin/tienda/productos*', async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            productos: [
+              {
+                id: 101,
+                nombre: 'Geisha Los Pozos',
+                origen: 'Panamá',
+                proceso: 'Lavado',
+                precio_por_kilo: 45000,
+                notas_cata: ['Jazmín', 'Ciruela Pasa'],
+                oculto_catalogo: false,
+                activo: true,
+                variantes: [
+                  { id: 1, formato_gramos: 250, precio_clp: 18000, precio_por_kilo: 72000, disponible: true }
+                ]
+              }
+            ],
+            total: 1,
+            page: 1,
+            per_page: 50,
+          }),
+        });
+      }
+    });
+
+    // Mock notas del café 101
+    await page.route('**/api/v1/admin/tienda/productos/101/notas', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          producto_id: 101,
+          producto_nombre: 'Geisha Los Pozos',
+          notas: [
+            { id: 1, nombre: 'Jazmín', macro_familia: 'Floral', estado: 'confirmada', es_fuera_de_rueda: false },
+            { id: 2, nombre: 'Ciruela Pasa', macro_familia: null, estado: 'sugerida', es_fuera_de_rueda: true }
+          ]
+        }),
+      });
+    });
+
+    let confirmClicked = false;
+    await page.route('**/api/v1/admin/tienda/productos/101/notas/confirmar', async (route) => {
+      confirmClicked = true;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, estado: 'confirmada' }),
+      });
+    });
+
+    await page.goto('/admin-tienda/productos');
+
+    // Botón de notas presente
+    const btnNotes = page.locator('.btn-notes-prod[data-id="101"]');
+    await expect(btnNotes).toBeVisible();
+    await btnNotes.click();
+
+    // Modal de notas visible
+    const modalNotes = page.locator('#modal-notes');
+    await expect(modalNotes).toBeVisible();
+    await expect(page.locator('#modal-notes-title')).toContainText('Geisha Los Pozos');
+
+    // Verificar las notas listadas
+    await expect(modalNotes.getByText('Jazmín')).toBeVisible();
+    await expect(modalNotes.getByText('Ciruela Pasa')).toBeVisible();
+    await expect(modalNotes.getByText('Fuera Rueda SCA')).toBeVisible();
+
+    // Confirmar la nota sugerida
+    const btnConfirmCiruela = modalNotes.locator('.btn-confirm-note[data-id="2"]');
+    await expect(btnConfirmCiruela).toBeVisible();
+    await btnConfirmCiruela.click();
+
+    expect(confirmClicked).toBe(true);
+    expect(pageErrors).toHaveLength(0);
+  });
 });

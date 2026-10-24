@@ -240,6 +240,29 @@ const captionText = product.descripcion_resumida
             </div>
           )}
 
+          <!-- NOTAS SUGERIDAS / "ALGUNOS TAMBIÉN SINTIERON..." -->
+          {product.notas_sugeridas && product.notas_sugeridas.length > 0 && (
+            <div class="space-y-1.5 pt-1 rounded-2xl bg-gradient-to-r from-purple-50/70 via-stone-50 to-amber-50/40 p-3.5 border border-purple-200/60 shadow-2xs">
+              <div class="flex items-center gap-1.5">
+                <span class="text-sm">✨</span>
+                <span class="block text-[11px] font-extrabold uppercase tracking-wider text-purple-900">
+                  Algunos también sintieron...
+                </span>
+                <span class="text-[10px] text-stone-500 font-medium hidden sm:inline">
+                  (Notas detectadas en cata comunitaria o tostaduría)
+                </span>
+              </div>
+              <div class="flex flex-wrap gap-1.5 pt-0.5">
+                {product.notas_sugeridas.map(sugerida => (
+                  <span class="inline-flex items-center gap-1 rounded-full bg-white border border-purple-200 text-purple-900 px-2.5 py-0.5 text-xs font-semibold shadow-2xs">
+                    <span class="text-purple-600 text-[10px]">✦</span>
+                    <span>{sugerida}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           <!-- GRILLA ESTRUCTURADA DE ESPECIFICACIONES TÉCNICAS (CON TONO SUAVE PARA VALORES NO IDENTIFICADOS) -->
           <div class="pt-2">
             <span class="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-2">
