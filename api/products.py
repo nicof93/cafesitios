@@ -521,9 +521,40 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
                 "texto_origen": relation.texto_origen,
                 "confianza": relation.confianza,
                 "version_extractor": relation.version_extractor,
+                "estado": getattr(relation, "estado", "confirmada") or "confirmada",
+                "es_fuera_de_rueda": bool(getattr(relation, "es_fuera_de_rueda", False)),
             }
             for relation in sorted(product.notas_cata, key=lambda relation: relation.nota.clave_normalizada)
             if relation.nota and is_valid_tasting_note(relation.nota.nombre) and is_valid_tasting_note(relation.nota.clave_normalizada)
+            and getattr(relation, "estado", "confirmada") != "descartada"
+        ],
+        "notas_confirmadas": [
+            {
+                "nombre": relation.nota.nombre,
+                "clave_normalizada": relation.nota.clave_normalizada,
+                "texto_origen": relation.texto_origen,
+                "confianza": relation.confianza,
+                "version_extractor": relation.version_extractor,
+                "estado": "confirmada",
+                "es_fuera_de_rueda": bool(getattr(relation, "es_fuera_de_rueda", False)),
+            }
+            for relation in sorted(product.notas_cata, key=lambda relation: relation.nota.clave_normalizada)
+            if relation.nota and is_valid_tasting_note(relation.nota.nombre)
+            and getattr(relation, "estado", "confirmada") == "confirmada"
+        ],
+        "notas_sugeridas": [
+            {
+                "nombre": relation.nota.nombre,
+                "clave_normalizada": relation.nota.clave_normalizada,
+                "texto_origen": relation.texto_origen,
+                "confianza": relation.confianza,
+                "version_extractor": relation.version_extractor,
+                "estado": "sugerida",
+                "es_fuera_de_rueda": bool(getattr(relation, "es_fuera_de_rueda", False)),
+            }
+            for relation in sorted(product.notas_cata, key=lambda relation: relation.nota.clave_normalizada)
+            if relation.nota and is_valid_tasting_note(relation.nota.nombre)
+            and getattr(relation, "estado", "confirmada") == "sugerida"
         ],
         "variantes": [
             {

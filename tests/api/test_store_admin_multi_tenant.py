@@ -17,7 +17,9 @@ from db.database import (
     AuditoriaAccionesTienda,
     InteraccionClic,
     Base,
+    NotaCata,
     Producto,
+    ProductoNotaCata,
     Tienda,
     UsuarioTienda,
     Variante,
@@ -532,6 +534,94 @@ class TestStoreAdminMultiTenant(unittest.TestCase):
         demand = get_store_unmet_demand(ctx=self.ctx_a, db_session=self.session)
         self.assertIsInstance(demand.origenes_mas_buscados, list)
         self.assertIsInstance(demand.oportunidades_catalogo, list)
+
+
+    def test_store_notes_moderation(self):
+        from api.admin_tienda import (
+            add_store_product_note,
+            confirm_store_product_note,
+            discard_store_product_note,
+            get_store_product_notes,
+            StoreNoteActionRequest,
+            StoreNoteCreateRequest,
+        )
+
+        prod_a = Producto(
+            tienda_id=self.tienda_a.id,
+            nombre="Café Especial Tienda A",
+            url_detalle="https://tienda-a.cl/producto/especial",
+            activo=True,
+        )
+        self.session.add(prod_a)
+        self.session.commit()
+
+        # 1. Tienda A agrega manualmente una nota a su producto
+        create_req = StoreNoteCreateRequest(nombre="Chancaca")
+        add_resp = add_store_product_note(
+            producto_id=prod_a.id,
+            payload=create_req,
+            ctx=self.ctx_a,
+            db_session=self.session,
+        )
+        self.assertTrue(add_resp["exito"])
+        nota_id = add_resp["nota_id"]
+        self.assertEqual(add_resp["estado"], "confirmada")
+
+        # 2. Listar notas del producto
+        notes_resp = get_store_product_notes(
+            producto_id=prod_a.id,
+            ctx=self.ctx_a,
+            db_session=self.session,
+        )
+        self.assertEqual(notes_resp.total_notas, 1)
+        self.assertEqual(notes_resp.notas[0].nombre, "Chancaca")
+        self.assertEqual(notes_resp.notas[0].estado, "confirmada")
+
+        # 3. Crear una nota sugerida y confirmarla
+        nota_sug = NotaCata(clave_normalizada="ciruela-pasa", nombre="Ciruela pasa")
+        self.session.add(nota_sug)
+        self.session.flush()
+        rel_sug = ProductoNotaCata(
+            producto_id=prod_a.id,
+            nota_id=nota_sug.id,
+            texto_origen="Con notas a ciruela pasa",
+            confianza=0.75,
+            version_extractor="test",
+            estado="sugerida",
+            es_fuera_de_rueda=False,
+        )
+        self.session.add(rel_sug)
+        self.session.commit()
+
+        # Confirmar nota sugerida
+        conf_resp = confirm_store_product_note(
+            producto_id=prod_a.id,
+            payload=StoreNoteActionRequest(nota_id=nota_sug.id),
+            ctx=self.ctx_a,
+            db_session=self.session,
+        )
+        self.assertTrue(conf_resp["exito"])
+        self.assertEqual(conf_resp["estado"], "confirmada")
+
+        # 4. Descartar la primera nota
+        disc_resp = discard_store_product_note(
+            producto_id=prod_a.id,
+            payload=StoreNoteActionRequest(nota_id=nota_id),
+            ctx=self.ctx_a,
+            db_session=self.session,
+        )
+        self.assertTrue(disc_resp["exito"])
+        self.assertEqual(disc_resp["estado"], "descartada")
+
+        # 5. Aislamiento Multi-Tenant: Tienda B no puede gestionar notas de Tienda A
+        from fastapi import HTTPException
+        with self.assertRaises(HTTPException) as ctx_err:
+            get_store_product_notes(
+                producto_id=prod_a.id,
+                ctx=self.ctx_b,
+                db_session=self.session,
+            )
+        self.assertEqual(ctx_err.exception.status_code, 404)
 
 
 if __name__ == "__main__":

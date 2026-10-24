@@ -67,6 +67,8 @@ class ProductTastingNoteResponse(BaseModel):
     texto_origen: str
     confianza: float
     version_extractor: str
+    estado: str = "confirmada"
+    es_fuera_de_rueda: bool = False
 
 class ProductRecipeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -118,6 +120,8 @@ class ProductDetailResponse(BaseModel):
     resumen_corto: Optional[str] = None
     caracteristicas_fuente: Dict[str, Any] = Field(default_factory=dict)
     notas_cata: List[ProductTastingNoteResponse] = Field(default_factory=list)
+    notas_confirmadas: List[ProductTastingNoteResponse] = Field(default_factory=list)
+    notas_sugeridas: List[ProductTastingNoteResponse] = Field(default_factory=list)
     variantes: List[ProductVariantDetailResponse]
     recetas: List[ProductRecipeResponse] = Field(default_factory=list)
 
