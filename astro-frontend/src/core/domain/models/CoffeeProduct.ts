@@ -32,6 +32,8 @@ export interface CoffeeProductProps {
   proceso?: string;
   variedad?: string;
   notas_cata?: any[];
+  notas_confirmadas?: any[];
+  notas_sugeridas?: any[];
   tueste?: string;
   escala_agtron?: number;
   altura_msnm?: string;
@@ -69,6 +71,8 @@ export class CoffeeProduct {
   readonly proceso?: string;
   readonly variedad?: string;
   readonly notas_cata: string[];
+  readonly notas_confirmadas: string[];
+  readonly notas_sugeridas: string[];
   readonly tueste?: string;
   readonly escala_agtron?: number;
   readonly altura_msnm?: string;
@@ -148,6 +152,26 @@ export class CoffeeProduct {
       }).filter(Boolean);
     } else {
       this.notas_cata = [];
+    }
+
+    if (Array.isArray(props.notas_confirmadas)) {
+      this.notas_confirmadas = props.notas_confirmadas.map(n => {
+        if (typeof n === 'string') return n.trim();
+        if (n && typeof n === 'object') return String((n as any).nombre || '').trim();
+        return String(n).trim();
+      }).filter(Boolean);
+    } else {
+      this.notas_confirmadas = [];
+    }
+
+    if (Array.isArray(props.notas_sugeridas)) {
+      this.notas_sugeridas = props.notas_sugeridas.map(n => {
+        if (typeof n === 'string') return n.trim();
+        if (n && typeof n === 'object') return String((n as any).nombre || '').trim();
+        return String(n).trim();
+      }).filter(Boolean);
+    } else {
+      this.notas_sugeridas = [];
     }
     this.tueste = props.tueste;
     this.escala_agtron = props.escala_agtron;

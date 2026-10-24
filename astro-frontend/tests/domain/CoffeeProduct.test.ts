@@ -113,5 +113,19 @@ describe('CoffeeProduct Entity', () => {
     expect(best?.precio_por_kilo).toBe(47960);
     expect(best?.formato_gramos).toBe(250);
   });
+
+  it('normaliza notas_confirmadas y notas_sugeridas correctamente', () => {
+    const product = new CoffeeProduct({
+      id: 40,
+      nombre: 'Kenia Nyeri AA',
+      tienda: 'Tostaduría Austral',
+      url_detalle: 'https://austral.cl/kenia',
+      notas_confirmadas: ['Grosella negra', { nombre: 'Pomelo rosado' }],
+      notas_sugeridas: ['Vino tinto', { nombre: 'Mora silvestre' }],
+    });
+
+    expect(product.notas_confirmadas).toEqual(['Grosella negra', 'Pomelo rosado']);
+    expect(product.notas_sugeridas).toEqual(['Vino tinto', 'Mora silvestre']);
+  });
 });
 
