@@ -122,12 +122,18 @@ class CoffeeAttributesExtractor:
         if not text:
             return extracted
 
-        # 1. Notas de cata explícitas: (?:notas|perfil|descriptores|cata)\s*[:|-]\s*([^\n\.<]+)
+        # 1. Notas de cata explícitas: (?:notas|perfil|descriptores|cata)\s*[:|-]\s*([^\n\.<]+) o patrones preposicionales
         match_notas = re.search(
             r"(?:notas\s*(?:de\s*cata)?|perfil\s*(?:en\s*taza)?|descriptores|tasting\s*notes?|sensorial)\s*[:|–—-]\s*([^\n\.<]+)",
             text,
             re.IGNORECASE,
         )
+        if not match_notas:
+            match_notas = re.search(
+                r"(?:(?:con\s+|presenta\s+|destacan?\s+|perciben?\s+|encontrar[aá]s\s+)?(?:notas?|toques?|descriptores?|aromas?|sabores?)\s+(?:a|de)\s+)([^\n\.<]+)",
+                text,
+                re.IGNORECASE,
+            )
         if match_notas:
             raw_chunk = match_notas.group(1).strip()
             # Separadores comunes: comas, guiones, barras, 'y', '&'

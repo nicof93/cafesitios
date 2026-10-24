@@ -273,6 +273,8 @@ class SCAFlavorWheelNormalizer:
         """
         notas_orig = []
         notas_norm = []
+        notas_fuera_de_rueda = []
+        detalles = []
         familias = set()
 
         seen_orig = set()
@@ -294,17 +296,32 @@ class SCAFlavorWheelNormalizer:
                     seen_norm.add(canonico)
                     notas_norm.append(canonico)
                 familias.add(familia)
+                detalles.append({
+                    "nombre": canonico,
+                    "original": raw_clean,
+                    "en_rueda": True,
+                    "macro_familia": familia,
+                })
             else:
                 # Si no está en el mapa estricto, conservar la versión capitalizada limpia
                 canonico = raw_clean.capitalize()
                 if canonico not in seen_norm:
                     seen_norm.add(canonico)
                     notas_norm.append(canonico)
+                notas_fuera_de_rueda.append(canonico)
+                detalles.append({
+                    "nombre": canonico,
+                    "original": raw_clean,
+                    "en_rueda": False,
+                    "macro_familia": None,
+                })
 
         return {
             "notas_originales": notas_orig,
             "notas_normalizadas": notas_norm,
+            "notas_fuera_de_rueda": notas_fuera_de_rueda,
             "macro_familias": sorted(list(familias)),
+            "detalles": detalles,
         }
 
 

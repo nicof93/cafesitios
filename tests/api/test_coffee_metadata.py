@@ -123,6 +123,17 @@ class TestCoffeeMetadataExtraction(unittest.TestCase):
         self.assertTrue(res.endswith("."))
         self.assertLessEqual(len(res), 135)
 
+    def test_extract_prepositional_notes_and_flags(self):
+        html = "<p>Café intenso, dulce y aromático. Con notas a Caramelo, Mandarina y Ciruela Pasa.</p>"
+        result = extract_coffee_characteristics(html)
+        self.assertTrue(result['notas_cata_mencionadas'])
+        keys = [n['clave_normalizada'] for n in result['notas_cata']]
+        self.assertIn('caramelo', keys)
+        self.assertIn('mandarina', keys)
+        self.assertIn('ciruela-pasa', keys)
+        # Notas preposicionales marcadas como sugeridas
+        self.assertTrue(all(n['estado'] == 'sugerida' for n in result['notas_cata']))
+
 
 if __name__ == '__main__':
     unittest.main()

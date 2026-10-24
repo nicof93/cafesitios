@@ -181,8 +181,22 @@ def _note_identity(raw_note: str) -> Tuple[str, str]:
     return key, display_name
 
 
-def _extract_notes(value: str, source: str) -> List[Dict[str, Any]]:
-    from core.normalizer import is_valid_tasting_note
+def _find_prepositional_notes(lines: List[str]) -> Tuple[Optional[str], Optional[str], bool]:
+    pattern = re.compile(
+        r"(?:(?:con\s+|presenta\s+|destacan?\s+|perciben?\s+|encontrar[aá]s\s+)?(?:notas?|toques?|descriptores?|aromas?|sabores?)\s+(?:a|de)\s+)(?P<value>[^.\n<]+)",
+        re.IGNORECASE
+    )
+    for line in lines:
+        match = pattern.search(line)
+        if match:
+            candidate = match.group('value').strip(' |	:;,.–—-')
+            if candidate and len(candidate) > 2:
+                return candidate, line, True
+    return None, None, False
+
+
+def _extract_notes(value: str, source: str, es_sugerida: bool = False) -> List[Dict[str, Any]]:
+    from core.normalizer import is_valid_tasting_note, SCAFlavorWheelNormalizer
 
     candidates = re.split(r'\s*(?:[,;|/•]|\s+(?:y|and|& )\s+)\s*', value, flags=re.IGNORECASE)
     notes = []
@@ -195,11 +209,18 @@ def _extract_notes(value: str, source: str) -> List[Dict[str, Any]]:
         if not key or key in seen or not is_valid_tasting_note(display_name):
             continue
         seen.add(key)
+        sca_match = SCAFlavorWheelNormalizer.normalizar_nota(display_name)
+        es_fuera = sca_match is None
+        confianza = 0.95 if (sca_match and not es_sugerida) else (0.80 if sca_match else 0.70)
+        estado = "sugerida" if (es_sugerida or es_fuera) else "confirmada"
         notes.append({
             'nombre': display_name,
             'clave_normalizada': key,
             'texto_origen': source,
-            'confianza': 0.9,
+            'confianza': confianza,
+            'estado': estado,
+            'es_fuera_de_rueda': es_fuera,
+            'macro_familia': sca_match[1] if sca_match else None,
             'version_extractor': EXTRACTOR_VERSION,
         })
     return notes
@@ -341,7 +362,12 @@ def extract_coffee_characteristics(
     value, source, found = _find_labeled_value(lines, _FIELD_LABELS['notas_cata'])
     result['notas_cata_mencionadas'] = found
     if value and source:
-        result['notas_cata'] = _extract_notes(value, source)
+        result['notas_cata'] = _extract_notes(value, source, es_sugerida=False)
+    else:
+        prep_value, prep_source, prep_found = _find_prepositional_notes(lines)
+        if prep_value and prep_source:
+            result['notas_cata_mencionadas'] = True
+            result['notas_cata'] = _extract_notes(prep_value, prep_source, es_sugerida=True)
 
     for field in ('proceso', 'finca', 'variedad', 'pais_origen', 'cosecha'):
         value, source, _ = _find_labeled_value(lines, _FIELD_LABELS[field])
