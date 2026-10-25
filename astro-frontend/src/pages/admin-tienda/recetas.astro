@@ -26,6 +26,20 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       </button>
     </div>
 
+    <!-- AVISO CUANDO NO HAY PRODUCTOS EN EL CATÁLOGO -->
+    <div id="no-products-warning" class="hidden rounded-2xl border border-amber-300 bg-amber-50 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">⚠️</span>
+        <div>
+          <h4 class="text-xs font-bold text-amber-900">Aún no tienes cafés en tu catálogo</h4>
+          <p class="text-[11px] text-amber-700">Para publicar recetas recomendadas, primero debes registrar al menos un café en tu catálogo.</p>
+        </div>
+      </div>
+      <a href="/admin-tienda/productos" class="inline-flex items-center gap-2 rounded-xl bg-amber-800 hover:bg-amber-900 px-4 py-2 text-xs font-bold text-white transition shrink-0">
+        <span>➕ Crear mi primer café</span>
+      </a>
+    </div>
+
     <!-- LISTADO DE RECETAS PUBLICADAS -->
     <div class="rounded-2xl border border-stone-200 bg-white shadow-xs overflow-hidden">
       <div class="p-4 sm:p-5 border-b border-stone-200 flex items-center justify-between">
@@ -50,18 +64,37 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
     </div>
   </div>
 
-  <!-- MODAL DE CREACIÓN DE RECETA -->
-  <div id="modal-recipe" class="fixed inset-0 z-50 hidden bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl border border-stone-200 shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-6">
-      <div class="flex items-center justify-between border-b border-stone-100 pb-4">
-        <h3 class="text-lg font-black text-stone-900 flex items-center gap-2">
-          <span>☕</span>
-          <span>Publicar Receta Oficial</span>
-        </h3>
-        <button type="button" id="btn-close-modal" class="text-stone-400 hover:text-stone-700 text-lg font-bold">✕</button>
-      </div>
+  <!-- BACKDROP PARA DRAWER DESLIZABLE (RECETAS) -->
+  <div
+    id="recipe-drawer-backdrop"
+    class="fixed inset-0 z-40 bg-stone-950/40 backdrop-blur-xs transition-opacity duration-300 opacity-0 pointer-events-none"
+    aria-hidden="true"
+  ></div>
 
-      <form id="form-recipe" class="space-y-4">
+  <!-- DRAWER DESLIZABLE LATERAL DESDE LA DERECHA (RECETAS) -->
+  <aside
+    id="modal-recipe"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-recipe-title"
+    class="fixed inset-y-0 right-0 z-50 w-full max-w-xl bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full border-l border-stone-200"
+  >
+    <!-- Cabecera fija del Drawer -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-stone-200 bg-[#FAF8F2]/90 backdrop-blur-md shrink-0">
+      <h3 class="text-base font-black text-stone-900 flex items-center gap-2">
+        <span>☕</span>
+        <span id="modal-recipe-title">Publicar Receta Oficial</span>
+      </h3>
+      <button 
+        type="button" 
+        id="btn-close-modal" 
+        class="text-stone-400 hover:text-stone-700 text-lg font-bold p-1 rounded-lg hover:bg-stone-100 transition" 
+        title="Cerrar panel lateral"
+      >✕</button>
+    </div>
+
+    <!-- Formulario con scroll independiente -->
+    <form id="form-recipe" class="flex-1 overflow-y-auto p-6 space-y-4">
         <!-- Selector de Producto -->
         <div>
           <label class="block text-xs font-bold text-stone-700 mb-1">Café de tu Catálogo *</label>
@@ -237,7 +270,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           </label>
         </div>
 
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-stone-200 sticky bottom-0 bg-white py-3 mt-4">
           <button type="button" id="btn-cancel-modal" class="rounded-xl border border-stone-200 px-4 py-2 text-xs font-bold text-stone-600 hover:bg-stone-50 transition">
             Cancelar
           </button>
@@ -245,9 +278,8 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
             Guardar Receta
           </button>
         </div>
-      </form>
-    </div>
-  </div>
+    </form>
+  </aside>
 
   <script is:inline>
     (function initStoreRecipes() {
@@ -276,6 +308,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
 
       let productsCache = [];
       let recipesCache = [];
+      let editingRecipeId = null;
 
       const pasosContainer = document.getElementById('pasos-container');
       const btnAddPaso = document.getElementById('btn-add-paso');
@@ -327,22 +360,111 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         addPasoRow('');
       }
 
-      // Control del Modal
-      function openModal() {
-        if (modal) modal.classList.remove('hidden');
-        resetPasos();
-        const checkBorrador = document.getElementById('rec-es-borrador');
-        if (checkBorrador) checkBorrador.checked = false;
-      }
-      function closeModal() {
-        if (modal) modal.classList.add('hidden');
-        if (form) form.reset();
-        resetPasos();
+      // Control del Drawer Deslizable (Crear / Editar)
+      const recipeBackdrop = document.getElementById('recipe-drawer-backdrop');
+
+      async function openModal(recipeToEdit = null) {
+        if (productsCache.length === 0) {
+          const wantToGo = await window.cafesitiosConfirm(
+            'Catálogo sin Cafés Registrados',
+            'Aún no tienes cafés en tu catálogo. Para publicar recetas oficiales de extracción, primero debes registrar al menos un café.\n\n¿Deseas ir ahora a la sección Mis Productos?',
+            { confirmText: 'Ir a Mis Productos ☕', cancelText: 'Permanecer aquí', type: 'warning' }
+          );
+          if (wantToGo) {
+            window.location.href = '/admin-tienda/productos';
+          }
+          return;
+        }
+
+        if (recipeBackdrop) {
+          recipeBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+          recipeBackdrop.classList.add('opacity-100', 'pointer-events-auto');
+        }
+        if (modal) {
+          modal.classList.remove('translate-x-full');
+          modal.classList.add('translate-x-0');
+        }
+        document.body.classList.add('overflow-hidden');
+
+        const modalTitle = document.getElementById('modal-recipe-title');
+        const submitBtn = document.getElementById('btn-submit-recipe');
+
+        if (recipeToEdit) {
+          editingRecipeId = recipeToEdit.id;
+          if (modalTitle) modalTitle.textContent = 'Editar Receta Oficial';
+          if (submitBtn) submitBtn.textContent = 'Guardar Cambios';
+
+          if (prodSelect) prodSelect.value = String(recipeToEdit.producto_id);
+          const recNombre = document.getElementById('rec-nombre');
+          if (recNombre) recNombre.value = recipeToEdit.nombre_receta || '';
+          const recMetodo = document.getElementById('rec-metodo');
+          if (recMetodo) recMetodo.value = recipeToEdit.metodo || 'V60';
+          const recRatio = document.getElementById('rec-ratio');
+          if (recRatio) recRatio.value = recipeToEdit.ratio || '';
+          if (inputDosis) inputDosis.value = recipeToEdit.dosis_cafe_g || 18;
+          if (inputAgua) inputAgua.value = recipeToEdit.agua_ml || 270;
+          const recMolienda = document.getElementById('rec-molienda');
+          if (recMolienda) recMolienda.value = recipeToEdit.grosor_molienda || '';
+          const recMolino = document.getElementById('rec-molino');
+          if (recMolino) recMolino.value = recipeToEdit.molino_usado || '';
+          const recTemp = document.getElementById('rec-temp');
+          if (recTemp) recTemp.value = recipeToEdit.temperatura_c || 92;
+          const recTiempo = document.getElementById('rec-tiempo');
+          if (recTiempo) recTiempo.value = recipeToEdit.tiempo_total_s || 165;
+          const recNotas = document.getElementById('rec-notas');
+          if (recNotas) recNotas.value = recipeToEdit.notas_catado || '';
+          const checkBorrador = document.getElementById('rec-es-borrador');
+          if (checkBorrador) checkBorrador.checked = !!recipeToEdit.es_borrador;
+
+          if (pasosContainer) {
+            pasosContainer.innerHTML = '';
+            if (recipeToEdit.pasos && Array.isArray(recipeToEdit.pasos) && recipeToEdit.pasos.length > 0) {
+              recipeToEdit.pasos.forEach(p => addPasoRow(p));
+            } else {
+              resetPasos();
+            }
+          }
+        } else {
+          editingRecipeId = null;
+          if (modalTitle) modalTitle.textContent = 'Publicar Receta Oficial';
+          if (submitBtn) submitBtn.textContent = 'Publicar Receta Oficial';
+          if (form) form.reset();
+          resetPasos();
+          const checkBorrador = document.getElementById('rec-es-borrador');
+          if (checkBorrador) checkBorrador.checked = false;
+        }
       }
 
-      if (btnOpen) btnOpen.addEventListener('click', openModal);
+      function closeModal() {
+        if (recipeBackdrop) {
+          recipeBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+          recipeBackdrop.classList.add('opacity-0', 'pointer-events-none');
+        }
+        if (modal) {
+          modal.classList.remove('translate-x-0');
+          modal.classList.add('translate-x-full');
+        }
+        document.body.classList.remove('overflow-hidden');
+
+        if (form) form.reset();
+        resetPasos();
+        editingRecipeId = null;
+        const modalTitle = document.getElementById('modal-recipe-title');
+        const submitBtn = document.getElementById('btn-submit-recipe');
+        if (modalTitle) modalTitle.textContent = 'Publicar Receta Oficial';
+        if (submitBtn) submitBtn.textContent = 'Publicar Receta Oficial';
+      }
+
+      if (btnOpen) btnOpen.addEventListener('click', () => openModal(null));
       if (btnClose) btnClose.addEventListener('click', closeModal);
       if (btnCancel) btnCancel.addEventListener('click', closeModal);
+      if (recipeBackdrop) recipeBackdrop.addEventListener('click', closeModal);
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal && !modal.classList.contains('translate-x-full')) {
+          closeModal();
+        }
+      });
 
       // Auto-calcular ratio al cambiar dosis o agua
       const inputDosis = document.getElementById('rec-dosis');
@@ -362,6 +484,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
 
       // Cargar productos de la tienda para el selector
       async function loadStoreProducts() {
+        const noProdsWarn = document.getElementById('no-products-warning');
         try {
           const res = await fetch(`${apiBase}/api/v1/admin/tienda/productos?page=1&per_page=100`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -369,6 +492,11 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           if (res.ok) {
             const data = await res.json();
             productsCache = data.productos || [];
+            if (productsCache.length === 0) {
+              if (noProdsWarn) noProdsWarn.classList.remove('hidden');
+            } else {
+              if (noProdsWarn) noProdsWarn.classList.add('hidden');
+            }
             if (prodSelect) {
               prodSelect.innerHTML = '<option value="">Selecciona un café...</option>' +
                 productsCache.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
@@ -433,14 +561,24 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
                         ? '<span class="rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-black px-2 py-0.5">📝 Borrador</span>'
                         : '<span class="rounded-full bg-emerald-100 border border-emerald-300 text-emerald-900 text-[10px] font-black px-2 py-0.5">✅ Publicada</span>'}
                     </div>
-                    <button 
-                      type="button" 
-                      data-delete-id="${r.id}" 
-                      class="btn-delete-recipe text-stone-400 hover:text-rose-600 transition text-xs font-bold p-1"
-                      title="Eliminar receta"
-                    >
-                      🗑️
-                    </button>
+                    <div class="flex items-center gap-1">
+                      <button 
+                        type="button" 
+                        data-edit-id="${r.id}" 
+                        class="btn-edit-recipe inline-flex items-center justify-center h-7 w-7 rounded-lg border border-stone-200 bg-stone-50 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition text-xs font-bold"
+                        title="Modificar receta oficial"
+                      >
+                        ✏️
+                      </button>
+                      <button 
+                        type="button" 
+                        data-delete-id="${r.id}" 
+                        class="btn-delete-recipe inline-flex items-center justify-center h-7 w-7 rounded-lg border border-stone-200 bg-stone-50 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition text-xs font-bold"
+                        title="Eliminar receta"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
 
                   <h3 class="text-sm font-black text-stone-900 mt-2">${r.nombre_receta}</h3>
@@ -479,11 +617,28 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
               </div>
             `).join('');
 
+            // Listeners para editar
+            document.querySelectorAll('.btn-edit-recipe').forEach(btn => {
+              btn.addEventListener('click', () => {
+                const id = parseInt(btn.getAttribute('data-edit-id'), 10);
+                const rec = recipesCache.find(item => item.id === id);
+                if (rec) {
+                  openModal(rec);
+                }
+              });
+            });
+
             // Listeners para eliminar
             document.querySelectorAll('.btn-delete-recipe').forEach(btn => {
               btn.addEventListener('click', async () => {
                 const id = btn.getAttribute('data-delete-id');
-                if (!confirm('¿Estás seguro de eliminar esta receta oficial?')) return;
+                const okDel = await window.cafesitiosConfirm(
+                  'Eliminar Receta Oficial',
+                  '¿Estás seguro de que deseas eliminar esta receta? Esta acción no se puede deshacer y desaparecerá de la ficha del producto en la tienda.',
+                  { confirmText: 'Sí, Eliminar', cancelText: 'Conservar', type: 'error' }
+                );
+                if (!okDel) return;
+
                 try {
                   const delRes = await fetch(`${apiBase}/api/v1/admin/tienda/recetas/${id}`, {
                     method: 'DELETE',
@@ -491,11 +646,12 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
                   });
                   if (delRes.ok) {
                     await loadStoreRecipes();
+                    window.cafesitiosAlert('Receta Eliminada', 'La receta oficial fue eliminada correctamente.', 'success');
                   } else {
-                    alert('Error al eliminar receta.');
+                    window.cafesitiosAlert('Error al Eliminar', 'No fue posible eliminar la receta seleccionada.', 'error');
                   }
                 } catch (e) {
-                  alert('Error de conexión.');
+                  window.cafesitiosAlert('Error de Red', 'No se pudo conectar con el servidor. Revisa tu conexión.', 'error');
                 }
               });
             });
@@ -534,9 +690,11 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
           const btnSubmit = document.getElementById('btn-submit-recipe');
+          const isEditing = !!editingRecipeId;
+
           if (btnSubmit) {
             btnSubmit.disabled = true;
-            btnSubmit.textContent = 'Publicando...';
+            btnSubmit.textContent = isEditing ? 'Guardando cambios...' : 'Publicando...';
           }
 
           const pasosInputs = Array.from(document.querySelectorAll('.paso-input'));
@@ -563,8 +721,13 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           };
 
           try {
-            const res = await fetch(`${apiBase}/api/v1/admin/tienda/recetas`, {
-              method: 'POST',
+            const endpoint = isEditing 
+              ? `${apiBase}/api/v1/admin/tienda/recetas/${editingRecipeId}`
+              : `${apiBase}/api/v1/admin/tienda/recetas`;
+            const method = isEditing ? 'PUT' : 'POST';
+
+            const res = await fetch(endpoint, {
+              method: method,
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
@@ -576,15 +739,25 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
               closeModal();
               await loadStoreRecipes();
             } else {
-              const err = await res.json();
-              alert(`Error al crear receta: ${err.detail || 'Verifica los campos ingresados.'}`);
+              const err = await res.json().catch(() => ({}));
+              let errorMsg = 'Verifica los campos ingresados.';
+              if (typeof err.detail === 'string') {
+                errorMsg = err.detail;
+              } else if (Array.isArray(err.detail)) {
+                errorMsg = err.detail.map(d => d.msg || JSON.stringify(d)).join(', ');
+              }
+              window.cafesitiosAlert(
+                isEditing ? 'Error al Actualizar Receta' : 'Error al Publicar Receta',
+                errorMsg,
+                'error'
+              );
             }
           } catch (err) {
-            alert(`Error de red: ${err.message}`);
+            window.cafesitiosAlert('Error de Conexión', err.message, 'error');
           } finally {
             if (btnSubmit) {
               btnSubmit.disabled = false;
-              btnSubmit.textContent = 'Publicar Receta Oficial';
+              btnSubmit.textContent = isEditing ? 'Guardar Cambios' : 'Publicar Receta Oficial';
             }
           }
         });

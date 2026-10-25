@@ -141,38 +141,42 @@ export class CoffeeProduct {
     this.proceso = props.proceso;
     this.variedad = props.variedad;
     
-    // Normalizar notas_cata defensivamente (soporta strings u objetos devueltos por la API de detalle)
-    if (Array.isArray(props.notas_cata)) {
-      this.notas_cata = props.notas_cata.map(n => {
-        if (typeof n === 'string') return n.trim();
-        if (n && typeof n === 'object') {
-          return String(n.nombre || n.clave_normalizada || '').trim();
-        }
-        return String(n).trim();
-      }).filter(Boolean);
-    } else {
-      this.notas_cata = [];
-    }
-
-    if (Array.isArray(props.notas_confirmadas)) {
+    // Normalizar notas confirmadas/oficiales
+    if (Array.isArray(props.notas_confirmadas) && props.notas_confirmadas.length > 0) {
       this.notas_confirmadas = props.notas_confirmadas.map(n => {
         if (typeof n === 'string') return n.trim();
-        if (n && typeof n === 'object') return String((n as any).nombre || '').trim();
+        if (n && typeof n === 'object') return String((n as any).nombre || (n as any).clave_normalizada || '').trim();
         return String(n).trim();
       }).filter(Boolean);
+    } else if (Array.isArray(props.notas_cata)) {
+      this.notas_confirmadas = props.notas_cata
+        .filter(n => typeof n === 'string' || !n || ((n as any).estado !== 'sugerida' && (n as any).estado !== 'descartada'))
+        .map(n => typeof n === 'string' ? n.trim() : String((n as any).nombre || (n as any).clave_normalizada || '').trim())
+        .filter(Boolean);
     } else {
       this.notas_confirmadas = [];
     }
 
+    // Normalizar notas sugeridas excluyendo las que ya están confirmadas para evitar repetición
+    const confirmadasLower = new Set(this.notas_confirmadas.map(n => n.toLowerCase().trim()));
     if (Array.isArray(props.notas_sugeridas)) {
-      this.notas_sugeridas = props.notas_sugeridas.map(n => {
-        if (typeof n === 'string') return n.trim();
-        if (n && typeof n === 'object') return String((n as any).nombre || '').trim();
-        return String(n).trim();
-      }).filter(Boolean);
+      this.notas_sugeridas = props.notas_sugeridas
+        .map(n => {
+          if (typeof n === 'string') return n.trim();
+          if (n && typeof n === 'object') return String((n as any).nombre || (n as any).clave_normalizada || '').trim();
+          return String(n).trim();
+        })
+        .filter(n => Boolean(n) && !confirmadasLower.has(n.toLowerCase()));
     } else {
       this.notas_sugeridas = [];
     }
+
+    // notas_cata refleja las notas confirmadas oficiales
+    this.notas_cata = this.notas_confirmadas.length > 0
+      ? this.notas_confirmadas
+      : (this.notas_sugeridas.length === 0 && Array.isArray(props.notas_cata)
+          ? props.notas_cata.map(n => typeof n === 'string' ? n.trim() : String((n as any).nombre || '').trim()).filter(Boolean)
+          : []);
     this.tueste = props.tueste;
     this.escala_agtron = props.escala_agtron;
     const minAlt = (props as any).elevacion_min_msnm;

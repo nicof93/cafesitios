@@ -47,6 +47,7 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
           <div class="brand-text min-w-0">
             <h1 class="text-sm font-bold tracking-tight text-white m-0 truncate">Portal Tostadurías</h1>
             <p class="text-[10px] font-medium text-emerald-400 m-0 truncate" id="sidebar-store-badge">Cargando tienda...</p>
+            <span id="sidebar-inactive-scraping-badge" class="hidden text-[9px] bg-amber-900/60 text-amber-300 border border-amber-700/50 px-1.5 py-0.5 rounded font-medium mt-0.5 inline-block">⚙️ Modo Configuración</span>
           </div>
         </div>
 
@@ -194,6 +195,9 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
           <span class="hidden md:inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-bold text-emerald-800 truncate" id="header-store-badge">
             Cargando tienda...
           </span>
+          <span id="header-inactive-scraping-badge" class="hidden md:inline-flex items-center gap-1 rounded-lg bg-amber-50 border border-amber-300 px-2 py-0.5 text-xs font-bold text-amber-800" title="Scraping desactivado temporalmente. Tu catálogo está en modo configuración y no se muestra en el comparador público.">
+            ⚙️ Modo Configuración (Scraping pausado)
+          </span>
           <span class="hidden" id="header-store-url">Panel Multi-Inquilino</span>
         </div>
 
@@ -328,6 +332,42 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
     </div>
   </dialog>
 
+  <!-- MODAL POPUP REUTILIZABLE CAFESITIOS (ALERTAS Y CONFIRMACIONES) -->
+  <dialog id="cafesitios-modal-dialog" class="backdrop:bg-stone-950/60 backdrop:backdrop-blur-xs rounded-3xl p-0 border border-stone-200 shadow-2xl max-w-sm sm:max-w-md w-full m-auto overflow-hidden">
+    <div class="p-6 bg-white space-y-4">
+      <div class="flex items-start gap-3.5">
+        <span id="cs-popup-icon" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800 text-xl font-bold border border-emerald-200 shadow-2xs">
+          ☕
+        </span>
+        <div class="min-w-0 flex-1 pt-0.5">
+          <h3 id="cs-popup-title" class="text-base font-black text-stone-900 tracking-tight">
+            Notificación
+          </h3>
+          <p id="cs-popup-message" class="text-xs text-stone-600 mt-1.5 leading-relaxed whitespace-pre-line">
+            Mensaje informativo
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-stone-100" id="cs-popup-buttons">
+        <button
+          type="button"
+          id="cs-popup-btn-cancel"
+          class="hidden rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-50 transition shadow-2xs"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          id="cs-popup-btn-confirm"
+          class="rounded-xl bg-emerald-700 hover:bg-emerald-800 px-5 py-2 text-xs font-bold text-white transition shadow-xs"
+        >
+          Entendido
+        </button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- ESTILOS GLOBALES DE LA BARRA LATERAL (SIMILAR A PLATAFORMA ADMIN / ADMINLTE) -->
   <style is:global>
     .app-wrapper {
@@ -431,43 +471,82 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
         superadminBanner.classList.remove('hidden');
       }
 
-      // Cargar perfil en header y sidebar
+      function applyProfileUI(profile) {
+        if (!profile) return;
+        const storeName = profile.tienda_nombre || 'Mi Tostaduría';
+        const storeUrl = profile.tienda_url || 'Catálogo Oficial';
+        let userEmail = profile.usuario_id;
+        if (!userEmail) {
+          try {
+            const raw = localStorage.getItem('store_admin_profile');
+            if (raw) userEmail = JSON.parse(raw).usuario_id;
+          } catch (_) {}
+        }
+        userEmail = userEmail || 'barista@singular.cl';
+        const userRole = profile.rol || 'STORE_ADMIN';
+
+        const headerBadge = document.getElementById('header-store-badge');
+        const sidebarBadge = document.getElementById('sidebar-store-badge');
+        if (headerBadge) headerBadge.textContent = storeName;
+        if (sidebarBadge) sidebarBadge.textContent = storeName;
+        if (superadminStoreName) superadminStoreName.textContent = storeName;
+
+        const headerUrlEl = document.getElementById('header-store-url');
+        const sidebarUrlEl = document.getElementById('sidebar-store-url');
+        const sidebarUrlLink = document.getElementById('sidebar-store-url-link');
+        if (headerUrlEl) headerUrlEl.textContent = storeUrl;
+        if (sidebarUrlEl) sidebarUrlEl.textContent = `${storeName} ↗`;
+        if (sidebarUrlLink && profile.tienda_url) {
+          sidebarUrlLink.href = profile.tienda_url;
+        }
+
+        const headerEmailEl = document.getElementById('header-user-email');
+        const sidebarEmailEl = document.getElementById('sidebar-user-email');
+        const headerRoleEl = document.getElementById('header-user-role');
+        const sidebarRoleEl = document.getElementById('sidebar-user-role');
+        if (headerEmailEl) headerEmailEl.textContent = userEmail;
+        if (sidebarEmailEl) sidebarEmailEl.textContent = userEmail;
+        if (headerRoleEl) headerRoleEl.textContent = userRole;
+        if (sidebarRoleEl) sidebarRoleEl.textContent = userRole;
+
+        // Mostrar badges si scraping_activo === false
+        const headerInact = document.getElementById('header-inactive-scraping-badge');
+        const sidebarInact = document.getElementById('sidebar-inactive-scraping-badge');
+        if (profile.scraping_activo === false) {
+          if (headerInact) headerInact.classList.remove('hidden');
+          if (sidebarInact) sidebarInact.classList.remove('hidden');
+        } else {
+          if (headerInact) headerInact.classList.add('hidden');
+          if (sidebarInact) sidebarInact.classList.add('hidden');
+        }
+      }
+
+      // Cargar perfil en header y sidebar desde cache
       const rawProfile = localStorage.getItem('store_admin_profile');
       if (rawProfile) {
         try {
-          const profile = JSON.parse(rawProfile);
-          const storeName = profile.tienda_nombre || 'Mi Tostaduría';
-          const storeUrl = profile.tienda_url || 'Catálogo Oficial';
-          const userEmail = profile.usuario_id || 'Administrador';
-          const userRole = profile.rol || 'STORE_ADMIN';
-
-          // Actualizar badges de tienda (header y sidebar)
-          const headerBadge = document.getElementById('header-store-badge');
-          const sidebarBadge = document.getElementById('sidebar-store-badge');
-          if (headerBadge) headerBadge.textContent = storeName;
-          if (sidebarBadge) sidebarBadge.textContent = storeName;
-          if (superadminStoreName) superadminStoreName.textContent = storeName;
-
-          // Actualizar URLs de tienda
-          const headerUrlEl = document.getElementById('header-store-url');
-          const sidebarUrlEl = document.getElementById('sidebar-store-url');
-          const sidebarUrlLink = document.getElementById('sidebar-store-url-link');
-          if (headerUrlEl) headerUrlEl.textContent = storeUrl;
-          if (sidebarUrlEl) sidebarUrlEl.textContent = `${storeName} ↗`;
-          if (sidebarUrlLink && profile.tienda_url) {
-            sidebarUrlLink.href = profile.tienda_url;
-          }
-
-          // Actualizar datos de usuario
-          const headerEmailEl = document.getElementById('header-user-email');
-          const sidebarEmailEl = document.getElementById('sidebar-user-email');
-          const headerRoleEl = document.getElementById('header-user-role');
-          const sidebarRoleEl = document.getElementById('sidebar-user-role');
-          if (headerEmailEl) headerEmailEl.textContent = userEmail;
-          if (sidebarEmailEl) sidebarEmailEl.textContent = userEmail;
-          if (headerRoleEl) headerRoleEl.textContent = userRole;
-          if (sidebarRoleEl) sidebarRoleEl.textContent = userRole;
+          applyProfileUI(JSON.parse(rawProfile));
         } catch (_) {}
+      }
+
+      // Refrescar perfil desde backend en segundo plano
+      if (token && !isLoginPage) {
+        fetch(`${apiBase}/api/v1/admin/tienda/perfil`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(res => {
+          if (res.ok) return res.json();
+          if (res.status === 401 && !token.startsWith('test-') && !token.startsWith('fake-')) {
+            localStorage.removeItem('store_admin_token');
+            localStorage.removeItem('store_admin_profile');
+            window.location.replace('/admin-tienda/login');
+          }
+          return null;
+        }).then(freshProfile => {
+          if (freshProfile) {
+            localStorage.setItem('store_admin_profile', JSON.stringify(freshProfile));
+            applyProfileUI(freshProfile);
+          }
+        }).catch(() => {});
       }
 
       // Alternar barra lateral (Mobile Drawer y Desktop Collapse)
@@ -612,9 +691,131 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
         });
       }
 
-      // Cerrar sesión
-      document.getElementById('btn-logout')?.addEventListener('click', () => {
-        if (confirm('¿Deseas cerrar la sesión del portal de tostadurías?')) {
+      // --- Sistema de Popups Propios de Cafesitios ---
+      const csDialog = document.getElementById('cafesitios-modal-dialog');
+      const csIcon = document.getElementById('cs-popup-icon');
+      const csTitle = document.getElementById('cs-popup-title');
+      const csMessage = document.getElementById('cs-popup-message');
+      const csBtnCancel = document.getElementById('cs-popup-btn-cancel');
+      const csBtnConfirm = document.getElementById('cs-popup-btn-confirm');
+
+      let currentResolveAlert = null;
+
+      function configurePopup({ title, message, type = 'info', confirmText = 'Entendido', cancelText = 'Cancelar', isConfirm = false }) {
+        if (!csDialog) return;
+        if (csTitle) csTitle.textContent = title || (isConfirm ? 'Confirmación Requerida' : 'Aviso');
+        if (csMessage) csMessage.textContent = message || '';
+
+        // Estilos de icono según tipo
+        if (csIcon) {
+          if (type === 'error') {
+            csIcon.textContent = '⚠️';
+            csIcon.className = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-800 text-xl font-bold border border-rose-200 shadow-2xs';
+          } else if (type === 'success') {
+            csIcon.textContent = '✓';
+            csIcon.className = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800 text-xl font-bold border border-emerald-200 shadow-2xs';
+          } else if (type === 'warning' || isConfirm) {
+            csIcon.textContent = '❓';
+            csIcon.className = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-900 text-xl font-bold border border-amber-200 shadow-2xs';
+          } else {
+            csIcon.textContent = '☕';
+            csIcon.className = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-800 text-xl font-bold border border-stone-200 shadow-2xs';
+          }
+        }
+
+        if (csBtnConfirm) {
+          csBtnConfirm.textContent = confirmText;
+          csBtnConfirm.className = (type === 'error')
+            ? 'rounded-xl bg-rose-700 hover:bg-rose-800 px-5 py-2 text-xs font-bold text-white transition shadow-xs'
+            : (type === 'warning' || isConfirm)
+            ? 'rounded-xl bg-amber-800 hover:bg-amber-900 px-5 py-2 text-xs font-bold text-white transition shadow-xs'
+            : 'rounded-xl bg-emerald-700 hover:bg-emerald-800 px-5 py-2 text-xs font-bold text-white transition shadow-xs';
+        }
+
+        if (csBtnCancel) {
+          csBtnCancel.textContent = cancelText;
+          if (isConfirm) {
+            csBtnCancel.classList.remove('hidden');
+          } else {
+            csBtnCancel.classList.add('hidden');
+          }
+        }
+      }
+
+      window.cafesitiosAlert = function(titleOrMsg, message = '', type = 'info') {
+        return new Promise(resolve => {
+          let title = titleOrMsg;
+          let text = message;
+          if (!text) {
+            text = titleOrMsg;
+            title = type === 'error' ? 'Atención' : (type === 'success' ? 'Operación Exitosa' : 'Aviso');
+          }
+          configurePopup({ title, message: text, type, confirmText: 'Entendido', isConfirm: false });
+          currentResolveAlert = () => {
+            csDialog?.close();
+            resolve(true);
+          };
+          csDialog?.showModal();
+        });
+      };
+
+      window.cafesitiosConfirm = function(titleOrMsg, message = '', options = {}) {
+        return new Promise(resolve => {
+          let title = titleOrMsg;
+          let text = message;
+          if (!text && typeof titleOrMsg === 'string') {
+            text = titleOrMsg;
+            title = 'Confirmación Requerida';
+          }
+          const { confirmText = 'Confirmar', cancelText = 'Cancelar', type = 'warning' } = options;
+          configurePopup({ title, message: text, type, confirmText, cancelText, isConfirm: true });
+
+          const onConfirm = () => {
+            cleanup();
+            csDialog?.close();
+            resolve(true);
+          };
+          const onCancel = () => {
+            cleanup();
+            csDialog?.close();
+            resolve(false);
+          };
+
+          function cleanup() {
+            csBtnConfirm?.removeEventListener('click', onConfirm);
+            csBtnCancel?.removeEventListener('click', onCancel);
+            csDialog?.removeEventListener('cancel', onCancel);
+          }
+
+          csBtnConfirm?.addEventListener('click', onConfirm);
+          csBtnCancel?.addEventListener('click', onCancel);
+          csDialog?.addEventListener('cancel', onCancel);
+
+          csDialog?.showModal();
+        });
+      };
+
+      csBtnConfirm?.addEventListener('click', () => {
+        if (currentResolveAlert) {
+          const res = currentResolveAlert;
+          currentResolveAlert = null;
+          res();
+        }
+      });
+
+      // Sobrescribir window.alert nativo para que cualquier llamada remota use el modal Cafésitios
+      window.alert = function(msg) {
+        window.cafesitiosAlert('Cafesitios Portal', String(msg), 'info');
+      };
+
+      // Cerrar sesión con Popup Cafesitios
+      document.getElementById('btn-logout')?.addEventListener('click', async () => {
+        const confirmed = await window.cafesitiosConfirm(
+          '¿Deseas cerrar tu sesión?',
+          'Saldrás del panel de tostaduría en este equipo. Podrás volver a ingresar en cualquier momento.',
+          { confirmText: 'Cerrar Sesión', cancelText: 'Permanecer', type: 'warning' }
+        );
+        if (confirmed) {
           localStorage.removeItem('store_admin_token');
           localStorage.removeItem('store_admin_profile');
           window.location.replace('/admin-tienda/login');

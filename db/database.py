@@ -42,6 +42,7 @@ class Tienda(Base):
     retiro_en_tienda = Column(Boolean, nullable=False, default=False, server_default='false')
     dias_tueste = Column(String(100), nullable=True)
     fecha_ultimo_tueste = Column(Date, nullable=True)
+    limite_almacenamiento_mb = Column(Integer, nullable=False, default=250, server_default='250')
     fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
     fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
     productos = relationship("Producto", back_populates="tienda", cascade="all, delete-orphan")

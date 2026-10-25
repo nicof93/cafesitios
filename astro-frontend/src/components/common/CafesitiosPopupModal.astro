@@ -1,0 +1,162 @@
+---
+// CafesitiosPopupModal.astro - Diálogo estilizado de confirmación y alertas de marca Cafésitios
+---
+<dialog
+  id="cafesitios-modal-dialog"
+  class="backdrop:bg-stone-950/70 backdrop:backdrop-blur-xs rounded-3xl p-0 border border-stone-200/90 shadow-2xl max-w-md w-full m-auto overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+>
+  <div class="p-6 bg-white space-y-4">
+    <div class="flex items-start gap-3.5">
+      <span id="cs-popup-icon-badge" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-800 text-xl font-bold border border-amber-200/80 shadow-xs">
+        ☕
+      </span>
+      <div class="min-w-0 flex-1 pt-0.5">
+        <h3 id="cs-popup-title" class="text-base font-black text-stone-900 tracking-tight leading-snug">
+          Notificación
+        </h3>
+        <p id="cs-popup-message" class="text-xs text-stone-600 mt-1.5 leading-relaxed whitespace-pre-line break-words">
+          Mensaje informativo
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-stone-100" id="cs-popup-buttons">
+      <button
+        type="button"
+        id="cs-popup-btn-cancel"
+        class="hidden rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-50 active:scale-95 transition shadow-2xs"
+      >
+        Cancelar
+      </button>
+      <button
+        type="button"
+        id="cs-popup-btn-confirm"
+        class="rounded-xl bg-emerald-700 hover:bg-emerald-800 active:scale-95 px-5 py-2 text-xs font-bold text-white transition shadow-xs"
+      >
+        Entendido
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<script is:inline>
+  (function () {
+    if (window.__cafesitiosPopupInitialized) return;
+    window.__cafesitiosPopupInitialized = true;
+
+    const csDialog = document.getElementById('cafesitios-modal-dialog');
+    const csTitle = document.getElementById('cs-popup-title');
+    const csMessage = document.getElementById('cs-popup-message');
+    const csIconBadge = document.getElementById('cs-popup-icon-badge');
+    const csBtnConfirm = document.getElementById('cs-popup-btn-confirm');
+    const csBtnCancel = document.getElementById('cs-popup-btn-cancel');
+
+    let currentResolveAlert = null;
+
+    function configurePopup({ title, message, type = 'info', confirmText = 'Entendido', cancelText = 'Cancelar', isConfirm = false }) {
+      if (csTitle) csTitle.textContent = title;
+      if (csMessage) csMessage.textContent = message;
+
+      if (csIconBadge) {
+        if (type === 'error') {
+          csIconBadge.className = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-700 text-xl font-bold border border-rose-200 shadow-xs';
+          csIconBadge.textContent = '⚠️';
+        } else if (type === 'warning') {
+          csIconBadge.className = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 text-xl font-bold border border-amber-200 shadow-xs';
+          csIconBadge.textContent = '☕';
+        } else if (type === 'success') {
+          csIconBadge.className = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 text-xl font-bold border border-emerald-200 shadow-xs';
+          csIconBadge.textContent = '✅';
+        } else {
+          csIconBadge.className = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-700 text-xl font-bold border border-stone-200 shadow-xs';
+          csIconBadge.textContent = 'ℹ️';
+        }
+      }
+
+      if (csBtnConfirm) {
+        csBtnConfirm.textContent = confirmText;
+        if (type === 'error' && isConfirm) {
+          csBtnConfirm.className = 'rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 px-5 py-2 text-xs font-bold text-white transition shadow-xs';
+        } else {
+          csBtnConfirm.className = 'rounded-xl bg-emerald-700 hover:bg-emerald-800 active:scale-95 px-5 py-2 text-xs font-bold text-white transition shadow-xs';
+        }
+      }
+
+      if (csBtnCancel) {
+        csBtnCancel.textContent = cancelText;
+        if (isConfirm) {
+          csBtnCancel.classList.remove('hidden');
+        } else {
+          csBtnCancel.classList.add('hidden');
+        }
+      }
+    }
+
+    window.cafesitiosAlert = function(titleOrMsg, message = '', type = 'info') {
+      return new Promise(resolve => {
+        let title = titleOrMsg;
+        let text = message;
+        if (!text) {
+          text = titleOrMsg;
+          title = type === 'error' ? 'Atención' : (type === 'success' ? 'Operación Exitosa' : 'Aviso');
+        }
+        configurePopup({ title, message: text, type, confirmText: 'Entendido', isConfirm: false });
+        currentResolveAlert = () => {
+          csDialog?.close();
+          resolve(true);
+        };
+        csDialog?.showModal();
+      });
+    };
+
+    window.cafesitiosConfirm = function(titleOrMsg, message = '', options = {}) {
+      return new Promise(resolve => {
+        let title = titleOrMsg;
+        let text = message;
+        if (!text && typeof titleOrMsg === 'string') {
+          text = titleOrMsg;
+          title = 'Confirmación Requerida';
+        }
+        const { confirmText = 'Confirmar', cancelText = 'Cancelar', type = 'warning' } = options;
+        configurePopup({ title, message: text, type, confirmText, cancelText, isConfirm: true });
+
+        const onConfirm = () => {
+          cleanup();
+          csDialog?.close();
+          resolve(true);
+        };
+        const onCancel = () => {
+          cleanup();
+          csDialog?.close();
+          resolve(false);
+        };
+
+        function cleanup() {
+          csBtnConfirm?.removeEventListener('click', onConfirm);
+          csBtnCancel?.removeEventListener('click', onCancel);
+          csDialog?.removeEventListener('cancel', onCancel);
+        }
+
+        csBtnConfirm?.addEventListener('click', onConfirm);
+        csBtnCancel?.addEventListener('click', onCancel);
+        csDialog?.addEventListener('cancel', onCancel);
+
+        csDialog?.showModal();
+      });
+    };
+
+    csBtnConfirm?.addEventListener('click', () => {
+      if (currentResolveAlert) {
+        const res = currentResolveAlert;
+        currentResolveAlert = null;
+        res();
+      }
+    });
+
+    // Sobrescritura de window.alert para interceptar cualquier llamada nativa remanente
+    window.alert = function(msg) {
+      window.cafesitiosAlert('Cafésitios', String(msg), 'info');
+    };
+  })();
+</script>
+

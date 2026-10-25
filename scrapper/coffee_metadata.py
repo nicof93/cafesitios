@@ -203,6 +203,12 @@ def _extract_notes(value: str, source: str, es_sugerida: bool = False) -> List[D
     seen = set()
     for candidate in candidates:
         candidate = candidate.strip()
+        candidate = re.sub(
+            r'^(?:(?:con|presenta|destacan?|perciben?|encontrar[aá]s)\s+)?(?:notas?|toques?|descriptores?|aromas?|sabores?|acidez|sabor|aroma)\s+(?:a|de)\s+',
+            '',
+            candidate,
+            flags=re.IGNORECASE
+        ).strip(' :;,.–—-')
         if not candidate or not is_valid_tasting_note(candidate):
             continue
         key, display_name = _note_identity(candidate)

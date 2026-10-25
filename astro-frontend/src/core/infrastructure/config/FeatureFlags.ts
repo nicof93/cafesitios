@@ -62,6 +62,15 @@ export class FeatureFlags {
     return this.parseFlag(val, true);
   }
 
+  /**
+   * Feature Flag: Glosario de Café de Especialidad (/glosario)
+   * Controlado por PUBLIC_ENABLE_GLOSSARY o ENABLE_GLOSSARY
+   */
+  static isGlossaryEnabled(): boolean {
+    const val = import.meta.env.PUBLIC_ENABLE_GLOSSARY ?? import.meta.env.ENABLE_GLOSSARY;
+    return this.parseFlag(val, true);
+  }
+
   static getAll(): Record<string, boolean> {
     return {
       guides: this.isGuidesEnabled(),
@@ -69,6 +78,7 @@ export class FeatureFlags {
       myRecipes: this.isMyRecipesEnabled(),
       flavorQuiz: this.isFlavorQuizEnabled(),
       whatsAppOrders: this.isWhatsAppOrdersEnabled(),
+      glossary: this.isGlossaryEnabled(),
     };
   }
 }

@@ -1,0 +1,316 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { FeatureFlags } from '../core/infrastructure/config/FeatureFlags';
+import { GLOSSARY_CATEGORIES, GLOSSARY_TERMS } from '../core/domain/glossaryData';
+
+if (!FeatureFlags.isGlossaryEnabled()) {
+  return Astro.rewrite('/404');
+}
+
+const termsJson = JSON.stringify(GLOSSARY_TERMS);
+
+// Schema.org para Glosario / Diccionario Técnico
+const jsonLdGlossary = {
+  "@context": "https://schema.org",
+  "@type": "DefinedTermSet",
+  "@id": "https://cafesitios.cl/glosario#terms",
+  "name": "Glosario de Café de Especialidad Cafesitios",
+  "description": "Diccionario técnico de procesos, botánica, tueste y cata de café de especialidad.",
+  "inLanguage": "es-CL",
+  "hasDefinedTerm": GLOSSARY_TERMS.map(t => ({
+    "@type": "DefinedTerm",
+    "@id": `https://cafesitios.cl/glosario#${t.slug}`,
+    "name": t.termino,
+    "description": t.resumen,
+    "inDefinedTermSet": "https://cafesitios.cl/glosario#terms"
+  }))
+};
+---
+
+<BaseLayout
+  title="Glosario de Café de Especialidad | Cafesitios - Guía y Diccionario Barista"
+  description="Diccionario esencial de café de especialidad: procesos lavado y honey, escala Agtron, variedades Geisha y Bourbon, y puntaje SCA explicados en simple."
+  canonicalUrl="https://cafesitios.cl/glosario"
+  jsonLd={jsonLdGlossary}
+>
+  <div class="space-y-12 pb-24">
+    
+    <!-- HERO PRINCIPAL EDUCATIVO -->
+    <header class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-stone-900 via-stone-850 to-emerald-950 text-white p-8 sm:p-12 shadow-md">
+      <div class="relative z-10 max-w-3xl space-y-4">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-900/60 border border-emerald-400/30 px-3 py-1 text-xs font-bold text-emerald-300">
+          📖 Enciclopedia del Grano
+        </span>
+        <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
+          Glosario de Café de Especialidad: De la Planta a la Taza
+        </h1>
+        <p class="text-stone-300 text-sm sm:text-base leading-relaxed font-normal max-w-2xl">
+          ¿Escuchaste hablar de fermentación anaeróbica, escala Agtron o variedad Geisha y no sabes qué significa? Te explicamos cada concepto sin rodeos técnicos para que compres y disfrutes mejor tu café.
+        </p>
+      </div>
+
+      <!-- BUSCADOR REACTIVO EN VIVO -->
+      <div class="mt-8 relative z-10 max-w-xl">
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-stone-400 text-base">
+            🔍
+          </span>
+          <input
+            type="search"
+            id="glossary-search-input"
+            placeholder="Buscar concepto (ej. Honey, Agtron, Ratio, Acidez, Geisha)..."
+            class="w-full rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 pl-11 pr-4 py-3.5 text-sm text-white placeholder-stone-400 focus:bg-white focus:text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-inner transition"
+          />
+        </div>
+      </div>
+    </header>
+
+    <!-- SELECTOR DE CATEGORÍAS (PILLS INTERACTIVAS) -->
+    <section class="space-y-3" aria-label="Filtrar por categoría">
+      <div class="flex items-center justify-between text-xs text-stone-500 font-semibold px-1">
+        <span>Filtrar por área tematica:</span>
+        <span id="terms-counter" class="text-emerald-800 font-bold">{GLOSSARY_TERMS.length} conceptos disponibles</span>
+      </div>
+
+      <div class="flex flex-wrap gap-2" id="category-pills-container">
+        <button
+          type="button"
+          class="cat-pill active-pill rounded-xl px-4 py-2 text-xs font-bold transition shadow-2xs bg-stone-900 text-white"
+          data-category="todas"
+        >
+          ✨ Todos ({GLOSSARY_TERMS.length})
+        </button>
+        {GLOSSARY_CATEGORIES.map(cat => {
+          const count = GLOSSARY_TERMS.filter(t => t.categoria === cat.id).length;
+          return (
+            <button
+              type="button"
+              class="cat-pill rounded-xl px-4 py-2 text-xs font-bold transition shadow-2xs bg-white text-stone-700 border border-stone-200 hover:bg-stone-50"
+              data-category={cat.id}
+            >
+              <span>{cat.icono}</span>
+              <span class="ml-1">{cat.nombre}</span>
+              <span class="ml-1 text-[10px] text-stone-400 font-normal">({count})</span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+
+    <!-- GRILLA DE TÉRMINOS DEL GLOSARIO -->
+    <section id="glossary-cards-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+      {GLOSSARY_TERMS.map(term => (
+        <article
+          id={term.slug}
+          class="glossary-card group scroll-mt-24 rounded-3xl bg-white border border-stone-200/80 p-6 sm:p-7 shadow-2xs hover:shadow-md hover:border-emerald-200 transition-all duration-200 space-y-4"
+          data-category={term.categoria}
+          data-text={`${term.termino} ${term.resumen} ${term.explicacion} ${term.impactoEnTaza} ${term.categoriaNombre}`.toLowerCase()}
+        >
+          <!-- ENCABEZADO DE TARJETA -->
+          <div class="flex items-start justify-between gap-3 border-b border-stone-100 pb-3">
+            <div class="flex items-center gap-3">
+              <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-100 text-2xl group-hover:scale-105 transition-transform">
+                {term.icono}
+              </span>
+              <div>
+                <a href={`#${term.slug}`} class="text-base sm:text-lg font-black text-stone-900 hover:text-emerald-800 transition">
+                  {term.termino}
+                </a>
+                <span class="block text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+                  {term.categoriaNombre}
+                </span>
+              </div>
+            </div>
+            
+            <a
+              href={`#${term.slug}`}
+              class="text-stone-300 hover:text-stone-600 text-xs font-bold p-1 rounded-lg"
+              title="Copiar enlace directo a este término"
+            >
+              🔗
+            </a>
+          </div>
+
+          <!-- RESUMEN EN SIMPLE -->
+          <div class="bg-stone-50/70 rounded-2xl p-3.5 border border-stone-100">
+            <span class="block text-[10px] font-extrabold uppercase tracking-wider text-stone-400">
+              ¿Qué es en simple?
+            </span>
+            <p class="text-xs sm:text-sm font-semibold text-stone-800 leading-snug mt-0.5">
+              {term.resumen}
+            </p>
+          </div>
+
+          <!-- EXPLICACIÓN TÉCNICA -->
+          <div class="space-y-1 text-xs text-stone-600 leading-relaxed font-normal">
+            <span class="block text-[10px] font-extrabold uppercase tracking-wider text-stone-400">
+              Detalle & Contexto
+            </span>
+            <p>
+              {term.explicacion}
+            </p>
+          </div>
+
+          <!-- IMPACTO EN TAZA -->
+          <div class="rounded-2xl bg-amber-50/60 p-3.5 border border-amber-200/60 space-y-1">
+            <div class="flex items-center gap-1.5 text-amber-900 text-xs font-bold">
+              <span>☕</span>
+              <span>¿Cómo se siente en taza?</span>
+            </div>
+            <p class="text-xs text-amber-950/90 leading-relaxed">
+              {term.impactoEnTaza}
+            </p>
+          </div>
+
+          <!-- PIE DE TARJETA CON FILTRO AL CATÁLOGO -->
+          {term.filtroCatalogoQuery && (
+            <div class="pt-2 border-t border-stone-100 flex items-center justify-between text-xs">
+              <a
+                href={`/catalogo?${term.filtroCatalogoQuery}`}
+                class="inline-flex items-center gap-1 font-bold text-emerald-800 hover:text-emerald-950 transition hover:underline"
+              >
+                <span>Ver cafés con este perfil en el catálogo</span>
+                <span>→</span>
+              </a>
+            </div>
+          )}
+        </article>
+      ))}
+    </section>
+
+    <!-- MENSAJE VACÍO ANTE BÚSQUEDA SIN COINCIDENCIAS -->
+    <div id="no-results-box" class="hidden rounded-3xl bg-white p-12 text-center border border-stone-200 space-y-3">
+      <span class="text-4xl">🔍</span>
+      <h3 class="text-lg font-bold text-stone-800">No encontramos coincidencias para esa búsqueda</h3>
+      <p class="text-xs text-stone-500 max-w-sm mx-auto">
+        Prueba con palabras como "Honey", "Agtron", "Lavado", "Geisha" o selecciona otra categoría.
+      </p>
+      <button
+        type="button"
+        id="btn-reset-search"
+        class="rounded-xl bg-stone-900 text-white font-bold text-xs px-4 py-2 hover:bg-emerald-800 transition"
+      >
+        Limpiar búsqueda
+      </button>
+    </div>
+
+    <!-- CALL TO ACTION EDUCATIVO HACIA EL CATÁLOGO -->
+    <aside class="rounded-3xl bg-emerald-50/70 border border-emerald-200/80 p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xs">
+      <div class="space-y-2 text-center sm:text-left max-w-xl">
+        <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">Aprende y Compara</span>
+        <h2 class="text-xl sm:text-2xl font-black text-stone-900">
+          ¿Listo para poner en práctica lo aprendido?
+        </h2>
+        <p class="text-xs sm:text-sm text-stone-600 leading-relaxed">
+          Explora nuestro catálogo en vivo de más de 30 tostadurías chilenas, filtra por proceso, variedad o nivel de tueste y encuentra tu café ideal al mejor precio por kilo.
+        </p>
+      </div>
+
+      <a
+        href="/catalogo"
+        class="shrink-0 rounded-2xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-sm px-6 py-3.5 shadow-sm transition inline-flex items-center gap-2"
+      >
+        <span>Explorar Catálogo</span>
+        <span>☕ →</span>
+      </a>
+    </aside>
+
+  </div>
+</BaseLayout>
+
+<script is:inline define:vars={{ termsJson }}>
+  (function initGlossary() {
+    const inputSearch = document.getElementById('glossary-search-input');
+    const cardsGrid = document.getElementById('glossary-cards-grid');
+    const noResultsBox = document.getElementById('no-results-box');
+    const btnReset = document.getElementById('btn-reset-search');
+    const counterEl = document.getElementById('terms-counter');
+    const pills = document.querySelectorAll('.cat-pill');
+
+    let currentCategory = 'todas';
+    let currentQuery = '';
+
+    function filterCards() {
+      const q = currentQuery.trim().toLowerCase();
+      const cat = currentCategory;
+      const cards = document.querySelectorAll('.glossary-card');
+      let visibleCount = 0;
+
+      cards.forEach((card) => {
+        const cardCategory = card.getAttribute('data-category') || '';
+        const cardText = card.getAttribute('data-text') || '';
+
+        const matchesCat = cat === 'todas' || cardCategory === cat;
+        const matchesQuery = !q || cardText.includes(q);
+
+        if (matchesCat && matchesQuery) {
+          card.classList.remove('hidden');
+          visibleCount++;
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+
+      if (counterEl) {
+        counterEl.textContent = `${visibleCount} conceptos mostrados`;
+      }
+
+      if (visibleCount === 0) {
+        cardsGrid?.classList.add('hidden');
+        noResultsBox?.classList.remove('hidden');
+      } else {
+        cardsGrid?.classList.remove('hidden');
+        noResultsBox?.classList.add('hidden');
+      }
+    }
+
+    inputSearch?.addEventListener('input', (e) => {
+      currentQuery = e.target.value;
+      filterCards();
+    });
+
+    pills.forEach((pill) => {
+      pill.addEventListener('click', () => {
+        pills.forEach((p) => {
+          p.classList.remove('bg-stone-900', 'text-white');
+          p.classList.add('bg-white', 'text-stone-700', 'border', 'border-stone-200');
+        });
+
+        pill.classList.remove('bg-white', 'text-stone-700', 'border', 'border-stone-200');
+        pill.classList.add('bg-stone-900', 'text-white');
+
+        currentCategory = pill.getAttribute('data-category') || 'todas';
+        filterCards();
+      });
+    });
+
+    btnReset?.addEventListener('click', () => {
+      if (inputSearch) inputSearch.value = '';
+      currentQuery = '';
+      currentCategory = 'todas';
+      pills.forEach((p) => {
+        if (p.getAttribute('data-category') === 'todas') {
+          p.classList.remove('bg-white', 'text-stone-700');
+          p.classList.add('bg-stone-900', 'text-white');
+        } else {
+          p.classList.remove('bg-stone-900', 'text-white');
+          p.classList.add('bg-white', 'text-stone-700');
+        }
+      });
+      filterCards();
+    });
+
+    // Soporte para URL con hash al cargar (ej. /glosario#proceso-honey)
+    if (window.location.hash) {
+      const targetId = window.location.hash.substring(1);
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) {
+        setTimeout(() => {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          targetEl.classList.add('ring-2', 'ring-emerald-500');
+          setTimeout(() => targetEl.classList.remove('ring-2', 'ring-emerald-500'), 2500);
+        }, 150);
+      }
+    }
+  })();
+</script>

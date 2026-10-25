@@ -13,6 +13,7 @@ const showCalibrator = Environment.isCalibratorEnabled();
 const showMyRecipes = Environment.isMyRecipesEnabled();
 const showFlavorQuiz = Environment.isFlavorQuizEnabled();
 const showWhatsAppOrders = Environment.isWhatsAppOrdersEnabled();
+const showGlossary = Environment.isGlossaryEnabled();
 ---
 
 <header class="sticky top-0 z-30 border-b border-stone-200/70 bg-[#FCFBF7]/90 backdrop-blur-md transition-all">
@@ -94,6 +95,17 @@ const showWhatsAppOrders = Environment.isWhatsAppOrdersEnabled();
         >
           <span aria-hidden="true">☕</span>
           <span class="hidden sm:inline">Guías</span>
+        </a>
+      )}
+
+      {showGlossary && (
+        <a 
+          href="/glosario" 
+          class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-stone-700 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+          title="Glosario y Diccionario de Café de Especialidad"
+        >
+          <span aria-hidden="true">📖</span>
+          <span class="hidden sm:inline">Glosario</span>
         </a>
       )}
 

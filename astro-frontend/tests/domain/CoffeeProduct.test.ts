@@ -127,5 +127,20 @@ describe('CoffeeProduct Entity', () => {
     expect(product.notas_confirmadas).toEqual(['Grosella negra', 'Pomelo rosado']);
     expect(product.notas_sugeridas).toEqual(['Vino tinto', 'Mora silvestre']);
   });
+
+  it('evita que las notas sugeridas dupliquen descriptores ya confirmados', () => {
+    const product = new CoffeeProduct({
+      id: 50,
+      nombre: 'Perú Cajamarca Dark',
+      tienda: 'Tostaduría Andina',
+      url_detalle: 'https://andina.cl/cajamarca',
+      notas_confirmadas: ['Fruta', 'Frutas Rojas'],
+      notas_sugeridas: ['fruta', 'Frutas rojas', 'Chancaca'],
+    });
+
+    expect(product.notas_confirmadas).toEqual(['Fruta', 'Frutas Rojas']);
+    // 'fruta' y 'Frutas rojas' deben ser eliminadas de sugeridas
+    expect(product.notas_sugeridas).toEqual(['Chancaca']);
+  });
 });
 

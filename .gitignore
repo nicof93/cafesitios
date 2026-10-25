@@ -20,4 +20,7 @@ ambientes.json
 *.db
 *.sqlite
 playwright-report/
-test-results/
+test-results/
+
+static/uploads/*
+!static/uploads/.gitkeep

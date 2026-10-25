@@ -39,6 +39,22 @@ const minHistorical = historicalPrices.length > 0 ? Math.min(...historicalPrices
 const avgHistorical = historicalPrices.length > 0 ? Math.round(historicalPrices.reduce((a, b) => a + b, 0) / historicalPrices.length) : currentPrice;
 const showWhatsApp = FeatureFlags.isWhatsAppOrdersEnabled();
 
+// Separar notas oficiales confirmadas (amarillas) de notas sugeridas (moradas) sin repetición
+const rawConfirmadas = (product.notas_confirmadas && product.notas_confirmadas.length > 0)
+  ? product.notas_confirmadas
+  : (product.notas_sugeridas.length === 0 ? product.notas_cata : []);
+
+const notasOficiales = rawConfirmadas
+  .map(n => typeof n === 'object' && n !== null ? ((n as any).nombre || (n as any).clave_normalizada || '') : String(n))
+  .filter(Boolean);
+
+const setOficiales = new Set(notasOficiales.map(n => n.toLowerCase().trim()));
+
+// Notas sugeridas: estrictamente las que no estén presentes en las notas oficiales
+const notasSugeridas = (product.notas_sugeridas || [])
+  .map(n => typeof n === 'object' && n !== null ? ((n as any).nombre || (n as any).clave_normalizada || '') : String(n))
+  .filter(n => Boolean(n) && !setOficiales.has(n.toLowerCase().trim()));
+
 // Agrupar variantes por precio para evitar tablas largas repetitivas
 interface GroupedVariant {
   formato_gramos: number;
@@ -218,30 +234,25 @@ const captionText = product.descripcion_resumida
             </div>
           )}
 
-          <!-- NOTAS DE CATA EN TONOS CÁLIDOS/ÁMBAR -->
-          {product.notas_cata && product.notas_cata.length > 0 && (
+          <!-- NOTAS DE CATA EN TONOS CÁLIDOS/ÁMBAR (OFICIALES/CONFIRMADAS) -->
+          {notasOficiales.length > 0 && (
             <div class="space-y-1.5 pt-1">
               <span class="block text-[11px] font-bold uppercase tracking-wider text-stone-400">
                 Perfil Sensorial & Notas de Cata
               </span>
               <div class="flex flex-wrap gap-1.5">
-                {product.notas_cata.map(nota => {
-                  const label = typeof nota === 'object' && nota !== null 
-                    ? ((nota as any).nombre || (nota as any).clave_normalizada || '') 
-                    : String(nota);
-                  return (
-                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200/80 text-amber-900 px-3 py-1 text-xs font-semibold shadow-2xs">
-                      <span>☕</span>
-                      <span>{label}</span>
-                    </span>
-                  );
-                })}
+                {notasOficiales.map(label => (
+                  <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200/80 text-amber-900 px-3 py-1 text-xs font-semibold shadow-2xs">
+                    <span>☕</span>
+                    <span>{label}</span>
+                  </span>
+                ))}
               </div>
             </div>
           )}
 
-          <!-- NOTAS SUGERIDAS / "ALGUNOS TAMBIÉN SINTIERON..." -->
-          {product.notas_sugeridas && product.notas_sugeridas.length > 0 && (
+          <!-- NOTAS SUGERIDAS / "ALGUNOS TAMBIÉN SINTIERON..." (FRANJA MORADA) -->
+          {notasSugeridas.length > 0 && (
             <div class="space-y-1.5 pt-1 rounded-2xl bg-gradient-to-r from-purple-50/70 via-stone-50 to-amber-50/40 p-3.5 border border-purple-200/60 shadow-2xs">
               <div class="flex items-center gap-1.5">
                 <span class="text-sm">✨</span>
@@ -253,7 +264,7 @@ const captionText = product.descripcion_resumida
                 </span>
               </div>
               <div class="flex flex-wrap gap-1.5 pt-0.5">
-                {product.notas_sugeridas.map(sugerida => (
+                {notasSugeridas.map(sugerida => (
                   <span class="inline-flex items-center gap-1 rounded-full bg-white border border-purple-200 text-purple-900 px-2.5 py-0.5 text-xs font-semibold shadow-2xs">
                     <span class="text-purple-600 text-[10px]">✦</span>
                     <span>{sugerida}</span>
@@ -850,6 +861,8 @@ const captionText = product.descripcion_resumida
 </script>
 
 <script>
+  import { filterSignificantPriceHistory } from '../../core/domain/priceHistory';
+
   // MANEJO INTERACTIVO DE VARIANTES Y GRÁFICO HISTÓRICO DE PRECIOS
   const selector = document.getElementById('variant-selector') as HTMLSelectElement | null;
   const displayKilo = document.getElementById('display-kilo-price');
@@ -893,27 +906,16 @@ const captionText = product.descripcion_resumida
     const isKilo = chartMode === 'kilo';
     const currentVal = isKilo ? (variant.precio_por_kilo || 0) : (variant.precio_clp || 0);
 
-    // Preparar serie de datos cronológicos
-    let points: { label: string; value: number }[] = [];
-    if (variant.historial_precios && variant.historial_precios.length > 1) {
-      points = variant.historial_precios.map((h: any, idx: number) => ({
-        label: h.fecha_registro ? new Date(h.fecha_registro).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }) : `P${idx + 1}`,
-        value: isKilo ? (h.precio_por_kilo || currentVal) : (h.precio_clp || currentVal)
-      }));
-    } else {
-      // Línea de estabilidad basada en fechas recientes
-      points = [
-        { label: 'Hace 30d', value: currentVal },
-        { label: 'Hace 20d', value: currentVal },
-        { label: 'Hace 10d', value: currentVal },
-        { label: 'Hoy', value: currentVal },
-      ];
-    }
+    // Preparar serie de datos cronológicos: solo fecha y valores que han cambiado, o primero y último si no hay cambios
+    const points = filterSignificantPriceHistory(variant.historial_precios, isKilo, currentVal);
 
-    const values = points.map(p => p.value);
-    const minVal = Math.min(...values);
-    const maxVal = Math.max(...values);
-    const avgVal = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+    // Métricas calculadas sobre todo el historial disponible para máxima precisión
+    const allHistory = Array.isArray(variant.historial_precios) && variant.historial_precios.length > 0
+      ? variant.historial_precios.map((h: any) => isKilo ? (h.precio_por_kilo || currentVal) : (h.precio_clp || currentVal))
+      : [currentVal];
+    const minVal = Math.min(...allHistory);
+    const maxVal = Math.max(...allHistory);
+    const avgVal = Math.round(allHistory.reduce((a: number, b: number) => a + b, 0) / allHistory.length);
 
     // Actualizar métricas superiores
     if (metricCurrent) metricCurrent.textContent = isKilo ? `${formatClp(currentVal)}/kg` : formatClp(currentVal);
@@ -930,7 +932,7 @@ const captionText = product.descripcion_resumida
     const padTop = 25;
     const padBottom = 25;
     const padLeft = 60;
-    const padRight = 30;
+    const padRight = 35;
 
     const effectiveHeight = height - padTop - padBottom;
     const effectiveWidth = width - padLeft - padRight;
@@ -975,13 +977,20 @@ const captionText = product.descripcion_resumida
       `;
     }).join('');
 
-    const circles = coords.map(c => `
-      <g class="cursor-pointer group">
-        <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="4.5" fill="#047857" stroke="#ffffff" stroke-width="2" class="transition-all hover:r-6" />
-        <text x="${c.x.toFixed(1)}" y="${c.y - 10}" text-anchor="middle" font-size="9" font-weight="700" fill="#064E3B">${formatClp(c.val)}</text>
-        <text x="${c.x.toFixed(1)}" y="${height - 8}" text-anchor="middle" font-size="9" fill="#78716C" font-weight="500">${c.label}</text>
-      </g>
-    `).join('');
+    const circles = coords.map((c, idx) => {
+      let anchor = 'middle';
+      if (coords.length <= 2) {
+        if (idx === 0) anchor = 'start';
+        else if (idx === coords.length - 1) anchor = 'end';
+      }
+      return `
+        <g class="cursor-pointer group">
+          <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="4.5" fill="#047857" stroke="#ffffff" stroke-width="2" class="transition-all hover:r-6" />
+          <text x="${c.x.toFixed(1)}" y="${c.y - 10}" text-anchor="${anchor}" font-size="9" font-weight="700" fill="#064E3B">${formatClp(c.val)}</text>
+          <text x="${c.x.toFixed(1)}" y="${height - 8}" text-anchor="${anchor}" font-size="9" fill="#78716C" font-weight="500">${c.label}</text>
+        </g>
+      `;
+    }).join('');
 
     chartContainer.innerHTML = `
       <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible" preserveAspectRatio="none">

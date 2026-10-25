@@ -46,6 +46,17 @@ describe('FeatureFlags & Environment (Estrategia de Lanzamiento Controlado)', ()
     expect(Environment.isWhatsAppOrdersEnabled()).toBe(false);
   });
 
+  it('controla el feature flag de glosario por defecto y con variable', () => {
+    vi.stubEnv('PUBLIC_ENABLE_GLOSSARY', undefined as any);
+    vi.stubEnv('ENABLE_GLOSSARY', undefined as any);
+    expect(FeatureFlags.isGlossaryEnabled()).toBe(true);
+    expect(Environment.isGlossaryEnabled()).toBe(true);
+
+    vi.stubEnv('PUBLIC_ENABLE_GLOSSARY', 'false');
+    expect(FeatureFlags.isGlossaryEnabled()).toBe(false);
+    expect(Environment.isGlossaryEnabled()).toBe(false);
+  });
+
   it('retorna snapshot completo con getAll()', () => {
     vi.stubEnv('PUBLIC_ENABLE_RECIPES', 'true');
     vi.stubEnv('PUBLIC_ENABLE_CALIBRATOR', 'false');
@@ -55,6 +66,7 @@ describe('FeatureFlags & Environment (Estrategia de Lanzamiento Controlado)', ()
     expect(flags.calibrator).toBe(false);
     expect(flags.myRecipes).toBe(true);
     expect(flags.whatsAppOrders).toBe(true);
+    expect(flags.glossary).toBe(true);
   });
 });
 

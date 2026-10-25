@@ -482,11 +482,25 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       <!-- Demanda Insatisfecha y Oportunidades -->
       <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
         <div class="border-b border-stone-100 pb-3">
-          <div class="flex items-center gap-2 text-base font-bold text-stone-900">
-            <span>🎯</span>
-            <span>Oportunidades de Catálogo y Demanda</span>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 text-base font-bold text-stone-900">
+              <span>🎯</span>
+              <span>Oportunidades de Catálogo y Demanda</span>
+            </div>
+            <span class="rounded-full bg-amber-100 text-amber-900 px-2 py-0.5 text-[10px] font-bold">Algoritmo Inteligente</span>
           </div>
           <p class="text-xs text-stone-500 mt-1">Orígenes más cotizados por usuarios en Cafesitios que aún no tienes publicados.</p>
+        </div>
+
+        <!-- EXPLICACIÓN CLARA DE CÓMO SE CALCULAN LAS OPORTUNIDADES -->
+        <div class="p-3 bg-stone-50/90 rounded-xl border border-stone-200/80 text-xs text-stone-600 space-y-1">
+          <div class="flex items-center gap-1.5 font-bold text-stone-800 text-[11px]">
+            <span>ℹ️</span>
+            <span>¿Cómo se sugieren estas oportunidades?</span>
+          </div>
+          <p class="text-[11px] leading-relaxed text-stone-600">
+            Nuestro motor analiza de forma continua el volumen de búsquedas, interés y visitas en Cafesitios para identificar los orígenes con mayor demanda en el mercado chileno. Luego, <strong>compara ese ranking con tu catálogo activo</strong>: aquellos orígenes de alta rotación comercial que aún no comercializas se destacan automáticamente como oportunidades clave para ampliar tu oferta y captar nuevos compradores.
+          </p>
         </div>
 
         <div>
@@ -496,9 +510,32 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           </div>
         </div>
 
-        <div class="pt-2 border-t border-stone-100">
-          <span class="text-[11px] font-bold text-stone-600 block mb-2">Top Orígenes más buscados en Chile:</span>
-          <div id="demand-top-origins-container" class="space-y-1.5 text-xs">
+        <div class="pt-2 border-t border-stone-100 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[11px] font-bold text-stone-600">Top Orígenes más buscados en Chile:</span>
+            <!-- Selector de Vista: Gráfico de Barras vs Lista -->
+            <div class="inline-flex rounded-lg border border-stone-200 bg-stone-100 p-0.5 text-[10px] font-bold">
+              <button 
+                type="button" 
+                id="btn-view-origins-bars" 
+                class="px-2 py-0.5 rounded-md bg-white text-stone-900 shadow-2xs transition" 
+                title="Ver demanda como gráfico de barras"
+              >
+                📊 Barras
+              </button>
+              <button 
+                type="button" 
+                id="btn-view-origins-list" 
+                class="px-2 py-0.5 rounded-md text-stone-500 hover:text-stone-900 transition" 
+                title="Ver demanda como lista"
+              >
+                📋 Lista
+              </button>
+            </div>
+          </div>
+
+          <!-- Contenedor dinámico de gráfico de barras / lista -->
+          <div id="demand-top-origins-container" class="space-y-2.5 text-xs pt-1">
             <div class="text-stone-400 text-xs italic">Cargando orígenes...</div>
           </div>
         </div>
@@ -768,7 +805,12 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           document.querySelectorAll('.btn-delete-catalog').forEach(btn => {
             btn.addEventListener('click', async () => {
               const id = btn.getAttribute('data-id');
-              if (!confirm('¿Seguro que deseas eliminar esta URL de colección?')) return;
+              const confirmed = await window.cafesitiosConfirm?.(
+                'Eliminar Colección de Scraping',
+                '¿Seguro que deseas eliminar esta URL de colección de escaneo automático?',
+                { confirmText: 'Eliminar URL', cancelText: 'Conservar', type: 'error' }
+              ) ?? confirm('¿Seguro que deseas eliminar esta URL de colección?');
+              if (!confirmed) return;
               try {
                 const delRes = await fetch(`${API_BASE}/api/v1/admin/tienda/catalogos/${id}`, {
                   method: 'DELETE',
@@ -776,7 +818,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
                 });
                 if (delRes.ok) loadCatalogs();
               } catch (_) {
-                alert('Error al eliminar catálogo');
+                await window.cafesitiosAlert?.('Error', 'No fue posible eliminar la colección.', 'error');
               }
             });
           });
@@ -817,7 +859,12 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           document.querySelectorAll('.btn-delete-branch').forEach(btn => {
             btn.addEventListener('click', async () => {
               const id = btn.getAttribute('data-id');
-              if (!confirm('¿Seguro que deseas eliminar esta cafetería física?')) return;
+              const confirmed = await window.cafesitiosConfirm?.(
+                'Eliminar Cafetería Física',
+                '¿Seguro que deseas eliminar esta sucursal de tu lista de locales?',
+                { confirmText: 'Eliminar Sucursal', cancelText: 'Conservar', type: 'error' }
+              ) ?? confirm('¿Seguro que deseas eliminar esta cafetería física?');
+              if (!confirmed) return;
               try {
                 const delRes = await fetch(`${API_BASE}/api/v1/admin/tienda/sucursales/${id}`, {
                   method: 'DELETE',
@@ -825,7 +872,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
                 });
                 if (delRes.ok) loadBranches();
               } catch (_) {
-                alert('Error al eliminar sucursal');
+                await window.cafesitiosAlert?.('Error', 'No fue posible eliminar la sucursal.', 'error');
               }
             });
           });
@@ -838,7 +885,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         const url = inputCatalogUrl?.value.trim();
         const etiqueta = inputCatalogLabel?.value.trim();
         if (!url) {
-          alert('Ingresa una URL válida');
+          await window.cafesitiosAlert?.('URL Inválida', 'Por favor ingresa una URL válida con protocolo https://...', 'warning');
           return;
         }
         try {
@@ -855,14 +902,14 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           if (inputCatalogLabel) inputCatalogLabel.value = '';
           loadCatalogs();
         } catch (e) {
-          alert(e.message);
+          await window.cafesitiosAlert?.('Error al Guardar', e.message, 'error');
         }
       });
 
       btnTestCatalog?.addEventListener('click', async () => {
         const url = inputCatalogUrl?.value.trim();
         if (!url) {
-          alert('Ingresa primero la URL que deseas probar');
+          await window.cafesitiosAlert?.('Probar Colección', 'Ingresa primero la URL que deseas probar.', 'warning');
           return;
         }
         btnTestCatalog.disabled = true;
@@ -903,7 +950,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
             modalTestCatalog.classList.add('flex');
           }
         } catch (_) {
-          alert('Error al probar catálogo.');
+          await window.cafesitiosAlert?.('Error al Probar Catálogo', 'No se pudo obtener respuesta del driver para la URL ingresada.', 'error');
         } finally {
           btnTestCatalog.disabled = false;
           btnTestCatalog.innerHTML = '<span>🧪</span><span>Probar</span>';
@@ -954,7 +1001,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           modalBranch?.classList.remove('flex');
           loadBranches();
         } catch (err) {
-          alert(err.message);
+          await window.cafesitiosAlert?.('Error al Registrar', err.message, 'error');
         }
       });
 
@@ -979,10 +1026,10 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
             })
           });
           if (!res.ok) throw new Error('Error al actualizar perfil');
-          alert('✅ Perfil de tienda actualizado exitosamente.');
+          await window.cafesitiosAlert?.('Perfil Actualizado', 'Los datos de tu tienda y despacho fueron guardados exitosamente.', 'success');
           loadProfile();
         } catch (err) {
-          alert(err.message);
+          await window.cafesitiosAlert?.('Error al Actualizar Perfil', err.message, 'error');
         }
       });
 
@@ -1036,10 +1083,14 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           if (!res.ok) return;
 
           const data = await res.json();
-          document.getElementById('dash-store-title').textContent = data.tienda_nombre;
-          document.getElementById('kpi-total-products').textContent = data.total_productos;
-          document.getElementById('kpi-platform').textContent = data.plataforma;
-          document.getElementById('kpi-user-role').textContent = data.rol;
+          const storeTitleEl = document.getElementById('dash-store-title');
+          if (storeTitleEl && data.tienda_nombre) storeTitleEl.textContent = data.tienda_nombre;
+          const kpiTotalEl = document.getElementById('kpi-total-products');
+          if (kpiTotalEl && data.total_productos !== undefined) kpiTotalEl.textContent = data.total_productos;
+          const kpiPlatEl = document.getElementById('kpi-platform');
+          if (kpiPlatEl && data.plataforma) kpiPlatEl.textContent = data.plataforma;
+          const kpiRoleEl = document.getElementById('kpi-user-role');
+          if (kpiRoleEl && data.rol) kpiRoleEl.textContent = data.rol;
 
           const logoImg = document.getElementById('dash-store-logo');
           const logoPlaceholder = document.getElementById('dash-store-logo-placeholder');
@@ -1051,17 +1102,21 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
 
           if (data.ultima_sincronizacion) {
             const dt = new Date(data.ultima_sincronizacion);
-            document.getElementById('kpi-last-sync-date').textContent = dt.toLocaleString('es-CL');
+            const syncDateEl = document.getElementById('kpi-last-sync-date');
+            if (syncDateEl) syncDateEl.textContent = dt.toLocaleString('es-CL');
           }
 
           const resEl = document.getElementById('kpi-sync-result');
-          if (resEl) {
+          if (resEl && data.estado_sincronizacion) {
             resEl.textContent = `Resultado: ${data.estado_sincronizacion}`;
             resEl.className = data.estado_sincronizacion === 'exitoso' ? 'text-[11px] font-semibold text-emerald-700' : 'text-[11px] font-semibold text-rose-600';
           }
 
-          if (data.cooldown_sync_segundos > 0) {
-            startCooldownTimer(data.cooldown_sync_segundos);
+          // Pre-cargar número de WhatsApp en el formulario
+          const inputPhone = document.getElementById('input-whatsapp-phone');
+          if (inputPhone && data.telefono_whatsapp) {
+            let cleanPhone = String(data.telefono_whatsapp).replace(/^\+56/, '').trim();
+            inputPhone.value = cleanPhone;
           }
 
           if (profDireccion && data.direccion) profDireccion.value = data.direccion;
@@ -1072,20 +1127,17 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           if (profRetiroTienda) profRetiroTienda.checked = Boolean(data.retiro_en_tienda);
           if (profDiasTueste && data.dias_tueste) profDiasTueste.value = data.dias_tueste;
           if (profFechaTueste && data.fecha_ultimo_tueste) profFechaTueste.value = data.fecha_ultimo_tueste;
-          loadCatalogs();
-          loadBranches();
-          loadTelemetrySummary();
-          loadInconsistencies();
-          loadBenchmark();
-          loadUnmetDemand();
 
-          // Pre-cargar número de WhatsApp en el formulario
-          const inputPhone = document.getElementById('input-whatsapp-phone');
-          if (inputPhone && data.telefono_whatsapp) {
-            // Eliminar +56 si viene incluido
-            let cleanPhone = String(data.telefono_whatsapp).replace(/^\+56/, '').trim();
-            inputPhone.value = cleanPhone;
+          if (data.cooldown_sync_segundos > 0) {
+            startCooldownTimer(data.cooldown_sync_segundos);
           }
+
+          loadCatalogs().catch(() => {});
+          loadBranches().catch(() => {});
+          loadTelemetrySummary().catch(() => {});
+          loadInconsistencies().catch(() => {});
+          loadBenchmark().catch(() => {});
+          loadUnmetDemand().catch(() => {});
         } catch (_) {}
       }
 
@@ -1212,7 +1264,12 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       });
 
       btnSync?.addEventListener('click', async () => {
-        if (!confirm('¿Deseas iniciar la sincronización de tu catálogo ahora? El proceso consultará tu tienda y actualizará precios y productos.')) {
+        const confirmed = await window.cafesitiosConfirm?.(
+          'Sincronizar Catálogo Ahora',
+          '¿Deseas iniciar la sincronización de tu catálogo ahora? El proceso consultará tu tienda y actualizará precios y productos.',
+          { confirmText: 'Sincronizar Ahora 🔄', cancelText: 'Cancelar', type: 'info' }
+        ) ?? confirm('¿Deseas iniciar la sincronización de tu catálogo ahora?');
+        if (!confirmed) {
           return;
         }
 
@@ -1335,15 +1392,94 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         } catch (_) {}
       }
 
+      let cachedDemandData = null;
+      let originsCurrentView = 'bars'; // 'bars' | 'list'
+
+      function renderDemandOrigins() {
+        const topContainer = document.getElementById('demand-top-origins-container');
+        if (!topContainer || !cachedDemandData) return;
+
+        const origenes = cachedDemandData.origenes_mas_buscados || [];
+        const oportunidades = cachedDemandData.oportunidades_catalogo || [];
+
+        if (origenes.length === 0) {
+          topContainer.innerHTML = '<div class="text-stone-400 text-xs italic">No hay datos de demanda de orígenes disponibles aún.</div>';
+          return;
+        }
+
+        const maxVariedades = Math.max(...origenes.map(o => o.productos_en_mercado), 1);
+
+        if (originsCurrentView === 'bars') {
+          topContainer.innerHTML = origenes.map(o => {
+            const esOportunidad = oportunidades.includes(o.origen);
+            const pct = Math.max(8, Math.round((o.productos_en_mercado / maxVariedades) * 100));
+            const barBg = esOportunidad ? 'bg-amber-500' : 'bg-emerald-600';
+            const badge = esOportunidad 
+              ? '<span class="rounded bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.2 text-[9px] font-bold">🎯 Demanda a suplir</span>'
+              : '<span class="rounded bg-emerald-100 text-emerald-800 border border-emerald-300 px-1.5 py-0.2 text-[9px] font-bold">✓ En tu catálogo</span>';
+
+            return `
+              <div class="space-y-1 bg-stone-50/60 p-2 rounded-xl border border-stone-100">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-bold text-stone-800 flex items-center gap-1.5 flex-wrap">
+                    <span>🌍 ${o.origen}</span>
+                    ${badge}
+                  </span>
+                  <span class="text-stone-600 font-bold text-[11px]">${o.productos_en_mercado} variedades</span>
+                </div>
+                <div class="w-full bg-stone-200/80 h-2 rounded-full overflow-hidden">
+                  <div class="${barBg} h-full rounded-full transition-all duration-500" style="width: ${pct}%;"></div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        } else {
+          topContainer.innerHTML = origenes.map(o => {
+            const esOportunidad = oportunidades.includes(o.origen);
+            const badge = esOportunidad 
+              ? '<span class="rounded bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.2 text-[9px] font-bold">🎯 Demanda a suplir</span>'
+              : '<span class="rounded bg-emerald-100 text-emerald-800 border border-emerald-300 px-1.5 py-0.2 text-[9px] font-bold">✓ En tu catálogo</span>';
+
+            return `
+              <div class="flex items-center justify-between p-2 rounded-lg bg-stone-50 border border-stone-100">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-bold text-stone-800">🌍 ${o.origen}</span>
+                  ${badge}
+                </div>
+                <span class="text-stone-500 font-semibold text-[11px]">${o.productos_en_mercado} variedades en mercado</span>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      const btnViewBars = document.getElementById('btn-view-origins-bars');
+      const btnViewList = document.getElementById('btn-view-origins-list');
+
+      btnViewBars?.addEventListener('click', () => {
+        originsCurrentView = 'bars';
+        btnViewBars.className = 'px-2 py-0.5 rounded-md bg-white text-stone-900 shadow-2xs transition';
+        if (btnViewList) btnViewList.className = 'px-2 py-0.5 rounded-md text-stone-500 hover:text-stone-900 transition';
+        renderDemandOrigins();
+      });
+
+      btnViewList?.addEventListener('click', () => {
+        originsCurrentView = 'list';
+        btnViewList.className = 'px-2 py-0.5 rounded-md bg-white text-stone-900 shadow-2xs transition';
+        if (btnViewBars) btnViewBars.className = 'px-2 py-0.5 rounded-md text-stone-500 hover:text-stone-900 transition';
+        renderDemandOrigins();
+      });
+
       async function loadUnmetDemand() {
         const oppContainer = document.getElementById('demand-opportunities-container');
-        const topContainer = document.getElementById('demand-top-origins-container');
         try {
           const res = await fetch(`${API_BASE}/api/v1/admin/tienda/analitica/demanda`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (!res.ok) return;
           const data = await res.json();
+          cachedDemandData = data;
+
           if (oppContainer) {
             if (data.oportunidades_catalogo.length === 0) {
               oppContainer.innerHTML = '<span class="text-xs text-emerald-700 font-bold">¡Tu tostaduría cubre los orígenes más solicitados!</span>';
@@ -1356,14 +1492,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
             }
           }
 
-          if (topContainer) {
-            topContainer.innerHTML = data.origenes_mas_buscados.map(o => `
-              <div class="flex items-center justify-between p-2 rounded-lg bg-stone-50 border border-stone-100">
-                <span class="font-bold text-stone-800">🌍 ${o.origen}</span>
-                <span class="text-stone-500 font-semibold text-[11px]">${o.productos_en_mercado} variedades en mercado</span>
-              </div>
-            `).join('');
-          }
+          renderDemandOrigins();
         } catch (_) {}
       }
 

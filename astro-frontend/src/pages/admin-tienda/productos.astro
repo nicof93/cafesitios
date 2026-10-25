@@ -10,11 +10,25 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         <h1 class="text-xl sm:text-2xl font-black text-stone-900">Catálogo de Productos</h1>
         <p class="text-xs text-stone-500 mt-1">Gestiona los cafés publicados bajo tu tostaduría.</p>
       </div>
-      <div>
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <!-- Widget Cuota de Almacenamiento -->
+        <div id="storage-quota-widget" class="flex items-center gap-3 bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-xs">
+          <span class="text-base" aria-hidden="true">💾</span>
+          <div>
+            <div class="flex items-center justify-between gap-2 text-[11px] font-bold text-stone-700">
+              <span>Almacenamiento:</span>
+              <span id="storage-text-usage">0 MB / 250 MB (0%)</span>
+            </div>
+            <div class="w-36 sm:w-40 bg-stone-200 h-1.5 rounded-full overflow-hidden mt-1">
+              <div id="storage-bar" class="bg-emerald-600 h-full rounded-full transition-all duration-300" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+
         <button
           type="button"
           id="btn-new-product"
-          class="inline-flex items-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-2 text-xs font-bold text-white transition shadow-sm"
+          class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-2 text-xs font-bold text-white transition shadow-sm shrink-0"
         >
           <span>➕</span>
           <span>Agregar Café Manual</span>
@@ -65,15 +79,30 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       </table>
     </div>
 
-    <!-- MODAL DE CREAR / EDITAR PRODUCTO -->
-    <div id="modal-product" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div class="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
-        <div class="flex items-center justify-between border-b border-stone-200 pb-3">
-          <h3 class="text-base font-bold text-stone-900" id="modal-product-title">Nuevo Café</h3>
-          <button type="button" id="btn-close-product-modal" class="text-stone-400 hover:text-stone-600 font-bold text-lg">✕</button>
-        </div>
+    <!-- BACKDROP PARA DRAWERS DE PRODUCTOS -->
+    <div
+      id="product-drawer-backdrop"
+      class="fixed inset-0 z-40 bg-stone-950/40 backdrop-blur-xs transition-opacity duration-300 opacity-0 pointer-events-none"
+      aria-hidden="true"
+    ></div>
 
-        <form id="form-product" class="space-y-3 overflow-y-auto pr-1 flex-1 text-xs">
+    <!-- DRAWER LATERAL PARA CREAR / EDITAR CAFÉ -->
+    <aside
+      id="modal-product"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-product-title"
+      class="fixed inset-y-0 right-0 z-50 w-full max-w-xl bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full border-l border-stone-200"
+    >
+      <div class="flex items-center justify-between px-6 py-4 border-b border-stone-200 bg-[#FAF8F2]/90 backdrop-blur-md shrink-0">
+        <h3 class="text-base font-black text-stone-900 flex items-center gap-2" id="modal-product-title">
+          <span>📦</span>
+          <span>Nuevo Café</span>
+        </h3>
+        <button type="button" id="btn-close-product-modal" class="text-stone-400 hover:text-stone-700 text-lg font-bold p-1 rounded-lg hover:bg-stone-100 transition" title="Cerrar panel">✕</button>
+      </div>
+
+      <form id="form-product" class="flex-1 overflow-y-auto p-6 space-y-3 text-xs">
           <input type="hidden" id="prod-id" value="" />
 
           <div>
@@ -118,9 +147,36 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
             </div>
           </div>
 
-          <div>
-            <label class="block font-semibold text-stone-700 mb-1">URL de Imagen</label>
-            <input type="url" id="prod-image" placeholder="https://..." class="w-full rounded-lg border border-stone-300 px-3 py-1.5 focus:border-emerald-600 focus:outline-none" />
+          <!-- Sección de Imagen de Producto -->
+          <div id="container-prod-image-upload" class="space-y-1.5 p-3 rounded-xl border border-stone-200 bg-stone-50/60">
+            <label class="block font-bold text-stone-700">Foto del Café</label>
+
+            <!-- Aviso para productos sincronizados por Scraper -->
+            <div id="prod-image-scraping-badge" class="hidden p-2.5 rounded-xl border border-sky-200 bg-sky-50 text-[11px] text-sky-800 items-center gap-2">
+              <span class="text-base">🌐</span>
+              <div>
+                <strong>Sincronizado automáticamente:</strong> La foto de este café proviene del catálogo online de tu tienda y no consume tu cuota local de almacenamiento.
+              </div>
+            </div>
+
+            <!-- Controles para productos manuales -->
+            <div id="prod-image-manual-controls" class="space-y-2">
+              <div class="flex items-center gap-3">
+                <div id="prod-image-preview-container" class="h-16 w-16 shrink-0 rounded-xl border border-stone-300 bg-white flex items-center justify-center overflow-hidden shadow-2xs">
+                  <img id="prod-image-preview" src="/images/producto-referencial.jpg" alt="Vista previa café" class="h-full w-full object-cover" />
+                </div>
+                <div class="flex-1 space-y-1 min-w-0">
+                  <input 
+                    type="file" 
+                    id="prod-image-file" 
+                    accept="image/png,image/jpeg,image/webp" 
+                    class="w-full text-[11px] text-stone-600 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+                  />
+                  <p class="text-[10px] text-stone-400">Formatos admitidos: PNG, JPG o WebP. Máximo 3 MB.</p>
+                </div>
+              </div>
+              <input type="hidden" id="prod-image" value="" />
+            </div>
           </div>
 
           <div>
@@ -155,32 +211,40 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
             </label>
           </div>
 
-          <div class="flex items-center justify-end gap-2 pt-4 border-t border-stone-200">
-            <button type="button" id="btn-cancel-product" class="rounded-xl border border-stone-300 px-4 py-2 text-stone-700 font-bold hover:bg-stone-50">Cancelar</button>
-            <button type="submit" id="btn-save-product" class="rounded-xl bg-emerald-700 px-5 py-2 font-bold text-white hover:bg-emerald-800">Guardar Café</button>
+          <div class="flex items-center justify-end gap-2 pt-4 border-t border-stone-200 sticky bottom-0 bg-white py-3 mt-4">
+            <button type="button" id="btn-cancel-product" class="rounded-xl border border-stone-300 px-4 py-2 text-stone-700 font-bold hover:bg-stone-50 transition">Cancelar</button>
+            <button type="submit" id="btn-save-product" class="rounded-xl bg-emerald-700 px-5 py-2 font-bold text-white hover:bg-emerald-800 transition shadow-xs">Guardar Café</button>
           </div>
         </form>
-      </div>
-    </div>
+    </aside>
 
-    <!-- MODAL DE GESTIÓN Y MODERACIÓN DE NOTAS DE CATA -->
-    <div id="modal-notes" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div class="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
-        <div class="flex items-center justify-between border-b border-stone-200 pb-3">
-          <div>
-            <h3 class="text-base font-bold text-stone-900" id="modal-notes-title">Notas de Cata</h3>
-            <p class="text-[11px] text-stone-500" id="modal-notes-subtitle">Modera notas sugeridas por el extractor o añade notas personalizadas.</p>
-          </div>
-          <button type="button" id="btn-close-notes-modal" class="text-stone-400 hover:text-stone-600 font-bold text-lg">✕</button>
+    <!-- DRAWER LATERAL PARA NOTAS DE CATA -->
+    <aside
+      id="modal-notes"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-notes-title"
+      class="fixed inset-y-0 right-0 z-50 w-full max-w-xl bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full border-l border-stone-200"
+    >
+      <div class="flex items-center justify-between px-6 py-4 border-b border-stone-200 bg-[#FAF8F2]/90 backdrop-blur-md shrink-0">
+        <div>
+          <h3 class="text-base font-black text-stone-900 flex items-center gap-2" id="modal-notes-title">
+            <span>🏷️</span>
+            <span>Notas de Cata</span>
+          </h3>
+          <p class="text-[11px] text-stone-500 mt-0.5" id="modal-notes-subtitle">Modera notas sugeridas por el extractor o añade notas personalizadas.</p>
         </div>
+        <button type="button" id="btn-close-notes-modal" class="text-stone-400 hover:text-stone-700 text-lg font-bold p-1 rounded-lg hover:bg-stone-100 transition" title="Cerrar panel">✕</button>
+      </div>
 
+      <div class="flex-1 overflow-y-auto p-6 space-y-4">
         <!-- LISTADO DE NOTAS -->
-        <div class="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[340px]" id="notes-list-container">
+        <div class="space-y-2 pr-1" id="notes-list-container">
           <p class="text-xs text-stone-400 text-center py-4">Cargando notas...</p>
         </div>
 
         <!-- AGREGAR NUEVA NOTA -->
-        <form id="form-add-note" class="pt-3 border-t border-stone-200 space-y-2">
+        <form id="form-add-note" class="pt-4 border-t border-stone-200 space-y-2">
           <label class="block text-xs font-semibold text-stone-700">Añadir nueva nota a este café</label>
           <div class="flex gap-2">
             <input 
@@ -199,12 +263,12 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
             </button>
           </div>
         </form>
-
-        <div class="flex justify-end pt-2 border-t border-stone-100">
-          <button type="button" id="btn-close-notes-footer" class="rounded-xl border border-stone-300 px-4 py-1.5 text-xs text-stone-700 font-bold hover:bg-stone-50">Cerrar</button>
-        </div>
       </div>
-    </div>
+
+      <div class="px-6 py-3 border-t border-stone-200 bg-stone-50 flex justify-end shrink-0">
+        <button type="button" id="btn-close-notes-footer" class="rounded-xl border border-stone-300 bg-white px-4 py-1.5 text-xs text-stone-700 font-bold hover:bg-stone-100 transition">Cerrar</button>
+      </div>
+    </aside>
   </div>
 
   <script is:inline>
@@ -234,10 +298,75 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       const notesContainer = document.getElementById('notes-list-container');
       const formAddNote = document.getElementById('form-add-note');
       const inputNewNote = document.getElementById('input-new-note');
+      const productBackdrop = document.getElementById('product-drawer-backdrop');
+      const fileInput = document.getElementById('prod-image-file');
+      const previewImg = document.getElementById('prod-image-preview');
+
       let cachedProducts = [];
       let currentProductForNotes = null;
+      let selectedImageBase64 = null;
+
+      function extractErrorMessage(err, fallback = 'Ha ocurrido un error.') {
+        if (!err) return fallback;
+        if (typeof err === 'string') return err;
+        if (typeof err.detail === 'string') return err.detail;
+        if (Array.isArray(err.detail)) {
+          return err.detail.map(d => d.msg || JSON.stringify(d)).join('\n');
+        }
+        if (err.message && typeof err.message === 'string') return err.message;
+        return fallback;
+      }
+
+      async function loadStorageQuota() {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/almacenamiento`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const txt = document.getElementById('storage-text-usage');
+            const bar = document.getElementById('storage-bar');
+            if (txt) {
+              txt.textContent = `${data.almacenamiento_usado_mb} MB / ${data.limite_almacenamiento_mb} MB (${data.almacenamiento_porcentaje}%)`;
+            }
+            if (bar) {
+              bar.style.width = `${Math.min(100, data.almacenamiento_porcentaje)}%`;
+              if (data.almacenamiento_porcentaje >= 90) {
+                bar.className = 'bg-rose-600 h-full rounded-full transition-all duration-300';
+              } else if (data.almacenamiento_porcentaje >= 75) {
+                bar.className = 'bg-amber-500 h-full rounded-full transition-all duration-300';
+              } else {
+                bar.className = 'bg-emerald-600 h-full rounded-full transition-all duration-300';
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      fileInput?.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) {
+          selectedImageBase64 = null;
+          return;
+        }
+        if (file.size > 3 * 1024 * 1024) {
+          window.cafesitiosAlert('Límite de Imagen Excedido', 'La foto seleccionada supera los 3 MB máximos permitidos por archivo.', 'error');
+          fileInput.value = '';
+          selectedImageBase64 = null;
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          selectedImageBase64 = evt.target.result;
+          if (previewImg) previewImg.src = selectedImageBase64;
+        };
+        reader.readAsDataURL(file);
+      });
 
       function openModal(prod = null) {
+        selectedImageBase64 = null;
+        if (fileInput) fileInput.value = '';
+
         document.getElementById('modal-product-title').textContent = prod ? `Editar: ${prod.nombre}` : 'Nuevo Café';
         document.getElementById('prod-id').value = prod ? prod.id : '';
         document.getElementById('prod-name').value = prod ? prod.nombre : '';
@@ -254,21 +383,55 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         document.getElementById('prod-active').checked = prod ? prod.activo : true;
         document.getElementById('prod-hidden').checked = prod ? prod.oculto_catalogo : false;
 
+        const isScraping = prod && prod.es_manual === false;
+        const scrapingBadge = document.getElementById('prod-image-scraping-badge');
+        const manualControls = document.getElementById('prod-image-manual-controls');
+
+        if (isScraping) {
+          if (scrapingBadge) {
+            scrapingBadge.classList.remove('hidden');
+            scrapingBadge.classList.add('flex');
+          }
+          if (manualControls) manualControls.classList.add('hidden');
+        } else {
+          if (scrapingBadge) {
+            scrapingBadge.classList.add('hidden');
+            scrapingBadge.classList.remove('flex');
+          }
+          if (manualControls) manualControls.classList.remove('hidden');
+        }
+
+        if (previewImg) {
+          previewImg.src = prod && prod.imagen ? prod.imagen : '/images/producto-referencial.jpg';
+        }
+
         const firstVar = prod && prod.variantes && prod.variantes[0] ? prod.variantes[0] : null;
         document.getElementById('prod-price').value = firstVar ? firstVar.precio_clp : 9990;
         document.getElementById('prod-grams').value = firstVar ? firstVar.formato_gramos : 250;
 
-        if (modal) {
-          modal.classList.remove('hidden');
-          modal.classList.add('flex');
+        if (productBackdrop) {
+          productBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+          productBackdrop.classList.add('opacity-100', 'pointer-events-auto');
         }
+        if (modal) {
+          modal.classList.remove('translate-x-full');
+          modal.classList.add('translate-x-0');
+        }
+        document.body.classList.add('overflow-hidden');
       }
 
       function closeModal() {
-        if (modal) {
-          modal.classList.add('hidden');
-          modal.classList.remove('flex');
+        if (productBackdrop) {
+          productBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+          productBackdrop.classList.add('opacity-0', 'pointer-events-none');
         }
+        if (modal) {
+          modal.classList.remove('translate-x-0');
+          modal.classList.add('translate-x-full');
+        }
+        document.body.classList.remove('overflow-hidden');
+        selectedImageBase64 = null;
+        if (fileInput) fileInput.value = '';
       }
 
       function openNotesModal(prod) {
@@ -276,18 +439,28 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         const titleEl = document.getElementById('modal-notes-title');
         if (titleEl) titleEl.textContent = `Notas de Cata: ${prod.nombre}`;
         if (inputNewNote) inputNewNote.value = '';
-        if (modalNotes) {
-          modalNotes.classList.remove('hidden');
-          modalNotes.classList.add('flex');
+        if (productBackdrop) {
+          productBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+          productBackdrop.classList.add('opacity-100', 'pointer-events-auto');
         }
+        if (modalNotes) {
+          modalNotes.classList.remove('translate-x-full');
+          modalNotes.classList.add('translate-x-0');
+        }
+        document.body.classList.add('overflow-hidden');
         loadNotes(prod.id);
       }
 
       function closeNotesModal() {
-        if (modalNotes) {
-          modalNotes.classList.add('hidden');
-          modalNotes.classList.remove('flex');
+        if (productBackdrop) {
+          productBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+          productBackdrop.classList.add('opacity-0', 'pointer-events-none');
         }
+        if (modalNotes) {
+          modalNotes.classList.remove('translate-x-0');
+          modalNotes.classList.add('translate-x-full');
+        }
+        document.body.classList.remove('overflow-hidden');
         currentProductForNotes = null;
       }
 
@@ -378,13 +551,13 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           });
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            alert(err.detail || `Error al ${action} nota`);
+            window.cafesitiosAlert('Gestión de Notas', extractErrorMessage(err, `Error al ${action} nota.`), 'error');
             return;
           }
           await loadNotes(currentProductForNotes.id);
           loadProducts(); // Refrescar catálogo en segundo plano
         } catch (err) {
-          alert(`Error: ${err.message}`);
+          window.cafesitiosAlert('Error de Red', err.message, 'error');
         }
       }
 
@@ -401,18 +574,18 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ nota, es_fuera_de_rueda: false }),
+            body: JSON.stringify({ nombre: nota, es_fuera_de_rueda: false }),
           });
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            alert(err.detail || 'Error al agregar nota');
+            window.cafesitiosAlert('Nota de Cata', extractErrorMessage(err, 'Error al agregar nota de cata.'), 'error');
             return;
           }
           inputNewNote.value = '';
           await loadNotes(currentProductForNotes.id);
           loadProducts();
         } catch (err) {
-          alert(`Error: ${err.message}`);
+          window.cafesitiosAlert('Error de Red', err.message, 'error');
         }
       });
 
@@ -421,6 +594,17 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       document.getElementById('btn-cancel-product')?.addEventListener('click', closeModal);
       document.getElementById('btn-close-notes-modal')?.addEventListener('click', closeNotesModal);
       document.getElementById('btn-close-notes-footer')?.addEventListener('click', closeNotesModal);
+      productBackdrop?.addEventListener('click', () => {
+        closeModal();
+        closeNotesModal();
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (modal && !modal.classList.contains('translate-x-full')) closeModal();
+          if (modalNotes && !modalNotes.classList.contains('translate-x-full')) closeNotesModal();
+        }
+      });
 
       async function loadProducts() {
         const q = (searchInput?.value || '').trim();
@@ -466,10 +650,13 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
               <td class="px-4 py-3">
                 <div class="flex items-center gap-3">
                   <img src="${p.imagen || '/images/producto-referencial.jpg'}" alt="${p.nombre}" onerror="this.onerror=null; this.src='/images/producto-referencial.jpg';" class="h-10 w-10 rounded-lg object-contain bg-[#F4F3ED] border border-stone-200" />
-                  <div>
-                    <a href="${p.url_detalle}" target="_blank" rel="noopener noreferrer" class="font-bold text-stone-900 hover:text-emerald-700 transition">
-                      ${p.nombre}
-                    </a>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <a href="${p.url_detalle}" target="_blank" rel="noopener noreferrer" class="font-bold text-stone-900 hover:text-emerald-700 transition">
+                        ${p.nombre}
+                      </a>
+                      ${p.es_manual ? '<span class="rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-[9px] font-bold px-1.5 py-0.2">Manual</span>' : ''}
+                    </div>
                     <span class="block text-[10px] text-stone-400">ID: #${p.id}</span>
                   </div>
                 </div>
@@ -538,6 +725,12 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
 
       form?.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const btnSave = document.getElementById('btn-save-product');
+        if (btnSave) {
+          btnSave.disabled = true;
+          btnSave.textContent = 'Guardando café...';
+        }
+
         const id = document.getElementById('prod-id')?.value;
         const name = document.getElementById('prod-name')?.value;
         const origin = document.getElementById('prod-origin')?.value;
@@ -595,13 +788,43 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           });
           if (!res.ok) {
             const errData = await res.json().catch(() => ({}));
-            alert(errData.detail || 'Error al guardar producto');
+            window.cafesitiosAlert('Catálogo de Cafés', extractErrorMessage(errData, 'Error al guardar producto.'), 'error');
             return;
           }
+
+          const savedData = await res.json().catch(() => ({}));
+          const targetProdId = id || savedData.id;
+
+          // Si hay foto nueva seleccionada para subir
+          if (selectedImageBase64 && targetProdId) {
+            try {
+              const imgRes = await fetch(`${API_BASE}/api/v1/admin/tienda/productos/${targetProdId}/imagen`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ imagen_base64: selectedImageBase64 })
+              });
+              if (!imgRes.ok) {
+                const imgErr = await imgRes.json().catch(() => ({}));
+                window.cafesitiosAlert('Imagen de Café', 'El café se guardó, pero hubo un error con la foto: ' + extractErrorMessage(imgErr, 'Error al guardar imagen.'), 'warning');
+              }
+            } catch (imgErr) {
+              window.cafesitiosAlert('Imagen de Café', 'El café se guardó, pero falló la carga de la foto: ' + imgErr.message, 'warning');
+            }
+          }
+
           closeModal();
           loadProducts();
+          loadStorageQuota();
         } catch (err) {
-          alert(`Error: ${err.message}`);
+          window.cafesitiosAlert('Error de Red', err.message, 'error');
+        } finally {
+          if (btnSave) {
+            btnSave.disabled = false;
+            btnSave.textContent = 'Guardar Café';
+          }
         }
       });
 
@@ -609,6 +832,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       filterVis?.addEventListener('change', () => loadProducts());
 
       loadProducts();
+      loadStorageQuota();
     })();
   </script>
 </StoreAdminLayout>

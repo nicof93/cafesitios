@@ -134,6 +134,15 @@ class TestCoffeeMetadataExtraction(unittest.TestCase):
         # Notas preposicionales marcadas como sugeridas
         self.assertTrue(all(n['estado'] == 'sugerida' for n in result['notas_cata']))
 
+    def test_extract_cleans_parasite_prefixes(self):
+        html = "<p>Perfil dulce con notas a acidez a fruta y sabores a frutas rojas.</p>"
+        result = extract_coffee_characteristics(html)
+        keys = [n['clave_normalizada'] for n in result['notas_cata']]
+        self.assertIn('fruta', keys)
+        self.assertTrue('frutos-rojos' in keys or 'frutas-rojas' in keys)
+        self.assertNotIn('acidez-a-fruta', keys)
+        self.assertNotIn('sabores-a-frutas-rojas', keys)
+
 
 if __name__ == '__main__':
     unittest.main()

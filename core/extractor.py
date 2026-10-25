@@ -138,7 +138,16 @@ class CoffeeAttributesExtractor:
             raw_chunk = match_notas.group(1).strip()
             # Separadores comunes: comas, guiones, barras, 'y', '&'
             tokens = re.split(r"[,;|/•]|\s+(?:y|and|&)\s+", raw_chunk, flags=re.IGNORECASE)
-            cleaned_tokens = [t.strip(" .") for t in tokens if len(t.strip(" .")) > 1]
+            cleaned_tokens = []
+            for t in tokens:
+                t_clean = re.sub(
+                    r'^(?:(?:con|presenta|destacan?|perciben?|encontrar[aá]s)\s+)?(?:notas?|toques?|descriptores?|aromas?|sabores?|acidez|sabor|aroma)\s+(?:a|de)\s+',
+                    '',
+                    t.strip(),
+                    flags=re.IGNORECASE
+                ).strip(" :;,.–—-")
+                if len(t_clean) > 1:
+                    cleaned_tokens.append(t_clean)
             extracted["notas_cata"] = cleaned_tokens
 
         # 2. Proceso
