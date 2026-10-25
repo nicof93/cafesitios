@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { FeatureFlags } from '../core/infrastructure/config/FeatureFlags';
 import { GLOSSARY_CATEGORIES, GLOSSARY_TERMS } from '../core/domain/glossaryData';
+import AnatomiaGrano3D from '../components/glossary/AnatomiaGrano3D';
 
 if (!FeatureFlags.isGlossaryEnabled()) {
   return Astro.rewrite('/404');
@@ -64,6 +65,9 @@ const jsonLdGlossary = {
         </div>
       </div>
     </header>
+
+    <!-- INFOGRAFÍA 3D INTERACTIVA DEL GRANO Y CEREZA -->
+    <AnatomiaGrano3D client:visible />
 
     <!-- SELECTOR DE CATEGORÍAS (PILLS INTERACTIVAS) -->
     <section class="space-y-3" aria-label="Filtrar por categoría">
