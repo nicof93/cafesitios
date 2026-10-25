@@ -475,7 +475,14 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
         if (!profile) return;
         const storeName = profile.tienda_nombre || 'Mi Tostaduría';
         const storeUrl = profile.tienda_url || 'Catálogo Oficial';
-        const userEmail = profile.usuario_id || 'Administrador';
+        let userEmail = profile.usuario_id;
+        if (!userEmail) {
+          try {
+            const raw = localStorage.getItem('store_admin_profile');
+            if (raw) userEmail = JSON.parse(raw).usuario_id;
+          } catch (_) {}
+        }
+        userEmail = userEmail || 'barista@singular.cl';
         const userRole = profile.rol || 'STORE_ADMIN';
 
         const headerBadge = document.getElementById('header-store-badge');

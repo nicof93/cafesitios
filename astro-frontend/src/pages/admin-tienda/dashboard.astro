@@ -1083,10 +1083,14 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           if (!res.ok) return;
 
           const data = await res.json();
-          document.getElementById('dash-store-title').textContent = data.tienda_nombre;
-          document.getElementById('kpi-total-products').textContent = data.total_productos;
-          document.getElementById('kpi-platform').textContent = data.plataforma;
-          document.getElementById('kpi-user-role').textContent = data.rol;
+          const storeTitleEl = document.getElementById('dash-store-title');
+          if (storeTitleEl && data.tienda_nombre) storeTitleEl.textContent = data.tienda_nombre;
+          const kpiTotalEl = document.getElementById('kpi-total-products');
+          if (kpiTotalEl && data.total_productos !== undefined) kpiTotalEl.textContent = data.total_productos;
+          const kpiPlatEl = document.getElementById('kpi-platform');
+          if (kpiPlatEl && data.plataforma) kpiPlatEl.textContent = data.plataforma;
+          const kpiRoleEl = document.getElementById('kpi-user-role');
+          if (kpiRoleEl && data.rol) kpiRoleEl.textContent = data.rol;
 
           const logoImg = document.getElementById('dash-store-logo');
           const logoPlaceholder = document.getElementById('dash-store-logo-placeholder');
@@ -1098,17 +1102,21 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
 
           if (data.ultima_sincronizacion) {
             const dt = new Date(data.ultima_sincronizacion);
-            document.getElementById('kpi-last-sync-date').textContent = dt.toLocaleString('es-CL');
+            const syncDateEl = document.getElementById('kpi-last-sync-date');
+            if (syncDateEl) syncDateEl.textContent = dt.toLocaleString('es-CL');
           }
 
           const resEl = document.getElementById('kpi-sync-result');
-          if (resEl) {
+          if (resEl && data.estado_sincronizacion) {
             resEl.textContent = `Resultado: ${data.estado_sincronizacion}`;
             resEl.className = data.estado_sincronizacion === 'exitoso' ? 'text-[11px] font-semibold text-emerald-700' : 'text-[11px] font-semibold text-rose-600';
           }
 
-          if (data.cooldown_sync_segundos > 0) {
-            startCooldownTimer(data.cooldown_sync_segundos);
+          // Pre-cargar número de WhatsApp en el formulario
+          const inputPhone = document.getElementById('input-whatsapp-phone');
+          if (inputPhone && data.telefono_whatsapp) {
+            let cleanPhone = String(data.telefono_whatsapp).replace(/^\+56/, '').trim();
+            inputPhone.value = cleanPhone;
           }
 
           if (profDireccion && data.direccion) profDireccion.value = data.direccion;
@@ -1119,20 +1127,17 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           if (profRetiroTienda) profRetiroTienda.checked = Boolean(data.retiro_en_tienda);
           if (profDiasTueste && data.dias_tueste) profDiasTueste.value = data.dias_tueste;
           if (profFechaTueste && data.fecha_ultimo_tueste) profFechaTueste.value = data.fecha_ultimo_tueste;
-          loadCatalogs();
-          loadBranches();
-          loadTelemetrySummary();
-          loadInconsistencies();
-          loadBenchmark();
-          loadUnmetDemand();
 
-          // Pre-cargar número de WhatsApp en el formulario
-          const inputPhone = document.getElementById('input-whatsapp-phone');
-          if (inputPhone && data.telefono_whatsapp) {
-            // Eliminar +56 si viene incluido
-            let cleanPhone = String(data.telefono_whatsapp).replace(/^\+56/, '').trim();
-            inputPhone.value = cleanPhone;
+          if (data.cooldown_sync_segundos > 0) {
+            startCooldownTimer(data.cooldown_sync_segundos);
           }
+
+          loadCatalogs().catch(() => {});
+          loadBranches().catch(() => {});
+          loadTelemetrySummary().catch(() => {});
+          loadInconsistencies().catch(() => {});
+          loadBenchmark().catch(() => {});
+          loadUnmetDemand().catch(() => {});
         } catch (_) {}
       }
 
