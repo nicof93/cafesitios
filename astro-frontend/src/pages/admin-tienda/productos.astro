@@ -317,6 +317,16 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         return fallback;
       }
 
+      function resolveImgUrl(url) {
+        if (!url) return '/images/producto-referencial.jpg';
+        const trimmed = String(url).trim();
+        if (trimmed.startsWith('/static/')) {
+          const base = API_BASE.replace(/\/+$/, '');
+          return `${base}${trimmed}`;
+        }
+        return trimmed;
+      }
+
       async function loadStorageQuota() {
         try {
           const res = await fetch(`${API_BASE}/api/v1/admin/tienda/almacenamiento`, {
@@ -402,7 +412,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         }
 
         if (previewImg) {
-          previewImg.src = prod && prod.imagen ? prod.imagen : '/images/producto-referencial.jpg';
+          previewImg.src = prod && prod.imagen ? resolveImgUrl(prod.imagen) : '/images/producto-referencial.jpg';
         }
 
         const firstVar = prod && prod.variantes && prod.variantes[0] ? prod.variantes[0] : null;
@@ -644,12 +654,13 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           const precio = v ? `$${v.precio_clp.toLocaleString('es-CL')}` : 'S/P';
           const gramos = v ? `${v.formato_gramos}g` : '250g';
           const precioKg = v ? `$${Math.round(v.precio_por_kilo).toLocaleString('es-CL')}/kg` : '';
+          const imgUrl = resolveImgUrl(p.imagen);
 
           return `
             <tr class="hover:bg-stone-50/70 transition border-b border-stone-100">
               <td class="px-4 py-3">
                 <div class="flex items-center gap-3">
-                  <img src="${p.imagen || '/images/producto-referencial.jpg'}" alt="${p.nombre}" onerror="this.onerror=null; this.src='/images/producto-referencial.jpg';" class="h-10 w-10 rounded-lg object-contain bg-[#F4F3ED] border border-stone-200" />
+                  <img src="${imgUrl}" alt="${p.nombre}" onerror="this.onerror=null; this.src='/images/producto-referencial.jpg';" class="h-10 w-10 rounded-lg object-contain bg-[#F4F3ED] border border-stone-200" />
                   <div class="min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
                       <a href="${p.url_detalle}" target="_blank" rel="noopener noreferrer" class="font-bold text-stone-900 hover:text-emerald-700 transition">
@@ -809,6 +820,13 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
               if (!imgRes.ok) {
                 const imgErr = await imgRes.json().catch(() => ({}));
                 window.cafesitiosAlert('Imagen de Café', 'El café se guardó, pero hubo un error con la foto: ' + extractErrorMessage(imgErr, 'Error al guardar imagen.'), 'warning');
+              } else {
+                const imgData = await imgRes.json().catch(() => ({}));
+                if (imgData && imgData.imagen_url) {
+                  const hiddenInput = document.getElementById('prod-image');
+                  if (hiddenInput) hiddenInput.value = imgData.imagen_url;
+                  if (previewImg) previewImg.src = resolveImgUrl(imgData.imagen_url);
+                }
               }
             } catch (imgErr) {
               window.cafesitiosAlert('Imagen de Café', 'El café se guardó, pero falló la carga de la foto: ' + imgErr.message, 'warning');

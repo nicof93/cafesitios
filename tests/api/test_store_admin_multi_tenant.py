@@ -821,5 +821,48 @@ class TestStoreAdminMultiTenant(unittest.TestCase):
         self.assertEqual(ctx_err.exception.status_code, 400)
         self.assertIn("Formato de imagen no soportado", ctx_err.exception.detail)
 
+    def test_update_product_preserves_uploaded_image_when_none_sent(self):
+        """Verifica que al actualizar un producto sin especificar imagen, no se borre la foto subida previamente."""
+        from api.admin_tienda import (
+            upload_store_product_image,
+            StoreProductImageUploadRequest,
+            create_store_product,
+            update_store_product,
+            StoreProductInput,
+        )
+
+        prod = create_store_product(
+            payload=StoreProductInput(nombre="Café Con Foto"),
+            ctx=self.ctx_a,
+            db_session=self.session,
+        )
+
+        png_1x1_b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+        upload_resp = upload_store_product_image(
+            producto_id=prod.id,
+            payload=StoreProductImageUploadRequest(imagen_base64=png_1x1_b64),
+            ctx=self.ctx_a,
+            db_session=self.session,
+        )
+        self.assertTrue(upload_resp.imagen_url.startswith("/static/uploads/productos/"))
+
+        # Actualizar el producto enviando imagen=None (como cuando solo se edita el nombre o descripción)
+        updated = update_store_product(
+            product_id=prod.id,
+            payload=StoreProductInput(nombre="Café Con Foto Renombrado", imagen=None),
+            ctx=self.ctx_a,
+            db_session=self.session,
+        )
+        self.assertEqual(updated.imagen, upload_resp.imagen_url)
+
+        # Si explícitamente se envía string vacío, debe borrarse la imagen
+        cleared = update_store_product(
+            product_id=prod.id,
+            payload=StoreProductInput(nombre="Café Sin Foto", imagen=""),
+            ctx=self.ctx_a,
+            db_session=self.session,
+        )
+        self.assertIsNone(cleared.imagen)
+
 if __name__ == "__main__":
     unittest.main()

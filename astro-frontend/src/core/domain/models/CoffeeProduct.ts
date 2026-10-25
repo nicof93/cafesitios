@@ -1,4 +1,17 @@
 import { ProductVariant, type ProductVariantProps } from './ProductVariant';
+import { Environment } from '../../infrastructure/config/Environment';
+
+export function resolveProductImageUrl(url?: string | null): string {
+  if (!url || typeof url !== 'string' || !url.trim()) {
+    return 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop';
+  }
+  const trimmed = url.trim();
+  if (trimmed.startsWith('/static/')) {
+    const apiBase = Environment.getApiBaseUrl().replace(/\/+$/, '');
+    return `${apiBase}${trimmed}`;
+  }
+  return trimmed;
+}
 
 export interface ProductRecipe {
   id: number;
@@ -98,7 +111,7 @@ export class CoffeeProduct {
     this.tienda_id = props.tienda_id;
     this.tienda_telefono_whatsapp = props.tienda_telefono_whatsapp;
     this.url_detalle = props.url_detalle;
-    this.imagen = props.imagen || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop';
+    this.imagen = resolveProductImageUrl(props.imagen);
     this.categoria = props.categoria || 'cafe';
     this.recetas = props.recetas || [];
     this.oculto_catalogo = Boolean(props.oculto_catalogo);

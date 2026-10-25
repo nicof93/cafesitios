@@ -1057,7 +1057,11 @@ def update_store_product(
     prod.categoria = classify_product_category(prod.nombre)
     if payload.url_detalle:
         prod.url_detalle = payload.url_detalle
-    prod.imagen = payload.imagen
+    if payload.imagen is not None:
+        if payload.imagen.strip():
+            prod.imagen = payload.imagen.strip()
+        else:
+            prod.imagen = None
     prod.descripcion = payload.descripcion
     prod.pais_origen = payload.origen
     prod.finca = payload.finca

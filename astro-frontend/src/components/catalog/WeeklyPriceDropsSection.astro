@@ -1,5 +1,6 @@
 ---
 import { HttpClient } from '../../core/infrastructure/api/HttpClient';
+import { resolveProductImageUrl } from '../../core/domain/models/CoffeeProduct';
 
 const http = new HttpClient();
 let ofertas: any[] = [];
@@ -65,7 +66,7 @@ try {
             <div class="space-y-3">
               <div class="relative h-44 w-full rounded-2xl bg-stone-100 flex items-center justify-center overflow-hidden">
                 <img 
-                  src={item.imagen_url || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=300'} 
+                  src={resolveProductImageUrl(item.imagen_url)} 
                   alt={item.nombre_producto}
                   loading="lazy"
                   class="h-full w-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
