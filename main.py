@@ -120,6 +120,7 @@ async def verify_proxy_origin(request: Request, call_next):
     if (
         request.method == "OPTIONS"
         or request.url.path == "/"
+        or request.url.path.startswith("/static")
         or not is_production
     ):
         return await call_next(request)

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CoffeeProduct } from '../../src/core/domain/models/CoffeeProduct';
+import { CoffeeProduct, resolveProductImageUrl } from '../../src/core/domain/models/CoffeeProduct';
 
 describe('CoffeeProduct Entity', () => {
   it('selecciona la variante disponible más económica por kilo', () => {
@@ -141,6 +141,31 @@ describe('CoffeeProduct Entity', () => {
     expect(product.notas_confirmadas).toEqual(['Fruta', 'Frutas Rojas']);
     // 'fruta' y 'Frutas rojas' deben ser eliminadas de sugeridas
     expect(product.notas_sugeridas).toEqual(['Chancaca']);
+  });
+
+  it('resuelve URLs de imágenes relativas locales (/static/uploads/...) anteponiendo la URL de la API', () => {
+    const relativeUrl = '/static/uploads/productos/1_2_1740000000.webp';
+    const resolved = resolveProductImageUrl(relativeUrl);
+    expect(resolved).toContain('/static/uploads/productos/1_2_1740000000.webp');
+    expect(resolved.startsWith('http')).toBe(true);
+
+    const product = new CoffeeProduct({
+      id: 60,
+      nombre: 'Geisha Los Pozos',
+      tienda: 'Singular Coffee',
+      url_detalle: 'https://singularcoffee.cl/geisha',
+      imagen: relativeUrl,
+    });
+    expect(product.imagen).toBe(resolved);
+    expect(product.imagen.startsWith('http')).toBe(true);
+  });
+
+  it('preserva URLs externas absolutas e imágenes referenciales de Astro intactas', () => {
+    const externalUrl = 'https://cdn.shopify.com/s/files/1/001/products/cafe.jpg';
+    expect(resolveProductImageUrl(externalUrl)).toBe(externalUrl);
+
+    const localAsset = '/images/producto-referencial.jpg';
+    expect(resolveProductImageUrl(localAsset)).toBe(localAsset);
   });
 });
 
