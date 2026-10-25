@@ -805,7 +805,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           document.querySelectorAll('.btn-delete-catalog').forEach(btn => {
             btn.addEventListener('click', async () => {
               const id = btn.getAttribute('data-id');
-              const confirmed = await (window as any).cafesitiosConfirm?.(
+              const confirmed = await window.cafesitiosConfirm?.(
                 'Eliminar Colección de Scraping',
                 '¿Seguro que deseas eliminar esta URL de colección de escaneo automático?',
                 { confirmText: 'Eliminar URL', cancelText: 'Conservar', type: 'error' }
@@ -818,7 +818,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
                 });
                 if (delRes.ok) loadCatalogs();
               } catch (_) {
-                await (window as any).cafesitiosAlert?.('Error', 'No fue posible eliminar la colección.', 'error');
+                await window.cafesitiosAlert?.('Error', 'No fue posible eliminar la colección.', 'error');
               }
             });
           });
@@ -859,7 +859,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           document.querySelectorAll('.btn-delete-branch').forEach(btn => {
             btn.addEventListener('click', async () => {
               const id = btn.getAttribute('data-id');
-              const confirmed = await (window as any).cafesitiosConfirm?.(
+              const confirmed = await window.cafesitiosConfirm?.(
                 'Eliminar Cafetería Física',
                 '¿Seguro que deseas eliminar esta sucursal de tu lista de locales?',
                 { confirmText: 'Eliminar Sucursal', cancelText: 'Conservar', type: 'error' }
@@ -872,7 +872,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
                 });
                 if (delRes.ok) loadBranches();
               } catch (_) {
-                await (window as any).cafesitiosAlert?.('Error', 'No fue posible eliminar la sucursal.', 'error');
+                await window.cafesitiosAlert?.('Error', 'No fue posible eliminar la sucursal.', 'error');
               }
             });
           });
@@ -885,7 +885,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         const url = inputCatalogUrl?.value.trim();
         const etiqueta = inputCatalogLabel?.value.trim();
         if (!url) {
-          await (window as any).cafesitiosAlert?.('URL Inválida', 'Por favor ingresa una URL válida con protocolo https://...', 'warning');
+          await window.cafesitiosAlert?.('URL Inválida', 'Por favor ingresa una URL válida con protocolo https://...', 'warning');
           return;
         }
         try {
@@ -901,15 +901,15 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           if (inputCatalogUrl) inputCatalogUrl.value = '';
           if (inputCatalogLabel) inputCatalogLabel.value = '';
           loadCatalogs();
-        } catch (e: any) {
-          await (window as any).cafesitiosAlert?.('Error al Guardar', e.message, 'error');
+        } catch (e) {
+          await window.cafesitiosAlert?.('Error al Guardar', e.message, 'error');
         }
       });
 
       btnTestCatalog?.addEventListener('click', async () => {
         const url = inputCatalogUrl?.value.trim();
         if (!url) {
-          await (window as any).cafesitiosAlert?.('Probar Colección', 'Ingresa primero la URL que deseas probar.', 'warning');
+          await window.cafesitiosAlert?.('Probar Colección', 'Ingresa primero la URL que deseas probar.', 'warning');
           return;
         }
         btnTestCatalog.disabled = true;
@@ -950,7 +950,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
             modalTestCatalog.classList.add('flex');
           }
         } catch (_) {
-          await (window as any).cafesitiosAlert?.('Error al Probar Catálogo', 'No se pudo obtener respuesta del driver para la URL ingresada.', 'error');
+          await window.cafesitiosAlert?.('Error al Probar Catálogo', 'No se pudo obtener respuesta del driver para la URL ingresada.', 'error');
         } finally {
           btnTestCatalog.disabled = false;
           btnTestCatalog.innerHTML = '<span>🧪</span><span>Probar</span>';
@@ -1000,8 +1000,8 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           modalBranch?.classList.add('hidden');
           modalBranch?.classList.remove('flex');
           loadBranches();
-        } catch (err: any) {
-          await (window as any).cafesitiosAlert?.('Error al Registrar', err.message, 'error');
+        } catch (err) {
+          await window.cafesitiosAlert?.('Error al Registrar', err.message, 'error');
         }
       });
 
@@ -1026,10 +1026,10 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
             })
           });
           if (!res.ok) throw new Error('Error al actualizar perfil');
-          await (window as any).cafesitiosAlert?.('Perfil Actualizado', 'Los datos de tu tienda y despacho fueron guardados exitosamente.', 'success');
+          await window.cafesitiosAlert?.('Perfil Actualizado', 'Los datos de tu tienda y despacho fueron guardados exitosamente.', 'success');
           loadProfile();
-        } catch (err: any) {
-          await (window as any).cafesitiosAlert?.('Error al Actualizar Perfil', err.message, 'error');
+        } catch (err) {
+          await window.cafesitiosAlert?.('Error al Actualizar Perfil', err.message, 'error');
         }
       });
 
@@ -1264,7 +1264,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       });
 
       btnSync?.addEventListener('click', async () => {
-        const confirmed = await (window as any).cafesitiosConfirm?.(
+        const confirmed = await window.cafesitiosConfirm?.(
           'Sincronizar Catálogo Ahora',
           '¿Deseas iniciar la sincronización de tu catálogo ahora? El proceso consultará tu tienda y actualizará precios y productos.',
           { confirmText: 'Sincronizar Ahora 🔄', cancelText: 'Cancelar', type: 'info' }

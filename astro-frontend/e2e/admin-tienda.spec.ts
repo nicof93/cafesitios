@@ -1,6 +1,31 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Portal de Administración de Tiendas', () => {
+  test.beforeEach(async ({ page }) => {
+    // Mock general de perfil de tienda para evitar 401 en componentes hijos
+    await page.route('**/api/v1/admin/tienda/perfil', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          tienda_id: 1,
+          tienda_nombre: 'Café Singular Test',
+          tienda_url: 'https://singularcoffee.cl',
+          total_productos: 12,
+          plataforma: 'Shopify',
+          rol: 'STORE_ADMIN',
+          usuario_id: 'barista@singular.cl',
+          ultima_sincronizacion: new Date().toISOString(),
+          estado_sincronizacion: 'exitoso',
+          envio_gratis_monto: 30000,
+          retiro_en_tienda: true,
+          dias_tueste: 'Martes y Jueves',
+          fecha_ultimo_tueste: '2026-10-18',
+        }),
+      });
+    });
+  });
+
   test('la página de login debe renderizar los campos y controles de seguridad', async ({ page }) => {
     const pageErrors: Error[] = [];
     page.on('pageerror', (err) => pageErrors.push(err));
