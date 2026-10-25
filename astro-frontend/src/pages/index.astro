@@ -457,98 +457,144 @@ const jsonLdHome = {
 
 
     <!-- ===================================================================== -->
-    <!-- 4. ESTADO DEL PROYECTO / ROADMAP "EN CONSTRUCCIÓN" -->
+    <!-- 4. ECOSISTEMA Y HERRAMIENTAS BARISTAS 100% OPERATIVAS -->
     <!-- ===================================================================== -->
-    <section class="rounded-3xl bg-stone-900 text-white p-8 sm:p-12 space-y-8 relative overflow-hidden shadow-md">
+    <section class="rounded-3xl bg-gradient-to-br from-stone-900 via-stone-850 to-stone-900 text-white p-8 sm:p-12 space-y-8 relative overflow-hidden shadow-md">
       
       <div class="relative z-10 max-w-3xl space-y-3">
         <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-900/60 border border-emerald-400/30 px-3 py-1 text-[11px] font-bold text-emerald-300">
-          ⚙️ Transparencia de Desarrollo
+          ⚡ Plataforma Integral
         </span>
         <h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
-          Estamos construyendo la herramienta que los amantes del café de especialidad necesitaban
+          Más que un comparador: el ecosistema definitivo para baristas y tostadores
         </h2>
         <p class="text-sm text-stone-300 leading-relaxed font-normal">
-          Cafesitios nació como un proyecto independiente para resolver la falta de claridad en precios y formatos entre tostadurías. Conoce el estado de avance:
+          Diseñamos herramientas especializadas para transparentar el mercado, perfeccionar tus extracciones y conectar directamente con el café tostado en Chile.
         </p>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 relative z-10">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 relative z-10">
         
-        <!-- Feature 1 -->
-        <div class="rounded-2xl bg-stone-850 border border-stone-800 p-5 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-lg">🤖</span>
-            <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">100% Operativo</span>
+        <!-- Herramienta 1: Glosario de Especialidad -->
+        <a 
+          href="/glosario" 
+          class="group rounded-2xl bg-stone-800/80 hover:bg-stone-800 border border-stone-700/80 hover:border-emerald-500/50 p-6 space-y-3 transition duration-200 flex flex-col justify-between"
+        >
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">📖</span>
+              <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">Nuevo</span>
+            </div>
+            <h3 class="font-bold text-white text-base group-hover:text-emerald-300 transition">Glosario de Especialidad</h3>
+            <p class="text-xs text-stone-400 leading-relaxed">
+              Aprende en simple qué significa un proceso Honey, fermentación anaeróbica, escala Agtron, variedad Geisha o puntaje SCA sin rodeos técnicos.
+            </p>
           </div>
-          <h3 class="font-bold text-white text-sm">Pipeline Cascada de Scraping</h3>
-          <p class="text-xs text-stone-400 leading-snug">
-            Extracción nocturna sin costo con RegEx y GLiNER, normalizando notas SCA y $/kg exacto.
-          </p>
-        </div>
-
-        <!-- Feature 2 -->
-        <div class="rounded-2xl bg-stone-850 border border-stone-800 p-5 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-lg">🔎</span>
-            <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">100% Operativo</span>
-          </div>
-          <h3 class="font-bold text-white text-sm">Catálogo & Filtros Facetados</h3>
-          <p class="text-xs text-stone-400 leading-snug">
-            Búsqueda por país, variedad, proceso, rango de precios y scroll infinito sin recargar la página.
-          </p>
-        </div>
-
-        <!-- Feature 3 -->
-        <div class="rounded-2xl bg-stone-850 border border-stone-800 p-5 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-lg">📍</span>
-            <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">En Pruebas</span>
-          </div>
-          <h3 class="font-bold text-white text-sm">Mapa de Tostadurías</h3>
-          <p class="text-xs text-stone-400 leading-snug">
-            Directorio geolocalizado en Leaflet.js para encontrar cafeterías y tostadores de especialidad cerca de ti.
-          </p>
-        </div>
-
-        <!-- Feature 4 -->
-        <div class="rounded-2xl bg-stone-850 border border-stone-800 p-5 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-lg">✨</span>
-            <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">Beta Activa</span>
-          </div>
-          <h3 class="font-bold text-white text-sm">Quiz de Perfil de Sabor</h3>
-          <p class="text-xs text-stone-400 leading-snug">
-            Recomendador inteligente que sugiere granos según tu método de preparación y preferencias de acidez.
-          </p>
-        </div>
-
-        <!-- Feature 5 -->
-        <div class="rounded-2xl bg-stone-850 border border-stone-800 p-5 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-lg">📖</span>
-            <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">Página Nueva</span>
-          </div>
-          <h3 class="font-bold text-white text-sm">Bitácora de Recetas</h3>
-          <p class="text-xs text-stone-400 leading-snug">
-            Guarda tus recetas de molienda, agua, tiempos y la planilla de catación Q-Grader SCA directamente en tu equipo.
-          </p>
-          <a href="/bitacora" class="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 font-bold pt-1 transition">
-            <span>Abrir Bitácora Barista</span>
+          <span class="text-xs font-bold text-emerald-400 group-hover:translate-x-1 transition flex items-center gap-1 pt-2">
+            <span>Explorar Glosario</span>
             <span>→</span>
-          </a>
-        </div>
+          </span>
+        </a>
 
-        <!-- Feature 6 -->
-        <div class="rounded-2xl bg-stone-850 border border-stone-800 p-5 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-lg">🔔</span>
-            <span class="rounded-full bg-amber-950 text-amber-400 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold">Próximamente</span>
+        <!-- Herramienta 2: Recetas Oficiales de Tostadurías -->
+        <a 
+          href="/recetas" 
+          class="group rounded-2xl bg-stone-800/80 hover:bg-stone-800 border border-stone-700/80 hover:border-emerald-500/50 p-6 space-y-3 transition duration-200 flex flex-col justify-between"
+        >
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">☕</span>
+              <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">Oficial</span>
+            </div>
+            <h3 class="font-bold text-white text-base group-hover:text-emerald-300 transition">Guías y Recetas de Tostadores</h3>
+            <p class="text-xs text-stone-400 leading-relaxed">
+              Parámetros de extracción exactos (dosis, agua, molienda, ratio y temperatura) calibrados por los propios tostadores para cada café y método.
+            </p>
           </div>
-          <h3 class="font-bold text-white text-sm">Alertas de Ofertas & Stock</h3>
-          <p class="text-xs text-stone-400 leading-snug">
-            Notificaciones por correo cuando baje el precio de tus granos favoritos o vuelvan a estar en stock.
-          </p>
+          <span class="text-xs font-bold text-emerald-400 group-hover:translate-x-1 transition flex items-center gap-1 pt-2">
+            <span>Ver Recetas Calibradas</span>
+            <span>→</span>
+          </span>
+        </a>
+
+        <!-- Herramienta 3: Calibrador Sensorial de Molienda -->
+        <a 
+          href="/calibrador" 
+          class="group rounded-2xl bg-stone-800/80 hover:bg-stone-800 border border-stone-700/80 hover:border-emerald-500/50 p-6 space-y-3 transition duration-200 flex flex-col justify-between"
+        >
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">🎯</span>
+              <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">Herramienta 2D</span>
+            </div>
+            <h3 class="font-bold text-white text-base group-hover:text-emerald-300 transition">Calibrador Dial-In Assistant</h3>
+            <p class="text-xs text-stone-400 leading-relaxed">
+              ¿Tu café salió agrio, amargo o seco? Ajusta clics de molino, temperatura y ratio en tiempo real con diagnóstico interactivo por método.
+            </p>
+          </div>
+          <span class="text-xs font-bold text-emerald-400 group-hover:translate-x-1 transition flex items-center gap-1 pt-2">
+            <span>Calibrar Extracción</span>
+            <span>→</span>
+          </span>
+        </a>
+
+        <!-- Herramienta 4: Directorio y Mapa de Tostadurías -->
+        <a 
+          href="/tiendas" 
+          class="group rounded-2xl bg-stone-800/80 hover:bg-stone-800 border border-stone-700/80 hover:border-emerald-500/50 p-6 space-y-3 transition duration-200 flex flex-col justify-between"
+        >
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">📍</span>
+              <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">Nacional</span>
+            </div>
+            <h3 class="font-bold text-white text-base group-hover:text-emerald-300 transition">Directorio de Tostadurías</h3>
+            <p class="text-xs text-stone-400 leading-relaxed">
+              Encuentra tostadurías locales con sucursales físicas, cafeterías y envíos a todo Chile. Conoce quién está detrás de cada tueste.
+            </p>
+          </div>
+          <span class="text-xs font-bold text-emerald-400 group-hover:translate-x-1 transition flex items-center gap-1 pt-2">
+            <span>Ver Tostadurías</span>
+            <span>→</span>
+          </span>
+        </a>
+
+        <!-- Herramienta 5: Comparador $/kg y Sustitutos -->
+        <a 
+          href="/catalogo" 
+          class="group rounded-2xl bg-stone-800/80 hover:bg-stone-800 border border-stone-700/80 hover:border-emerald-500/50 p-6 space-y-3 transition duration-200 flex flex-col justify-between"
+        >
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">⚖️</span>
+              <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">Transparencia</span>
+            </div>
+            <h3 class="font-bold text-white text-base group-hover:text-emerald-300 transition">Comparador $/kg y Sustitutos</h3>
+            <p class="text-xs text-stone-400 leading-relaxed">
+              Estandarizamos bolsas de 250g, 500g y 1kg al precio real por kilo. Encuentra alternativas equivalentes de otras marcas al instante.
+            </p>
+          </div>
+          <span class="text-xs font-bold text-emerald-400 group-hover:translate-x-1 transition flex items-center gap-1 pt-2">
+            <span>Comparar en Catálogo</span>
+            <span>→</span>
+          </span>
+        </a>
+
+        <!-- Herramienta 6: Pedidos Directos por WhatsApp -->
+        <div class="group rounded-2xl bg-stone-800/80 border border-stone-700/80 p-6 space-y-3 flex flex-col justify-between">
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">📲</span>
+              <span class="rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">Sin Comisiones</span>
+            </div>
+            <h3 class="font-bold text-white text-base">Pedidos Directos por WhatsApp</h3>
+            <p class="text-xs text-stone-400 leading-relaxed">
+              Arma tu carrito multitienda y envía tu pedido directamente al WhatsApp oficial de cada tostaduría con un mensaje estructurado.
+            </p>
+          </div>
+          <span class="text-xs font-bold text-emerald-400 flex items-center gap-1 pt-2">
+            <span>✓ Integrado en Catálogo</span>
+          </span>
         </div>
 
       </div>
