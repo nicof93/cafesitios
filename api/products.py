@@ -526,7 +526,7 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
             }
             for relation in sorted(product.notas_cata, key=lambda relation: relation.nota.clave_normalizada)
             if relation.nota and is_valid_tasting_note(relation.nota.nombre) and is_valid_tasting_note(relation.nota.clave_normalizada)
-            and getattr(relation, "estado", "confirmada") != "descartada"
+            and getattr(relation, "estado", "confirmada") == "confirmada"
         ],
         "notas_confirmadas": [
             {
