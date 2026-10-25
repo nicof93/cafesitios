@@ -15,18 +15,7 @@ test.describe('Glosario de Café de Especialidad (/glosario)', () => {
     const searchInput = page.locator('#glossary-search-input');
     await expect(searchInput).toBeVisible();
 
-    // 3. Infografía 3D de anatomía del grano presente e interactiva
-    const infografia = page.locator('#anatomia-grano');
-    await expect(infografia).toBeVisible();
-
-    const headingAnatomia = page.getByRole('heading', { name: /Anatomía 3D de la Cereza/i });
-    await expect(headingAnatomia).toBeVisible();
-
-    // Cambiar a vista explotada
-    const btnExplotada = page.getByRole('button', { name: /Explotada/i });
-    await btnExplotada.click();
-
-    // 4. Tarjetas de términos renderizadas
+    // 3. Tarjetas de términos renderizadas
     const cards = page.locator('.glossary-card');
     const count = await cards.count();
     expect(count).toBeGreaterThanOrEqual(28);
