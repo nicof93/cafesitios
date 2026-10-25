@@ -1,5 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { FeatureFlags } from '../core/infrastructure/config/FeatureFlags';
+
+// Guard de Feature Flag para Mis Recetas / Bitácora
+if (!FeatureFlags.isMyRecipesEnabled()) {
+  return Astro.rewrite('/404');
+}
 
 const jsonLdMisRecetas = {
   "@context": "https://schema.org",

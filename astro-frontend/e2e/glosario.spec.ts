@@ -53,9 +53,18 @@ test.describe('Glosario de Café de Especialidad (/glosario)', () => {
     const headingEcosistema = page.getByRole('heading', { name: /Más que un comparador/i });
     await expect(headingEcosistema).toBeVisible();
 
-    // Verificar enlace directo hacia el glosario
+    // Verificar enlace directo hacia el glosario y herramientas activas
     const linkGlosario = page.locator('a[href="/glosario"]').first();
     await expect(linkGlosario).toBeVisible();
+
+    const linkRecetas = page.locator('a[href="/recetas"]').first();
+    await expect(linkRecetas).toBeVisible();
+
+    const linkCalibrador = page.locator('a[href="/calibrador"]').first();
+    await expect(linkCalibrador).toBeVisible();
+
+    const linkTiendas = page.locator('a[href="/tiendas"]').first();
+    await expect(linkTiendas).toBeVisible();
 
     expect(pageErrors).toHaveLength(0);
   });
