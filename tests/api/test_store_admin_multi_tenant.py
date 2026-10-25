@@ -624,5 +624,202 @@ class TestStoreAdminMultiTenant(unittest.TestCase):
         self.assertEqual(ctx_err.exception.status_code, 404)
 
 
+
+    def test_login_and_access_inactive_scraping_store(self):
+        """Verifica que una tienda con activo=False pueda autenticarse y consultar su perfil."""
+        from api.admin_tienda import store_admin_login, get_store_profile, StoreAdminLoginRequest
+        from core.security_store_admin import hash_store_password
+
+        # Crear tienda inactiva en scraping
+        tienda_inactiva = Tienda(
+            nombre="Tostaduría Onboarding",
+            url_base="https://onboarding-coffee.cl",
+            plataforma="manual",
+            activo=False,
+            limite_almacenamiento_mb=250,
+        )
+        self.session.add(tienda_inactiva)
+        self.session.flush()
+
+        user_inactivo = UsuarioTienda(
+            usuario_id="onboarding@tostaduria.cl",
+            tienda_id=tienda_inactiva.id,
+            rol="STORE_ADMIN",
+            password_hash=hash_store_password("PasswordSeguro123!"),
+        )
+        self.session.add(user_inactivo)
+        self.session.commit()
+
+        # Login exitoso a pesar de estar inactiva en scraping
+        req = DummyRequest()
+        login_resp = store_admin_login(
+            payload=StoreAdminLoginRequest(
+                email="onboarding@tostaduria.cl",
+                password="PasswordSeguro123!",
+                turnstile_token="turnstile_bypass_test",
+            ),
+            request=req,
+            db_session=self.session,
+        )
+        self.assertTrue(login_resp.token)
+        self.assertFalse(login_resp.scraping_activo)
+
+        # Contexto de tienda inactiva
+        ctx_inactivo = StoreAdminContext(
+            usuario_id=user_inactivo.usuario_id,
+            tienda_id=tienda_inactiva.id,
+            rol=user_inactivo.rol,
+            tienda=tienda_inactiva,
+            ip_origen="127.0.0.1",
+        )
+        perfil = get_store_profile(ctx=ctx_inactivo, db_session=self.session)
+        self.assertEqual(perfil.tienda_nombre, "Tostaduría Onboarding")
+        self.assertFalse(perfil.scraping_activo)
+        self.assertEqual(perfil.limite_almacenamiento_mb, 250)
+
+    def test_update_recipe(self):
+        """Verifica la creación y posterior modificación de una receta (PUT /recetas/{id})."""
+        from api.admin_tienda import create_store_recipe, update_store_recipe, StoreRecipeInput
+
+        prod = Producto(
+            tienda_id=self.tienda_a.id,
+            nombre="Caturra Lavado A",
+            url_detalle="https://tienda-a.cl/caturra",
+            activo=True,
+        )
+        self.session.add(prod)
+        self.session.commit()
+
+        req = DummyRequest()
+        # Crear receta inicial
+        nueva_rec = create_store_recipe(
+            payload=StoreRecipeInput(
+                producto_id=prod.id,
+                nombre_receta="V60 Inicial",
+                metodo="V60",
+                dosis_cafe_g=15.0,
+                agua_ml=250.0,
+                ratio="1:16.7",
+                pasos=["Paso 1"],
+            ),
+            request=req,
+            ctx=self.ctx_a,
+            db_session=self.session,
+        )
+        self.assertEqual(nueva_rec.nombre_receta, "V60 Inicial")
+
+        # Modificar receta
+        rec_modificada = update_store_recipe(
+            receta_id=nueva_rec.id,
+            payload=StoreRecipeInput(
+                producto_id=prod.id,
+                nombre_receta="V60 Modificado Pro",
+                metodo="V60",
+                dosis_cafe_g=16.0,
+                agua_ml=240.0,
+                ratio="1:15",
+                molino_usado="Comandante C40",
+                grosor_molienda="24 clicks",
+                temperatura_c=93,
+                pasos=["Paso 1: Pre-infusión", "Paso 2: Vertido continuo"],
+            ),
+            request=req,
+            ctx=self.ctx_a,
+            db_session=self.session,
+        )
+        self.assertEqual(rec_modificada.nombre_receta, "V60 Modificado Pro")
+        self.assertEqual(rec_modificada.dosis_cafe_g, 16.0)
+        self.assertEqual(rec_modificada.molino_usado, "Comandante C40")
+        self.assertEqual(len(rec_modificada.pasos), 2)
+
+    def test_recipe_rejected_when_zero_products_or_invalid_product(self):
+        """Verifica que no se permita crear receta sin asociar un café existente en la tienda."""
+        from api.admin_tienda import create_store_recipe, StoreRecipeInput
+        from fastapi import HTTPException
+
+        req = DummyRequest()
+        with self.assertRaises(HTTPException) as ctx_err:
+            create_store_recipe(
+                payload=StoreRecipeInput(
+                    producto_id=999999,  # Producto inexistente
+                    nombre_receta="Receta Huérfana",
+                    metodo="Chemex",
+                    dosis_cafe_g=20.0,
+                    agua_ml=300.0,
+                ),
+                request=req,
+                ctx=self.ctx_a,
+                db_session=self.session,
+            )
+        self.assertEqual(ctx_err.exception.status_code, 400)
+        self.assertIn("Debes seleccionar un café", ctx_err.exception.detail)
+
+    def test_product_creation_syncs_tasting_notes(self):
+        """Verifica que notas de cata pasadas en notas_cata se sincronicen en ProductoNotaCata."""
+        from api.admin_tienda import create_store_product, StoreProductInput
+
+        req = DummyRequest()
+        prod_output = create_store_product(
+            payload=StoreProductInput(
+                nombre="Geisha Finca Vista Hermosa",
+                notas_cata=["Jazmín", "Miel", "Mora silvestre"],
+                activo=True,
+            ),
+            ctx=self.ctx_a,
+            db_session=self.session,
+        )
+        self.assertTrue(prod_output.es_manual)
+        self.assertEqual(len(prod_output.notas_cata), 3)
+
+        # Verificar en base de datos la relación relacional
+        from sqlalchemy import select
+        notas_rel = self.session.scalars(
+            select(ProductoNotaCata).where(ProductoNotaCata.producto_id == prod_output.id)
+        ).all()
+        self.assertEqual(len(notas_rel), 3)
+        for r in notas_rel:
+            self.assertEqual(r.estado, "confirmada")
+
+    def test_manual_product_image_upload_and_security(self):
+        """Verifica la subida de imagen en base64 para productos manuales y validación de cuota/tipo."""
+        from api.admin_tienda import (
+            upload_store_product_image,
+            StoreProductImageUploadRequest,
+            create_store_product,
+            StoreProductInput,
+        )
+        from fastapi import HTTPException
+        import base64
+
+        req = DummyRequest()
+        prod = create_store_product(
+            payload=StoreProductInput(nombre="Café Con Imagen"),
+            ctx=self.ctx_a,
+            db_session=self.session,
+        )
+
+        # 1. Imagen PNG válida (1x1 transparente)
+        png_1x1_b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+        upload_resp = upload_store_product_image(
+            producto_id=prod.id,
+            payload=StoreProductImageUploadRequest(imagen_base64=png_1x1_b64),
+            ctx=self.ctx_a,
+            db_session=self.session,
+        )
+        self.assertTrue(upload_resp.exito)
+        self.assertTrue(upload_resp.imagen_url.startswith("/static/uploads/productos/"))
+
+        # 2. Rechazo de formato inválido (texto simulado)
+        invalid_b64 = base64.b64encode(b"Este no es un archivo de imagen").decode("utf-8")
+        with self.assertRaises(HTTPException) as ctx_err:
+            upload_store_product_image(
+                producto_id=prod.id,
+                payload=StoreProductImageUploadRequest(imagen_base64=invalid_b64),
+                ctx=self.ctx_a,
+                db_session=self.session,
+            )
+        self.assertEqual(ctx_err.exception.status_code, 400)
+        self.assertIn("Formato de imagen no soportado", ctx_err.exception.detail)
+
 if __name__ == "__main__":
     unittest.main()

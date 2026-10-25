@@ -194,6 +194,10 @@ app.include_router(admin_tienda_router)
 app.include_router(pedidos_router)
 app.include_router(orders_router)
 
+from starlette.staticfiles import StaticFiles
+os.makedirs(os.path.join('static', 'uploads', 'productos'), exist_ok=True)
+app.mount('/static', StaticFiles(directory='static'), name='static')
+
 
 @app.get("/", tags=["Healthcheck"])
 def healthcheck():

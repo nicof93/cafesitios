@@ -5,6 +5,7 @@ import CompareBarAndModal from '../components/compare/CompareBarAndModal.astro';
 import FlavorQuizModal from '../components/quiz/FlavorQuizModal.astro';
 import FeedbackWidget from '../components/feedback/FeedbackWidget.astro';
 import CartDrawer from '../components/cart/CartDrawer.astro';
+import CafesitiosPopupModal from '../components/common/CafesitiosPopupModal.astro';
 import Analytics from '@vercel/analytics/astro';
 import { Environment } from '../core/infrastructure/config/Environment';
 import '../styles/global.css';
@@ -126,6 +127,7 @@ const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'htt
   <FlavorQuizModal />
   <FeedbackWidget />
   {showWhatsAppOrders && <CartDrawer />}
+  <CafesitiosPopupModal />
 
   <!-- SCRIPTS GLOBALES CLIENTE -->
   <script>

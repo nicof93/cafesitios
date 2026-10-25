@@ -10,6 +10,7 @@ from sqlalchemy import func, inspect, select
 from sqlalchemy.orm import Session, selectinload
 
 from api.dependencies import get_db_session, require_local_admin
+from core.storage_manager import get_tienda_storage_info
 from api.stores import extract_official_website
 from core.security_store_admin import create_store_admin_token, hash_store_password
 import os
@@ -111,6 +112,7 @@ class StoreCreateUpdateRequest(BaseModel):
     password_administrador: Optional[str] = Field(
         None, max_length=100, description="Clave de acceso inicial para el administrador de la tostaduría"
     )
+    limite_almacenamiento_mb: Optional[int] = Field(250, ge=10, le=10000, description="Cuota máxima de almacenamiento de imágenes en MB")
     sucursales: List[BranchInput] = Field(default_factory=list)
 
 
@@ -138,6 +140,10 @@ class AdminStoreItem(BaseModel):
     estado_sincronizacion: Optional[str] = None
     es_pendiente_sincronizacion: bool = True
     logo_url: Optional[str] = None
+    limite_almacenamiento_mb: int = 250
+    espacio_usado_mb: float = 0.0
+    porcentaje_almacenamiento: float = 0.0
+    total_imagenes_subidas: int = 0
     catalogos: List[CatalogOutput] = Field(default_factory=list)
     sucursales: List[BranchOutput] = Field(default_factory=list)
 
@@ -634,6 +640,7 @@ def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminSto
         is_pending = (total_prods == 0) or (last_sync_status != "exitoso")
 
         adm_user = store_admin_obj_map.get(s.id)
+        storage = get_tienda_storage_info(s.id, getattr(s, "limite_almacenamiento_mb", 250))
         items.append(
             AdminStoreItem(
                 id=s.id,
@@ -929,6 +936,8 @@ def update_store_by_id(
     store.latitud = payload.latitud
     store.longitud = payload.longitud
     store.activo = payload.activo
+    if payload.limite_almacenamiento_mb is not None:
+        store.limite_almacenamiento_mb = payload.limite_almacenamiento_mb
 
     for old_b in list(store.sucursales):
         db_session.delete(old_b)

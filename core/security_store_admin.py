@@ -320,12 +320,6 @@ def get_current_store_admin(
             detail="La tienda asociada al administrador no fue encontrada.",
         )
 
-    if not tienda.activo:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="La tostaduría asignada se encuentra temporalmente inactiva en la plataforma.",
-        )
-
     client_ip = get_client_ip(request)
 
     return StoreAdminContext(

@@ -295,6 +295,21 @@ const apiBaseUrl = "http://localhost:8000";
           </div>
         </div>
 
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="store-storage-limit" class="block text-xs font-bold text-stone-700">Cuota Almacenamiento Imágenes (MB)</label>
+            <input
+              type="number"
+              id="store-storage-limit"
+              min="50"
+              max="5000"
+              value="250"
+              class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+            <p class="mt-1 text-[10px] text-stone-400">Cuota según plan contratado (inicial: 250 MB).</p>
+          </div>
+        </div>
+
         <div class="pt-1">
           <label class="inline-flex items-center gap-2 cursor-pointer">
             <input type="checkbox" id="store-active" checked class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
@@ -829,6 +844,10 @@ const apiBaseUrl = "http://localhost:8000";
             <td class="px-4 py-3 text-center">
               <div class="font-bold text-emerald-800">${store.cantidad_productos_visibles || 0} visibles</div>
               ${store.cantidad_productos_ocultos ? `<div class="text-[10px] text-rose-600 font-semibold">(${store.cantidad_productos_ocultos} ocultos)</div>` : ''}
+              <div class="mt-1 flex items-center justify-center gap-1 text-[10px] text-stone-500 font-semibold" title="Cuota de fotos: ${store.espacio_usado_mb || 0} MB usados de ${store.limite_almacenamiento_mb || 250} MB">
+                <span>💾 ${store.espacio_usado_mb || 0}/${store.limite_almacenamiento_mb || 250} MB</span>
+                <span class="text-[9px] ${store.almacenamiento_porcentaje >= 90 ? 'text-rose-600 font-black' : (store.almacenamiento_porcentaje >= 75 ? 'text-amber-600 font-bold' : 'text-stone-400')}">(${store.almacenamiento_porcentaje || 0}%)</span>
+              </div>
               <div class="mt-1">
                 ${store.es_pendiente_sincronizacion
                   ? `<span class="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-900 px-2 py-0.5 text-[10px] font-bold" title="${store.estado_sincronizacion === 'fallido' ? 'Último intento falló' : 'Sin sincronizar aún'}">⏳ Pendiente</span>`
@@ -1216,6 +1235,10 @@ const apiBaseUrl = "http://localhost:8000";
         document.getElementById('store-address').value = store.direccion || '';
         document.getElementById('store-comuna').value = store.comuna || '';
         document.getElementById('store-admin-email').value = store.email_administrador || '';
+        const storageLimitInput = document.getElementById('store-storage-limit');
+        if (storageLimitInput) {
+          storageLimitInput.value = store.limite_almacenamiento_mb || 250;
+        }
         const passInput = document.getElementById('store-admin-password');
         if (passInput) {
           passInput.value = '';
@@ -1260,6 +1283,10 @@ const apiBaseUrl = "http://localhost:8000";
         document.getElementById('store-address').value = '';
         document.getElementById('store-comuna').value = '';
         document.getElementById('store-admin-email').value = '';
+        const storageLimitInput = document.getElementById('store-storage-limit');
+        if (storageLimitInput) {
+          storageLimitInput.value = 250;
+        }
         const passInput = document.getElementById('store-admin-password');
         if (passInput) {
           passInput.value = '';
@@ -1372,6 +1399,7 @@ const apiBaseUrl = "http://localhost:8000";
         const adminEmail = document.getElementById('store-admin-email')?.value?.trim();
         const adminPassword = document.getElementById('store-admin-password')?.value?.trim();
         const active = document.getElementById('store-active')?.checked;
+        const storageLimit = parseInt(document.getElementById('store-storage-limit')?.value || '250', 10);
         const syncImmediate = document.getElementById('store-sync-immediate')?.checked;
 
         const catalogos = [];
@@ -1415,6 +1443,7 @@ const apiBaseUrl = "http://localhost:8000";
           direccion: address || null,
           comuna: comuna || null,
           email_administrador: adminEmail || null,
+          limite_almacenamiento_mb: isNaN(storageLimit) ? 250 : storageLimit,
           activo: active,
           sucursales: branches,
         };

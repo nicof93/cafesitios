@@ -1,7 +1,11 @@
+from core.storage_manager import get_tienda_storage_info
 from datetime import datetime, timezone, timedelta
 import math
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+import base64
+import os
+import time
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select, desc, text
 from sqlalchemy.orm import Session, selectinload
@@ -128,6 +132,7 @@ class StoreAdminLoginResponse(BaseModel):
     tienda_nombre: str
     rol: str
     debe_cambiar_password: bool = False
+    scraping_activo: bool = True
 
 
 class StoreChangePasswordRequest(BaseModel):
@@ -142,6 +147,10 @@ class StoreAdminProfileResponse(BaseModel):
     tienda_url: str
     plataforma: str
     activo: bool
+    scraping_activo: bool = True
+    limite_almacenamiento_mb: int = 250
+    almacenamiento_usado_mb: float = 0.0
+    almacenamiento_porcentaje: float = 0.0
     rol: str
     ultima_sincronizacion: Optional[str] = None
     estado_sincronizacion: Optional[str] = None
@@ -268,8 +277,23 @@ class StoreProductOutput(BaseModel):
     notas_cata: List[str] = Field(default_factory=list)
     activo: bool
     oculto_catalogo: bool
+    es_manual: bool = True
     variantes: List[StoreProductVariantOutput] = Field(default_factory=list)
 
+
+
+class StoreProductImageUploadRequest(BaseModel):
+    imagen_base64: str = Field(..., description="Imagen en base64 con o sin prefijo data:image/...")
+    nombre_archivo: Optional[str] = Field(None, max_length=150)
+
+
+class StoreProductImageUploadResponse(BaseModel):
+    exito: bool
+    imagen_url: str
+    mensaje: str
+    mb_usados: float
+    limite_mb: int
+    porcentaje_usado: float
 
 class StoreProductsListResponse(BaseModel):
     total: int
@@ -350,6 +374,78 @@ class StoreRecipeOutput(BaseModel):
     fecha_creacion: datetime
 
 
+
+def get_tienda_storage_info(tienda_id: int, limite_mb: Optional[int] = None) -> Dict[str, Any]:
+    upload_dir = os.path.join("static", "uploads", "productos")
+    total_bytes = 0
+    total_archivos = 0
+    prefix = f"{tienda_id}_"
+    if os.path.isdir(upload_dir):
+        for entry in os.scandir(upload_dir):
+            if entry.is_file() and entry.name.startswith(prefix):
+                try:
+                    total_bytes += entry.stat().st_size
+                    total_archivos += 1
+                except OSError:
+                    pass
+    
+    lim_mb = limite_mb if (limite_mb and limite_mb > 0) else 250
+    lim_bytes = lim_mb * 1024 * 1024
+    mb_usados = round(total_bytes / (1024 * 1024), 2)
+    porcentaje = round((total_bytes / lim_bytes) * 100, 1) if lim_bytes > 0 else 0.0
+
+    return {
+        "tienda_id": tienda_id,
+        "bytes_usados": total_bytes,
+        "mb_usados": mb_usados,
+        "limite_mb": lim_mb,
+        "porcentaje_usado": min(porcentaje, 100.0),
+        "total_archivos": total_archivos,
+        "superado": total_bytes >= lim_bytes,
+    }
+
+
+def _sync_product_tasting_notes(db_session: Session, producto_id: int, notas: List[str]) -> None:
+    if not notas:
+        return
+    from core.normalizer import is_valid_tasting_note, SCAFlavorWheelNormalizer, sanitize_text
+    
+    for nota_raw in notas:
+        nom_limpio = (nota_raw or "").strip()
+        if not nom_limpio or not is_valid_tasting_note(nom_limpio):
+            continue
+        clave = sanitize_text(nom_limpio).replace(" ", "-")
+        nota = db_session.scalar(select(NotaCata).where(NotaCata.clave_normalizada == clave))
+        if not nota:
+            nota = NotaCata(clave_normalizada=clave, nombre=nom_limpio.capitalize())
+            db_session.add(nota)
+            db_session.flush()
+        
+        sca_match = SCAFlavorWheelNormalizer.normalizar_nota(nom_limpio)
+        es_fuera = sca_match is None
+        
+        rel = db_session.scalar(
+            select(ProductoNotaCata).where(
+                ProductoNotaCata.producto_id == producto_id,
+                ProductoNotaCata.nota_id == nota.id,
+            )
+        )
+        if rel:
+            rel.estado = "confirmada"
+            rel.confianza = 1.0
+        else:
+            rel = ProductoNotaCata(
+                producto_id=producto_id,
+                nota_id=nota.id,
+                texto_origen="Registrado en catálogo por tostaduría",
+                confianza=1.0,
+                version_extractor="manual_store_admin",
+                estado="confirmada",
+                es_fuera_de_rueda=es_fuera,
+            )
+            db_session.add(rel)
+
+
 # --- ENDPOINTS ---
 
 @router.post(
@@ -403,11 +499,11 @@ def store_admin_login(
         )
 
     tienda = db_session.scalars(select(Tienda).where(Tienda.id == user_store.tienda_id)).first()
-    if not tienda or not tienda.activo:
+    if not tienda:
         anti_brute_force.record_login_failure(client_ip, identifier)
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="La tostaduría vinculada a esta cuenta está inactiva o no existe.",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="La tostaduría vinculada a esta cuenta no existe.",
         )
 
     # Si el usuario tiene contraseña configurada, verificarla
@@ -450,6 +546,7 @@ def store_admin_login(
         tienda_nombre=tienda.nombre,
         rol=user_store.rol,
         debe_cambiar_password=bool(getattr(user_store, "debe_cambiar_password", False)),
+        scraping_activo=bool(tienda.activo),
     )
 
 
@@ -504,6 +601,18 @@ def change_store_admin_password(
     }
 
 
+
+@router.get(
+    "/almacenamiento",
+    summary="Consultar uso actual y cuota de almacenamiento de imágenes de la tienda",
+)
+def get_store_storage_quota(
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+) -> Dict[str, Any]:
+    limite_mb = getattr(ctx.tienda, "limite_almacenamiento_mb", 250) or 250
+    return get_tienda_storage_info(ctx.tienda_id, limite_mb)
+
+
 @router.get(
     "/perfil",
     response_model=StoreAdminProfileResponse,
@@ -547,6 +656,10 @@ def get_store_profile(
         retiro_en_tienda=bool(getattr(t, "retiro_en_tienda", False)),
         dias_tueste=getattr(t, "dias_tueste", None),
         fecha_ultimo_tueste=getattr(t, "fecha_ultimo_tueste", None).isoformat() if getattr(t, "fecha_ultimo_tueste", None) else None,
+        scraping_activo=bool(t.activo),
+        limite_almacenamiento_mb=get_tienda_storage_info(t.id, getattr(t, "limite_almacenamiento_mb", 250))["limite_mb"],
+        almacenamiento_usado_mb=get_tienda_storage_info(t.id, getattr(t, "limite_almacenamiento_mb", 250))["mb_usados"],
+        almacenamiento_porcentaje=get_tienda_storage_info(t.id, getattr(t, "limite_almacenamiento_mb", 250))["porcentaje_usado"],
     )
 
 
@@ -634,6 +747,7 @@ def list_store_products(
                 notas_cata=c_fuente.get('notas_cata') or [],
                 activo=bool(p.activo),
                 oculto_catalogo=bool(p.oculto_catalogo),
+                es_manual=bool(p.id_externo is None or (c_fuente.get("creacion_manual") is True)),
                 variantes=variantes_dto,
             )
         )
@@ -668,6 +782,7 @@ def create_store_product(
     caract_init = {}
     if payload.sca_score is not None:
         caract_init['sca_score'] = payload.sca_score
+    caract_init['creacion_manual'] = True
     if payload.notas_cata is not None:
         caract_init['notas_cata'] = payload.notas_cata
 
@@ -689,6 +804,8 @@ def create_store_product(
     )
     db_session.add(prod)
     db_session.flush()
+    if payload.notas_cata:
+        _sync_product_tasting_notes(db_session, prod.id, payload.notas_cata)
 
     variantes_creadas = []
     if payload.variantes:
@@ -784,7 +901,110 @@ def create_store_product(
         notas_cata=c_fuente_creado.get('notas_cata') or [],
         activo=bool(prod.activo),
         oculto_catalogo=bool(prod.oculto_catalogo),
+        es_manual=bool(prod.id_externo is None or (prod.caracteristicas_fuente and prod.caracteristicas_fuente.get("creacion_manual") is True)),
         variantes=variantes_dto,
+    )
+
+
+
+@router.post(
+    "/productos/{producto_id}/imagen",
+    response_model=StoreProductImageUploadResponse,
+    summary="Subir imagen para un producto creado manualmente",
+)
+def upload_store_product_image(
+    producto_id: int,
+    payload: StoreProductImageUploadRequest,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> StoreProductImageUploadResponse:
+    prod = db_session.scalars(
+        select(Producto).where(Producto.id == producto_id, Producto.tienda_id == ctx.tienda_id)
+    ).first()
+    if not prod:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Producto no encontrado en su catálogo.",
+        )
+    
+    c_fuente = prod.caracteristicas_fuente or {}
+    es_manual = prod.id_externo is None or bool(c_fuente.get("creacion_manual"))
+    if not es_manual:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Solo se pueden subir imágenes locales para productos creados manualmente desde la administración. Los productos de tiendas online sincronizan sus imágenes automáticamente.",
+        )
+    
+    b64_str = payload.imagen_base64.strip()
+    if "," in b64_str and b64_str.startswith("data:"):
+        b64_str = b64_str.split(",", 1)[1]
+    
+    try:
+        raw_bytes = base64.b64decode(b64_str)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La cadena Base64 provista es inválida o está corrupta.",
+        )
+    
+    if len(raw_bytes) > 3 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La imagen excede el tamaño máximo permitido de 3 MB.",
+        )
+    
+    ext = ".jpg"
+    if raw_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        ext = ".png"
+    elif raw_bytes.startswith(b"\xff\xd8\xff"):
+        ext = ".jpg"
+    elif raw_bytes.startswith(b"RIFF") and len(raw_bytes) > 12 and raw_bytes[8:12] == b"WEBP":
+        ext = ".webp"
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Formato de imagen no soportado. Debe ser WebP, JPEG o PNG.",
+        )
+    
+    limite_mb = getattr(ctx.tienda, "limite_almacenamiento_mb", 250) or 250
+    storage = get_tienda_storage_info(ctx.tienda_id, limite_mb)
+    if storage["bytes_usados"] + len(raw_bytes) > limite_mb * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Has superado la cuota de almacenamiento de imágenes ({limite_mb} MB). Espacio usado: {storage['mb_usados']} MB. Contacta a soporte para ampliar tu plan.",
+        )
+    
+    target_dir = os.path.join("static", "uploads", "productos")
+    os.makedirs(target_dir, exist_ok=True)
+    filename = f"{ctx.tienda_id}_{prod.id}_{int(time.time())}{ext}"
+    file_path = os.path.join(target_dir, filename)
+    
+    with open(file_path, "wb") as f_out:
+        f_out.write(raw_bytes)
+    
+    imagen_url = f"/static/uploads/productos/{filename}"
+    prod.imagen = imagen_url
+    
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="SUBIR_IMAGEN_PRODUCTO",
+        entidad="productos",
+        entidad_id=prod.id,
+        valores_nuevos={"imagen": imagen_url, "bytes": len(raw_bytes)},
+        ip_origen=ctx.ip_origen,
+    )
+    db_session.commit()
+    
+    updated_storage = get_tienda_storage_info(ctx.tienda_id, limite_mb)
+    return StoreProductImageUploadResponse(
+        exito=True,
+        imagen_url=imagen_url,
+        mensaje="Imagen subida y asociada exitosamente al producto.",
+        mb_usados=updated_storage["mb_usados"],
+        limite_mb=updated_storage["limite_mb"],
+        porcentaje_usado=updated_storage["porcentaje_usado"],
     )
 
 
@@ -852,6 +1072,7 @@ def update_store_product(
         caract["sca_score"] = payload.sca_score
     if payload.notas_cata is not None:
         caract["notas_cata"] = payload.notas_cata
+        _sync_product_tasting_notes(db_session, prod.id, payload.notas_cata)
     prod.caracteristicas_fuente = caract
 
     # Actualizar o insertar variantes si se especifican
@@ -951,6 +1172,7 @@ def update_store_product(
         notas_cata=c_fuente_upd.get('notas_cata') or [],
         activo=bool(prod.activo),
         oculto_catalogo=bool(prod.oculto_catalogo),
+        es_manual=bool(prod.id_externo is None or (prod.caracteristicas_fuente and prod.caracteristicas_fuente.get("creacion_manual") is True)),
         variantes=variantes_dto,
     )
 
@@ -1148,8 +1370,8 @@ def create_store_recipe(
     ).first()
     if not product:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="El producto no existe o no pertenece a tu tostaduría.",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debes seleccionar un café existente en tu catálogo. Si no tienes productos aún, crea uno primero.",
         )
 
     ratio_calculado = payload.ratio
@@ -1222,6 +1444,110 @@ def create_store_recipe(
         es_borrador=nueva_receta.es_borrador,
         pasos=nueva_receta.pasos,
         fecha_creacion=nueva_receta.fecha_creacion,
+    )
+
+
+
+@router.put(
+    "/recetas/{receta_id}",
+    response_model=StoreRecipeOutput,
+    status_code=status.HTTP_200_OK,
+    summary="Modificar una receta oficial existente de la tostaduría",
+)
+def update_store_recipe(
+    receta_id: int,
+    payload: StoreRecipeInput,
+    request: Request,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> StoreRecipeOutput:
+    receta = db_session.scalars(
+        select(Receta).where(Receta.id == receta_id, Receta.tienda_id == ctx.tienda_id)
+    ).first()
+    if not receta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Receta no encontrada o no pertenece a tu tostaduría.",
+        )
+
+    product = db_session.scalars(
+        select(Producto).where(Producto.id == payload.producto_id, Producto.tienda_id == ctx.tienda_id)
+    ).first()
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El café seleccionado no existe en tu catálogo o no pertenece a tu tostaduría.",
+        )
+
+    ratio_calculado = payload.ratio
+    if not ratio_calculado and payload.dosis_cafe_g > 0:
+        ratio_val = round(payload.agua_ml / payload.dosis_cafe_g, 1)
+        ratio_calculado = f"1:{ratio_val}"
+
+    pasos_limpios = (
+        [p.strip() for p in payload.pasos if p and p.strip()]
+        if payload.pasos else None
+    )
+
+    valores_previos = {
+        "nombre": receta.nombre_receta,
+        "producto_id": receta.producto_id,
+        "metodo": receta.metodo,
+        "es_borrador": receta.es_borrador,
+    }
+
+    receta.producto_id = product.id
+    receta.nombre_receta = payload.nombre_receta.strip()
+    receta.metodo = payload.metodo.strip()
+    receta.dosis_cafe_g = payload.dosis_cafe_g
+    receta.agua_ml = payload.agua_ml
+    receta.ratio = ratio_calculado
+    receta.molino_usado = payload.molino_usado.strip() if payload.molino_usado else None
+    receta.grosor_molienda = payload.grosor_molienda.strip() if payload.grosor_molienda else None
+    receta.temperatura_c = payload.temperatura_c
+    receta.tiempo_total_s = payload.tiempo_total_s
+    receta.notas_catado = payload.notas_catado.strip() if payload.notas_catado else None
+    receta.es_borrador = payload.es_borrador
+    receta.es_publica = not payload.es_borrador
+    receta.pasos = pasos_limpios
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="MODIFICAR_RECETA_PRODUCTO",
+        entidad="recetas",
+        entidad_id=receta.id,
+        valores_previos=valores_previos,
+        valores_nuevos={
+            "nombre": receta.nombre_receta,
+            "producto_id": product.id,
+            "metodo": receta.metodo,
+            "es_borrador": receta.es_borrador,
+        },
+        ip_origen=get_client_ip(request),
+    )
+    db_session.commit()
+    db_session.refresh(receta)
+
+    return StoreRecipeOutput(
+        id=receta.id,
+        producto_id=receta.producto_id,
+        producto_nombre=product.nombre,
+        tienda_id=receta.tienda_id,
+        nombre_receta=receta.nombre_receta,
+        metodo=receta.metodo,
+        dosis_cafe_g=float(receta.dosis_cafe_g),
+        agua_ml=float(receta.agua_ml),
+        ratio=receta.ratio,
+        molino_usado=receta.molino_usado,
+        grosor_molienda=receta.grosor_molienda,
+        temperatura_c=receta.temperatura_c,
+        tiempo_total_s=receta.tiempo_total_s,
+        notas_catado=receta.notas_catado,
+        es_borrador=receta.es_borrador,
+        pasos=receta.pasos,
+        fecha_creacion=receta.fecha_creacion,
     )
 
 
@@ -1990,7 +2316,16 @@ class StoreNoteActionRequest(BaseModel):
 
 
 class StoreNoteCreateRequest(BaseModel):
-    nombre: str = Field(..., min_length=2, max_length=100)
+    nombre: Optional[str] = None
+    nota: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_name(self) -> "StoreNoteCreateRequest":
+        val = (self.nombre or self.nota or "").strip()
+        if len(val) < 2:
+            raise ValueError("El nombre de la nota es requerido (mínimo 2 caracteres).")
+        self.nombre = val
+        return self
 
 
 @router.get(
