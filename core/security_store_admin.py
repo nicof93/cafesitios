@@ -93,6 +93,32 @@ def create_store_admin_token(
     return f"{header_b64}.{payload_b64}.{signature_b64}"
 
 
+def create_password_reset_token(
+    usuario_id: str,
+    tienda_id: int,
+    expires_in_seconds: int = 7200,
+) -> str:
+    header = {"alg": "HS256", "typ": "JWT"}
+    now = int(time.time())
+    payload = {
+        "sub": str(usuario_id),
+        "usuario_id": str(usuario_id),
+        "tienda_id": int(tienda_id),
+        "purpose": "password_reset",
+        "iat": now,
+        "exp": now + expires_in_seconds,
+    }
+
+    header_b64 = _base64url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8"))
+    payload_b64 = _base64url_encode(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+    to_sign = f"{header_b64}.{payload_b64}".encode("utf-8")
+
+    signature = hmac.new(JWT_SECRET.encode("utf-8"), to_sign, hashlib.sha256).digest()
+    signature_b64 = _base64url_encode(signature)
+
+    return f"{header_b64}.{payload_b64}.{signature_b64}"
+
+
 def decode_store_admin_token(token: str) -> Optional[Dict[str, Any]]:
     if not token or not isinstance(token, str):
         return None
@@ -127,6 +153,14 @@ def decode_store_admin_token(token: str) -> Optional[Dict[str, Any]]:
     except Exception as exc:
         logger.warning(f"Error al decodificar token JWT: {exc}")
         return None
+
+
+def decode_password_reset_token(token: str) -> Optional[Dict[str, Any]]:
+    payload = decode_store_admin_token(token)
+    if not payload or payload.get("purpose") != "password_reset":
+        return None
+    return payload
+
 
 
 # --- GESTOR ANTI-FUERZA BRUTA Y RATE LIMITING ---

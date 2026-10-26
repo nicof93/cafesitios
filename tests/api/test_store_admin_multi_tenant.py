@@ -864,5 +864,71 @@ class TestStoreAdminMultiTenant(unittest.TestCase):
         )
         self.assertIsNone(cleared.imagen)
 
+    def test_password_recovery_and_email_flow(self):
+        """Verifica el flujo completo de recuperación de contraseña y envío de correos sin costo."""
+        from core.email_service import EmailService
+        from api.admin_tienda import (
+            request_password_reset,
+            reset_store_admin_password,
+            store_admin_login,
+            StoreForgotPasswordRequest,
+            StoreResetPasswordRequest,
+            StoreAdminLoginRequest,
+        )
+        from core.security_store_admin import decode_password_reset_token
+
+        # 1. Probar servicio de correo nativo en modo mock
+        welcome_ok = EmailService.send_welcome_email(
+            to_email="test@tostaduria.cl",
+            tienda_nombre="Tostaduría de Prueba",
+        )
+        self.assertTrue(welcome_ok)
+
+        reset_email_ok = EmailService.send_password_reset_email(
+            to_email="test@tostaduria.cl",
+            tienda_nombre="Tostaduría de Prueba",
+            reset_url="https://cafesitios.cl/admin-tienda/restablecer-password?token=mocktoken123",
+        )
+        self.assertTrue(reset_email_ok)
+
+        # 2. Solicitar recuperación de contraseña para admin_a
+        req = DummyRequest()
+        res_req = request_password_reset(
+            payload=StoreForgotPasswordRequest(email=self.user_admin_a.usuario_id),
+            request=req,
+            db_session=self.session,
+        )
+        self.assertTrue(res_req["exito"])
+        self.assertIn("recibirás las instrucciones", res_req["mensaje"])
+
+        # 3. Generar token de prueba y decodificarlo
+        from core.security_store_admin import create_password_reset_token
+        token = create_password_reset_token(usuario_id=self.user_admin_a.usuario_id, tienda_id=self.tienda_a.id)
+        decoded = decode_password_reset_token(token)
+        self.assertIsNotNone(decoded)
+        self.assertEqual(decoded["usuario_id"], self.user_admin_a.usuario_id)
+
+        # 4. Restablecer la contraseña con nueva clave
+        nueva_clave = "SuperPasswordSeguro2026!"
+        res_reset = reset_store_admin_password(
+            payload=StoreResetPasswordRequest(token=token, nueva_password=nueva_clave),
+            request=req,
+            db_session=self.session,
+        )
+        self.assertTrue(res_reset["exito"])
+
+        # 5. Iniciar sesión exitosamente con la nueva clave restablecida
+        login_resp = store_admin_login(
+            payload=StoreAdminLoginRequest(
+                email=self.user_admin_a.usuario_id,
+                password=nueva_clave,
+                turnstile_token="mock_valid",
+            ),
+            request=req,
+            db_session=self.session,
+        )
+        self.assertIsNotNone(login_resp.token)
+        self.assertEqual(login_resp.tienda_id, self.tienda_a.id)
+
 if __name__ == "__main__":
     unittest.main()

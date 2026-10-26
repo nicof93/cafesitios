@@ -1,0 +1,336 @@
+---
+import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
+---
+
+<StoreAdminLayout title="Ventas & WhatsApp Leads | Cafesitios Admin" activeNav="ventas">
+  <div class="space-y-8">
+    <!-- Header de la Sección -->
+    <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">💬</span>
+          <h1 class="text-xl sm:text-2xl font-black text-stone-900">Canal de Ventas & WhatsApp Leads</h1>
+        </div>
+        <p class="text-xs text-stone-500 mt-1">
+          Configura tu número directo, mide tus ventas derivadas y calcula el ahorro de comisiones (0% Cafésitios vs 18% marketplaces).
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-900 text-xs font-bold px-3 py-1">
+          <span>🛡️</span> 0% Comisiones por Venta
+        </span>
+      </div>
+    </div>
+
+    <!-- SECCIÓN WHATSAPP COMMERCE: CONTACTO, MÉTRICAS Y PROYECCIÓN FINANCIERA -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Configuración WhatsApp de Ventas -->
+      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+        <div class="flex items-center gap-2 text-stone-900 font-bold text-base">
+          <span>📱</span>
+          <span>WhatsApp de Ventas</span>
+        </div>
+        <p class="text-xs text-stone-500">
+          Los clientes de Cafésitios te enviarán sus pedidos directamente a este número con el detalle armado.
+        </p>
+
+        <form id="form-whatsapp-config" class="space-y-3">
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">
+              Número de WhatsApp
+            </label>
+            <div class="flex items-center gap-1.5">
+              <span class="px-2.5 py-2 rounded-xl bg-stone-100 border border-stone-300 text-xs font-bold text-stone-700 select-none">
+                🇨🇱 +56
+              </span>
+              <input
+                type="tel"
+                id="input-whatsapp-phone"
+                placeholder="912345678"
+                class="flex-1 rounded-xl border border-stone-300 px-3 py-2 text-xs font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              />
+            </div>
+            <p class="text-[10px] text-stone-400 mt-1">Ingresa los 9 dígitos móviles (ej: 912345678).</p>
+          </div>
+
+          <button
+            type="submit"
+            id="btn-save-whatsapp"
+            class="w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-4 transition shadow-xs"
+          >
+            Guardar WhatsApp de Ventas
+          </button>
+          <p id="msg-whatsapp-status" class="text-[11px] text-center hidden font-semibold"></p>
+        </form>
+      </div>
+
+      <!-- Métricas de WhatsApp y Proyección Financiera (KPI 1 & KPI 2) -->
+      <div class="lg:col-span-2 rounded-2xl border-2 border-emerald-500/20 bg-gradient-to-br from-emerald-50/50 via-white to-amber-50/30 p-6 shadow-xs flex flex-col justify-between space-y-4">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-bold uppercase tracking-wider">
+              <span>📈</span> Módulo de Proyección Comercial
+            </span>
+            <span class="text-xs text-stone-400 font-medium">Actualizado en tiempo real</span>
+          </div>
+          <h3 class="text-lg font-black text-stone-900 mt-2">Impacto Financiero de Ventas Directas</h3>
+          <p class="text-xs text-stone-500 mt-0.5">
+            Métricas de intención de compra derivadas desde el comparador hacia tu canal directo de WhatsApp.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- KPI 1 -->
+          <div class="p-4 rounded-xl bg-white border border-emerald-100 shadow-2xs space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold uppercase text-stone-400">Total Pedidos Derivados</span>
+              <span class="text-emerald-700 font-bold text-xs">KPI 1</span>
+            </div>
+            <div class="text-3xl font-black text-stone-900" id="kpi-whatsapp-leads-total">0</div>
+            <p class="text-[11px] text-stone-500">Pedidos armados enviados a tu WhatsApp</p>
+          </div>
+
+          <!-- Proyección Pasarela +18% -->
+          <div class="p-4 rounded-xl bg-white border border-emerald-100 shadow-2xs space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold uppercase text-stone-400">Total Bruto Proyectado</span>
+              <span class="text-stone-400 font-mono text-[10px]">Ventas</span>
+            </div>
+            <div class="text-2xl font-black text-stone-900" id="kpi-whatsapp-gross-total">$0</div>
+            <p class="text-[11px] text-stone-500">Valor transaccional estimado derivado</p>
+          </div>
+        </div>
+
+        <!-- Cuadro Analítico Destacado KPI 2 -->
+        <div class="p-4 rounded-xl bg-gradient-to-r from-emerald-800 to-teal-900 text-white shadow-md flex items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center gap-1.5 text-emerald-200 text-xs font-bold">
+              <span>💰</span>
+              <span>Ahorro Financiero por Cero Comisiones (KPI 2)</span>
+            </div>
+            <p class="text-[11px] text-emerald-100/90 leading-tight">
+              Ahorro neto calculado frente a la comisión estándar (18%) de marketplaces tradicionales de delivery.
+            </p>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-2xl sm:text-3xl font-black text-emerald-300" id="kpi-whatsapp-savings-total">$0</div>
+            <span class="text-[10px] text-emerald-200 font-bold">100% ganancia en tu bolsillo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLA DE HISTORIAL DE PEDIDOS RECIBIDOS POR WHATSAPP -->
+    <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-bold text-stone-900">Historial de Pedidos WhatsApp Derivados</h3>
+          <p class="text-xs text-stone-500 mt-0.5">Últimos contactos de compra originados desde el catálogo de Cafésitios.</p>
+        </div>
+        <span class="text-xs font-bold text-stone-400" id="whatsapp-orders-count">0 pedidos</span>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-stone-100">
+        <table class="w-full text-left text-xs text-stone-600">
+          <thead class="bg-stone-50 text-[11px] font-bold uppercase tracking-wider text-stone-400 border-b border-stone-200">
+            <tr>
+              <th class="px-4 py-3">Fecha y Hora</th>
+              <th class="px-4 py-3">Cliente</th>
+              <th class="px-4 py-3">Café y Formato</th>
+              <th class="px-4 py-3">Molienda</th>
+              <th class="px-4 py-3">Total Estimado</th>
+            </tr>
+          </thead>
+          <tbody id="table-whatsapp-leads" class="divide-y divide-stone-100">
+            <tr>
+              <td colspan="5" class="px-4 py-6 text-center text-stone-400">
+                No se registran pedidos enviados por WhatsApp aún.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- WIDGET EMBEBIBLE "VERIFICADO EN CAFESITIOS" -->
+    <div id="sec-widget" class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+        <div>
+          <div class="flex items-center gap-2 text-base font-bold text-stone-900">
+            <span>🛡️</span>
+            <span>Insignia Embebible "Verificado en Cafésitios"</span>
+          </div>
+          <p class="text-xs text-stone-500 mt-0.5">
+            Inserta este sello oficial en el pie de página o ficha de tu tienda online para transmitir confianza de especialidad.
+          </p>
+        </div>
+        <span class="rounded-full bg-emerald-100 text-emerald-900 px-2.5 py-0.5 text-xs font-bold">Oficial</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+        <!-- Vista previa -->
+        <div class="p-6 rounded-xl bg-stone-50 border border-stone-200 flex flex-col items-center justify-center text-center space-y-3">
+          <span class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">Vista Previa del Widget</span>
+          <div id="widget-preview-container" class="inline-block p-1">
+            <!-- Render dinámico del widget -->
+          </div>
+        </div>
+
+        <!-- Código para copiar -->
+        <div class="space-y-2">
+          <label class="block text-xs font-bold text-stone-700">Código HTML para tu Tienda Online (Shopify, WooCommerce, etc.)</label>
+          <textarea
+            id="widget-embed-code"
+            rows="4"
+            readonly
+            class="w-full rounded-xl border border-stone-300 bg-stone-50 p-3 font-mono text-[11px] text-stone-800 focus:outline-none"
+          ></textarea>
+          <div class="flex justify-end">
+            <button
+              type="button"
+              id="btn-copy-widget"
+              class="inline-flex items-center gap-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold px-4 py-2 transition shadow-xs"
+            >
+              <span>📋</span>
+              <span id="btn-copy-widget-text">Copiar Código HTML</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    (function initStoreVentas() {
+      const token = localStorage.getItem('store_admin_token');
+      if (!token) {
+        window.location.replace('/admin-tienda/login');
+        return;
+      }
+
+      const mainEl = document.querySelector('body[data-api-base]');
+      let API_BASE = mainEl ? (mainEl.getAttribute('data-api-base') || '').trim() : '';
+      if (!API_BASE) {
+        API_BASE = `http://${window.location.hostname}:8000`;
+      } else if (API_BASE.includes('localhost') && window.location.hostname === '127.0.0.1') {
+        API_BASE = API_BASE.replace('localhost', '127.0.0.1');
+      } else if (API_BASE.includes('127.0.0.1') && window.location.hostname === 'localhost') {
+        API_BASE = API_BASE.replace('127.0.0.1', 'localhost');
+      }
+
+      // WhatsApp Form & Leads
+      const formWhatsApp = document.getElementById('form-whatsapp-config');
+      const inputWhatsAppPhone = document.getElementById('input-whatsapp-phone');
+      const msgWhatsAppStatus = document.getElementById('msg-whatsapp-status');
+      const kpiLeadsTotal = document.getElementById('kpi-whatsapp-leads-total');
+      const kpiGrossTotal = document.getElementById('kpi-whatsapp-gross-total');
+      const kpiSavingsTotal = document.getElementById('kpi-whatsapp-savings-total');
+      const tableLeads = document.getElementById('table-whatsapp-leads');
+      const ordersCount = document.getElementById('whatsapp-orders-count');
+
+      // Widget Embebible
+      const widgetPreview = document.getElementById('widget-preview-container');
+      const widgetEmbedCode = document.getElementById('widget-embed-code');
+      const btnCopyWidget = document.getElementById('btn-copy-widget');
+      const btnCopyWidgetText = document.getElementById('btn-copy-widget-text');
+
+      async function loadProfileAndLeads() {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/perfil`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+
+          if (inputWhatsAppPhone && data.telefono_whatsapp) {
+            inputWhatsAppPhone.value = data.telefono_whatsapp.replace(/^\+?56/, '');
+          }
+
+          // Generar Widget HTML
+          const storeSlug = (data.tienda_nombre || 'tienda').toLowerCase().replace(/\s+/g, '-');
+          const widgetHtml = `<a href="https://cafesitios.cl/tiendas" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:12px;background:#064E3B;color:#FFFFFF;text-decoration:none;font-family:sans-serif;font-size:12px;font-weight:bold;box-shadow:0 2px 5px rgba(0,0,0,0.1);"><span style="font-size:14px;">☕</span><span>Verificado en Cafesitios</span></a>`;
+          
+          if (widgetEmbedCode) widgetEmbedCode.value = widgetHtml;
+          if (widgetPreview) widgetPreview.innerHTML = widgetHtml;
+        } catch (_) {}
+
+        try {
+          const resLeads = await fetch(`${API_BASE}/api/v1/admin/tienda/analitica/leads-whatsapp`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!resLeads.ok) return;
+          const leadsData = await resLeads.json();
+
+          if (kpiLeadsTotal) kpiLeadsTotal.textContent = leadsData.total_leads || 0;
+          if (kpiGrossTotal) kpiGrossTotal.textContent = `$${(leadsData.monto_total_bruto || 0).toLocaleString('es-CL')}`;
+          if (kpiSavingsTotal) kpiSavingsTotal.textContent = `$${(leadsData.ahorro_comisiones_estimado || 0).toLocaleString('es-CL')}`;
+          if (ordersCount) ordersCount.textContent = `${leadsData.total_leads || 0} pedidos`;
+
+          if (tableLeads && leadsData.historial && leadsData.historial.length) {
+            tableLeads.innerHTML = leadsData.historial.map(lead => `
+              <tr class="hover:bg-stone-50/60 transition">
+                <td class="px-4 py-3 text-stone-500">${new Date(lead.fecha).toLocaleDateString('es-CL', { hour: '2-digit', minute: '2-digit' })}</td>
+                <td class="px-4 py-3 font-bold text-stone-800">${lead.cliente_nombre || 'Cliente Anónimo'}</td>
+                <td class="px-4 py-3 text-stone-700">${lead.producto_nombre || 'Varios Cafés'} <span class="text-stone-400">(${lead.formato_gramos || 250}g)</span></td>
+                <td class="px-4 py-3 text-stone-600">${lead.molienda || 'Grano entero'}</td>
+                <td class="px-4 py-3 font-extrabold text-emerald-800">$${(lead.total_estimado || 0).toLocaleString('es-CL')}</td>
+              </tr>
+            `).join('');
+          }
+        } catch (_) {}
+      }
+
+      formWhatsApp?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const rawPhone = inputWhatsAppPhone?.value.trim().replace(/\D/g, '');
+        if (!rawPhone || rawPhone.length !== 9) {
+          if (msgWhatsAppStatus) {
+            msgWhatsAppStatus.textContent = 'Ingresa un número chileno válido de 9 dígitos (ej: 912345678).';
+            msgWhatsAppStatus.className = 'text-[11px] text-center font-bold text-rose-600';
+            msgWhatsAppStatus.classList.remove('hidden');
+          }
+          return;
+        }
+
+        const phoneE164 = `+56${rawPhone}`;
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/perfil`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ telefono_whatsapp: phoneE164 })
+          });
+
+          if (!res.ok) throw new Error('Error al guardar WhatsApp.');
+
+          if (msgWhatsAppStatus) {
+            msgWhatsAppStatus.textContent = '✓ Número de WhatsApp comercial guardado exitosamente.';
+            msgWhatsAppStatus.className = 'text-[11px] text-center font-bold text-emerald-700';
+            msgWhatsAppStatus.classList.remove('hidden');
+          }
+        } catch (err) {
+          if (msgWhatsAppStatus) {
+            msgWhatsAppStatus.textContent = err.message || 'Error al conectar con el servidor.';
+            msgWhatsAppStatus.className = 'text-[11px] text-center font-bold text-rose-600';
+            msgWhatsAppStatus.classList.remove('hidden');
+          }
+        }
+      });
+
+      btnCopyWidget?.addEventListener('click', () => {
+        if (!widgetEmbedCode) return;
+        navigator.clipboard.writeText(widgetEmbedCode.value).then(() => {
+          if (btnCopyWidgetText) btnCopyWidgetText.textContent = '¡Copiado al Portapapeles!';
+          setTimeout(() => {
+            if (btnCopyWidgetText) btnCopyWidgetText.textContent = 'Copiar Código HTML';
+          }, 2500);
+        });
+      });
+
+      loadProfileAndLeads();
+    })();
+  </script>
+</StoreAdminLayout>

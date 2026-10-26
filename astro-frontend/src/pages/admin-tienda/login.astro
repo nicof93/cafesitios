@@ -88,14 +88,30 @@ const apiBase = Environment.getApiBaseUrl();
         </div>
 
         <div>
-          <label for="input-password" class="block text-xs font-semibold text-stone-300 mb-1">Contraseña o Clave Secreta</label>
-          <input
-            type="password"
-            id="input-password"
-            required
-            placeholder="••••••••••••"
-            class="w-full rounded-xl border border-stone-700 bg-stone-900/90 px-3.5 py-2 text-xs text-white placeholder-stone-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          />
+          <div class="flex items-center justify-between mb-1">
+            <label for="input-password" class="block text-xs font-semibold text-stone-300">Contraseña o Clave Secreta</label>
+            <a href="/admin-tienda/recuperar-password" class="text-[11px] text-emerald-400 hover:text-emerald-300 font-medium transition">
+              ¿Olvidaste tu contraseña?
+            </a>
+          </div>
+          <div class="relative flex items-center">
+            <input
+              type="password"
+              id="input-password"
+              required
+              placeholder="••••••••••••"
+              class="w-full rounded-xl border border-stone-700 bg-stone-900/90 pl-3.5 pr-10 py-2 text-xs text-white placeholder-stone-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+            <button
+              type="button"
+              id="btn-toggle-password"
+              class="absolute right-2 text-stone-400 hover:text-stone-200 p-1.5 text-xs transition select-none"
+              title="Mostrar u ocultar contraseña"
+              aria-label="Mostrar u ocultar contraseña"
+            >
+              👁️
+            </button>
+          </div>
         </div>
 
         <!-- Verificación Anti-Bot (Turnstile) -->
@@ -382,6 +398,15 @@ const apiBase = Environment.getApiBaseUrl();
             btnSubmitChangePass.textContent = 'Guardar Contraseña y Continuar';
           }
         }
+      });
+
+      const btnToggle = document.getElementById('btn-toggle-password');
+      btnToggle?.addEventListener('click', () => {
+        if (!inputPassword) return;
+        const isPwd = inputPassword.type === 'password';
+        inputPassword.type = isPwd ? 'text' : 'password';
+        btnToggle.textContent = isPwd ? '🙈' : '👁️';
+        btnToggle.setAttribute('aria-label', isPwd ? 'Ocultar contraseña' : 'Mostrar contraseña');
       });
 
       formLogin?.addEventListener('submit', (e) => {

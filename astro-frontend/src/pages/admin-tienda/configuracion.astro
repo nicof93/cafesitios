@@ -1,0 +1,556 @@
+---
+import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
+---
+
+<StoreAdminLayout title="Configuración de Tostaduría | Cafesitios Admin" activeNav="configuracion">
+  <div class="space-y-8">
+    <!-- Header de la Sección -->
+    <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">⚙️</span>
+          <h1 class="text-xl sm:text-2xl font-black text-stone-900">Configuración de Marca & Sucursales</h1>
+        </div>
+        <p class="text-xs text-stone-500 mt-1">
+          Ajusta tu perfil público, geolocaliza tus cafeterías físicas y administra tus fuentes automáticas de catálogo (Shopify / WooCommerce).
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-stone-100 text-stone-800 text-xs font-bold px-3 py-1">
+          <span>☕</span> Tostaduría de Especialidad
+        </span>
+      </div>
+    </div>
+
+    <!-- 1. PERFIL DE MARCA, DESPACHO Y DÍAS DE TUESTE -->
+    <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-6">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-stone-900">Perfil Comercial y Políticas de Despacho</h3>
+          <p class="text-xs text-stone-500 mt-0.5">Información pública exhibida a los compradores en el directorio de tiendas.</p>
+        </div>
+        <span class="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+          Sincronizado
+        </span>
+      </div>
+
+      <form id="form-brand-profile" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Nombre Comercial de la Tostaduría</label>
+            <input
+              type="text"
+              id="prof-name"
+              disabled
+              class="w-full rounded-xl border border-stone-200 bg-stone-100 px-3 py-2 text-xs font-bold text-stone-600 cursor-not-allowed"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">URL de Sitio Web Oficial</label>
+            <input
+              type="url"
+              id="prof-url"
+              placeholder="https://mitostaduria.cl"
+              class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-stone-700 mb-1">Descripción de la Tostaduría</label>
+          <textarea
+            id="prof-description"
+            rows="2"
+            placeholder="Breve reseña sobre la filosofía de tueste, fincas aliadas y propuesta de valor..."
+            class="w-full rounded-xl border border-stone-300 p-3 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+          ></textarea>
+        </div>
+
+        <!-- Despacho y Días de Tueste -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Envío Gratis desde (CLP)</label>
+            <input
+              type="number"
+              id="prof-envio-gratis"
+              placeholder="30000"
+              class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Días de Tueste Semanal</label>
+            <input
+              type="text"
+              id="prof-dias-tueste"
+              placeholder="Ej: Martes y Jueves"
+              class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Última Fecha de Tueste</label>
+            <input
+              type="date"
+              id="prof-fecha-tueste"
+              class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+            />
+          </div>
+
+          <div class="flex items-center gap-2 pt-6">
+            <input
+              type="checkbox"
+              id="prof-retiro-tienda"
+              class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+            />
+            <label for="prof-retiro-tienda" class="text-xs font-bold text-stone-800 cursor-pointer">
+              Permite Retiro en Tienda / Barra
+            </label>
+          </div>
+        </div>
+
+        <div class="flex justify-end pt-3 border-t border-stone-100">
+          <button
+            type="submit"
+            id="btn-save-profile"
+            class="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-5 transition shadow-xs"
+          >
+            Guardar Cambios de Perfil
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 2. SUCURSALES Y CAFETERÍAS FÍSICAS -->
+    <div id="sec-sucursales" class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+        <div>
+          <div class="flex items-center gap-2 text-base font-bold text-stone-900">
+            <span>📍</span>
+            <span>Sucursales y Barras de Café Físicas</span>
+          </div>
+          <p class="text-xs text-stone-500 mt-0.5">Tus locales aparecerán en el mapa de tostadurías de Cafésitios.</p>
+        </div>
+        <button
+          type="button"
+          id="btn-new-branch"
+          class="rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold px-3.5 py-1.5 transition shadow-xs"
+        >
+          + Agregar Sucursal
+        </button>
+      </div>
+
+      <div id="branches-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="text-xs text-stone-400 py-4 text-center col-span-2">Cargando sucursales...</div>
+      </div>
+    </div>
+
+    <!-- 3. CONEXIÓN DE CATÁLOGOS AUTOMÁTICOS & SCRAPING -->
+    <div id="sec-catalogos" class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-6">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+        <div>
+          <div class="flex items-center gap-2 text-base font-bold text-stone-900">
+            <span>🔄</span>
+            <span>Fuentes de Sincronización Automática (Scraping)</span>
+          </div>
+          <p class="text-xs text-stone-500 mt-0.5">URLs de colecciones de Shopify o WooCommerce vinculadas a tu tostaduría.</p>
+        </div>
+        <span class="rounded-full bg-emerald-100 text-emerald-900 px-2.5 py-0.5 text-xs font-bold">
+          Multi-Catálogo Activo
+        </span>
+      </div>
+
+      <!-- Formulario para agregar y probar nueva URL -->
+      <div class="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-stone-700">Conectar Nueva Colección o URL</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          <div class="sm:col-span-6">
+            <input
+              type="url"
+              id="input-new-catalog-url"
+              placeholder="https://mitostaduria.cl/collections/cafe-de-especialidad"
+              class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+            />
+          </div>
+          <div class="sm:col-span-3">
+            <input
+              type="text"
+              id="input-new-catalog-label"
+              placeholder="Etiqueta (ej: Granos)"
+              class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+            />
+          </div>
+          <div class="sm:col-span-3 flex items-center gap-2">
+            <button
+              type="button"
+              id="btn-test-catalog-url"
+              class="flex-1 rounded-xl border border-stone-300 hover:bg-stone-200 text-stone-700 font-bold text-xs py-2 px-3 transition shadow-2xs"
+            >
+              🧪 Probar
+            </button>
+            <button
+              type="button"
+              id="btn-add-catalog-url"
+              class="flex-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-3 transition shadow-xs"
+            >
+              + Agregar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lista de URLs registradas -->
+      <div class="space-y-2">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-stone-700">Colecciones Conectadas</h4>
+        <div id="catalogs-list-container" class="space-y-2">
+          <div class="text-xs text-stone-400 py-2">Cargando catálogos conectados...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE PROBADOR DE CATÁLOGO (DRY-RUN) -->
+  <div id="modal-catalog-test" class="hidden fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl border border-stone-200 shadow-xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">🧪</span>
+          <h3 class="text-base font-bold text-stone-900">Resultado de Prueba en Seco (Dry-Run)</h3>
+        </div>
+        <button type="button" id="btn-close-test-modal" class="text-stone-400 hover:text-stone-700 font-bold text-sm">✕</button>
+      </div>
+
+      <div id="catalog-test-content" class="flex-1 overflow-y-auto space-y-3 text-xs">
+        <!-- Inyectado dinámicamente -->
+      </div>
+
+      <div class="border-t border-stone-100 pt-3 flex justify-end">
+        <button type="button" id="btn-close-test-modal-footer" class="rounded-xl bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs px-4 py-2">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PARA CREAR SUCURSAL -->
+  <div id="modal-branch" class="hidden fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl border border-stone-200 shadow-xl max-w-md w-full p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+        <h3 class="text-base font-bold text-stone-900">Nueva Sucursal o Cafetería</h3>
+        <button type="button" id="btn-close-branch-modal" class="text-stone-400 hover:text-stone-700 font-bold text-sm">✕</button>
+      </div>
+
+      <form id="form-branch" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Nombre de la Sucursal</label>
+          <input type="text" id="branch-name" required placeholder="Ej: Barra Providencia" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+        </div>
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Dirección Completa</label>
+          <input type="text" id="branch-address" required placeholder="Av. Providencia 1234" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+        </div>
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Comuna / Ciudad</label>
+          <input type="text" id="branch-commune" required placeholder="Providencia, Santiago" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold text-stone-700 mb-1">Latitud</label>
+            <input type="number" step="any" id="branch-lat" placeholder="-33.425" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+          </div>
+          <div>
+            <label class="block font-bold text-stone-700 mb-1">Longitud</label>
+            <input type="number" step="any" id="branch-lng" placeholder="-70.615" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+          </div>
+        </div>
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Horario de Atención</label>
+          <input type="text" id="branch-hours" placeholder="Lun a Vie 8:00 - 19:00" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+        </div>
+
+        <div class="pt-3 border-t border-stone-100 flex justify-end gap-2">
+          <button type="button" id="btn-cancel-branch" class="rounded-xl border border-stone-300 px-4 py-2 font-bold text-stone-600 hover:bg-stone-100">
+            Cancelar
+          </button>
+          <button type="submit" id="btn-save-branch" class="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 font-bold shadow-xs">
+            Guardar Sucursal
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script is:inline>
+    (function initStoreConfiguracion() {
+      const token = localStorage.getItem('store_admin_token');
+      if (!token) {
+        window.location.replace('/admin-tienda/login');
+        return;
+      }
+
+      const mainEl = document.querySelector('body[data-api-base]');
+      let API_BASE = mainEl ? (mainEl.getAttribute('data-api-base') || '').trim() : '';
+      if (!API_BASE) {
+        API_BASE = `http://${window.location.hostname}:8000`;
+      } else if (API_BASE.includes('localhost') && window.location.hostname === '127.0.0.1') {
+        API_BASE = API_BASE.replace('localhost', '127.0.0.1');
+      } else if (API_BASE.includes('127.0.0.1') && window.location.hostname === 'localhost') {
+        API_BASE = API_BASE.replace('127.0.0.1', 'localhost');
+      }
+
+      // Perfil
+      const formProfile = document.getElementById('form-brand-profile');
+      const profName = document.getElementById('prof-name');
+      const profUrl = document.getElementById('prof-url');
+      const profDescription = document.getElementById('prof-description');
+      const profEnvioGratis = document.getElementById('prof-envio-gratis');
+      const profRetiroTienda = document.getElementById('prof-retiro-tienda');
+      const profDiasTueste = document.getElementById('prof-dias-tueste');
+      const profFechaTueste = document.getElementById('prof-fecha-tueste');
+
+      // Catálogos
+      const catalogsContainer = document.getElementById('catalogs-list-container');
+      const inputCatalogUrl = document.getElementById('input-new-catalog-url');
+      const inputCatalogLabel = document.getElementById('input-new-catalog-label');
+      const btnTestCatalog = document.getElementById('btn-test-catalog-url');
+      const btnAddCatalog = document.getElementById('btn-add-catalog-url');
+      const modalTest = document.getElementById('modal-catalog-test');
+      const testContent = document.getElementById('catalog-test-content');
+
+      // Sucursales
+      const branchesContainer = document.getElementById('branches-list-container');
+      const btnNewBranch = document.getElementById('btn-new-branch');
+      const modalBranch = document.getElementById('modal-branch');
+      const formBranch = document.getElementById('form-branch');
+      const btnCloseBranch = document.getElementById('btn-close-branch-modal');
+      const btnCancelBranch = document.getElementById('btn-cancel-branch');
+
+      async function loadProfile() {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/perfil`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+
+          if (profName) profName.value = data.tienda_nombre || '';
+          if (profUrl) profUrl.value = data.tienda_url || '';
+          if (profDescription) profDescription.value = data.descripcion || '';
+          if (profEnvioGratis) profEnvioGratis.value = data.envio_gratis_monto || '';
+          if (profRetiroTienda) profRetiroTienda.checked = Boolean(data.retiro_en_tienda);
+          if (profDiasTueste) profDiasTueste.value = data.dias_tueste || '';
+          if (profFechaTueste) profFechaTueste.value = data.fecha_ultimo_tueste || '';
+        } catch (_) {}
+      }
+
+      formProfile?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+          url_oficial: profUrl?.value.trim() || null,
+          descripcion: profDescription?.value.trim() || null,
+          envio_gratis_monto: profEnvioGratis?.value ? parseInt(profEnvioGratis.value, 10) : null,
+          retiro_en_tienda: profRetiroTienda?.checked ?? false,
+          dias_tueste: profDiasTueste?.value.trim() || null,
+          fecha_ultimo_tueste: profFechaTueste?.value || null,
+        };
+
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/perfil`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error('Error al actualizar perfil de marca.');
+          window.cafesitiosAlert('Perfil Actualizado', 'Los datos comerciales se guardaron exitosamente.', 'success');
+        } catch (err) {
+          window.cafesitiosAlert('Error', err.message, 'error');
+        }
+      });
+
+      // Catálogos
+      async function loadCatalogs() {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/catalogos`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) return;
+          const list = await res.json();
+
+          if (!list.length) {
+            catalogsContainer.innerHTML = '<p class="text-stone-400 italic">No hay URLs adicionales configuradas.</p>';
+            return;
+          }
+
+          catalogsContainer.innerHTML = list.map(c => `
+            <div class="flex items-center justify-between p-3 rounded-xl border border-stone-200 bg-white gap-2">
+              <div class="min-w-0">
+                <div class="font-bold text-stone-800 truncate">${c.url_catalogo}</div>
+                <div class="text-[10px] text-stone-400">${c.etiqueta || 'Colección'} &bull; ${c.activa ? 'Activa' : 'Pausada'}</div>
+              </div>
+              <button type="button" class="btn-del-cat text-rose-600 hover:text-rose-800 text-xs font-bold px-2 py-1" data-id="${c.id}">
+                Eliminar
+              </button>
+            </div>
+          `).join('');
+
+          catalogsContainer.querySelectorAll('.btn-del-cat').forEach(b => {
+            b.addEventListener('click', async () => {
+              const id = b.getAttribute('data-id');
+              const res = await fetch(`${API_BASE}/api/v1/admin/tienda/catalogos/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (res.ok) loadCatalogs();
+            });
+          });
+        } catch (_) {}
+      }
+
+      btnAddCatalog?.addEventListener('click', async () => {
+        const url = inputCatalogUrl?.value.trim();
+        const label = inputCatalogLabel?.value.trim();
+        if (!url) return;
+
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/catalogos`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ url_catalogo: url, etiqueta: label || null })
+          });
+          if (!res.ok) throw new Error('Error al agregar catálogo.');
+          inputCatalogUrl.value = '';
+          inputCatalogLabel.value = '';
+          loadCatalogs();
+        } catch (err) {
+          window.cafesitiosAlert('Error Catálogo', err.message, 'error');
+        }
+      });
+
+      btnTestCatalog?.addEventListener('click', async () => {
+        const url = inputCatalogUrl?.value.trim();
+        if (!url) {
+          window.cafesitiosAlert('Atención', 'Ingresa una URL antes de probar.', 'warning');
+          return;
+        }
+
+        modalTest?.classList.remove('hidden');
+        if (testContent) testContent.innerHTML = '<p class="text-stone-500 py-6 text-center">Ejecutando prueba en seco (Dry-run)...</p>';
+
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/catalogos/probar`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ url_catalogo: url })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || 'Fallo en la prueba.');
+
+          testContent.innerHTML = `
+            <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 font-bold">
+              ✓ Driver detectado: ${data.driver_detectado} &bull; ${data.total_encontrados} productos encontrados
+            </div>
+            <div class="space-y-1.5 max-h-60 overflow-y-auto">
+              ${(data.muestra_productos || []).map(p => `
+                <div class="p-2 rounded-lg bg-stone-50 border border-stone-200 flex justify-between">
+                  <span class="font-bold text-stone-800">${p.nombre}</span>
+                  <span class="text-emerald-700 font-bold">$${(p.precio_clp || 0).toLocaleString('es-CL')}</span>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } catch (err) {
+          testContent.innerHTML = `<div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 font-bold">Error: ${err.message}</div>`;
+        }
+      });
+
+      document.getElementById('btn-close-test-modal')?.addEventListener('click', () => modalTest?.classList.add('hidden'));
+      document.getElementById('btn-close-test-modal-footer')?.addEventListener('click', () => modalTest?.classList.add('hidden'));
+
+      // Sucursales
+      async function loadBranches() {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/sucursales`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) return;
+          const list = await res.json();
+
+          if (!list.length) {
+            branchesContainer.innerHTML = '<div class="text-stone-400 italic col-span-2 text-center py-4">No tienes sucursales físicas registradas aún.</div>';
+            return;
+          }
+
+          branchesContainer.innerHTML = list.map(b => `
+            <div class="p-4 rounded-xl border border-stone-200 bg-stone-50/50 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-stone-900 text-xs">${b.nombre}</span>
+                <button type="button" class="btn-del-branch text-rose-600 hover:text-rose-800 text-[11px] font-bold" data-id="${b.id}">Eliminar</button>
+              </div>
+              <div class="text-[11px] text-stone-600">${b.direccion}, ${b.comuna || ''}</div>
+              ${b.horario_atencion ? `<div class="text-[10px] text-stone-400">🕒 ${b.horario_atencion}</div>` : ''}
+            </div>
+          `).join('');
+
+          branchesContainer.querySelectorAll('.btn-del-branch').forEach(b => {
+            b.addEventListener('click', async () => {
+              const id = b.getAttribute('data-id');
+              await fetch(`${API_BASE}/api/v1/admin/tienda/sucursales/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              loadBranches();
+            });
+          });
+        } catch (_) {}
+      }
+
+      btnNewBranch?.addEventListener('click', () => modalBranch?.classList.remove('hidden'));
+      btnCloseBranch?.addEventListener('click', () => modalBranch?.classList.add('hidden'));
+      btnCancelBranch?.addEventListener('click', () => modalBranch?.classList.add('hidden'));
+
+      formBranch?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+          nombre: document.getElementById('branch-name')?.value.trim(),
+          direccion: document.getElementById('branch-address')?.value.trim(),
+          comuna: document.getElementById('branch-commune')?.value.trim(),
+          latitud: document.getElementById('branch-lat')?.value ? parseFloat(document.getElementById('branch-lat').value) : null,
+          longitud: document.getElementById('branch-lng')?.value ? parseFloat(document.getElementById('branch-lng').value) : null,
+          horario_atencion: document.getElementById('branch-hours')?.value.trim() || null,
+        };
+
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/sucursales`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error('Error al crear sucursal.');
+          modalBranch?.classList.add('hidden');
+          formBranch.reset();
+          loadBranches();
+        } catch (err) {
+          window.cafesitiosAlert('Error Sucursal', err.message, 'error');
+        }
+      });
+
+      loadProfile();
+      loadCatalogs();
+      loadBranches();
+    })();
+  </script>
+</StoreAdminLayout>

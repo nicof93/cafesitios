@@ -67,6 +67,16 @@ describe('FeatureFlags & Environment (Estrategia de Lanzamiento Controlado)', ()
     expect(flags.myRecipes).toBe(true);
     expect(flags.whatsAppOrders).toBe(true);
     expect(flags.glossary).toBe(true);
+    expect(flags.chatbotSommelier).toBe(true);
+  });
+
+  it('controla el feature flag del chatbot sommelier por defecto y con variable', () => {
+    vi.stubEnv('PUBLIC_ENABLE_CHATBOT_SOMMELIER', undefined as any);
+    vi.stubEnv('ENABLE_CHATBOT_SOMMELIER', undefined as any);
+    expect(FeatureFlags.isChatbotSommelierEnabled()).toBe(true);
+
+    vi.stubEnv('PUBLIC_ENABLE_CHATBOT_SOMMELIER', 'false');
+    expect(FeatureFlags.isChatbotSommelierEnabled()).toBe(false);
   });
 });
 

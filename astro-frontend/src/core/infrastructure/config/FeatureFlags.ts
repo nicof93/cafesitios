@@ -71,6 +71,15 @@ export class FeatureFlags {
     return this.parseFlag(val, true);
   }
 
+  /**
+   * Feature Flag: Chatbot Sommelier Digital de Café
+   * Controlado por PUBLIC_ENABLE_CHATBOT_SOMMELIER o ENABLE_CHATBOT_SOMMELIER
+   */
+  static isChatbotSommelierEnabled(): boolean {
+    const val = import.meta.env.PUBLIC_ENABLE_CHATBOT_SOMMELIER ?? import.meta.env.ENABLE_CHATBOT_SOMMELIER;
+    return this.parseFlag(val, true);
+  }
+
   static getAll(): Record<string, boolean> {
     return {
       guides: this.isGuidesEnabled(),
@@ -79,6 +88,7 @@ export class FeatureFlags {
       flavorQuiz: this.isFlavorQuizEnabled(),
       whatsAppOrders: this.isWhatsAppOrdersEnabled(),
       glossary: this.isGlossaryEnabled(),
+      chatbotSommelier: this.isChatbotSommelierEnabled(),
     };
   }
 }

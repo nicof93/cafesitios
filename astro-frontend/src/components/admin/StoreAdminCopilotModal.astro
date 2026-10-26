@@ -1,0 +1,314 @@
+---
+// StoreAdminCopilotModal.astro - Copiloto Asistente para Administradores de Tostadurías
+---
+
+<div id="copilot-container" class="fixed bottom-6 right-6 z-40">
+  <!-- Botón Flotante de Activación -->
+  <button
+    type="button"
+    id="btn-open-copilot"
+    class="flex items-center gap-2.5 rounded-full bg-emerald-800 hover:bg-emerald-900 text-white px-4 py-3 shadow-xl transition-all duration-200 hover:scale-105 border border-emerald-600/50 group focus:outline-none focus:ring-4 focus:ring-emerald-500/30"
+    title="Abrir Copiloto de Tostaduría"
+    aria-label="Abrir asistente de ayuda"
+  >
+    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-700 text-white text-base font-bold shadow-inner group-hover:rotate-12 transition-transform">
+      💡
+    </span>
+    <span class="text-xs font-bold tracking-wide pr-1">
+      Asistente Cafésitios
+    </span>
+    <span class="flex h-2 w-2 rounded-full bg-emerald-300 animate-ping"></span>
+  </button>
+
+  <!-- Panel Deslizable / Drawer del Copiloto -->
+  <div
+    id="copilot-drawer"
+    class="hidden fixed bottom-6 right-6 w-[92vw] sm:w-[420px] max-h-[85vh] h-[640px] bg-white rounded-3xl border border-stone-200 shadow-2xl flex-col overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200"
+    role="dialog"
+    aria-labelledby="copilot-title"
+  >
+    <!-- Header del Copiloto -->
+    <div class="px-5 py-4 bg-gradient-to-r from-emerald-900 via-emerald-800 to-stone-900 text-white flex items-center justify-between shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-700/80 border border-emerald-500/40 text-lg shadow-sm">
+          🤖
+        </div>
+        <div>
+          <h3 id="copilot-title" class="text-sm font-black text-white m-0 tracking-tight">Copiloto de Tostaduría</h3>
+          <p class="text-[11px] text-emerald-300 m-0">Guía operativa y navegación directa</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        id="btn-close-copilot"
+        class="h-8 w-8 inline-flex items-center justify-center rounded-xl bg-emerald-950/60 hover:bg-emerald-950 text-emerald-200 hover:text-white transition text-xs font-bold border border-emerald-700/50"
+        aria-label="Cerrar asistente"
+      >
+        ✕
+      </button>
+    </div>
+
+    <!-- Área de Chat / Mensajes con Scroll -->
+    <div id="copilot-messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-stone-50/70 text-xs">
+      <!-- Mensaje Inicial de Bienvenida -->
+      <div class="flex items-start gap-2.5">
+        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 font-bold text-xs">
+          ☕
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl rounded-tl-none border border-stone-200 shadow-2xs space-y-2 max-w-[85%] text-stone-800">
+          <p class="font-medium leading-relaxed">
+            ¡Hola! Soy tu <strong>Copiloto Cafésitios</strong>. Estoy aquí para enseñarte a usar cualquier parte de la plataforma o llevarte directamente a la herramienta que buscas.
+          </p>
+          <p class="text-[11px] text-stone-500">
+            ¿En qué te puedo ayudar hoy? Puedes tocar una sugerencia o escribirme tu duda abajo:
+          </p>
+        </div>
+      </div>
+
+      <!-- Píldoras de Preguntas Frecuentes Iniciales -->
+      <div id="copilot-quick-pills" class="flex flex-wrap gap-1.5 pl-9">
+        <button type="button" class="copilot-pill px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-[11px] transition shadow-2xs" data-q="¿Cómo subo fotos a mis cafés?">
+          📸 Subir fotos
+        </button>
+        <button type="button" class="copilot-pill px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-[11px] transition shadow-2xs" data-q="¿Cómo configuro WhatsApp para recibir pedidos?">
+          💬 Configurar WhatsApp
+        </button>
+        <button type="button" class="copilot-pill px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-[11px] transition shadow-2xs" data-q="¿Cómo vinculo mi tienda Shopify o WooCommerce?">
+          🔄 Conectar Shopify/Woo
+        </button>
+        <button type="button" class="copilot-pill px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-[11px] transition shadow-2xs" data-q="¿Cómo publico una receta oficial?">
+          ☕ Publicar recetas
+        </button>
+        <button type="button" class="copilot-pill px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-[11px] transition shadow-2xs" data-q="¿Por qué mi café aparece como Oculto?">
+          ⚠️ Café Oculto
+        </button>
+        <button type="button" class="copilot-pill px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-[11px] transition shadow-2xs" data-q="¿Cómo funcionan las Oportunidades de Demanda?">
+          📈 Demanda y Oportunidades
+        </button>
+        <button type="button" class="copilot-pill px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-[11px] transition shadow-2xs" data-q="¿Cómo agrego una sucursal física?">
+          📍 Agregar sucursal
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra Inferior de Entrada de Pregunta -->
+    <div class="p-3 bg-white border-t border-stone-200 shrink-0">
+      <form id="copilot-form" class="flex items-center gap-2">
+        <input
+          type="text"
+          id="copilot-input"
+          placeholder="Escribe tu consulta operativa..."
+          class="flex-1 rounded-xl border border-stone-300 bg-stone-50 px-3 py-2 text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-600"
+          autocomplete="off"
+        />
+        <button
+          type="submit"
+          class="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-2 text-xs font-bold transition shadow-2xs shrink-0"
+        >
+          Enviar
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+  (function initStoreAdminCopilot() {
+    const btnOpen = document.getElementById('btn-open-copilot');
+    const btnClose = document.getElementById('btn-close-copilot');
+    const drawer = document.getElementById('copilot-drawer');
+    const messages = document.getElementById('copilot-messages');
+    const form = document.getElementById('copilot-form');
+    const input = document.getElementById('copilot-input');
+    const quickPills = document.querySelectorAll('.copilot-pill');
+
+    // Base de conocimiento interactiva con enlaces directos
+    const KNOWLEDGE_BASE = [
+      {
+        keys: ['foto', 'imagen', 'portada', 'peso', 'cuota', 'subir foto', 'almacenamiento', 'mb'],
+        title: 'Gestión de Imágenes y Fotos de Cafés',
+        answer: 'Puedes subir fotos en formato <strong>PNG, JPG o WebP</strong> con un peso máximo de <strong>3 MB</strong> por foto. Cada tostaduría cuenta con una cuota inicial de <strong>250 MB</strong> de almacenamiento en alta definición. Al editar un café manual, selecciona el archivo en el formulario y se asociará inmediatamente.',
+        actions: [
+          { text: 'Ir a Mis Productos ↗', url: '/admin-tienda/productos' },
+          { text: 'Ver almacenamiento en Productos', url: '/admin-tienda/productos#container-prod-image-upload' }
+        ]
+      },
+      {
+        keys: ['whatsapp', 'ventas', 'pedido', 'comision', 'telefono', 'numero', 'leads', 'calculadora'],
+        title: 'Configuración de WhatsApp Comercial y Ventas',
+        answer: 'En Cafésitios los pedidos van directos a tu WhatsApp con <strong>0% de comisiones por venta</strong>. Configura tu número móvil chileno de 9 dígitos (ej: 912345678) en la pestaña de Ventas. Allí también verás la calculadora de cuánto dinero ahorras versus marketplaces tradicionales (18%+).',
+        actions: [
+          { text: 'Ir a Ventas & WhatsApp ↗', url: '/admin-tienda/ventas' }
+        ]
+      },
+      {
+        keys: ['shopify', 'woocommerce', 'scraping', 'sincronizar', 'coleccion', 'url', 'catalogo', 'dry-run', 'probar'],
+        title: 'Conexión de Catálogos Automáticos (Scraping)',
+        answer: 'Para que tus productos y precios se actualicen solos, agrega la URL de tu colección de café en <strong>Configuración & Catálogos</strong>. Puedes usar el botón <em>"Probar en seco" (Dry-run)</em> para simular la extracción en 5 segundos sin alterar tu catálogo real.',
+        actions: [
+          { text: 'Ir a Conexión de Catálogos ↗', url: '/admin-tienda/configuracion#sec-catalogos' }
+        ]
+      },
+      {
+        keys: ['receta', 'guia', 'v60', 'espresso', 'aeropress', 'prensa', 'ratio', 'molienda'],
+        title: 'Publicación de Recetas Oficiales del Tostador',
+        answer: 'Las recetas oficiales educan a tus compradores y aparecen con tu sello en la ficha pública de tus cafés. Puedes registrar parámetros de dosis (g), agua (ml), molienda, temperatura (°C) y pasos paso a paso.',
+        actions: [
+          { text: 'Ir a Recetas Oficiales ↗', url: '/admin-tienda/recetas' }
+        ]
+      },
+      {
+        keys: ['oculto', 'desactivado', 'visible', 'no ven', 'no aparece', 'porque esta oculto', 'inconsistencia'],
+        title: 'Visibilidad de Productos en el Comparador Público',
+        answer: 'Si un café tiene el interruptor <strong>"Oculto del catálogo público"</strong> activo, los clientes no lo verán en el buscador ni en el comparador. También puede estar oculto si tu tienda se encuentra en <em>"Modo Configuración"</em>. Puedes activar o desactivar la visibilidad editando el café en Mis Productos.',
+        actions: [
+          { text: 'Revisar Cafés Ocultos ↗', url: '/admin-tienda/productos?oculto=true' }
+        ]
+      },
+      {
+        keys: ['oportunidad', 'demanda', 'benchmark', 'insatisfecha', 'mercado', 'precios', 'kpi'],
+        title: 'Oportunidades de Catálogo y Demanda de Mercado',
+        answer: 'El Radar de Demanda analiza las búsquedas de usuarios en Cafésitios donde no hubo suficiente stock (ej. orígenes específicos como Kenia o Etiopía natural). Te indica qué cafés tienen alta intención de compra pero poca oferta en Chile, para ayudarte a planificar importaciones.',
+        actions: [
+          { text: 'Ver Radar de Demanda en Dashboard ↗', url: '/admin-tienda/dashboard#sec-demanda' }
+        ]
+      },
+      {
+        keys: ['sucursal', 'cafeteria', 'mapa', 'direccion', 'local', 'tienda fisica', 'geolocalizacion'],
+        title: 'Sucursales Físicas y Cafeterías',
+        answer: 'Si tienes barra de café o tostaduría física, puedes registrar su dirección, comuna y coordenadas. Tus locales aparecerán geolocalizados en el mapa de tostadurías para atraer clientes que buscan café cerca de su ubicación.',
+        actions: [
+          { text: 'Ir a Sucursales & Locales ↗', url: '/admin-tienda/configuracion#sec-sucursales' }
+        ]
+      },
+      {
+        keys: ['nota', 'cata', 'sca', 'sugerida', 'descriptores', 'rueda', 'moderar'],
+        title: 'Moderación de Notas de Cata y Léxico SCA',
+        answer: 'Nuestra inteligencia artificial sugiere notas de cata basadas en la descripción de tu café. Puedes hacer clic en el botón <strong>🏷️ Notas</strong> de cualquier café para confirmar descriptores de la rueda SCA o agregar notas personalizadas.',
+        actions: [
+          { text: 'Ir a Mis Productos ↗', url: '/admin-tienda/productos' }
+        ]
+      },
+      {
+        keys: ['widget', 'embebible', 'insignia', 'verificado', 'sello', 'html'],
+        title: 'Widget "Verificado en Cafésitios"',
+        answer: 'Puedes copiar e insertar un widget HTML en tu propio sitio web o tienda online para lucir tu insignia de tostaduría verificada por la comunidad de Cafésitios.',
+        actions: [
+          { text: 'Obtener Código de Widget ↗', url: '/admin-tienda/ventas#sec-widget' }
+        ]
+      }
+    ];
+
+    function toggleDrawer(open) {
+      if (open) {
+        drawer?.classList.remove('hidden');
+        drawer?.classList.add('flex');
+        input?.focus();
+      } else {
+        drawer?.classList.add('hidden');
+        drawer?.classList.remove('flex');
+      }
+    }
+
+    btnOpen?.addEventListener('click', () => toggleDrawer(true));
+    btnClose?.addEventListener('click', () => toggleDrawer(false));
+
+    function appendUserMessage(text) {
+      const userDiv = document.createElement('div');
+      userDiv.className = 'flex items-start justify-end gap-2.5';
+      userDiv.innerHTML = `
+        <div class="bg-emerald-800 text-white p-3 rounded-2xl rounded-tr-none shadow-2xs max-w-[85%] text-xs font-medium leading-relaxed">
+          ${text}
+        </div>
+      `;
+      messages?.appendChild(userDiv);
+      messages?.scrollTo({ top: messages.scrollHeight, behavior: 'smooth' });
+    }
+
+    function appendBotResponse(title, answer, actions = []) {
+      const botDiv = document.createElement('div');
+      botDiv.className = 'flex items-start gap-2.5 animate-in fade-in duration-150';
+
+      const actionsHtml = actions.length ? `
+        <div class="pt-2 flex flex-wrap gap-1.5 border-t border-stone-100 mt-2">
+          ${actions.map(a => `
+            <a
+              href="${a.url}"
+              class="inline-flex items-center gap-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] px-2.5 py-1 transition shadow-2xs"
+            >
+              <span>${a.text}</span>
+            </a>
+          `).join('')}
+        </div>
+      ` : '';
+
+      botDiv.innerHTML = `
+        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 font-bold text-xs">
+          💡
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl rounded-tl-none border border-stone-200 shadow-2xs space-y-2 max-w-[85%] text-stone-800 text-xs">
+          ${title ? `<div class="font-extrabold text-emerald-900 text-xs">${title}</div>` : ''}
+          <div class="leading-relaxed">${answer}</div>
+          ${actionsHtml}
+        </div>
+      `;
+      messages?.appendChild(botDiv);
+      messages?.scrollTo({ top: messages.scrollHeight, behavior: 'smooth' });
+    }
+
+    function handleQuery(queryText) {
+      const clean = queryText.toLowerCase().trim();
+      if (!clean) return;
+
+      appendUserMessage(queryText);
+
+      // Búsqueda en la base de conocimientos
+      let bestMatch = null;
+      let maxScore = 0;
+
+      for (const item of KNOWLEDGE_BASE) {
+        let score = 0;
+        for (const key of item.keys) {
+          if (clean.includes(key)) {
+            score += key.length * 2;
+          }
+        }
+        if (score > maxScore) {
+          maxScore = score;
+          bestMatch = item;
+        }
+      }
+
+      setTimeout(() => {
+        if (bestMatch && maxScore > 2) {
+          appendBotResponse(bestMatch.title, bestMatch.answer, bestMatch.actions);
+        } else {
+          appendBotResponse(
+            'Consulta personalizada',
+            'No encontré una respuesta exacta para esa consulta, pero puedes explorar las secciones clave del menú lateral o contactar directamente a nuestro equipo en <a href="mailto:soporte@cafesitios.cl" class="text-emerald-700 font-bold underline">soporte@cafesitios.cl</a>.',
+            [
+              { text: '📦 Mis Productos', url: '/admin-tienda/productos' },
+              { text: '💬 Ventas & WhatsApp', url: '/admin-tienda/ventas' },
+              { text: '⚙️ Configuración', url: '/admin-tienda/configuracion' }
+            ]
+          );
+        }
+      }, 250);
+    }
+
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const val = input?.value.trim();
+      if (!val) return;
+      input.value = '';
+      handleQuery(val);
+    });
+
+    quickPills.forEach((pill) => {
+      pill.addEventListener('click', () => {
+        const q = pill.getAttribute('data-q') || pill.textContent?.trim();
+        if (q) handleQuery(q);
+      });
+    });
+  })();
+</script>

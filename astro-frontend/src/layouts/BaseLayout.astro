@@ -6,8 +6,10 @@ import FlavorQuizModal from '../components/quiz/FlavorQuizModal.astro';
 import FeedbackWidget from '../components/feedback/FeedbackWidget.astro';
 import CartDrawer from '../components/cart/CartDrawer.astro';
 import CafesitiosPopupModal from '../components/common/CafesitiosPopupModal.astro';
+import PublicSommelierChatbot from '../components/chat/PublicSommelierChatbot.astro';
 import Analytics from '@vercel/analytics/astro';
 import { Environment } from '../core/infrastructure/config/Environment';
+import { FeatureFlags } from '../core/infrastructure/config/FeatureFlags';
 import '../styles/global.css';
 
 interface Props {
@@ -31,6 +33,7 @@ const {
 const gtmId = Environment.getGtmId();
 const gaId = Environment.getGaMeasurementId();
 const showWhatsAppOrders = Environment.isWhatsAppOrdersEnabled();
+const showSommelier = FeatureFlags.isChatbotSommelierEnabled();
 const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'https://cafesitios.cl').href;
 ---
 
@@ -128,6 +131,7 @@ const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'htt
   <FeedbackWidget />
   {showWhatsAppOrders && <CartDrawer />}
   <CafesitiosPopupModal />
+  {showSommelier && <PublicSommelierChatbot />}
 
   <!-- SCRIPTS GLOBALES CLIENTE -->
   <script>

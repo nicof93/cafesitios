@@ -411,6 +411,13 @@ def _sync_store_admin_user(
             debe_cambiar_password=True,
         )
         db_session.add(new_user)
+        try:
+            from core.email_service import EmailService
+            tienda_obj = db_session.scalars(select(Tienda).where(Tienda.id == store_id)).first()
+            tienda_nombre = tienda_obj.nombre if tienda_obj else "Tostaduría"
+            EmailService.send_welcome_email(to_email=email_clean, tienda_nombre=tienda_nombre)
+        except Exception as email_err:
+            logger.warning(f"No se pudo enviar correo de bienvenida a {email_clean}: {email_err}")
     db_session.flush()
     return email_clean or (existing.usuario_id if existing else None)
 
