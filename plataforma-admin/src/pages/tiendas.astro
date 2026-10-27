@@ -367,6 +367,9 @@ const apiBaseUrl = "http://localhost:8000";
         <div id="catalog-test-result" class="hidden"></div>
       </div>
 
+      <!-- Feedback de guardado y sincronización -->
+      <div id="store-form-feedback" class="hidden"></div>
+
       <!-- BOTONES DEL PIE DEL DRAWER -->
       <div class="sticky bottom-0 bg-white/95 backdrop-blur-md pt-4 pb-2 border-t border-stone-200 flex items-center justify-end gap-3">
         <button
@@ -850,9 +853,30 @@ const apiBaseUrl = "http://localhost:8000";
               </div>
               <div class="mt-1">
                 ${store.es_pendiente_sincronizacion
-                  ? `<span class="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-900 px-2 py-0.5 text-[10px] font-bold" title="${store.estado_sincronizacion === 'fallido' ? 'Último intento falló' : 'Sin sincronizar aún'}">⏳ Pendiente</span>`
-                  : `<span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-900 px-2 py-0.5 text-[10px] font-bold" title="${store.ultima_sincronizacion ? 'Sincronizado: ' + store.ultima_sincronizacion : ''}">✅ Sincronizada</span>`
-                }
+                    ? (store.estado_sincronizacion === 'fallido'
+                        ? `<span class="inline-flex items-center gap-1 rounded-full ${
+                            store.codigo_error_sincronizacion === 'TIENDA_PROTEGIDA_PASSWORD'
+                              ? 'bg-purple-100 text-purple-900 border border-purple-200'
+                              : (store.codigo_error_sincronizacion === 'SITIO_CAIDO_O_TIMEOUT'
+                                  ? 'bg-rose-100 text-rose-900 border border-rose-200'
+                                  : 'bg-amber-100 text-amber-900 border border-amber-200')
+                          } px-2 py-0.5 text-[10px] font-bold cursor-help" title="${store.categoria_error_sincronizacion || 'Error de sincronización'}: ${store.ultimo_error_sincronizacion || ''}">
+                            <span>${
+                              store.codigo_error_sincronizacion === 'TIENDA_PROTEGIDA_PASSWORD'
+                                ? '🔒 Con Password'
+                                : (store.codigo_error_sincronizacion === 'SITIO_CAIDO_O_TIMEOUT'
+                                    ? '🔌 Sitio Caído'
+                                    : (store.codigo_error_sincronizacion === 'CATALOGO_NO_ENCONTRADO'
+                                        ? '🔍 Error 404'
+                                        : (store.codigo_error_sincronizacion === 'ERROR_SERVIDOR_TIENDA'
+                                            ? '🛑 Error 5xx'
+                                            : '⚠️ Fallida')))
+                            }</span>
+                          </span>`
+                        : `<span class="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-900 px-2 py-0.5 text-[10px] font-bold" title="Sin sincronizar aún">⏳ Pendiente</span>`
+                      )
+                    : `<span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-900 px-2 py-0.5 text-[10px] font-bold" title="${store.ultima_sincronizacion ? 'Sincronizado: ' + store.ultima_sincronizacion : ''}">✅ Sincronizada</span>`
+                  }
               </div>
             </td>
             <td class="px-4 py-3 text-center">
@@ -1061,7 +1085,7 @@ const apiBaseUrl = "http://localhost:8000";
           const isSuccess = Boolean(data.exito || data.estado === 'exitoso');
 
           const summaryHtml = `
-            <div class="space-y-1">
+            <div class="space-y-2">
               <div class="flex items-center justify-between">
                 <span class="font-bold text-sm ${isSuccess ? 'text-emerald-800' : 'text-rose-800'}">
                   ${isSuccess ? '✅ Catálogo Sincronizado con Éxito' : '❌ Sincronización con Errores'}
@@ -1069,6 +1093,18 @@ const apiBaseUrl = "http://localhost:8000";
                 <span class="text-xs font-mono text-stone-500">${data.duracion_segundos}s</span>
               </div>
               <p class="text-xs text-stone-700">${data.mensaje}</p>
+              ${data.categoria_error ? `
+                <div class="rounded-xl border border-rose-200 bg-rose-50/80 p-3 space-y-1.5 my-2">
+                  <div class="flex items-center gap-1.5 font-bold text-rose-950 text-xs">
+                    <span>${data.codigo_error === 'TIENDA_PROTEGIDA_PASSWORD' ? '🔒' : (data.codigo_error === 'SITIO_CAIDO_O_TIMEOUT' ? '🔌' : '⚠️')}</span>
+                    <span>Diagnóstico: ${data.categoria_error}</span>
+                  </div>
+                  ${data.mensaje_amigable ? `<p class="text-[11px] text-rose-800 font-medium">${data.mensaje_amigable}</p>` : ''}
+                  <div class="text-[10px] font-mono text-rose-700 bg-rose-100/70 p-2 rounded-lg break-all">
+                    ${data.error || data.mensaje || ''}
+                  </div>
+                </div>
+              ` : ''}
               <div class="flex flex-wrap gap-3 pt-2 text-[11px] font-semibold text-stone-700 border-t border-stone-200 mt-2">
                 <span class="text-emerald-700">🌱 ${data.productos_nuevos || 0} nuevos</span>
                 <span class="text-sky-700">🔄 ${data.productos_actualizados || 0} actualizados</span>
@@ -1307,19 +1343,80 @@ const apiBaseUrl = "http://localhost:8000";
         if (branchesContainer) branchesContainer.innerHTML = '';
         const testResultBox = document.getElementById('catalog-test-result');
         if (testResultBox) testResultBox.classList.add('hidden');
+        setStoreFormFeedback(null, null);
+        const submitBtn = document.getElementById('btn-submit-store');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = 'Guardar Tienda';
+        }
+        const cancelBtn = document.getElementById('btn-cancel-drawer');
+        if (cancelBtn) {
+          cancelBtn.disabled = false;
+        }
+      }
+
+      const storeFormFeedback = document.getElementById('store-form-feedback');
+      function setStoreFormFeedback(type, message, details = '') {
+        if (!storeFormFeedback) return;
+        if (!message) {
+          storeFormFeedback.classList.add('hidden');
+          storeFormFeedback.innerHTML = '';
+          return;
+        }
+        storeFormFeedback.classList.remove('hidden');
+        if (type === 'loading') {
+          storeFormFeedback.innerHTML = `
+            <div class="rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 flex items-center gap-3 text-xs text-amber-900 animate-pulse">
+              <span class="inline-block animate-spin text-base">⏳</span>
+              <div class="flex-1">
+                <strong class="font-bold block">${message}</strong>
+                ${details ? `<span class="text-[11px] text-amber-800 block mt-0.5">${details}</span>` : ''}
+              </div>
+            </div>
+          `;
+        } else if (type === 'success') {
+          storeFormFeedback.innerHTML = `
+            <div class="rounded-xl border border-emerald-300 bg-emerald-50/90 p-3.5 flex items-center gap-3 text-xs text-emerald-900">
+              <span class="text-base">✅</span>
+              <div class="flex-1">
+                <strong class="font-bold block">${message}</strong>
+                ${details ? `<span class="text-[11px] text-emerald-800 block mt-0.5">${details}</span>` : ''}
+              </div>
+            </div>
+          `;
+        } else if (type === 'error') {
+          storeFormFeedback.innerHTML = `
+            <div class="rounded-xl border border-rose-300 bg-rose-50/90 p-3.5 flex items-start gap-3 text-xs text-rose-900">
+              <span class="text-base shrink-0">❌</span>
+              <div class="flex-1">
+                <strong class="font-bold block">${message}</strong>
+                ${details ? `<span class="text-[11px] text-rose-800 block mt-0.5 break-words">${details}</span>` : ''}
+              </div>
+            </div>
+          `;
+        }
       }
 
       // --- Probar Catálogo con Driver Nativo ---
       const btnTestCatalog = document.getElementById('btn-test-catalog');
       btnTestCatalog?.addEventListener('click', async () => {
+        syncPrimaryUrl();
         const name = document.getElementById('store-name')?.value || 'Tienda de Prueba';
-        const url = document.getElementById('store-url')?.value;
+        const firstCatalogInput = catalogsContainer?.querySelector('.catalog-url');
+        const url = document.getElementById('store-url')?.value?.trim() || firstCatalogInput?.value?.trim();
         const platform = document.getElementById('store-platform')?.value || 'auto';
         const resultBox = document.getElementById('catalog-test-result');
 
         if (!url) {
-          alert('Por favor ingresa la URL del catálogo para probar.');
-          document.getElementById('store-url')?.focus();
+          if (resultBox) {
+            resultBox.classList.remove('hidden');
+            resultBox.innerHTML = `
+              <div class="rounded-xl border border-amber-300 bg-amber-50/80 p-3 text-xs text-amber-900 font-semibold">
+                ⚠️ Por favor ingresa la URL del catálogo para realizar la prueba.
+              </div>
+            `;
+          }
+          firstCatalogInput?.focus();
           return;
         }
 
@@ -1357,7 +1454,7 @@ const apiBaseUrl = "http://localhost:8000";
               <div class="rounded-xl border border-emerald-300 bg-emerald-50/70 p-4 space-y-2">
                 <div class="flex items-center justify-between">
                   <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-200 px-3 py-0.5 text-xs font-bold text-emerald-900">
-                    ✅ Catálogo Legible (${data.plataforma_detectada.toUpperCase()})
+                    ✅ Catálogo Legible (${(data.plataforma_detectada || platform).toUpperCase()})
                   </span>
                   <span class="text-xs font-bold text-emerald-800">${data.total_productos_detectados} productos</span>
                 </div>
@@ -1373,10 +1470,15 @@ const apiBaseUrl = "http://localhost:8000";
           } else {
             resultBox.innerHTML = `
               <div class="rounded-xl border border-rose-300 bg-rose-50/70 p-4 space-y-2">
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-200 px-3 py-0.5 text-xs font-bold text-rose-900">
-                  ❌ No fue posible leer el catálogo
-                </span>
+                <div class="flex items-center justify-between">
+                  <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-200 px-3 py-0.5 text-xs font-bold text-rose-900">
+                    <span>${data.codigo_error === 'TIENDA_PROTEGIDA_PASSWORD' ? '🔒' : (data.codigo_error === 'SITIO_CAIDO_O_TIMEOUT' ? '🔌' : '❌')}</span>
+                    <span>${data.categoria_error || 'No fue posible leer el catálogo'}</span>
+                  </span>
+                  <span class="text-[10px] font-mono text-rose-700 font-bold">${data.codigo_error || 'ERROR'}</span>
+                </div>
                 <p class="text-xs font-semibold text-rose-800">${data.mensaje || 'Error al conectar'}</p>
+                ${data.error_detalle ? `<p class="text-[11px] font-mono text-rose-700 bg-rose-100/60 p-2 rounded-lg break-all">${data.error_detalle}</p>` : ''}
               </div>
             `;
           }
@@ -1391,6 +1493,8 @@ const apiBaseUrl = "http://localhost:8000";
       // --- Guardar Tienda ---
       document.getElementById('form-store')?.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const submitBtn = document.getElementById('btn-submit-store');
+        const cancelBtn = document.getElementById('btn-cancel-drawer');
         const storeId = document.getElementById('store-id')?.value;
         const name = document.getElementById('store-name')?.value;
         const platform = document.getElementById('store-platform')?.value;
@@ -1416,7 +1520,7 @@ const apiBaseUrl = "http://localhost:8000";
         });
 
         if (catalogos.length === 0) {
-          alert('Por favor ingresa al menos una URL de catálogo.');
+          setStoreFormFeedback('error', 'Falta información requerida', 'Por favor ingresa al menos una URL de catálogo.');
           return;
         }
 
@@ -1452,6 +1556,15 @@ const apiBaseUrl = "http://localhost:8000";
           payload.password_administrador = adminPassword;
         }
 
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<span>⏳</span><span>Guardando...</span>';
+        }
+        if (cancelBtn) {
+          cancelBtn.disabled = true;
+        }
+        setStoreFormFeedback('loading', 'Guardando tienda...', 'Registrando información y catálogos en el sistema...');
+
         try {
           const endpoint = storeId ? `${API_BASE}/api/v1/admin/stores/${storeId}` : `${API_BASE}/api/v1/admin/stores`;
           const method = storeId ? 'PUT' : 'POST';
@@ -1465,17 +1578,33 @@ const apiBaseUrl = "http://localhost:8000";
             throw new Error(errData.detail || `Error HTTP ${res.status} al guardar la tienda`);
           }
           const savedStore = await res.json();
-          closeDrawer();
-          resetForm();
-          await loadStores();
 
           if (syncImmediate && savedStore && savedStore.id) {
+            setStoreFormFeedback('loading', '¡Tienda guardada con éxito!', 'Iniciando sincronización inmediata del catálogo con el driver...');
+            if (submitBtn) {
+              submitBtn.innerHTML = '<span>🔄</span><span>Sincronizando...</span>';
+            }
             await syncStoreById(savedStore.id, savedStore.nombre);
+            closeDrawer();
+            resetForm();
+            await loadStores();
           } else {
-            alert('Tienda guardada con éxito.');
+            setStoreFormFeedback('success', '¡Tienda guardada con éxito!', 'Los cambios se han registrado correctamente.');
+            setTimeout(() => {
+              closeDrawer();
+              resetForm();
+              loadStores();
+            }, 700);
           }
         } catch (err) {
-          alert(`Error: ${err.message}`);
+          setStoreFormFeedback('error', 'Error al guardar la tienda', err.message);
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Guardar Tienda';
+          }
+          if (cancelBtn) {
+            cancelBtn.disabled = false;
+          }
         }
       });
 

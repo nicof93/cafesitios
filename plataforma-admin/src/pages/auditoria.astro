@@ -1,0 +1,609 @@
+---
+import AdminLteLayout from '../layouts/AdminLteLayout.astro';
+
+const apiBaseUrl = "http://localhost:8000";
+---
+
+<AdminLteLayout 
+  title="Trazabilidad y Auditoría de Tiendas | Plataforma Admin"
+  activeNav="auditoria"
+  breadcrumb={[{ label: "Inicio", url: "/plataforma/" }, { label: "Trazabilidad de Tiendas" }]}
+>
+  <div class="space-y-6" data-api-base={apiBaseUrl}>
+    
+    <!-- CABECERA DE LA PÁGINA -->
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-stone-200/80 pb-6">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-black tracking-tight text-stone-900 flex items-center gap-2">
+          <span>📜</span>
+          <span>Trazabilidad y Auditoría de Tiendas</span>
+        </h1>
+        <p class="mt-1 text-xs text-stone-500 max-w-2xl">
+          Registro inmutable y centralizado de todas las operaciones realizadas por los administradores de tostadurías (creación/edición de productos, cambios de perfil, recetas, cargas y sincronizaciones).
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          id="btn-refresh-audit"
+          class="inline-flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-xs font-semibold text-stone-700 shadow-xs hover:bg-stone-50 transition active:scale-95"
+        >
+          <span>🔄</span>
+          <span>Actualizar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TARJETAS DE RESUMEN KPI -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs flex items-center gap-4">
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 text-2xl font-black">
+          📝
+        </span>
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">Total Acciones Registradas</span>
+          <h3 class="text-2xl font-black text-stone-900" id="stat-total-actions">-</h3>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs flex items-center gap-4">
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-50 text-sky-800 text-2xl font-black">
+          🏪
+        </span>
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">Tiendas con Registro</span>
+          <h3 class="text-2xl font-black text-stone-900" id="stat-total-stores">-</h3>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs flex items-center gap-4">
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-800 text-2xl font-black">
+          🛡️
+        </span>
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">Auditoría Multi-Tenant</span>
+          <h3 class="text-xs font-bold text-stone-700 mt-1">100% Inmutable & RBAC</h3>
+        </div>
+      </div>
+    </div>
+
+    <!-- BARRA DE FILTROS Y BÚSQUEDA -->
+    <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs space-y-3">
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+        <!-- Filtro por Tienda -->
+        <div class="sm:col-span-4">
+          <label for="filter-store" class="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1">
+            Filtrar por Tienda
+          </label>
+          <select
+            id="filter-store"
+            class="block w-full rounded-xl border border-stone-300 bg-stone-50/50 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-600 font-medium"
+          >
+            <option value="">Todas las tiendas</option>
+          </select>
+        </div>
+
+        <!-- Filtro por Acción -->
+        <div class="sm:col-span-3">
+          <label for="filter-action" class="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1">
+            Tipo de Acción
+          </label>
+          <select
+            id="filter-action"
+            class="block w-full rounded-xl border border-stone-300 bg-stone-50/50 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-600 font-medium"
+          >
+            <option value="">Todas las acciones</option>
+            <option value="CREAR_PRODUCTO">🌱 CREAR_PRODUCTO</option>
+            <option value="EDITAR_PRODUCTO">✏️ EDITAR_PRODUCTO</option>
+            <option value="UPLOAD_IMAGEN_PRODUCTO">🖼️ UPLOAD_IMAGEN_PRODUCTO</option>
+            <option value="UPDATE_PERFIL">🏪 UPDATE_PERFIL</option>
+            <option value="UPDATE_WHATSAPP">💬 UPDATE_WHATSAPP</option>
+            <option value="INICIAR_SYNC">🔄 INICIAR_SYNC</option>
+            <option value="CREAR_RECETA">☕ CREAR_RECETA</option>
+            <option value="EDITAR_RECETA">📝 EDITAR_RECETA</option>
+            <option value="ELIMINAR_RECETA">🗑️ ELIMINAR_RECETA</option>
+            <option value="CONFIRMAR_NOTA_CATA">🍒 CONFIRMAR_NOTA_CATA</option>
+            <option value="DESCARTAR_NOTA_CATA">🚫 DESCARTAR_NOTA_CATA</option>
+            <option value="AGREGAR_NOTA_CATA">🏷️ AGREGAR_NOTA_CATA</option>
+            <option value="LOGIN_EXITOSO">🔑 LOGIN_EXITOSO</option>
+          </select>
+        </div>
+
+        <!-- Búsqueda rápida -->
+        <div class="sm:col-span-5">
+          <label for="filter-search" class="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1">
+            Búsqueda Rápida
+          </label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400 text-xs">
+              🔍
+            </span>
+            <input
+              type="search"
+              id="filter-search"
+              placeholder="Buscar por usuario, ID, entidad..."
+              class="block w-full rounded-xl border border-stone-300 bg-stone-50/50 pl-8 pr-8 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+            <button
+              type="button"
+              id="btn-clear-search"
+              class="absolute inset-y-0 right-0 pr-3 hidden items-center text-stone-400 hover:text-stone-600 text-xs"
+              title="Limpiar búsqueda"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLA DE TRAZABILIDAD -->
+    <div class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xs">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-stone-700">
+          <thead class="bg-stone-50/80 border-b border-stone-200 text-[11px] uppercase tracking-wider font-bold text-stone-500">
+            <tr>
+              <th class="px-4 py-3">Tienda</th>
+              <th class="px-4 py-3">Fecha y Hora</th>
+              <th class="px-4 py-3">Acción</th>
+              <th class="px-4 py-3">Entidad / ID</th>
+              <th class="px-4 py-3">Usuario</th>
+              <th class="px-4 py-3">IP Origen</th>
+              <th class="px-4 py-3 text-center">Cambios</th>
+            </tr>
+          </thead>
+          <tbody id="audit-table-body" class="divide-y divide-stone-100">
+            <tr>
+              <td colspan="7" class="px-4 py-12 text-center text-stone-400">
+                <div class="inline-flex items-center gap-2">
+                  <span class="animate-spin text-lg">⏳</span>
+                  <span>Cargando registros de trazabilidad...</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- BARRA DE PAGINACIÓN -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t border-stone-200 bg-stone-50/50 text-xs text-stone-600">
+        <div class="flex items-center gap-2">
+          <span>Mostrando</span>
+          <select
+            id="page-size"
+            class="rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-700 focus:border-emerald-600 focus:outline-none"
+          >
+            <option value="20">20 por página</option>
+            <option value="50" selected>50 por página</option>
+            <option value="100">100 por página</option>
+          </select>
+          <span id="pagination-summary" class="font-medium text-stone-500">-</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            id="btn-prev-page"
+            disabled
+            class="rounded-xl border border-stone-300 bg-white px-3 py-1.5 font-bold text-stone-700 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            ← Anterior
+          </button>
+          <span id="pagination-current-page" class="font-bold text-stone-800 px-2">Pág. 1</span>
+          <button
+            type="button"
+            id="btn-next-page"
+            disabled
+            class="rounded-xl border border-stone-300 bg-white px-3 py-1.5 font-bold text-stone-700 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            Siguiente →
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL DE DETALLE DE AUDITORÍA (INSPECTOR DE DIFF / JSON) -->
+    <div id="modal-audit-detail" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+      <div class="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+        <div class="flex items-start justify-between border-b border-stone-200 pb-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="audit-modal-badge"></span>
+              <h3 class="text-base font-black text-stone-900" id="audit-modal-action">Detalle de Acción</h3>
+            </div>
+            <p class="text-xs text-stone-500 mt-1" id="audit-modal-meta">Meta información</p>
+          </div>
+          <button
+            type="button"
+            id="btn-close-audit-modal"
+            class="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition"
+            title="Cerrar ventana"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div class="overflow-y-auto flex-1 space-y-4 text-xs pr-1">
+          <!-- Comparativa lado a lado o apilada -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Valores Previos -->
+            <div id="audit-prev-box" class="space-y-1.5">
+              <span class="inline-flex items-center gap-1.5 font-bold text-rose-800 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-md text-[11px]">
+                <span>⏪</span>
+                <span>Valores Previos</span>
+              </span>
+              <pre id="audit-prev-content" class="bg-stone-950 text-rose-300 p-3.5 rounded-xl font-mono text-[11px] overflow-x-auto border border-stone-800 max-h-72"></pre>
+            </div>
+
+            <!-- Valores Nuevos -->
+            <div id="audit-new-box" class="space-y-1.5">
+              <span class="inline-flex items-center gap-1.5 font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md text-[11px]">
+                <span>⏩</span>
+                <span>Valores Nuevos / Aplicados</span>
+              </span>
+              <pre id="audit-new-content" class="bg-stone-950 text-emerald-400 p-3.5 rounded-xl font-mono text-[11px] overflow-x-auto border border-stone-800 max-h-72"></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-stone-200">
+          <span class="text-[11px] text-stone-400 font-mono">Auditoría inmutable • ID registrado en PostgreSQL</span>
+          <button
+            type="button"
+            id="btn-confirm-audit-modal"
+            class="rounded-xl bg-stone-900 px-5 py-2 text-xs font-bold text-white hover:bg-stone-800 transition"
+          >
+            Cerrar Inspector
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script is:inline>
+    (function initGlobalAudit() {
+      const API_BASE = 'http://localhost:8000';
+
+      const fetchWithEnv = (url, opts = {}) => {
+        if (window.plataformaState && typeof window.plataformaState.fetchWithEnv === 'function') {
+          return window.plataformaState.fetchWithEnv(url, opts);
+        }
+        const headers = new Headers(opts.headers || {});
+        headers.set('X-Target-Environment', localStorage.getItem('plataforma_active_env') || 'local');
+        return fetch(url, { ...opts, headers });
+      };
+
+      // Estado de filtros y paginación
+      let currentPage = 1;
+      let pageSize = 50;
+      let cachedLogs = [];
+      let totalLogs = 0;
+      let totalStores = 0;
+
+      const tbody = document.getElementById('audit-table-body');
+      const selectStore = document.getElementById('filter-store');
+      const selectAction = document.getElementById('filter-action');
+      const inputSearch = document.getElementById('filter-search');
+      const btnClearSearch = document.getElementById('btn-clear-search');
+      const btnRefresh = document.getElementById('btn-refresh-audit');
+      const pageSizeSelect = document.getElementById('page-size');
+      const btnPrevPage = document.getElementById('btn-prev-page');
+      const btnNextPage = document.getElementById('btn-next-page');
+      const paginationPageIndicator = document.getElementById('pagination-current-page');
+      const paginationSummary = document.getElementById('pagination-summary');
+      const statTotalActions = document.getElementById('stat-total-actions');
+      const statTotalStores = document.getElementById('stat-total-stores');
+      const modal = document.getElementById('modal-audit-detail');
+
+      function getBadgeForAction(action) {
+        switch (action) {
+          case 'CREAR_PRODUCTO':
+            return '<span class="inline-flex items-center gap-1 rounded-md bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[10px]">🌱 CREAR_PRODUCTO</span>';
+          case 'EDITAR_PRODUCTO':
+            return '<span class="inline-flex items-center gap-1 rounded-md bg-sky-100 text-sky-800 font-bold px-2 py-0.5 text-[10px]">✏️ EDITAR_PRODUCTO</span>';
+          case 'UPLOAD_IMAGEN_PRODUCTO':
+            return '<span class="inline-flex items-center gap-1 rounded-md bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 text-[10px]">🖼️ UPLOAD_IMAGEN</span>';
+          case 'UPDATE_PERFIL':
+            return '<span class="inline-flex items-center gap-1 rounded-md bg-amber-100 text-amber-900 font-bold px-2 py-0.5 text-[10px]">🏪 UPDATE_PERFIL</span>';
+          case 'UPDATE_WHATSAPP':
+            return '<span class="inline-flex items-center gap-1 rounded-md bg-emerald-100 text-emerald-900 font-bold px-2 py-0.5 text-[10px]">💬 UPDATE_WHATSAPP</span>';
+          case 'INICIAR_SYNC':
+            return '<span class="inline-flex items-center gap-1 rounded-md bg-amber-100 text-amber-900 font-bold px-2 py-0.5 text-[10px]">🔄 INICIAR_SYNC</span>';
+          case 'CREAR_RECETA':
+            return '<span class="inline-flex items-center gap-1 rounded-md bg-teal-100 text-teal-800 font-bold px-2 py-0.5 text-[10px]">☕ CREAR_RECETA</span>';
+          case 'EDITAR_RECETA':
+            return '<span class="inline-flex items-center gap-1 rounded-md bg-cyan-100 text-cyan-800 font-bold px-2 py-0.5 text-[10px]">📝 EDITAR_RECETA</span>';
+          case 'ELIMINAR_RECETA':
+            return '<span class="inline-flex items-center gap-1 rounded-md bg-rose-100 text-rose-800 font-bold px-2 py-0.5 text-[10px]">🗑️ ELIMINAR_RECETA</span>';
+          case 'CONFIRMAR_NOTA_CATA':
+            return '<span class="inline-flex items-center gap-1 rounded-md bg-lime-100 text-lime-800 font-bold px-2 py-0.5 text-[10px]">🍒 CONFIRMAR_NOTA</span>';
+          case 'DESCARTAR_NOTA_CATA':
+            return '<span class="inline-flex items-center gap-1 rounded-md bg-stone-200 text-stone-700 font-bold px-2 py-0.5 text-[10px]">🚫 DESCARTAR_NOTA</span>';
+          case 'AGREGAR_NOTA_CATA':
+            return '<span class="inline-flex items-center gap-1 rounded-md bg-fuchsia-100 text-fuchsia-800 font-bold px-2 py-0.5 text-[10px]">🏷️ AGREGAR_NOTA</span>';
+          case 'LOGIN_EXITOSO':
+            return '<span class="inline-flex items-center gap-1 rounded-md bg-purple-100 text-purple-800 font-bold px-2 py-0.5 text-[10px]">🔑 LOGIN_EXITOSO</span>';
+          default:
+            return `<span class="inline-flex items-center gap-1 rounded-md bg-stone-100 text-stone-700 font-bold px-2 py-0.5 text-[10px]">${action}</span>`;
+        }
+      }
+
+      function openModal(logItem) {
+        document.getElementById('audit-modal-badge').innerHTML = getBadgeForAction(logItem.accion);
+        document.getElementById('audit-modal-action').textContent = `Acción #${logItem.id} • ${logItem.tienda_nombre}`;
+        document.getElementById('audit-modal-meta').textContent = 
+          `Tienda ID: ${logItem.tienda_id} • Usuario: ${logItem.usuario_id} • IP: ${logItem.ip_origen || '127.0.0.1'} • Fecha: ${new Date(logItem.fecha_registro).toLocaleString('es-CL')}`;
+
+        const prevBox = document.getElementById('audit-prev-box');
+        const prevContent = document.getElementById('audit-prev-content');
+        if (logItem.valores_previos && Object.keys(logItem.valores_previos).length > 0) {
+          prevBox?.classList.remove('hidden');
+          if (prevContent) prevContent.textContent = JSON.stringify(logItem.valores_previos, null, 2);
+        } else {
+          prevBox?.classList.add('hidden');
+        }
+
+        const newBox = document.getElementById('audit-new-box');
+        const newContent = document.getElementById('audit-new-content');
+        if (logItem.valores_nuevos && Object.keys(logItem.valores_nuevos).length > 0) {
+          newBox?.classList.remove('hidden');
+          if (newContent) newContent.textContent = JSON.stringify(logItem.valores_nuevos, null, 2);
+        } else {
+          newBox?.classList.add('hidden');
+        }
+
+        // Si ambos están vacíos, mostrar mensaje informativo en valores nuevos
+        if ((!logItem.valores_previos || Object.keys(logItem.valores_previos).length === 0) &&
+            (!logItem.valores_nuevos || Object.keys(logItem.valores_nuevos).length === 0)) {
+          newBox?.classList.remove('hidden');
+          if (newContent) newContent.textContent = '// Sin payload de cambios estructurado para esta acción.';
+        }
+
+        if (modal) {
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+        }
+      }
+
+      function closeModal() {
+        if (modal) {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+        }
+      }
+
+      document.getElementById('btn-close-audit-modal')?.addEventListener('click', closeModal);
+      document.getElementById('btn-confirm-audit-modal')?.addEventListener('click', closeModal);
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+      });
+
+      // Cargar lista de tiendas para el selector
+      async function loadStoresSelector() {
+        try {
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/stores`);
+          if (!res.ok) return;
+          const stores = await res.json();
+          if (selectStore && Array.isArray(stores)) {
+            const currentVal = selectStore.value;
+            selectStore.innerHTML = '<option value="">Todas las tiendas</option>' + 
+              stores.map((s) => `<option value="${s.id}">${s.nombre} (ID #${s.id})</option>`).join('');
+            selectStore.value = currentVal;
+          }
+        } catch (e) {
+          console.warn('No se pudo cargar el listado de tiendas para el filtro:', e);
+        }
+      }
+
+      // Cargar registros de auditoría
+      async function loadAuditLogs() {
+        if (tbody) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" class="px-4 py-12 text-center text-stone-400">
+                <div class="inline-flex items-center gap-2">
+                  <span class="animate-spin text-lg">⏳</span>
+                  <span>Consultando historial de auditoría global...</span>
+                </div>
+              </td>
+            </tr>
+          `;
+        }
+
+        const storeId = selectStore?.value || '';
+        const action = selectAction?.value || '';
+        const search = inputSearch?.value?.trim() || '';
+
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          per_page: pageSize.toString(),
+        });
+        if (storeId) params.append('tienda_id', storeId);
+        if (action) params.append('accion', action);
+        if (search) params.append('search', search);
+
+        try {
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/administracion/auditoria-tiendas?${params.toString()}`);
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `Error HTTP ${res.status}`);
+          }
+
+          const data = await res.json();
+          cachedLogs = data.registros || [];
+          totalLogs = data.total || 0;
+          totalStores = data.total_tiendas || 0;
+
+          if (statTotalActions) statTotalActions.textContent = totalLogs.toLocaleString('es-CL');
+          if (statTotalStores) statTotalStores.textContent = totalStores.toLocaleString('es-CL');
+
+          renderTable();
+          renderPagination();
+        } catch (err) {
+          if (tbody) {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="7" class="px-4 py-8 text-center text-rose-600 font-bold">
+                  ❌ Error al cargar registros de auditoría: ${err.message}
+                </td>
+              </tr>
+            `;
+          }
+        }
+      }
+
+      function renderTable() {
+        if (!tbody) return;
+
+        if (!cachedLogs.length) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" class="px-4 py-12 text-center text-stone-400">
+                <div class="max-w-xs mx-auto space-y-1">
+                  <span class="text-2xl block">🔍</span>
+                  <p class="font-bold text-stone-700">No se encontraron registros de auditoría</p>
+                  <p class="text-[11px] text-stone-400">Prueba ajustando los filtros de tienda, acción o término de búsqueda.</p>
+                </div>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = cachedLogs.map((log) => {
+          const dt = new Date(log.fecha_registro).toLocaleString('es-CL', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          });
+
+          return `
+            <tr class="hover:bg-stone-50/80 transition border-b border-stone-100">
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-700 font-black text-xs border border-stone-200">
+                    🏪
+                  </span>
+                  <div>
+                    <strong class="font-bold text-stone-900 block truncate max-w-[180px]" title="${log.tienda_nombre}">${log.tienda_nombre}</strong>
+                    <span class="text-[10px] font-mono text-stone-400">ID #${log.tienda_id}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="px-4 py-3 font-mono text-[11px] text-stone-500 whitespace-nowrap">
+                ${dt}
+              </td>
+              <td class="px-4 py-3">
+                ${getBadgeForAction(log.accion)}
+              </td>
+              <td class="px-4 py-3 font-semibold text-stone-800">
+                <span class="uppercase text-[10px] text-stone-400 block">${log.entidad}</span>
+                <span>ID #${log.entidad_id ?? 'N/A'}</span>
+              </td>
+              <td class="px-4 py-3 font-mono text-[11px] text-stone-600 truncate max-w-[140px]" title="${log.usuario_id}">
+                ${log.usuario_id}
+              </td>
+              <td class="px-4 py-3 font-mono text-[11px] text-stone-400">
+                ${log.ip_origen || '127.0.0.1'}
+              </td>
+              <td class="px-4 py-3 text-center">
+                <button
+                  type="button"
+                  class="btn-view-diff rounded-xl border border-stone-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-900 px-3 py-1 text-[11px] font-bold text-stone-700 shadow-xs transition active:scale-95"
+                  data-id="${log.id}"
+                >
+                  🔍 Ver Cambios
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        tbody.querySelectorAll('.btn-view-diff').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = parseInt(btn.getAttribute('data-id'), 10);
+            const found = cachedLogs.find((x) => x.id === id);
+            if (found) openModal(found);
+          });
+        });
+      }
+
+      function renderPagination() {
+        const totalPages = Math.ceil(totalLogs / pageSize) || 1;
+        if (paginationPageIndicator) paginationPageIndicator.textContent = `Pág. ${currentPage} de ${totalPages}`;
+        if (btnPrevPage) btnPrevPage.disabled = currentPage <= 1;
+        if (btnNextPage) btnNextPage.disabled = currentPage >= totalPages;
+
+        const start = totalLogs === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalLogs);
+        if (paginationSummary) {
+          paginationSummary.textContent = `(${start} - ${end} de ${totalLogs} registros)`;
+        }
+      }
+
+      // Eventos de controles
+      btnPrevPage?.addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage--;
+          loadAuditLogs();
+        }
+      });
+
+      btnNextPage?.addEventListener('click', () => {
+        const totalPages = Math.ceil(totalLogs / pageSize) || 1;
+        if (currentPage < totalPages) {
+          currentPage++;
+          loadAuditLogs();
+        }
+      });
+
+      pageSizeSelect?.addEventListener('change', () => {
+        pageSize = parseInt(pageSizeSelect.value, 10) || 50;
+        currentPage = 1;
+        loadAuditLogs();
+      });
+
+      selectStore?.addEventListener('change', () => {
+        currentPage = 1;
+        loadAuditLogs();
+      });
+
+      selectAction?.addEventListener('change', () => {
+        currentPage = 1;
+        loadAuditLogs();
+      });
+
+      let searchTimeout = null;
+      inputSearch?.addEventListener('input', () => {
+        const hasVal = Boolean(inputSearch.value.trim());
+        if (btnClearSearch) btnClearSearch.style.display = hasVal ? 'flex' : 'none';
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          currentPage = 1;
+          loadAuditLogs();
+        }, 350);
+      });
+
+      btnClearSearch?.addEventListener('click', () => {
+        inputSearch.value = '';
+        btnClearSearch.style.display = 'none';
+        currentPage = 1;
+        loadAuditLogs();
+      });
+
+      btnRefresh?.addEventListener('click', () => {
+        loadStoresSelector();
+        loadAuditLogs();
+      });
+
+      // Inicialización
+      loadStoresSelector();
+      loadAuditLogs();
+    })();
+  </script>
+</AdminLteLayout>

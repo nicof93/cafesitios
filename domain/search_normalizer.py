@@ -73,8 +73,8 @@ def expand_search_terms(search_query: str) -> List[str]:
 
 # Patrones semánticos para clasificar productos ajenos al café en grano/molido
 NON_COFFEE_PATTERNS = [
-    # Ropa, Merchandising textil y Souvenirs (poleras, imanes, relojes, pines, llaveros, stickers)
-    r'\b(?:polera|poleras|poleron|polerones|hoodie|t-shirt|shirt|camiseta|camisa|chaqueta|delantal|pechera|apron|calcetin|calcetines|gorro|gorros|jockey|cap|beanie|tote\s*bag|tote|bolso|bolsos|mochila|mochilas|iman|imanes|magnet|reloj|relojes|clock|watch|pin|pines|llavero|llaveros|sticker|stickers|calcomania|parche|merch)\b',
+    # Ropa, Merchandising textil y Souvenirs (poleras, imanes, relojes, pines, llaveros, stickers, joyas, clickers)
+    r'\b(?:polera|poleras|poleron|polerones|hoodie|t-shirt|shirt|camiseta|camisa|chaqueta|delantal|pechera|apron|calcetin|calcetines|gorro|gorros|jockey|cap|beanie|tote\s*bag|tote|bolso|bolsos|mochila|mochilas|iman|imanes|magnet|reloj|relojes|clock|watch|pin|pines|llavero|llaveros|sticker|stickers|calcomania|parche|merch|arito|aritos|aro|aros|joya|joyas|joyeria|clicker|antiestres)\b',
     # Vajilla y Accesorios de consumo
     r'\b(?:taza|tazas|tacita|tacitas|mug|mugs|vaso|vasos|copa|copas|termo|termos|botella|tumbler|keepcup|cuchara|cucharas|cucharilla|platillo)\b',
     # Cajas de regalo, sets de regalo y gift cards
@@ -85,12 +85,12 @@ NON_COFFEE_PATTERNS = [
     r'\b(?:molino|molinos|molinillo|molinillos|grinder|muela|muelas|comandante\s+c40|timemore\s+chestnut)\b',
     # Máquinas comerciales y cafeteras espresso
     r'\b(?:la\s+marzocco|marzocco|appartamento|mozzafiato|linea\s+classic|linea\s+pb|strada\s+[sx]|kb90|leva\s+[sx]|gs3|cafetera|cafeteras|mokapot|moka\s+italiana|brita)\b',
-    # Métodos de extracción, cafeteras filtradas, barismo y limpieza
-    r'\b(?:filtro\s+v60|filtros\s+v60|filtro\s+aeropress|filtros\s+aeropress|filtro\s+de\s+papel|filtros\s+de\s+papel|filtros\b|aeropress\s+(?:clear|go|original)|chemex|kettle|tetera|balanza|gramera|bascula|prensa\s+francesa|dripper|portafiltro|tamper|pitcher|jarra\s+barista|server\s+hario|knock\s*box|puck\s*screen|cafiza|rinza|descalcificador|limpiador)\b',
+    # Métodos de extracción, cafeteras filtradas, barismo, cepillos, filtros y limpieza
+    r'\b(?:filtro\s+v60|filtros\s+v60|filtro\s+aeropress|filtros\s+aeropress|filtro\s+de\s+papel|filtros\s+de\s+papel|filtro\s+cafe\s+drip|filtros\s+cafe\s+drip|filtro\s+drip|filtros\s+drip|filtros\b|aeropress\s+(?:clear|go|original)|chemex|kettle|tetera|balanza|gramera|bascula|prensa\s+francesa|dripper|portafiltro|tamper|pitcher|jarra\s+barista|server\s+hario|knock\s*box|puck\s*screen|cafiza|rinza|descalcificador|limpiador|cepillo|cepillos)\b',
     # Prints, libros, ilustraciones y arte
     r'\b(?:print\s+cafe|poster|posters|cuadro|lamina|libro|libros|revista|magazine|libreta|cuaderno)\b',
     # Talleres, cursos, catas y otros alimentos/bebidas no-café
-    r'\b(?:taller\s+de|taller\b|curso\s+de|curso\b|workshop|sesion\s+de\s+cata|clase\s+de|matcha|chai\s+latte|infusion|chocolate\s+en\s+barra|sirope|syrup|galletas|alfajor)\b',
+    r'\b(?:taller\s+de|taller\b|curso\s+de|curso\b|workshop|sesion\s+de\s+cata|clase\s+de|matcha|chai\s+latte|infusion|chocolate|bombones|galleta|galletas|alfajor|snack)\b',
 ]
 
 

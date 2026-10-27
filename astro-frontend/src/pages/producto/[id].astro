@@ -11,12 +11,14 @@ if (!id) {
   return Astro.redirect('/');
 }
 
+const previewToken = Astro.url.searchParams.get('preview_token') || Astro.url.searchParams.get('token');
+
 const detailUseCase = new GetProductDetailUseCase();
 let product: CoffeeProduct | null = null;
 let matches: CoffeeProduct[] = [];
 
 try {
-  const result = await detailUseCase.execute(id);
+  const result = await detailUseCase.execute(id, previewToken);
   product = result.product;
   matches = result.matches;
 } catch (error) {
@@ -145,7 +147,21 @@ const captionText = product.descripcion_resumida
   ogImage={product.imagen}
 >
   <div class="space-y-10 pb-24">
-    
+    {product.oculto_catalogo && (
+      <aside aria-label="Aviso de modo vista previa" class="rounded-2xl bg-amber-50 border border-amber-200/90 p-4 flex items-center justify-between gap-3 text-amber-900 shadow-xs">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl" aria-hidden="true">👁️‍🗨️</span>
+          <div>
+            <p class="text-xs font-bold uppercase tracking-wider text-amber-800">Modo Vista Previa de Tienda</p>
+            <p class="text-xs text-amber-700">Este café se encuentra <strong>oculto en el catálogo público</strong>. Puedes previsualizarlo porque accediste desde la administración de tu tostaduría.</p>
+          </div>
+        </div>
+        <span class="rounded-full bg-amber-200/90 px-2.5 py-1 text-[11px] font-bold text-amber-900 shrink-0">
+          Oculto en catálogo
+        </span>
+      </aside>
+    )}
+
     <!-- BREADCRUMB / RETORNO RÁPIDO -->
     <nav class="flex items-center gap-2 text-xs text-stone-500" aria-label="Ruta de navegación">
       <a href="/" class="hover:text-emerald-800 transition flex items-center gap-1">

@@ -4,7 +4,8 @@ from html.parser import HTMLParser
 from typing import Any, Dict, List, Literal, Optional, Union
 from urllib.parse import urlsplit
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from core.security_store_admin import decode_store_admin_token
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from api.dependencies import get_db_session
@@ -331,8 +332,36 @@ def recommend_products(
     summary="Obtener el detalle de un producto y todas sus variantes",
     description="Retorna la ficha técnica detallada del café, notas de cata y el historial de precios por variante."
 )
-def get_product_detail(product_id: int, db_session: Session = Depends(get_db_session)) -> Dict[str, Any]:
-    product = (
+def get_product_detail(
+    product_id: int,
+    db_session: Session = Depends(get_db_session),
+    preview_token: Optional[str] = Query(None, description="Token temporal de vista previa para administradores"),
+    x_preview_token: Optional[str] = Header(None, alias="X-Preview-Token"),
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+) -> Dict[str, Any]:
+    token = preview_token or x_preview_token
+    if not token and authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+
+    is_preview_authorized = False
+    if token:
+        try:
+            payload = decode_store_admin_token(token)
+            if payload:
+                candidate = (
+                    db_session.query(Producto.tienda_id)
+                    .filter(Producto.id == product_id)
+                    .first()
+                )
+                if candidate:
+                    rol = payload.get("rol")
+                    tienda_id = payload.get("tienda_id")
+                    if rol in ("SUPER_ADMIN", "ADMIN") or tienda_id == candidate.tienda_id:
+                        is_preview_authorized = True
+        except Exception:
+            is_preview_authorized = False
+
+    query = (
         db_session.query(Producto)
         .join(Tienda, Producto.tienda_id == Tienda.id)
         .options(
@@ -342,12 +371,17 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
         )
         .filter(
             Producto.id == product_id,
-            Producto.activo.is_(True),
-            Producto.oculto_catalogo.is_(False),
             Tienda.activo.is_(True),
         )
-        .first()
     )
+
+    if not is_preview_authorized:
+        query = query.filter(
+            Producto.activo.is_(True),
+            Producto.oculto_catalogo.is_(False),
+        )
+
+    product = query.first()
     if product is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -493,6 +527,8 @@ def get_product_detail(product_id: int, db_session: Session = Depends(get_db_ses
         "tienda_sitio_oficial": official_store_url,
         "sitio_oficial": official_store_url,
         "tienda_catalogo_url": product.tienda.url_base,
+        "oculto_catalogo": bool(product.oculto_catalogo),
+        "activo": bool(product.activo),
         "nombre": product.nombre,
         "descripcion": _DescriptionSanitizer().get_html(product.descripcion),
         "descripcion_resumida": resumen_corto,

@@ -692,11 +692,15 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
               <td class="px-4 py-3 text-center">
                 ${p.oculto_catalogo
                   ? `
-                    <div class="inline-flex flex-col items-center gap-1">
-                      <span class="rounded-full bg-rose-100 px-2.5 py-0.5 text-[10px] font-bold text-rose-800">Oculto</span>
-                      <span class="text-[9px] text-rose-600 font-medium max-w-[130px] leading-tight block">
-                        Los clientes no ven este producto porque está oculto
+                    <div class="relative inline-flex group cursor-help" title="Los clientes no ven este producto porque está oculto">
+                      <span class="rounded-full bg-rose-100 px-2.5 py-0.5 text-[10px] font-bold text-rose-800 inline-flex items-center gap-1 border border-rose-200">
+                        <span>Oculto</span>
+                        <span class="text-[9px] text-rose-500 font-normal">ℹ️</span>
                       </span>
+                      <div class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-30 w-48 rounded-xl bg-stone-900 px-3 py-1.5 text-center text-[10px] font-medium text-white shadow-xl border border-stone-700 animate-in fade-in duration-150 leading-snug" role="tooltip">
+                        Los clientes no ven este producto porque está oculto
+                        <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-stone-900"></div>
+                      </div>
                     </div>
                   `
                   : '<span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800">Visible</span>'}
@@ -704,11 +708,11 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
               <td class="px-4 py-3 text-center">
                 <div class="flex items-center justify-center gap-1.5 flex-wrap">
                   <a
-                    href="/producto/${p.id}"
+                    href="/producto/${p.id}${token ? `?preview_token=${encodeURIComponent(token)}` : ''}"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 rounded-lg px-2 py-1 text-xs transition inline-flex items-center gap-1 shadow-2xs"
-                    title="Ver ficha de producto en el comparador público en una nueva pestaña"
+                    title="${p.oculto_catalogo ? 'Ver vista previa del café oculto en nueva pestaña' : 'Ver ficha de producto en el comparador público en una nueva pestaña'}"
                   >
                     <span>👁️ Ficha</span>
                     <span class="text-[10px]">↗</span>

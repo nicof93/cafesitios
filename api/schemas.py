@@ -124,6 +124,8 @@ class ProductDetailResponse(BaseModel):
     notas_sugeridas: List[ProductTastingNoteResponse] = Field(default_factory=list)
     variantes: List[ProductVariantDetailResponse]
     recetas: List[ProductRecipeResponse] = Field(default_factory=list)
+    oculto_catalogo: bool = False
+    activo: bool = True
 
 # --- CU-03: Comparativa Side-by-Side ---
 class CompareVariantItem(BaseModel):

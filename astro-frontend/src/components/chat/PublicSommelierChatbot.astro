@@ -5,12 +5,12 @@ import { Environment } from '../../core/infrastructure/config/Environment';
 const apiBase = Environment.getApiBaseUrl();
 ---
 
-<div id="sommelier-widget-root" class="fixed bottom-6 left-6 z-40">
+<div id="sommelier-widget-root">
   <!-- Botón Flotante de Activación -->
   <button
     type="button"
     id="btn-open-sommelier"
-    class="flex items-center gap-2.5 rounded-full bg-gradient-to-r from-emerald-800 to-teal-850 hover:from-emerald-700 hover:to-teal-800 text-white px-4 py-3 shadow-xl transition-all duration-200 hover:scale-105 border border-emerald-500/40 group focus:outline-none focus:ring-4 focus:ring-emerald-500/30"
+    class="pointer-events-auto flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-800 to-teal-850 hover:from-emerald-700 hover:to-teal-800 text-white px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-lg transition-all duration-200 hover:scale-105 border border-emerald-500/40 group focus:outline-none focus:ring-2 focus:ring-emerald-500"
     title="Sommelier Virtual de Café"
     aria-label="Abrir recomendador de café"
   >
@@ -26,7 +26,7 @@ const apiBase = Environment.getApiBaseUrl();
   <!-- Ventana Modal / Chatbot del Sommelier -->
   <div
     id="sommelier-modal"
-    class="hidden fixed bottom-6 left-6 w-[94vw] sm:w-[420px] max-h-[85vh] h-[640px] bg-white rounded-3xl border border-stone-200 shadow-2xl flex-col overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200"
+    class="hidden fixed bottom-6 right-4 sm:right-6 w-[94vw] sm:w-[420px] max-h-[85vh] h-[640px] bg-white rounded-3xl border border-stone-200 shadow-2xl flex-col overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 pointer-events-auto"
     role="dialog"
     aria-labelledby="sommelier-title"
   >
@@ -335,3 +335,4 @@ const apiBase = Environment.getApiBaseUrl();
     });
   })();
 </script>
+

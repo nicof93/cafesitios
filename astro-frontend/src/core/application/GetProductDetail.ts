@@ -14,8 +14,13 @@ interface RawMatchesResponse {
 export class GetProductDetailUseCase {
   constructor(private readonly http: HttpClient = new HttpClient()) {}
 
-  async execute(productId: number | string): Promise<ProductDetailResult> {
-    const productData = await this.http.get<CoffeeProductProps>(`/api/v1/products/${productId}/detail`);
+  async execute(productId: number | string, previewToken?: string | null): Promise<ProductDetailResult> {
+    const params = previewToken ? { preview_token: previewToken } : undefined;
+    const headers = previewToken ? { 'X-Preview-Token': previewToken } : undefined;
+    const productData = await this.http.get<CoffeeProductProps>(`/api/v1/products/${productId}/detail`, {
+      params,
+      headers
+    });
     const product = new CoffeeProduct(productData);
 
     let matches: CoffeeProduct[] = [];

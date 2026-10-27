@@ -133,3 +133,4 @@ Para las tostadurías pioneras que se sumen esta semana:
 
 ---
 *Documento estratégico de uso interno y comercial para el equipo fundador de Cafésitios. Santiago de Chile, 2026.*
+

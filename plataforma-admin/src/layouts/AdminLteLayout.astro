@@ -3,7 +3,7 @@ import '../styles/adminlte.css';
 
 interface Props {
   title?: string;
-  activeNav?: 'dashboard' | 'tiendas' | 'moderacion' | 'administracion' | 'bitacora' | 'sincronizaciones' | 'ambientes';
+  activeNav?: 'dashboard' | 'tiendas' | 'moderacion' | 'administracion' | 'bitacora' | 'sincronizaciones' | 'auditoria' | 'almacenamiento' | 'ambientes';
   breadcrumb?: Array<{ label: string; url?: string }>;
 }
 
@@ -49,7 +49,9 @@ const {
         async fetchWithEnv(url, options = {}) {
           const headers = new Headers(options.headers || {});
           headers.set('X-Target-Environment', this.activeEnvId || 'local');
-          return fetch(url, { ...options, headers });
+          const apiBase = document.querySelector('[data-api-base]')?.dataset.apiBase || 'http://localhost:8000';
+          const finalUrl = (typeof url === 'string' && url.startsWith('/api/')) ? `${apiBase.replace(/\/+$/, '')}${url}` : url;
+          return fetch(finalUrl, { ...options, headers });
         },
 
         confirmAction({ title, message, onProceed }) {
@@ -165,6 +167,30 @@ const {
           >
             <span class="text-base" aria-hidden="true">📈</span>
             <span class="nav-text">Sincronización y Logs</span>
+          </a>
+
+          <a 
+            href="/plataforma/auditoria" 
+            class={`nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition ${
+              activeNav === 'auditoria' 
+                ? 'bg-emerald-800 text-white shadow-sm' 
+                : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+            }`}
+          >
+            <span class="text-base" aria-hidden="true">📜</span>
+            <span class="nav-text">Trazabilidad de Tiendas</span>
+          </a>
+
+          <a 
+            href="/plataforma/almacenamiento" 
+            class={`nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition ${
+              activeNav === 'almacenamiento' 
+                ? 'bg-emerald-800 text-white shadow-sm' 
+                : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+            }`}
+          >
+            <span class="text-base" aria-hidden="true">💾</span>
+            <span class="nav-text">Almacenamiento y BD</span>
           </a>
 
           <div class="pt-3 border-t border-stone-800/80 my-2"></div>
@@ -402,11 +428,110 @@ const {
     </div>
   </dialog>
 
+  <!-- 5. TOAST CONTAINER PROPIO DE CAFESITIOS -->
+  <div id="cafesitios-toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none"></div>
+
+  <!-- 6. MODAL DE ALERTA INFORMATIVA PROPIO DE CAFESITIOS -->
+  <dialog 
+    id="alert-action-dialog" 
+    class="fixed inset-0 z-50 m-auto w-[90%] max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-stone-200 backdrop:bg-stone-950/60 backdrop:backdrop-blur-xs"
+  >
+    <div class="flex items-start gap-3.5">
+      <span id="alert-modal-icon" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 text-2xl font-bold">
+        ☕
+      </span>
+      <div class="flex-1">
+        <h3 id="alert-modal-title" class="text-base font-bold text-stone-900">
+          Notificación
+        </h3>
+        <p id="alert-modal-message" class="text-xs text-stone-600 mt-2 leading-relaxed">
+          Mensaje de notificación.
+        </p>
+      </div>
+    </div>
+    <div class="mt-5 flex justify-end">
+      <button 
+        type="button" 
+        id="btn-alert-action-close" 
+        class="px-4 py-2 rounded-xl bg-stone-900 text-white hover:bg-stone-800 text-xs font-semibold transition"
+      >
+        Entendido
+      </button>
+    </div>
+  </dialog>
+
   <!-- SCRIPT GLOBAL DEL ADMINISTRADOR MULTI-AMBIENTE -->
   <script is:inline>
     (function initPlataformaEngine() {
       const STORAGE_ENV_KEY = 'plataforma_active_env';
       const API_BASE = 'http://localhost:8000';
+      // Sistema de Notificaciones Toast Propias de Cafésitios
+      window.plataformaNotify = function(message, type = 'info') {
+        const container = document.getElementById('cafesitios-toast-container');
+        if (!container) {
+          console.log(`[${type.toUpperCase()}] ${message}`);
+          return;
+        }
+        const toast = document.createElement('div');
+        let bgClass = 'bg-stone-900 text-white border-stone-800';
+        let icon = '☕';
+        if (type === 'success') {
+          bgClass = 'bg-emerald-900 text-emerald-100 border-emerald-700 shadow-emerald-950/20';
+          icon = '✓';
+        } else if (type === 'warning') {
+          bgClass = 'bg-amber-900 text-amber-100 border-amber-700 shadow-amber-950/20';
+          icon = '⚠️';
+        } else if (type === 'error') {
+          bgClass = 'bg-rose-950 text-rose-100 border-rose-800 shadow-rose-950/20';
+          icon = '❌';
+        }
+        toast.className = `pointer-events-auto flex items-center gap-3 p-3.5 rounded-xl border shadow-lg text-xs font-medium transition-all duration-300 transform translate-y-2 opacity-0 ${bgClass}`;
+        toast.innerHTML = `
+          <span class="text-base shrink-0">${icon}</span>
+          <span class="flex-1 leading-snug">${message}</span>
+          <button type="button" class="text-stone-400 hover:text-white shrink-0 ml-1 font-bold">✕</button>
+        `;
+        const closeBtn = toast.querySelector('button');
+        const removeToast = () => {
+          toast.classList.add('opacity-0', 'translate-y-2');
+          setTimeout(() => toast.remove(), 300);
+        };
+        closeBtn.onclick = removeToast;
+        container.appendChild(toast);
+        requestAnimationFrame(() => {
+          toast.classList.remove('opacity-0', 'translate-y-2');
+        });
+        setTimeout(removeToast, 4500);
+      };
+
+      // Modal de Alerta Propio de Cafésitios
+      window.plataformaAlert = function({ title, message, type = 'info' }) {
+        const dialog = document.getElementById('alert-action-dialog');
+        const titleEl = document.getElementById('alert-modal-title');
+        const msgEl = document.getElementById('alert-modal-message');
+        const iconEl = document.getElementById('alert-modal-icon');
+        const closeBtn = document.getElementById('btn-alert-action-close');
+        if (titleEl) titleEl.textContent = title || 'Notificación';
+        if (msgEl) msgEl.textContent = message || '';
+        if (iconEl) {
+          if (type === 'error') {
+            iconEl.className = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-800 text-2xl font-bold';
+            iconEl.textContent = '❌';
+          } else if (type === 'warning') {
+            iconEl.className = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 text-2xl font-bold';
+            iconEl.textContent = '⚠️';
+          } else if (type === 'success') {
+            iconEl.className = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 text-2xl font-bold';
+            iconEl.textContent = '✓';
+          } else {
+            iconEl.className = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-stone-100 text-stone-800 text-2xl font-bold';
+            iconEl.textContent = '☕';
+          }
+        }
+        if (closeBtn) closeBtn.onclick = () => dialog.close();
+        if (dialog) dialog.showModal();
+      };
+
 
       // Asegurar Estado Global
       if (!window.plataformaState) {
@@ -434,7 +559,9 @@ const {
           async fetchWithEnv(url, options = {}) {
             const headers = new Headers(options.headers || {});
             headers.set('X-Target-Environment', this.activeEnvId || 'local');
-            return fetch(url, { ...options, headers });
+            const apiBase = document.querySelector('[data-api-base]')?.dataset.apiBase || API_BASE;
+            const finalUrl = (typeof url === 'string' && url.startsWith('/api/')) ? `${apiBase.replace(/\/+$/, '')}${url}` : url;
+            return fetch(finalUrl, { ...options, headers });
           },
 
           confirmAction({ title, message, onProceed }) {
@@ -589,6 +716,13 @@ const {
       }
 
       // Eventos del Modal Dirty State
+      
+      const confirmCancelBtn = document.getElementById('btn-confirm-action-cancel');
+      const confirmDialog = document.getElementById('confirm-action-dialog');
+      if (confirmCancelBtn && confirmDialog) {
+        confirmCancelBtn.onclick = () => confirmDialog.close();
+      }
+
       const dirtyCancelBtn = document.getElementById('btn-dirty-cancel');
       const dirtyDiscardBtn = document.getElementById('btn-dirty-discard');
       const dirtySaveBtn = document.getElementById('btn-dirty-save');

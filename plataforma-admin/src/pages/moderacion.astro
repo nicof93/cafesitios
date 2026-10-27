@@ -256,9 +256,19 @@ const apiBaseUrl = "http://localhost:8000";
                   const errData = await patchRes.json().catch(() => ({}));
                   throw new Error(errData.detail || `Error HTTP ${patchRes.status} al actualizar visibilidad`);
                 }
+                if (window.plataformaNotify) {
+                  window.plataformaNotify(
+                    !current ? 'Producto ocultado del catálogo público.' : 'Producto marcado como visible en el catálogo.',
+                    'success'
+                  );
+                }
                 loadModerationProducts();
               } catch (err) {
-                alert(`Error: ${err.message}`);
+                if (window.plataformaNotify) {
+                  window.plataformaNotify(`Error: ${err.message}`, 'error');
+                } else {
+                  console.error('Error al actualizar visibilidad:', err);
+                }
                 btn.disabled = false;
               }
             });
@@ -299,28 +309,48 @@ const apiBaseUrl = "http://localhost:8000";
           .map((i) => i.id);
 
         if (!suspectedVisibleIds.length) {
-          alert('No hay productos sospechosos visibles en este listado para ocultar.');
-          return;
-        }
-
-        if (!confirm(`¿Deseas ocultar ${suspectedVisibleIds.length} productos sospechosos del catálogo general?`)) {
-          return;
-        }
-
-        try {
-          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/products/bulk-visibility`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ product_ids: suspectedVisibleIds, oculto_catalogo: true }),
-          });
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.detail || `Error HTTP ${res.status} al ocultar en lote`);
+          if (window.plataformaNotify) {
+            window.plataformaNotify('No hay productos sospechosos visibles en este listado para ocultar.', 'warning');
+          } else {
+            console.warn('No hay productos sospechosos visibles para ocultar.');
           }
-          alert(`${suspectedVisibleIds.length} productos ocultados del catálogo.`);
-          loadModerationProducts();
-        } catch (err) {
-          alert(`Error: ${err.message}`);
+          return;
+        }
+
+        const ejecutarOcultamientoMasivo = async () => {
+          try {
+            const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/products/bulk-visibility`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ product_ids: suspectedVisibleIds, oculto_catalogo: true }),
+            });
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(errData.detail || `Error HTTP ${res.status} al ocultar en lote`);
+            }
+            if (window.plataformaNotify) {
+              window.plataformaNotify(`${suspectedVisibleIds.length} productos sospechosos ocultados del catálogo con éxito.`, 'success');
+            } else {
+              console.log(`${suspectedVisibleIds.length} productos sospechosos ocultados.`);
+            }
+            loadModerationProducts();
+          } catch (err) {
+            if (window.plataformaNotify) {
+              window.plataformaNotify(`Error: ${err.message}`, 'error');
+            } else {
+              console.error('Error en bulk hide:', err);
+            }
+          }
+        };
+
+        if (window.plataformaState && typeof window.plataformaState.confirmAction === 'function') {
+          window.plataformaState.confirmAction({
+            title: 'Ocultar Productos Sospechosos',
+            message: `¿Deseas ocultar ${suspectedVisibleIds.length} productos sospechosos del catálogo general?`,
+            onProceed: ejecutarOcultamientoMasivo
+          });
+        } else {
+          await ejecutarOcultamientoMasivo();
         }
       });
 

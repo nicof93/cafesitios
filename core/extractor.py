@@ -224,7 +224,7 @@ class CoffeeAttributesExtractor:
             re.IGNORECASE,
         )
         if match_lote:
-            extracted["lote"] = match_lote.group(1).strip()
+            extracted["lote"] = match_lote.group(1).strip()[:255]
 
         # 6. Origen / País
         match_origen = re.search(

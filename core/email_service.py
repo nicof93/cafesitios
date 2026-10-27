@@ -268,3 +268,4 @@ El equipo de Cafésitios
 </html>
 """
         return cls.send_email(to_email, subject, text_content, html_content)
+

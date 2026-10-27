@@ -4,17 +4,18 @@ from typing import Any, Dict, List, Literal, Optional
 from urllib.parse import urlparse
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, inspect, select
 from sqlalchemy.orm import Session, selectinload
 
 from api.dependencies import get_db_session, require_local_admin
-from core.storage_manager import get_tienda_storage_info
+from core.storage_manager import calcular_reporte_almacenamiento_global, get_tienda_storage_info
 from api.stores import extract_official_website
 from core.security_store_admin import create_store_admin_token, hash_store_password
 import os
 from db.database import (
+    AuditoriaAccionesTienda,
     DatabaseManager,
     Producto,
     Sincronizacion,
@@ -24,6 +25,7 @@ from db.database import (
     UsuarioTienda,
     Variante,
 )
+from core.error_classifier import clasificar_error_sincronizacion
 from domain.search_normalizer import (
     classify_product_category,
     detect_non_coffee_suspicion,
@@ -146,6 +148,9 @@ class AdminStoreItem(BaseModel):
     total_imagenes_subidas: int = 0
     catalogos: List[CatalogOutput] = Field(default_factory=list)
     sucursales: List[BranchOutput] = Field(default_factory=list)
+    ultimo_error_sincronizacion: Optional[str] = None
+    codigo_error_sincronizacion: Optional[str] = None
+    categoria_error_sincronizacion: Optional[str] = None
 
 
 class AdminStoresListResponse(BaseModel):
@@ -170,6 +175,9 @@ class SingleStoreSyncResponse(BaseModel):
     productos_eliminados: int = 0
     duracion_segundos: float
     error: Optional[str] = None
+    codigo_error: Optional[str] = None
+    categoria_error: Optional[str] = None
+    mensaje_amigable: Optional[str] = None
     mensaje: str
 
 
@@ -218,6 +226,31 @@ class CatalogTestResponse(BaseModel):
     primer_producto: Optional[CatalogTestFirstProduct] = None
     mensaje: str
     error_detalle: Optional[str] = None
+    codigo_error: Optional[str] = None
+    categoria_error: Optional[str] = None
+
+
+class GlobalStoreAuditItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    tienda_id: int
+    tienda_nombre: str
+    usuario_id: str
+    accion: str
+    entidad: str
+    entidad_id: Optional[int] = None
+    valores_previos: Optional[Dict[str, Any]] = None
+    valores_nuevos: Optional[Dict[str, Any]] = None
+    ip_origen: Optional[str] = None
+    fecha_registro: datetime
+
+
+class GlobalStoreAuditListResponse(BaseModel):
+    total: int
+    page: int
+    per_page: int
+    total_tiendas: int
+    registros: List[GlobalStoreAuditItem]
 
 
 class StoresExportResponse(BaseModel):
@@ -646,6 +679,9 @@ def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminSto
         total_prods = (cnt.cantidad_productos_visibles + cnt.cantidad_ocultos) if cnt else 0
         is_pending = (total_prods == 0) or (last_sync_status != "exitoso")
 
+        raw_err = last_sync.detalle_error if (last_sync and last_sync_status == "fallido") else None
+        diag_err = clasificar_error_sincronizacion(raw_err) if raw_err else None
+
         adm_user = store_admin_obj_map.get(s.id)
         storage = get_tienda_storage_info(s.id, getattr(s, "limite_almacenamiento_mb", 250))
         items.append(
@@ -674,6 +710,9 @@ def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminSto
                 logo_url=getattr(s, "logo_url", None),
                 catalogos=catalogos_out,
                 sucursales=branches,
+                ultimo_error_sincronizacion=raw_err,
+                codigo_error_sincronizacion=diag_err["codigo"] if diag_err else None,
+                categoria_error_sincronizacion=diag_err["categoria"] if diag_err else None,
             )
         )
 
@@ -1165,6 +1204,8 @@ def test_store_catalog(payload: CatalogTestRequest) -> CatalogTestResponse:
         except Exception as exc:
             errores.append(f"{driver_cls.__name__}: {str(exc)}")
 
+    error_str = " | ".join(errores)
+    diag = clasificar_error_sincronizacion(error_str)
     return CatalogTestResponse(
         legible=False,
         plataforma_solicitada=plataforma_solicitada,
@@ -1172,9 +1213,28 @@ def test_store_catalog(payload: CatalogTestRequest) -> CatalogTestResponse:
         url_probada=url_probada,
         total_productos_detectados=0,
         primer_producto=None,
-        mensaje="No fue posible leer productos desde la URL ingresada con el driver seleccionado.",
-        error_detalle=" | ".join(errores),
+        mensaje=f"No fue posible leer productos: {diag['categoria']}.",
+        error_detalle=error_str,
+        codigo_error=diag["codigo"],
+        categoria_error=diag["categoria"],
     )
+
+
+def _resolve_db_manager(request: Optional[Request] = None, db_session: Optional[Session] = None) -> DatabaseManager:
+    """Retorna la instancia adecuada de DatabaseManager respetando el ambiente multi-tenant (X-Target-Environment)."""
+    env_target = None
+    if request is not None and hasattr(request, "headers"):
+        env_target = request.headers.get("x-target-environment")
+    if env_target:
+        return DatabaseManager.get_instance_for_env(env_target)
+    if db_session is not None:
+        try:
+            bind = db_session.get_bind()
+            if bind and hasattr(bind, "url"):
+                return DatabaseManager(db_url=str(bind.url))
+        except Exception:
+            pass
+    return DatabaseManager()
 
 
 @administracion_router.post(
@@ -1196,8 +1256,10 @@ def test_store_catalog(payload: CatalogTestRequest) -> CatalogTestResponse:
     status_code=status.HTTP_200_OK,
     summary="Sincronizar el catálogo de una tostaduría específica",
 )
+
 def sync_single_store(
     store_id: int,
+    request: Request = None,
     db_session: Session = Depends(get_db_session),
 ) -> SingleStoreSyncResponse:
     has_catalogos_table = True
@@ -1233,13 +1295,14 @@ def sync_single_store(
         "plataforma": store.plataforma or "desconocida",
         "catalogos": catalogos_list,
     }
-    db_manager = DatabaseManager()
+    db_manager = _resolve_db_manager(request, db_session)
     res = sincronizar_tienda(tienda_dict, db=db_manager)
+    diag = clasificar_error_sincronizacion(res.get("error")) if not res["exito"] else None
     mensaje = (
         f"Sincronización exitosa: {res['total_productos']} productos sincronizados "
         f"({res['productos_nuevos']} nuevos, {res['productos_actualizados']} actualizados) en {res['duracion_segundos']}s."
         if res["exito"]
-        else f"Error al sincronizar: {res['error']}"
+        else f"[{diag['categoria'] if diag else 'Error'}] {res['error']}"
     )
     return SingleStoreSyncResponse(
         tienda_id=res["tienda_id"],
@@ -1254,6 +1317,9 @@ def sync_single_store(
         productos_eliminados=res.get("productos_eliminados", 0),
         duracion_segundos=res["duracion_segundos"],
         error=res["error"],
+        codigo_error=diag["codigo"] if diag else None,
+        categoria_error=diag["categoria"] if diag else None,
+        mensaje_amigable=diag["mensaje_amigable"] if diag else None,
         mensaje=mensaje,
     )
 
@@ -1287,9 +1353,10 @@ def sync_single_store(
     summary="Alias para sincronizar tiendas pendientes",
 )
 def sync_unsynced_stores(
+    request: Request = None,
     db_session: Session = Depends(get_db_session),
 ) -> BatchSyncResponse:
-    db_manager = DatabaseManager()
+    db_manager = _resolve_db_manager(request, db_session)
     unsynced = db_manager.listar_tiendas_no_sincronizadas()
     if not unsynced:
         return BatchSyncResponse(
@@ -1371,9 +1438,10 @@ def sync_unsynced_stores(
     summary="Alias para sincronización masiva",
 )
 def sync_all_stores(
+    request: Request = None,
     db_session: Session = Depends(get_db_session),
 ) -> BatchSyncResponse:
-    db_manager = DatabaseManager()
+    db_manager = _resolve_db_manager(request, db_session)
     tiendas = db_manager.listar_tiendas_activas()
     if not tiendas:
         return BatchSyncResponse(
@@ -2023,3 +2091,186 @@ def impersonate_store_admin_endpoint(
         token=token,
         redirect_url=redirect_url,
     )
+
+
+@administracion_router.get(
+    "/auditoria-tiendas",
+    response_model=GlobalStoreAuditListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Consultar trazabilidad global de acciones realizadas por todas las tostadurías",
+)
+@administracion_router.get(
+    "/stores/audit-logs",
+    response_model=GlobalStoreAuditListResponse,
+    include_in_schema=False,
+)
+@router.get(
+    "/auditoria-tiendas",
+    response_model=GlobalStoreAuditListResponse,
+    include_in_schema=False,
+)
+@router.get(
+    "/stores/audit-logs",
+    response_model=GlobalStoreAuditListResponse,
+    include_in_schema=False,
+)
+def list_global_store_audit_logs(
+    tienda_id: Optional[int] = Query(None, description="Filtrar por ID de tienda"),
+    accion: Optional[str] = Query(None, description="Filtrar por acción específica"),
+    entidad: Optional[str] = Query(None, description="Filtrar por tipo de entidad"),
+    search: Optional[str] = Query(None, description="Búsqueda por usuario, entidad, acción o tienda"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(30, ge=1, le=100),
+    db_session: Session = Depends(get_db_session),
+) -> GlobalStoreAuditListResponse:
+    query = (
+        select(AuditoriaAccionesTienda, Tienda.nombre.label("tienda_nombre"))
+        .join(Tienda, AuditoriaAccionesTienda.tienda_id == Tienda.id, isouter=True)
+    )
+
+    if tienda_id is not None:
+        query = query.where(AuditoriaAccionesTienda.tienda_id == tienda_id)
+    if accion and accion.strip():
+        query = query.where(AuditoriaAccionesTienda.accion == accion.strip())
+    if entidad and entidad.strip():
+        query = query.where(AuditoriaAccionesTienda.entidad == entidad.strip())
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.where(
+            (AuditoriaAccionesTienda.usuario_id.ilike(term))
+            | (AuditoriaAccionesTienda.accion.ilike(term))
+            | (AuditoriaAccionesTienda.entidad.ilike(term))
+            | (Tienda.nombre.ilike(term))
+        )
+
+    total = db_session.scalar(
+        select(func.count()).select_from(query.subquery())
+    ) or 0
+
+    total_tiendas = db_session.scalar(
+        select(func.count(func.distinct(AuditoriaAccionesTienda.tienda_id)))
+    ) or 0
+
+    offset = (page - 1) * per_page
+    query = query.order_by(AuditoriaAccionesTienda.fecha_registro.desc()).offset(offset).limit(per_page)
+    results = db_session.execute(query).all()
+
+    items = [
+        GlobalStoreAuditItem(
+            id=log.id,
+            tienda_id=log.tienda_id,
+            tienda_nombre=tienda_nombre or f"Tienda #{log.tienda_id}",
+            usuario_id=log.usuario_id,
+            accion=log.accion,
+            entidad=log.entidad,
+            entidad_id=log.entidad_id,
+            valores_previos=log.valores_previos,
+            valores_nuevos=log.valores_nuevos,
+            ip_origen=log.ip_origen,
+            fecha_registro=log.fecha_registro,
+        )
+        for log, tienda_nombre in results
+    ]
+
+    return GlobalStoreAuditListResponse(
+        total=total,
+        page=page,
+        per_page=per_page,
+        total_tiendas=total_tiendas,
+        registros=items,
+    )
+
+
+# --- DTOs y Endpoints de Almacenamiento y Peso de BD por Tienda ---
+
+class TiendaImageStorageSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total_archivos: int
+    peso_bytes: int
+    peso_mb: float
+    porcentaje_usado: float
+    estado_cuota: str
+
+
+class TableStorageDetailSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    filas: int
+    bytes: int
+
+
+class TiendaDbStorageSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total_filas: int
+    peso_bytes: int
+    peso_kb: float
+    peso_mb: float
+    desglose_tablas: Dict[str, TableStorageDetailSchema]
+
+
+class TiendaStorageReportItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    tienda_id: int
+    nombre: str
+    url_base: Optional[str] = None
+    plataforma: Optional[str] = None
+    activo: bool
+    logo_url: Optional[str] = None
+    limite_almacenamiento_mb: int
+    imagenes: TiendaImageStorageSchema
+    base_datos: TiendaDbStorageSchema
+    peso_total_mb: float
+
+
+class GlobalStorageStoreSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    tienda_id: int
+    nombre: str
+    peso_imagenes_bytes: Optional[int] = None
+    peso_imagenes_mb: Optional[float] = None
+    peso_bd_bytes: Optional[int] = None
+    peso_bd_mb: Optional[float] = None
+
+
+class GlobalStorageSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total_tiendas: int
+    total_imagenes: int
+    total_imagenes_mb: float
+    total_filas_bd: int
+    total_bd_mb: float
+    total_combinado_mb: float
+    tienda_mayor_consumo_imagenes: Optional[GlobalStorageStoreSummary] = None
+    tienda_mayor_consumo_bd: Optional[GlobalStorageStoreSummary] = None
+
+
+class TiendasStorageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    resumen_global: GlobalStorageSummary
+    tiendas: List[TiendaStorageReportItem]
+
+
+@administracion_router.get(
+    "/tiendas/almacenamiento",
+    response_model=TiendasStorageResponse,
+    summary="Auditoría de Almacenamiento y BD por Tienda",
+)
+@administracion_router.get(
+    "/stores/storage-report",
+    response_model=TiendasStorageResponse,
+    include_in_schema=False,
+)
+@router.get(
+    "/tiendas/almacenamiento",
+    response_model=TiendasStorageResponse,
+    include_in_schema=False,
+)
+@router.get(
+    "/stores/storage-report",
+    response_model=TiendasStorageResponse,
+    include_in_schema=False,
+)
+def get_stores_storage_report(
+    db_session: Session = Depends(get_db_session),
+) -> TiendasStorageResponse:
+    reporte = calcular_reporte_almacenamiento_global(db_session)
+    return TiendasStorageResponse.model_validate(reporte)

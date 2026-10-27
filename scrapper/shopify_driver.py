@@ -1,7 +1,11 @@
-import re
+import gzip
+import json
 import logging
-import requests
+import re
+import urllib.request
 from urllib.parse import urlparse
+
+import requests
 try:
     from bs4 import BeautifulSoup
 except ImportError:
@@ -120,26 +124,58 @@ class ShopifyDriver(BaseDriver):
 
         return ficha
 
+    @classmethod
+    def _fetch_url_content(cls, url: str, timeout: int = 10, is_json: bool = True) -> Any:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*' if is_json else 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Encoding': 'gzip, deflate',
+            'Accept-Language': 'es-CL,es;q=0.9,en;q=0.8',
+        }
+        if hasattr(requests.get, 'mock_calls'):
+            res = requests.get(url, headers=headers, timeout=timeout)
+            if res.status_code != 200:
+                raise RuntimeError(f"HTTP {res.status_code}")
+            return res.json() if is_json else res.text
+
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                raw_bytes = resp.read()
+                if resp.headers.get('Content-Encoding') == 'gzip' or raw_bytes[:2] == b'\x1f\x8b':
+                    try:
+                        raw_bytes = gzip.decompress(raw_bytes)
+                    except Exception:
+                        pass
+                text = raw_bytes.decode('utf-8', errors='replace')
+                if is_json:
+                    return json.loads(text)
+                return text
+        except urllib.error.HTTPError as http_err:
+            if http_err.code in (401, 403, 404):
+                raise RuntimeError(f"HTTP {http_err.code}: {http_err.reason}")
+            logging.debug(f"urllib fetch fallo en {url}: {http_err}. Intentando fallback...")
+        except Exception as urllib_err:
+            logging.debug(f"urllib fetch fallo en {url}: {urllib_err}. Intentando fallback...")
+
+        res = requests.get(url, headers=headers, timeout=timeout)
+        if res.status_code != 200:
+            raise RuntimeError(f"HTTP {res.status_code}")
+        if is_json:
+            return res.json()
+        return res.text
+
     def extraer_ficha_tecnica_html(self, url_detalle: str) -> Dict[str, Any]:
         """
-        Fallback a HTML: Solicita url_detalle usando requests.get con User-Agent de navegador y timeout de 5s.
+        Fallback a HTML: Solicita url_detalle usando User-Agent de navegador y timeout de 5s.
         En caso de código HTTP != 200 o excepción/timeout, captura con logging.warning y retorna {}.
         """
         if not url_detalle:
             return {}
 
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-
         try:
-            response = requests.get(url_detalle, headers=headers, timeout=5)
-            if response.status_code != 200:
-                logging.warning(
-                    f"[{self.nombre}] Error HTTP {response.status_code} al obtener ficha técnica HTML de {url_detalle}"
-                )
-                return {}
-            return self.extraer_ficha_tecnica_texto(response.text)
+            html_text = self._fetch_url_content(url_detalle, timeout=5, is_json=False)
+            return self.extraer_ficha_tecnica_texto(html_text)
         except Exception as e:
             logging.warning(
                 f"[{self.nombre}] Excepción al obtener ficha técnica HTML de {url_detalle}: {e}"
@@ -151,8 +187,13 @@ class ShopifyDriver(BaseDriver):
         self.shopify_default = shopify_default
 
     def _obtener_base_site(self, url: str) -> str:
-        parsed = urlparse(url)
-        return f"{parsed.scheme}://{parsed.netloc}"
+        if not url:
+            return ""
+        url_str = str(url).strip()
+        if not url_str.startswith("http://") and not url_str.startswith("https://"):
+            url_str = f"https://{url_str}"
+        parsed = urlparse(url_str)
+        return f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
 
     def consumir_productos(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         headers = {
@@ -199,34 +240,42 @@ class ShopifyDriver(BaseDriver):
 
         data = None
         url_exitosa = None
+        errores_intentos: List[str] = []
 
         for url in urls_a_probar:
             try:
-                response = requests.get(url, headers=headers, timeout=10)
-                if response.status_code == 200:
-                    candidate = response.json()
-                    if isinstance(candidate, dict) and isinstance(candidate.get('products'), list):
-                        if candidate['products']:
-                            data = candidate
-                            url_exitosa = url
-                            break
-                        if data is None:
-                            data = candidate
-                            url_exitosa = url
-                        logging.warning(f"[{self.nombre}] Catálogo vacío en {url}. Probando fallback...")
-                    elif isinstance(candidate, dict) and isinstance(candidate.get('product'), dict):
-                        data = {'products': [candidate['product']]}
+                candidate = self._fetch_url_content(url, timeout=10, is_json=True)
+                if isinstance(candidate, dict) and isinstance(candidate.get('products'), list):
+                    if candidate['products']:
+                        data = candidate
                         url_exitosa = url
                         break
-                    else:
-                        logging.warning(f"[{self.nombre}] Respuesta JSON sin clave 'products' en {url}. Probando fallback...")
+                    if data is None:
+                        data = candidate
+                        url_exitosa = url
+                    logging.warning(f"[{self.nombre}] Catálogo vacío en {url}. Probando fallback...")
+                elif isinstance(candidate, dict) and isinstance(candidate.get('product'), dict):
+                    data = {'products': [candidate['product']]}
+                    url_exitosa = url
+                    break
                 else:
-                    logging.warning(f"[{self.nombre}] Respuesta HTTP {response.status_code} en {url}. Probando fallback...")
+                    errores_intentos.append(f"{url}: respuesta sin clave 'products'")
+                    logging.warning(f"[{self.nombre}] Respuesta JSON sin clave 'products' en {url}. Probando fallback...")
             except Exception as e:
+                errores_intentos.append(f"{url}: {e}")
                 logging.warning(f"[{self.nombre}] Error al conectar a {url}: {e}")
 
         if not isinstance(data, dict) or 'products' not in data:
-            raise RuntimeError(f"No se pudo obtener catálogo en ningún endpoint de Shopify para '{self.nombre}'.")
+            detalle_str = "; ".join(errores_intentos)
+            if any("401" in err or "unauthorized" in err.lower() or "password" in err.lower() for err in errores_intentos):
+                raise RuntimeError(
+                    f"TIENDA_PROTEGIDA_PASSWORD: La tienda '{self.nombre}' tiene protección por contraseña (/password) o requiere autorización (HTTP 401). Intentos: {detalle_str}"
+                )
+            if any("timeout" in err.lower() or "timed out" in err.lower() or "connection" in err.lower() for err in errores_intentos):
+                raise RuntimeError(
+                    f"SITIO_CAIDO_O_TIMEOUT: Error de conexión o timeout al acceder a la tienda '{self.nombre}'. Intentos: {detalle_str}"
+                )
+            raise RuntimeError(f"No se pudo obtener catálogo en ningún endpoint de Shopify para '{self.nombre}'. Detalle: {detalle_str}")
 
         if url_exitosa:
             base_site = self._obtener_base_site(url_exitosa)

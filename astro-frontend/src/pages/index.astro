@@ -1,8 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import ProductCard from '../components/catalog/ProductCard.astro';
 import FavoritesAlertsBanner from '../components/catalog/FavoritesAlertsBanner.astro';
-import WeeklyPriceDropsSection from '../components/catalog/WeeklyPriceDropsSection.astro';
 import { GetCatalogUseCase } from '../core/application/GetCatalog';
 import { GetStoresUseCase } from '../core/application/GetStores';
 import { HttpClient } from '../core/infrastructure/api/HttpClient';
@@ -149,16 +147,10 @@ const jsonLdHome = {
         
         <!-- Columna de Texto y Llamados a la Acción -->
         <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
-          
-          <!-- Badge de Construcción / Beta Pública -->
-          <div class="inline-flex items-center gap-2 rounded-full bg-amber-50 border border-amber-200/80 px-3.5 py-1 text-xs font-semibold text-amber-900 shadow-2xs">
-            <span class="flex h-2 w-2 rounded-full bg-amber-500 animate-ping"></span>
-            <span>🚧 Plataforma en Construcción • <strong>Beta Abierta con Catálogo en Vivo</strong></span>
-          </div>
 
           <!-- H1 Principal Optimizado para SEO -->
           <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black text-stone-900 tracking-tight leading-[1.1]">
-            El café de especialidad, <span class="text-emerald-800 underline decoration-emerald-300 decoration-wavy decoration-2">transparente</span>.
+            El café de especialidad, <span class="text-emerald-800">transparente</span>.
           </h1>
 
           <!-- Bajada de Valor Clara -->
@@ -172,7 +164,7 @@ const jsonLdHome = {
               href="/catalogo" 
               class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-2xl bg-stone-900 hover:bg-emerald-900 text-white font-bold text-sm sm:text-base px-7 py-4 transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5"
             >
-              <span>Explorar Catálogo Beta</span>
+              <span>Explorar Catálogo</span>
               <span class="text-emerald-400">☕ →</span>
             </a>
 
@@ -321,9 +313,6 @@ const jsonLdHome = {
     <!-- Alertas de Variación de Precio de Favoritos Guardados -->
     <FavoritesAlertsBanner />
 
-    <!-- Mayores Caídas de Precio de la Semana (Ofertas Verificadas) -->
-    <WeeklyPriceDropsSection />
-
     <!-- ===================================================================== -->
     <!-- 2. EXPLORA POR FAMILIA DE SABOR (Rueda SCA Interactiva) -->
     <!-- ===================================================================== -->
@@ -422,50 +411,6 @@ const jsonLdHome = {
     </section>
 
 
-    <!-- ===================================================================== -->
-    <!-- 3. MUESTRA SELECTA DEL CATÁLOGO EN VIVO -->
-    <!-- ===================================================================== -->
-    {featuredProducts.length > 0 && (
-      <section class="space-y-6">
-        
-        <div class="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-3">
-          <div>
-            <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">Catálogo en Vivo</span>
-            <h2 class="text-2xl font-extrabold text-stone-900 tracking-tight">
-              Cafés recién indexados por tostaduría
-            </h2>
-            <p class="text-xs sm:text-sm text-stone-500">
-              Datos actualizados diariamente para comparar precios por kilo oficiales y estimados.
-            </p>
-          </div>
-
-          <a 
-            href="/catalogo" 
-            class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/70 px-4 py-2 rounded-xl transition"
-          >
-            <span>Ver los {totalProducts} cafés disponibles</span>
-            <span>→</span>
-          </a>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredProducts.map(product => (
-            <ProductCard product={product} />
-          ))}
-        </div>
-
-        <div class="pt-4 text-center">
-          <a 
-            href="/catalogo" 
-            class="inline-flex items-center gap-2 rounded-2xl bg-stone-900 hover:bg-emerald-900 text-white font-bold text-sm px-8 py-3.5 transition shadow-sm"
-          >
-            <span>Ir al Catálogo Completo con Filtros Avanzados</span>
-            <span>☕</span>
-          </a>
-        </div>
-
-      </section>
-    )}
 
 
     <!-- ===================================================================== -->
