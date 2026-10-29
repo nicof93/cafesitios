@@ -1,7 +1,7 @@
 ---
 import AdminLteLayout from '../layouts/AdminLteLayout.astro';
 
-const apiBaseUrl = "http://localhost:8000";
+const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://localhost:8001";
 ---
 
 <AdminLteLayout 
@@ -595,7 +595,7 @@ const apiBaseUrl = "http://localhost:8000";
 
   <script is:inline>
     (function () {
-      const API_BASE = 'http://localhost:8000';
+      const API_BASE = document.querySelector('[data-api-base]')?.dataset.apiBase || 'http://localhost:8001';
 
       const fetchWithEnv = (url, opts = {}) => {
         if (window.plataformaState && typeof window.plataformaState.fetchWithEnv === 'function') {
@@ -909,6 +909,16 @@ const apiBaseUrl = "http://localhost:8000";
                 >
                   ✏️ Editar
                 </button>
+                <button
+                  type="button"
+                  class="btn-delete-store inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100 hover:text-rose-900 transition shadow-xs"
+                  data-id="${store.id}"
+                  data-name="${store.nombre}"
+                  title="Eliminar tienda permanentemente"
+                >
+                  <span>🗑️</span>
+                  <span>Eliminar</span>
+                </button>
               </div>
             </td>
           </tr>
@@ -934,12 +944,33 @@ const apiBaseUrl = "http://localhost:8000";
               }
               const data = await res.json();
               if (data.redirect_url) {
-                window.open(data.redirect_url, '_blank');
+                let finalRedirect = data.redirect_url;
+                const activeEnv = (window.plataformaState && window.plataformaState.activeEnvId) || 'local';
+
+                // Si el ambiente no es local y la URL devuelta apuntara a localhost, sustituir por la URL base configurada del ambiente
+                if (activeEnv !== 'local' && window.plataformaState?.getUrlAdminTiendaBase) {
+                  const targetBase = window.plataformaState.getUrlAdminTiendaBase();
+                  if (finalRedirect.includes('localhost:') || finalRedirect.includes('127.0.0.1:')) {
+                    try {
+                      const u = new URL(finalRedirect);
+                      finalRedirect = `${targetBase}${u.pathname}${u.search}`;
+                    } catch (_) {}
+                  }
+                }
+
+                if (!finalRedirect.includes('target_env=')) {
+                  finalRedirect += `${finalRedirect.includes('?') ? '&' : '?'}target_env=${activeEnv}`;
+                }
+                window.open(finalRedirect, '_blank');
               } else {
-                alert('No se pudo generar el enlace de redirección.');
+                if (typeof window.plataformaNotify === 'function') {
+                  window.plataformaNotify('No se pudo generar el enlace de redirección.', 'error');
+                }
               }
             } catch (error) {
-              alert(`Error al abrir panel de ${name}: ${error.message}`);
+              if (typeof window.plataformaNotify === 'function') {
+                window.plataformaNotify(`Error al abrir panel de ${name}: ${error.message}`, 'error');
+              }
             } finally {
               btn.innerHTML = originalHtml;
               btn.disabled = false;
@@ -955,6 +986,54 @@ const apiBaseUrl = "http://localhost:8000";
             const storeData = JSON.parse(raw);
             populateForm(storeData);
             openDrawer();
+          });
+        });
+
+        // Enlazar botones de eliminación con modal de confirmación
+        document.querySelectorAll('.btn-delete-store').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name') || 'esta tostaduría';
+
+            const executeDelete = async () => {
+              const originalHtml = btn.innerHTML;
+              btn.innerHTML = '<span>⏳</span><span>Borrando...</span>';
+              btn.disabled = true;
+
+              try {
+                const res = await fetchWithEnv(`${API_BASE}/api/v1/administracion/tiendas/${id}`, {
+                  method: 'DELETE',
+                  headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!res.ok) {
+                  const err = await res.json().catch(() => ({}));
+                  throw new Error(err.detail || 'Error al eliminar la tienda');
+                }
+
+                if (typeof window.plataformaNotify === 'function') {
+                  window.plataformaNotify(`La tienda "${name}" y todos sus datos fueron eliminados.`, 'success');
+                }
+                await loadStores();
+              } catch (error) {
+                if (typeof window.plataformaNotify === 'function') {
+                  window.plataformaNotify(`Error al eliminar tienda: ${error.message}`, 'error');
+                }
+              } finally {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+              }
+            };
+
+            if (window.plataformaState && typeof window.plataformaState.confirmAction === 'function') {
+              window.plataformaState.confirmAction({
+                title: `¿Eliminar tienda "${name}"?`,
+                message: `Esta acción eliminará de forma irreversible la tienda, todos sus catálogos, sucursales, productos, variantes y métricas asociadas. ¿Deseas continuar?`,
+                onProceed: executeDelete
+              });
+            } else {
+              executeDelete();
+            }
           });
         });
 

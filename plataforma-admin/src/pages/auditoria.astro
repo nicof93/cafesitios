@@ -1,7 +1,7 @@
 ---
 import AdminLteLayout from '../layouts/AdminLteLayout.astro';
 
-const apiBaseUrl = "http://localhost:8000";
+const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://localhost:8001";
 ---
 
 <AdminLteLayout 
@@ -264,7 +264,7 @@ const apiBaseUrl = "http://localhost:8000";
 
   <script is:inline>
     (function initGlobalAudit() {
-      const API_BASE = 'http://localhost:8000';
+      const API_BASE = document.querySelector('[data-api-base]')?.dataset.apiBase || 'http://localhost:8001';
 
       const fetchWithEnv = (url, opts = {}) => {
         if (window.plataformaState && typeof window.plataformaState.fetchWithEnv === 'function') {
@@ -505,8 +505,10 @@ const apiBaseUrl = "http://localhost:8000";
                 <span class="uppercase text-[10px] text-stone-400 block">${log.entidad}</span>
                 <span>ID #${log.entidad_id ?? 'N/A'}</span>
               </td>
-              <td class="px-4 py-3 font-mono text-[11px] text-stone-600 truncate max-w-[140px]" title="${log.usuario_id}">
-                ${log.usuario_id}
+              <td class="px-4 py-3 font-mono text-[11px] text-stone-600 truncate max-w-[170px]" title="${log.usuario_id}">
+                ${(log.usuario_id && log.usuario_id.includes('SUPERADMIN'))
+                  ? `<span class="inline-flex items-center gap-1 rounded-md bg-purple-100 text-purple-900 border border-purple-200 px-1.5 py-0.5 text-[10px] font-bold"><span class="text-xs">👑</span> SUPERADMIN</span>` 
+                  : (log.usuario_id || 'Sistema')}
               </td>
               <td class="px-4 py-3 font-mono text-[11px] text-stone-400">
                 ${log.ip_origen || '127.0.0.1'}

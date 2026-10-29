@@ -71,6 +71,7 @@ def create_store_admin_token(
     tienda_id: int,
     rol: str = "STORE_ADMIN",
     expires_in_seconds: int = 86400,
+    target_env: Optional[str] = None,
 ) -> str:
     header = {"alg": "HS256", "typ": "JWT"}
     now = int(time.time())
@@ -82,6 +83,8 @@ def create_store_admin_token(
         "iat": now,
         "exp": now + expires_in_seconds,
     }
+    if target_env:
+        payload["target_env"] = str(target_env)
 
     header_b64 = _base64url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8"))
     payload_b64 = _base64url_encode(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
@@ -323,8 +326,11 @@ def get_current_store_admin(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="La tostaduría solicitada para inspección no fue encontrada.",
             )
+        super_uid = str(usuario_id)
+        if not super_uid.startswith("SUPERADMIN:"):
+            super_uid = f"SUPERADMIN: {super_uid}"
         return StoreAdminContext(
-            usuario_id=str(usuario_id),
+            usuario_id=super_uid,
             tienda_id=tienda.id,
             rol="PLATFORM_SUPERADMIN",
             tienda=tienda,
@@ -377,14 +383,24 @@ def log_store_action(
     valores_nuevos: Optional[Dict[str, Any]] = None,
     ip_origen: Optional[str] = None,
 ) -> AuditoriaAccionesTienda:
+    clean_user = str(usuario_id)
+    if "superadmin" in clean_user.lower() and not clean_user.startswith("SUPERADMIN:"):
+        clean_user = f"SUPERADMIN: {clean_user}"
+
+    vals_nuevos = dict(valores_nuevos) if valores_nuevos is not None else None
+    if "SUPERADMIN" in clean_user:
+        if vals_nuevos is None:
+            vals_nuevos = {}
+        vals_nuevos["_ejecutado_por"] = "SUPERADMIN_PLATAFORMA"
+
     log_entry = AuditoriaAccionesTienda(
         tienda_id=tienda_id,
-        usuario_id=str(usuario_id),
+        usuario_id=clean_user,
         accion=accion,
         entidad=entidad,
         entidad_id=entidad_id,
         valores_previos=valores_previos,
-        valores_nuevos=valores_nuevos,
+        valores_nuevos=vals_nuevos,
         ip_origen=ip_origen,
         fecha_registro=datetime.now(timezone.utc).replace(tzinfo=None),
     )

@@ -130,6 +130,34 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
         <span class="text-[10px] text-stone-400">Las credenciales se guardan de forma local en tu máquina.</span>
       </div>
 
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label for="input-env-url-catalogo" class="block font-bold text-stone-600 mb-1">
+            URL Base Catálogo Público:
+          </label>
+          <input 
+            id="input-env-url-catalogo" 
+            type="url" 
+            placeholder="ej. https://cafesitios.cl o http://localhost:4321"
+            class="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-emerald-600"
+          />
+          <span class="text-[10px] text-stone-400">Web pública de Cafesitios para este ambiente.</span>
+        </div>
+
+        <div>
+          <label for="input-env-url-admin-tienda" class="block font-bold text-stone-600 mb-1">
+            URL Base Admin Tiendas:
+          </label>
+          <input 
+            id="input-env-url-admin-tienda" 
+            type="url" 
+            placeholder="ej. https://cafesitios.cl o http://localhost:4321"
+            class="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-emerald-600"
+          />
+          <span class="text-[10px] text-stone-400">Portal de administración (/admin-tienda).</span>
+        </div>
+      </div>
+
       <div>
         <label for="input-env-desc" class="block font-bold text-stone-600 mb-1">
           Descripción u observaciones (opcional):
@@ -170,7 +198,7 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
 
   <script is:inline>
     (function initEnvironmentsModule() {
-      const API_BASE = 'http://localhost:8000';
+      const API_BASE = document.querySelector('[data-api-base]')?.dataset.apiBase || 'http://localhost:8001';
       const grid = document.getElementById('environments-grid');
       const dialog = document.getElementById('env-form-dialog');
       const form = document.getElementById('env-form');
@@ -229,10 +257,26 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
                 ${env.descripcion || 'Sin descripción configurada.'}
               </p>
 
-              <div class="p-2.5 rounded-lg border border-stone-200 bg-stone-50 space-y-1 font-mono text-[11px]">
-                <div class="text-[10px] uppercase font-bold text-stone-400 font-sans">Cadena de Conexión:</div>
-                <div class="truncate text-stone-700" title="${env.connection_url_masked || ''}">
-                  ${env.connection_url_masked || 'Configurado por entorno'}
+              <div class="p-2.5 rounded-lg border border-stone-200 bg-stone-50 space-y-2 font-mono text-[11px]">
+                <div>
+                  <div class="text-[10px] uppercase font-bold text-stone-400 font-sans">Cadena de Conexión:</div>
+                  <div class="truncate text-stone-700" title="${env.connection_url_masked || ''}">
+                    ${env.connection_url_masked || 'Configurado por entorno'}
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 pt-1.5 border-t border-stone-200/80 font-sans">
+                  <div>
+                    <span class="text-[9px] uppercase font-bold text-stone-400 block">Catálogo Público:</span>
+                    <a href="${env.url_catalogo_base || 'http://localhost:4321'}" target="_blank" rel="noopener noreferrer" class="text-emerald-700 hover:underline truncate block text-[10px] font-mono">
+                      ${env.url_catalogo_base || 'http://localhost:4321'} ↗
+                    </a>
+                  </div>
+                  <div>
+                    <span class="text-[9px] uppercase font-bold text-stone-400 block">Admin Tiendas:</span>
+                    <a href="${(env.url_admin_tienda_base || env.url_catalogo_base || 'http://localhost:4321').replace(/\/+$/, '')}/admin-tienda/dashboard" target="_blank" rel="noopener noreferrer" class="text-purple-700 hover:underline truncate block text-[10px] font-mono">
+                      ${env.url_admin_tienda_base || env.url_catalogo_base || 'http://localhost:4321'} ↗
+                    </a>
+                  </div>
                 </div>
               </div>
 
@@ -308,7 +352,7 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
                 } else {
                   resEl.textContent = '✕ Error';
                   resEl.className = 'text-rose-700 font-semibold font-mono';
-                  alert(`Error en ${id}: ${data.error}`);
+                  if (window.plataformaNotify) { window.plataformaNotify(`Error en ${id}: ${data.error}`, 'error'); }
                 }
               }
             } catch (err) {
@@ -344,6 +388,8 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
             urlInput.required = false;
             urlInput.placeholder = '(Dejar en blanco para conservar la URL y contraseña actual)';
 
+            document.getElementById('input-env-url-catalogo').value = env.url_catalogo_base || '';
+            document.getElementById('input-env-url-admin-tienda').value = env.url_admin_tienda_base || '';
             document.getElementById('input-env-desc').value = env.descripcion || '';
             document.getElementById('check-env-protegido').checked = Boolean(env.es_protegido);
 
@@ -375,10 +421,10 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
                 fetchEnvironments();
               } else {
                 const err = await res.json();
-                alert(`Error al eliminar: ${err.detail || 'Fallo desconocido'}`);
+                if (window.plataformaNotify) { window.plataformaNotify(`Error al eliminar: ${err.detail || 'Fallo desconocido'}`, 'error'); }
               }
             } catch (err) {
-              alert(`Error: ${err.message}`);
+              if (window.plataformaNotify) { window.plataformaNotify(`Error: ${err.message}`, 'error'); }
             }
           });
         });
@@ -398,6 +444,8 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
           const urlInput = document.getElementById('input-env-url');
           urlInput.required = true;
           urlInput.placeholder = 'postgresql+psycopg://user:password@host:5432/dbname';
+          document.getElementById('input-env-url-catalogo').value = 'http://localhost:4321';
+          document.getElementById('input-env-url-admin-tienda').value = 'http://localhost:4321';
           dialog.showModal();
         });
       }
@@ -430,6 +478,8 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
                 nombre: nombreVal,
                 tipo: document.getElementById('select-env-tipo').value,
                 color_badge: document.getElementById('select-env-badge').value,
+                url_catalogo_base: document.getElementById('input-env-url-catalogo').value.trim() || undefined,
+                url_admin_tienda_base: document.getElementById('input-env-url-admin-tienda').value.trim() || undefined,
                 descripcion: document.getElementById('input-env-desc').value.trim(),
                 es_protegido: document.getElementById('check-env-protegido').checked,
               };
@@ -454,10 +504,10 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
                   }
                 } else {
                   const err = await res.json().catch(() => ({}));
-                  alert(`Error al actualizar ambiente: ${err.detail || 'Verifica los campos'}`);
+                  if (window.plataformaNotify) { window.plataformaNotify(`Error al actualizar ambiente: ${err.detail || 'Verifica los campos'}`, 'error'); }
                 }
               } catch (err) {
-                alert(`Error de conexión: ${err.message}`);
+                if (window.plataformaNotify) { window.plataformaNotify(`Error de conexión: ${err.message}`, 'error'); }
               }
             }
 
@@ -469,6 +519,8 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
               tipo: document.getElementById('select-env-tipo').value,
               color_badge: document.getElementById('select-env-badge').value,
               connection_url: document.getElementById('input-env-url').value.trim(),
+              url_catalogo_base: document.getElementById('input-env-url-catalogo').value.trim() || undefined,
+              url_admin_tienda_base: document.getElementById('input-env-url-admin-tienda').value.trim() || undefined,
               descripcion: document.getElementById('input-env-desc').value.trim(),
               es_protegido: document.getElementById('check-env-protegido').checked,
               activo: true
@@ -487,10 +539,10 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
                 fetchEnvironments();
               } else {
                 const err = await res.json().catch(() => ({}));
-                alert(`Error al guardar ambiente: ${err.detail || 'Verifica los campos'}`);
+                if (window.plataformaNotify) { window.plataformaNotify(`Error al guardar ambiente: ${err.detail || 'Verifica los campos'}`, 'error'); }
               }
             } catch (err) {
-              alert(`Error de conexión: ${err.message}`);
+              if (window.plataformaNotify) { window.plataformaNotify(`Error de conexión: ${err.message}`, 'error'); }
             }
           }
         });
