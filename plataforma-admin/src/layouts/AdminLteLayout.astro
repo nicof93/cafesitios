@@ -3,7 +3,7 @@ import '../styles/adminlte.css';
 
 interface Props {
   title?: string;
-  activeNav?: 'dashboard' | 'tiendas' | 'moderacion' | 'administracion' | 'bitacora' | 'sincronizaciones' | 'auditoria' | 'almacenamiento' | 'ambientes';
+  activeNav?: 'dashboard' | 'tiendas' | 'moderacion' | 'administracion' | 'bitacora' | 'sincronizaciones' | 'auditoria' | 'almacenamiento' | 'traccion' | 'ambientes';
   breadcrumb?: Array<{ label: string; url?: string }>;
 }
 
@@ -37,19 +37,34 @@ const {
         },
 
         getActiveEnv() {
-          return this.environments.find(e => e.id === this.activeEnvId) || {
+          const found = this.environments.find(e => e.id === this.activeEnvId);
+          if (found) return found;
+          const isSupabase = this.activeEnvId === 'supabase';
+          return {
             id: this.activeEnvId || 'local',
-            nombre: (this.activeEnvId === 'supabase') ? 'Supabase Producción' : 'PostgreSQL Local',
-            tipo: (this.activeEnvId === 'supabase') ? 'supabase' : 'postgres',
-            color_badge: (this.activeEnvId === 'supabase') ? 'red' : 'amber',
-            es_protegido: (this.activeEnvId === 'supabase')
+            nombre: isSupabase ? 'Supabase Producción' : 'PostgreSQL Local',
+            tipo: isSupabase ? 'supabase' : 'postgres',
+            color_badge: isSupabase ? 'red' : 'amber',
+            url_catalogo_base: isSupabase ? 'https://cafesitios.cl' : 'http://localhost:4321',
+            url_admin_tienda_base: isSupabase ? 'https://cafesitios.cl' : 'http://localhost:4321',
+            es_protegido: isSupabase
           };
+        },
+
+        getUrlCatalogoBase() {
+          const env = this.getActiveEnv();
+          return (env.url_catalogo_base || (this.activeEnvId === 'supabase' ? 'https://cafesitios.cl' : 'http://localhost:4321')).replace(/\/+$/, '');
+        },
+
+        getUrlAdminTiendaBase() {
+          const env = this.getActiveEnv();
+          return (env.url_admin_tienda_base || env.url_catalogo_base || (this.activeEnvId === 'supabase' ? 'https://cafesitios.cl' : 'http://localhost:4321')).replace(/\/+$/, '');
         },
 
         async fetchWithEnv(url, options = {}) {
           const headers = new Headers(options.headers || {});
           headers.set('X-Target-Environment', this.activeEnvId || 'local');
-          const apiBase = document.querySelector('[data-api-base]')?.dataset.apiBase || 'http://localhost:8000';
+          const apiBase = document.querySelector('[data-api-base]')?.dataset.apiBase || 'http://localhost:8001';
           const finalUrl = (typeof url === 'string' && url.startsWith('/api/')) ? `${apiBase.replace(/\/+$/, '')}${url}` : url;
           return fetch(finalUrl, { ...options, headers });
         },
@@ -193,6 +208,18 @@ const {
             <span class="nav-text">Almacenamiento y BD</span>
           </a>
 
+          <a 
+            href="/plataforma/traccion" 
+            class={`nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition ${
+              activeNav === 'traccion' 
+                ? 'bg-emerald-800 text-white shadow-sm' 
+                : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+            }`}
+          >
+            <span class="text-base" aria-hidden="true">📈</span>
+            <span class="nav-text">Tracción y Conversión</span>
+          </a>
+
           <div class="pt-3 border-t border-stone-800/80 my-2"></div>
 
           <a 
@@ -212,6 +239,7 @@ const {
       <!-- Pie Fijo del Sidebar: Acceso a Admin Tienda y Web Pública (Sin scroll) -->
       <div class="p-2.5 border-t border-stone-800 text-xs text-stone-400 bg-stone-950/60 shrink-0 space-y-1">
         <a 
+          id="sidebar-link-admin-tienda"
           href="/admin-tienda/dashboard" 
           target="_blank"
           class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-stone-300 hover:bg-stone-800 hover:text-white font-medium transition"
@@ -222,7 +250,7 @@ const {
         </a>
         <div class="flex items-center justify-between px-2.5 pt-1 text-[11px] text-stone-500 border-t border-stone-900">
           <span class="nav-text">Café-sitios Platform</span>
-          <a href="http://localhost:3000" target="_blank" class="text-emerald-400 hover:underline">Web ➔</a>
+          <a id="sidebar-link-web" href="http://localhost:4321" target="_blank" class="text-emerald-400 hover:underline">Web ➔</a>
         </div>
       </div>
     </aside>
@@ -464,7 +492,7 @@ const {
   <script is:inline>
     (function initPlataformaEngine() {
       const STORAGE_ENV_KEY = 'plataforma_active_env';
-      const API_BASE = 'http://localhost:8000';
+      const API_BASE = document.querySelector('[data-api-base]')?.dataset.apiBase || 'http://localhost:8001';
       // Sistema de Notificaciones Toast Propias de Cafésitios
       window.plataformaNotify = function(message, type = 'info') {
         const container = document.getElementById('cafesitios-toast-container');
@@ -645,7 +673,19 @@ const {
         }
       }
 
+      function syncSidebarUrls() {
+        const linkAdmin = document.getElementById('sidebar-link-admin-tienda');
+        const linkWeb = document.getElementById('sidebar-link-web');
+        if (linkAdmin && window.plataformaState?.getUrlAdminTiendaBase) {
+          linkAdmin.href = `${window.plataformaState.getUrlAdminTiendaBase()}/admin-tienda/dashboard`;
+        }
+        if (linkWeb && window.plataformaState?.getUrlCatalogoBase) {
+          linkWeb.href = `${window.plataformaState.getUrlCatalogoBase()}/`;
+        }
+      }
+
       function renderEnvironmentSwitcher() {
+        syncSidebarUrls();
         const activeEnv = window.plataformaState.getActiveEnv();
         const activeNameEl = document.getElementById('active-env-name');
         const activeDotEl = document.getElementById('active-env-dot');

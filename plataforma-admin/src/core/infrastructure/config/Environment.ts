@@ -1,4 +1,12 @@
 export class Environment {
+  static getPlataformaApiBaseUrl(): string {
+    const customUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || import.meta.env.PUBLIC_API_BASE_URL;
+    if (customUrl && typeof customUrl === 'string' && customUrl.trim()) {
+      return customUrl.replace(/\/+$/, '');
+    }
+    return 'http://localhost:8001';
+  }
+
   static getApiBaseUrl(): string {
     // 1. En el navegador
     if (typeof window !== 'undefined') {
@@ -57,4 +65,3 @@ export class Environment {
     return import.meta.env.PUBLIC_GA_MEASUREMENT_ID || '';
   }
 }
-

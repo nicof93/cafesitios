@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 import unittest
 from fastapi.testclient import TestClient
 
-from main import app
+from plataforma_backend import app
 from db.database import DatabaseManager, Tienda, AuditoriaAccionesTienda
 
 

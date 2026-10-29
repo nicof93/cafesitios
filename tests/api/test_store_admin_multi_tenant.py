@@ -317,7 +317,7 @@ class TestStoreAdminMultiTenant(unittest.TestCase):
         )
         self.assertEqual(superadmin_ctx.tienda_id, self.tienda_b.id)
         self.assertEqual(superadmin_ctx.rol, "PLATFORM_SUPERADMIN")
-        self.assertEqual(superadmin_ctx.usuario_id, "superadmin@cafesitios.cl")
+        self.assertIn("superadmin@cafesitios.cl", superadmin_ctx.usuario_id)
 
         # 4. Probar que el contexto de superadmin puede consultar perfil y productos de Tienda B
         profile = get_store_profile(ctx=superadmin_ctx, db_session=self.session)

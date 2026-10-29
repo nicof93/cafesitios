@@ -4,6 +4,8 @@ Re-exporta los enrutadores y controladores separados por entidad para
 mantener compatibilidad total hacia atrás con importaciones existentes.
 """
 from api.admin import administracion_router, router as admin_router
+from api.app_plataforma import create_plataforma_app
+from api.app_public import create_public_app
 from api.dependencies import get_db_session
 from api.feedback import router as feedback_router, sugerencias_router
 from api.products import (
@@ -33,6 +35,8 @@ from api.telemetry import router as telemetry_router, telemetria_router
 from infrastructure.postgres_repository import PostgresCoffeeRepository
 
 __all__ = [
+    "create_public_app",
+    "create_plataforma_app",
     "admin_router",
     "administracion_router",
     "get_db_session",

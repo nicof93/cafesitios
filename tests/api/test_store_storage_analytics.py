@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from main import app
+from plataforma_backend import app
 from db.database import (
     Base,
     DatabaseManager,
@@ -32,6 +32,21 @@ class TestStoreStorageAnalytics(unittest.TestCase):
         cls.mock_db.SessionLocal = cls.SessionLocal
         cls._orig_local = DatabaseManager._instances.get("local")
         DatabaseManager._instances["local"] = cls.mock_db
+
+        from api.dependencies import get_db_session, require_local_admin
+
+        def override_get_db():
+            db = cls.SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        def override_require_admin():
+            return True
+
+        app.dependency_overrides[get_db_session] = override_get_db
+        app.dependency_overrides[require_local_admin] = override_require_admin
 
         # Seed data
         with cls.SessionLocal() as session:
@@ -88,6 +103,7 @@ class TestStoreStorageAnalytics(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        app.dependency_overrides.clear()
         if cls._orig_local is not None:
             DatabaseManager._instances["local"] = cls._orig_local
         else:

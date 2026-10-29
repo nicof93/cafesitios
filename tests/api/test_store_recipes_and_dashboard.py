@@ -35,6 +35,9 @@ class TestStoreRecipesAndDashboard(unittest.TestCase):
 
         app.dependency_overrides[get_db_session] = override_get_db
         cls.client = TestClient(app)
+        from plataforma_backend import app as plataforma_app
+        plataforma_app.dependency_overrides[get_db_session] = override_get_db
+        cls.plataforma_client = TestClient(plataforma_app)
         session = cls.SessionLocal()
         try:
             # Crear o buscar tienda de prueba
@@ -110,7 +113,7 @@ class TestStoreRecipesAndDashboard(unittest.TestCase):
 
     def test_01_dashboard_admin_status_fields(self):
         headers = {"X-Admin-Role": "SUPER_ADMIN"}
-        resp = self.client.get("/api/v1/administracion/estado", headers=headers)
+        resp = self.plataforma_client.get("/api/v1/administracion/estado", headers=headers)
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertIn("productos_sin_moderar", data)

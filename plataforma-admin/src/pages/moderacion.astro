@@ -1,7 +1,7 @@
 ---
 import AdminLteLayout from '../layouts/AdminLteLayout.astro';
 
-const apiBaseUrl = "http://localhost:8000";
+const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://localhost:8001";
 ---
 
 <AdminLteLayout 
@@ -126,7 +126,7 @@ const apiBaseUrl = "http://localhost:8000";
         return;
       }
 
-      const API_BASE = 'http://localhost:8000';
+      const API_BASE = document.querySelector('[data-api-base]')?.dataset.apiBase || 'http://localhost:8001';
 
       const fetchWithEnv = (url, opts = {}) => {
         if (window.plataformaState && typeof window.plataformaState.fetchWithEnv === 'function') {

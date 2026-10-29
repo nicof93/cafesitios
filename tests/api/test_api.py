@@ -403,7 +403,9 @@ class TestAPI(unittest.TestCase):
             self.assertIn("last_sync", res_sync.json())
 
             # 4. Administración en español: /api/v1/administracion/estado
-            res_admin = client.get("/api/v1/administracion/estado")
+            from plataforma_backend import app as plataforma_app
+            client_plataforma = TestClient(plataforma_app)
+            res_admin = client_plataforma.get("/api/v1/administracion/estado")
             self.assertEqual(res_admin.status_code, 200)
             self.assertTrue(res_admin.json()["enabled"])
         finally:
