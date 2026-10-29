@@ -1252,7 +1252,7 @@ class DatabaseManager:
                     finca_productor = (item.get("finca_productor") or "").strip()[:255] or None
                     variedad = (item.get("variedad") or "").strip()[:255] or None
                     proceso = (item.get("proceso") or "").strip()[:255] or None
-                    lote_val = (item.get("lote") or "").strip()[:255] or None
+                    lote_val = (item.get("lote") or "").strip()[:100] or None
                     hash_desc = item.get("hash_descripcion")
 
                     cafe = None

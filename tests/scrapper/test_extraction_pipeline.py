@@ -271,6 +271,52 @@ class TestExtractionPipeline(unittest.TestCase):
         self.assertEqual(result["origen"], "Panamá")
         self.assertEqual(result["puntuacion_sca"], 89.5)
 
+    def test_guardar_cafes_cascada_truncates_long_lote(self):
+        engine = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(engine)
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        tienda = Tienda(nombre="Tienda Lote Largo", url_base="https://ejemplo.cl")
+        session.add(tienda)
+        session.commit()
+
+        db_mgr = DatabaseManager.__new__(DatabaseManager)
+        db_mgr.engine = engine
+        db_mgr.SessionLocal = Session
+
+        long_lote = "Bourbon, Caturra y Catuaí— son en realidad una familia: Caturra es una mutación de Bourbon, y Catuaí es hija de Caturra"
+        self.assertGreater(len(long_lote), 100)
+
+        catalogo_cascada = [{
+            "nombre": "Qawale",
+            "origen": "Guatemala",
+            "variedad": "Bourbon",
+            "proceso": "Lavado",
+            "lote": long_lote,
+            "notas_cata": ["Manzana Verde", "Panela", "Vainilla"],
+            "notas_normalizadas": ["Manzana verde", "Panela", "Vainilla"],
+            "hash_descripcion": "0f9409599568013d0b1605411ab8f6db",
+            "ofertas": [
+                {
+                    "precio_actual": 12990,
+                    "formato_gramos": 250,
+                    "precio_por_kilo": 51960.0,
+                    "es_estimado": True,
+                    "link_detalle": "https://ejemplo.cl/products/qawale",
+                    "disponible": True,
+                }
+            ]
+        }]
+
+        res_counts = db_mgr.guardar_cafes_cascada(catalogo_cascada, tienda_id=tienda.id)
+        self.assertEqual(res_counts["cafes_agregados"], 1)
+
+        cafe_guardado = session.query(Cafe).filter(Cafe.nombre == "Qawale").first()
+        self.assertIsNotNone(cafe_guardado)
+        self.assertLessEqual(len(cafe_guardado.lote), 100)
+        self.assertEqual(cafe_guardado.lote, long_lote[:100])
+
 
 if __name__ == "__main__":
     unittest.main()
