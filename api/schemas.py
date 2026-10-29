@@ -437,3 +437,45 @@ class MarketAnalyticsResponse(BaseModel):
     tiendas_mas_competitivas: List[MarketStoreDiscountSummary] = Field(default_factory=list)
     distribucion_tueste: List[MarketDistributionItem] = Field(default_factory=list)
     distribucion_proceso: List[MarketDistributionItem] = Field(default_factory=list)
+
+# --- TRACCIÓN Y MÉTRICAS COMERCIALES GLOBALES DE TIENDAS ---
+
+class StoreTractionMetricsItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    tienda_id: int
+    nombre: str
+    url_base: Optional[str] = None
+    logo_url: Optional[str] = None
+    telefono_whatsapp: Optional[str] = None
+    activo: bool = True
+    total_productos: int = 0
+    clics_salientes: int = 0
+    cafes_favoritos: int = 0
+    en_matriz_comparativa: int = 0
+    ventas_solicitadas_whatsapp_clp: int = 0
+    pedidos_recibidos_whatsapp: int = 0
+    ticket_promedio_whatsapp_clp: float = 0.0
+
+class GlobalTractionSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total_clics_salientes: int = 0
+    total_cafes_favoritos: int = 0
+    total_en_matriz_comparativa: int = 0
+    total_ventas_solicitadas_whatsapp_clp: int = 0
+    total_pedidos_recibidos_whatsapp: int = 0
+    total_tiendas_activas: int = 0
+    tiendas_con_ventas_whatsapp: int = 0
+    tiendas_con_clics: int = 0
+
+class GlobalStoreTractionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    resumen_global: GlobalTractionSummary = Field(default_factory=GlobalTractionSummary)
+    tiendas: List[StoreTractionMetricsItem] = Field(default_factory=list)
+
+
+class StoreDeleteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    mensaje: str
+    tienda_id: int
+    tienda_nombre: str
+    exito: bool = True

@@ -1,0 +1,610 @@
+---
+import AdminLteLayout from '../layouts/AdminLteLayout.astro';
+
+const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://localhost:8001";
+---
+
+<AdminLteLayout 
+  title="Tracción y Conversión de Tiendas | Plataforma Admin"
+  activeNav="traccion"
+  breadcrumb={[{ label: "Inicio", url: "/plataforma/" }, { label: "Tracción Comercial" }]}
+>
+  <div class="space-y-6" data-api-base={apiBaseUrl}>
+    
+    <!-- CABECERA DE LA PÁGINA -->
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-stone-200/80 pb-6">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-black tracking-tight text-stone-900 flex items-center gap-2">
+          <span>📈</span>
+          <span>Tracción y Conversión de Tiendas</span>
+        </h1>
+        <p class="mt-1 text-xs text-stone-500 max-w-2xl">
+          Monitoreo global de la demanda generada para las tostadurías: Clics salientes, cafés guardados en favoritos, apariciones en la matriz comparativa y pedidos/ventas solicitadas vía WhatsApp.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          id="btn-export-csv"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-semibold text-stone-700 shadow-xs hover:bg-stone-50 transition active:scale-95"
+          title="Descargar reporte en formato CSV"
+        >
+          <span>📥</span>
+          <span>Exportar CSV</span>
+        </button>
+        <button
+          type="button"
+          id="btn-refresh-traction"
+          class="inline-flex items-center gap-2 rounded-xl border border-emerald-600 bg-emerald-800 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-900 transition active:scale-95"
+        >
+          <span>🔄</span>
+          <span>Actualizar Datos</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TARJETAS DE RESUMEN KPI -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+      <!-- 1. Clics Salientes a tu Tienda -->
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs flex items-center gap-3.5">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700 text-2xl font-black shrink-0">
+          🛒
+        </span>
+        <div class="min-w-0">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-stone-400">Clics Salientes</span>
+          <h3 class="text-lg font-black text-stone-900 truncate" id="stat-total-clics">-</h3>
+          <span class="text-[10px] text-stone-500 font-medium" id="stat-stores-with-clics">- tiendas con tráfico</span>
+        </div>
+      </div>
+
+      <!-- 2. Cafés en Favoritos -->
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs flex items-center gap-3.5">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-700 text-2xl font-black shrink-0">
+          ❤️
+        </span>
+        <div class="min-w-0">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-stone-400">En Favoritos</span>
+          <h3 class="text-lg font-black text-stone-900 truncate" id="stat-total-favs">-</h3>
+          <span class="text-[10px] text-stone-500 font-medium">Cafés guardados</span>
+        </div>
+      </div>
+
+      <!-- 3. En Matriz Comparativa -->
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs flex items-center gap-3.5">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-50 text-purple-700 text-2xl font-black shrink-0">
+          ⚖️
+        </span>
+        <div class="min-w-0">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-stone-400">En Comparador</span>
+          <h3 class="text-lg font-black text-stone-900 truncate" id="stat-total-compare">-</h3>
+          <span class="text-[10px] text-stone-500 font-medium">Enfrentamientos en matriz</span>
+        </div>
+      </div>
+
+      <!-- 4. Ventas Solicitadas vía WhatsApp -->
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs flex items-center gap-3.5">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 text-2xl font-black shrink-0">
+          💬
+        </span>
+        <div class="min-w-0">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-stone-400">Ventas WhatsApp</span>
+          <h3 class="text-lg font-black text-emerald-900 truncate" id="stat-total-ventas-wa">$0</h3>
+          <span class="text-[10px] text-stone-500 font-medium" id="stat-stores-with-wa">- tostadurías</span>
+        </div>
+      </div>
+
+      <!-- 5. Pedidos Recibidos vía WhatsApp -->
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs flex items-center gap-3.5">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-700 text-2xl font-black shrink-0">
+          📦
+        </span>
+        <div class="min-w-0">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-stone-400">Pedidos WhatsApp</span>
+          <h3 class="text-lg font-black text-stone-900 truncate" id="stat-total-pedidos-wa">-</h3>
+          <span class="text-[10px] text-stone-500 font-medium" id="stat-ticket-promedio">Ticket prom: $0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- BARRA DE FILTROS Y ORDENAMIENTO -->
+    <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs">
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <!-- Buscador -->
+        <div class="relative flex-1 max-w-md">
+          <input
+            type="text"
+            id="input-search-traction"
+            placeholder="Buscar tostaduría por nombre..."
+            class="w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3.5 py-2 pl-9 text-xs text-stone-800 placeholder-stone-400 focus:border-emerald-600 focus:bg-white focus:outline-none transition"
+          />
+          <span class="absolute left-3 top-2.5 text-xs text-stone-400">🔍</span>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Filtro de actividad -->
+          <select
+            id="select-filter-activity"
+            class="rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-700 focus:border-emerald-600 focus:outline-none shadow-xs"
+          >
+            <option value="all">Todas las tostadurías</option>
+            <option value="with_traffic">Con interacción (clics/favoritos/comparador)</option>
+            <option value="with_wa">Con ventas vía WhatsApp</option>
+            <option value="active_only">Solo tiendas activas</option>
+          </select>
+
+          <!-- Selector de Ordenamiento -->
+          <select
+            id="select-sort-traction"
+            class="rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-700 focus:border-emerald-600 focus:outline-none shadow-xs"
+          >
+            <option value="ventas_wa_desc">Mayor Ventas WhatsApp ($ CLP)</option>
+            <option value="pedidos_wa_desc">Mayor Pedidos WhatsApp</option>
+            <option value="clics_desc">Mayor Clics Salientes</option>
+            <option value="favoritos_desc">Más en Favoritos</option>
+            <option value="comparador_desc">Más en Matriz Comparativa</option>
+            <option value="nombre_asc">Nombre (A-Z)</option>
+          </select>
+
+          <span class="text-xs text-stone-400 font-medium px-1" id="counter-filtered-stores">
+            Mostrando 0 tiendas
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLA DE TRACCIÓN POR TIENDA -->
+    <div class="rounded-2xl border border-stone-200 bg-white shadow-xs overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-stone-200 bg-stone-50/75 text-[11px] font-bold text-stone-500 uppercase tracking-wider">
+              <th class="py-3 px-4">Tostaduría</th>
+              <th class="py-3 px-4 text-center">Productos</th>
+              <th class="py-3 px-4 text-center">Clics Salientes</th>
+              <th class="py-3 px-4 text-center">Cafés en Favoritos</th>
+              <th class="py-3 px-4 text-center">En Matriz Comparativa</th>
+              <th class="py-3 px-4 text-right">Ventas Solicitadas WhatsApp</th>
+              <th class="py-3 px-4 text-center">Pedidos WhatsApp</th>
+              <th class="py-3 px-4 text-right">Ticket Promedio</th>
+              <th class="py-3 px-4 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-traction" class="divide-y divide-stone-100">
+            <tr>
+              <td colspan="9" class="py-12 text-center text-stone-400 font-medium">
+                <span class="inline-block animate-spin mr-2">⏳</span>
+                Cargando métricas de tracción comercial...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MODAL DE DETALLE COMERCIAL DE TIENDA -->
+    <div id="modal-traction-detail" class="fixed inset-0 z-50 hidden bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <div class="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl border border-stone-200 space-y-4">
+        <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+          <div class="flex items-center gap-3">
+            <div id="modal-store-logo" class="h-10 w-10 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center text-lg font-bold overflow-hidden">
+              ☕
+            </div>
+            <div>
+              <h3 class="text-base font-black text-stone-900" id="modal-store-name">Tostaduría</h3>
+              <p class="text-[11px] text-stone-500" id="modal-store-url">-</p>
+            </div>
+          </div>
+          <button type="button" id="btn-close-modal" class="text-stone-400 hover:text-stone-600 text-lg font-bold p-1">
+            ✕
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-3 bg-stone-50 rounded-xl border border-stone-100">
+            <span class="text-[10px] font-bold text-stone-400 uppercase">Clics Salientes</span>
+            <p class="text-lg font-black text-blue-700" id="modal-clics">0</p>
+          </div>
+          <div class="p-3 bg-stone-50 rounded-xl border border-stone-100">
+            <span class="text-[10px] font-bold text-stone-400 uppercase">En Favoritos</span>
+            <p class="text-lg font-black text-rose-700" id="modal-favs">0</p>
+          </div>
+          <div class="p-3 bg-stone-50 rounded-xl border border-stone-100">
+            <span class="text-[10px] font-bold text-stone-400 uppercase">En Matriz Comparativa</span>
+            <p class="text-lg font-black text-purple-700" id="modal-compare">0</p>
+          </div>
+          <div class="p-3 bg-stone-50 rounded-xl border border-stone-100">
+            <span class="text-[10px] font-bold text-stone-400 uppercase">Pedidos Recibidos WA</span>
+            <p class="text-lg font-black text-amber-700" id="modal-pedidos-wa">0</p>
+          </div>
+        </div>
+
+        <div class="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-100">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-emerald-900">Total Ventas Solicitadas vía WhatsApp</span>
+            <span class="text-base font-black text-emerald-800" id="modal-ventas-wa">$0 CLP</span>
+          </div>
+          <div class="mt-1 flex items-center justify-between text-[11px] text-emerald-700">
+            <span>Ticket Promedio por Pedido</span>
+            <span class="font-bold" id="modal-ticket-wa">$0 CLP</span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <span class="text-[11px] text-stone-500" id="modal-whatsapp-phone">WhatsApp: No configurado</span>
+          <button
+            type="button"
+            id="btn-close-modal-bottom"
+            class="rounded-xl border border-stone-200 bg-stone-100 px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200 transition"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</AdminLteLayout>
+
+<script>
+  let rawTractionData: any = null;
+  let filteredStores: any[] = [];
+
+  function formatCLP(val: number): string {
+    return '$' + Math.round(val || 0).toLocaleString('es-CL');
+  }
+
+  async function loadTractionData() {
+    const tbody = document.getElementById('tbody-traction');
+    if (!tbody) return;
+
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" class="py-12 text-center text-stone-400 font-medium">
+          <span class="inline-block animate-spin mr-2">⏳</span>
+          Cargando métricas de tracción comercial...
+        </td>
+      </tr>
+    `;
+
+    try {
+      const win = window as any;
+      let res: Response;
+      if (typeof win.fetchWithEnv === 'function') {
+        res = await win.fetchWithEnv('/api/v1/administracion/tiendas/traccion');
+      } else {
+        const rootDiv = document.querySelector('[data-api-base]');
+        const apiBase = rootDiv?.getAttribute('data-api-base') || 'http://localhost:8001';
+        res = await fetch(`${apiBase}/api/v1/administracion/tiendas/traccion`);
+      }
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      rawTractionData = await res.json();
+      renderKPIs(rawTractionData.resumen_global);
+      applyFilters();
+    } catch (err: any) {
+      console.error('Error al cargar datos de tracción:', err);
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9" class="py-8 text-center text-rose-600 font-medium">
+            ⚠️ Error al cargar métricas de tracción: ${err.message || err}
+          </td>
+        </tr>
+      `;
+    }
+  }
+
+  function renderKPIs(resumen: any) {
+    if (!resumen) return;
+
+    const elClics = document.getElementById('stat-total-clics');
+    const elClicsDesc = document.getElementById('stat-stores-with-clics');
+    const elFavs = document.getElementById('stat-total-favs');
+    const elCompare = document.getElementById('stat-total-compare');
+    const elVentasWa = document.getElementById('stat-total-ventas-wa');
+    const elStoresWa = document.getElementById('stat-stores-with-wa');
+    const elPedidosWa = document.getElementById('stat-total-pedidos-wa');
+    const elTicketProm = document.getElementById('stat-ticket-promedio');
+
+    if (elClics) elClics.textContent = (resumen.total_clics_salientes || 0).toLocaleString('es-CL');
+    if (elClicsDesc) elClicsDesc.textContent = `${resumen.tiendas_con_clics || 0} tiendas con clics`;
+    if (elFavs) elFavs.textContent = (resumen.total_cafes_favoritos || 0).toLocaleString('es-CL');
+    if (elCompare) elCompare.textContent = (resumen.total_en_matriz_comparativa || 0).toLocaleString('es-CL');
+    if (elVentasWa) elVentasWa.textContent = formatCLP(resumen.total_ventas_solicitadas_whatsapp_clp || 0);
+    if (elStoresWa) elStoresWa.textContent = `${resumen.tiendas_con_ventas_whatsapp || 0} con pedidos WhatsApp`;
+    if (elPedidosWa) elPedidosWa.textContent = (resumen.total_pedidos_recibidos_whatsapp || 0).toLocaleString('es-CL');
+
+    const totPedidos = resumen.total_pedidos_recibidos_whatsapp || 0;
+    const totVentas = resumen.total_ventas_solicitadas_whatsapp_clp || 0;
+    const prom = totPedidos > 0 ? totVentas / totPedidos : 0;
+    if (elTicketProm) elTicketProm.textContent = `Ticket prom: ${formatCLP(prom)}`;
+  }
+
+  function applyFilters() {
+    if (!rawTractionData?.tiendas) return;
+
+    const inputSearch = document.getElementById('input-search-traction') as HTMLInputElement;
+    const selectActivity = document.getElementById('select-filter-activity') as HTMLSelectElement;
+    const selectSort = document.getElementById('select-sort-traction') as HTMLSelectElement;
+
+    const searchQ = (inputSearch?.value || '').toLowerCase().trim();
+    const activity = selectActivity?.value || 'all';
+    const sortBy = selectSort?.value || 'ventas_wa_desc';
+
+    filteredStores = rawTractionData.tiendas.filter((t: any) => {
+      // Filtro texto
+      if (searchQ && !t.nombre.toLowerCase().includes(searchQ)) {
+        return false;
+      }
+      // Filtro actividad
+      if (activity === 'with_traffic') {
+        return (t.clics_salientes > 0 || t.cafes_favoritos > 0 || t.en_matriz_comparativa > 0);
+      }
+      if (activity === 'with_wa') {
+        return (t.ventas_solicitadas_whatsapp_clp > 0 || t.pedidos_recibidos_whatsapp > 0);
+      }
+      if (activity === 'active_only') {
+        return Boolean(t.activo);
+      }
+      return true;
+    });
+
+    // Ordenamiento
+    filteredStores.sort((a: any, b: any) => {
+      switch (sortBy) {
+        case 'ventas_wa_desc':
+          return (b.ventas_solicitadas_whatsapp_clp || 0) - (a.ventas_solicitadas_whatsapp_clp || 0);
+        case 'pedidos_wa_desc':
+          return (b.pedidos_recibidos_whatsapp || 0) - (a.pedidos_recibidos_whatsapp || 0);
+        case 'clics_desc':
+          return (b.clics_salientes || 0) - (a.clics_salientes || 0);
+        case 'favoritos_desc':
+          return (b.cafes_favoritos || 0) - (a.cafes_favoritos || 0);
+        case 'comparador_desc':
+          return (b.en_matriz_comparativa || 0) - (a.en_matriz_comparativa || 0);
+        case 'nombre_asc':
+          return a.nombre.localeCompare(b.nombre);
+        default:
+          return 0;
+      }
+    });
+
+    const counter = document.getElementById('counter-filtered-stores');
+    if (counter) {
+      counter.textContent = `Mostrando ${filteredStores.length} de ${rawTractionData.tiendas.length} tiendas`;
+    }
+
+    renderTable();
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('tbody-traction');
+    if (!tbody) return;
+
+    if (filteredStores.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9" class="py-12 text-center text-stone-400 font-medium">
+            No se encontraron tostadurías con los filtros seleccionados.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = filteredStores.map((t: any) => {
+      const waLink = t.telefono_whatsapp ? `https://wa.me/${t.telefono_whatsapp.replace(/[^0-9]/g, '')}` : null;
+      return `
+        <tr class="hover:bg-stone-50/70 transition">
+          <!-- Tostaduría -->
+          <td class="py-3 px-4">
+            <div class="flex items-center gap-3">
+              <div class="h-8 w-8 rounded-lg bg-stone-100 border border-stone-200 shrink-0 flex items-center justify-center font-bold text-stone-600 text-xs overflow-hidden">
+                ${t.logo_url ? `<img src="${t.logo_url}" alt="${t.nombre}" class="h-full w-full object-cover" />` : '☕'}
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-bold text-stone-900 truncate">${t.nombre}</span>
+                  ${t.activo ? '<span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-700" title="Activa"></span>' : '<span class="inline-block h-1.5 w-1.5 rounded-full bg-stone-300" title="Inactiva"></span>'}
+                </div>
+                <div class="flex items-center gap-2 mt-0.5 text-[10px] text-stone-400">
+                  ${t.url_base ? `<a href="${t.url_base}" target="_blank" rel="noopener noreferrer" class="hover:underline flex items-center gap-0.5">🌐 Web</a>` : ''}
+                  ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener noreferrer" class="text-emerald-800 hover:underline flex items-center gap-0.5">💬 WA</a>` : ''}
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Productos -->
+          <td class="py-3 px-4 text-center font-medium text-stone-600">
+            ${t.total_productos || 0}
+          </td>
+
+          <!-- Clics Salientes a tu Tienda -->
+          <td class="py-3 px-4 text-center">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-xs ${t.clics_salientes > 0 ? 'bg-blue-50 text-blue-700' : 'text-stone-400'}">
+              🛒 ${t.clics_salientes || 0}
+            </span>
+          </td>
+
+          <!-- Cafés en Favoritos -->
+          <td class="py-3 px-4 text-center">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-xs ${t.cafes_favoritos > 0 ? 'bg-rose-50 text-rose-700' : 'text-stone-400'}">
+              ❤️ ${t.cafes_favoritos || 0}
+            </span>
+          </td>
+
+          <!-- En Matriz Comparativa -->
+          <td class="py-3 px-4 text-center">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-xs ${t.en_matriz_comparativa > 0 ? 'bg-purple-50 text-purple-700' : 'text-stone-400'}">
+              ⚖️ ${t.en_matriz_comparativa || 0}
+            </span>
+          </td>
+
+          <!-- Ventas Solicitadas vía WhatsApp -->
+          <td class="py-3 px-4 text-right">
+            <span class="font-bold text-xs ${t.ventas_solicitadas_whatsapp_clp > 0 ? 'text-emerald-800' : 'text-stone-400'}">
+              ${formatCLP(t.ventas_solicitadas_whatsapp_clp || 0)}
+            </span>
+          </td>
+
+          <!-- Pedidos Recibidos vía WhatsApp -->
+          <td class="py-3 px-4 text-center">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-xs ${t.pedidos_recibidos_whatsapp > 0 ? 'bg-amber-50 text-amber-800' : 'text-stone-400'}">
+              📦 ${t.pedidos_recibidos_whatsapp || 0}
+            </span>
+          </td>
+
+          <!-- Ticket Promedio WhatsApp -->
+          <td class="py-3 px-4 text-right font-medium text-stone-500">
+            ${t.ticket_promedio_whatsapp_clp > 0 ? formatCLP(t.ticket_promedio_whatsapp_clp) : '-'}
+          </td>
+
+          <!-- Acciones -->
+          <td class="py-3 px-4 text-center">
+            <button
+              type="button"
+              class="btn-view-detail inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white p-1.5 text-stone-600 hover:bg-stone-100 hover:text-stone-900 shadow-2xs transition"
+              data-tienda-id="${t.tienda_id}"
+              title="Ver detalle comercial"
+            >
+              👁️
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Asignar eventos de modal
+    document.querySelectorAll('.btn-view-detail').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const id = Number((e.currentTarget as HTMLElement).getAttribute('data-tienda-id'));
+        openDetailModal(id);
+      });
+    });
+  }
+
+  function openDetailModal(tiendaId: number) {
+    const t = rawTractionData?.tiendas?.find((item: any) => item.tienda_id === tiendaId);
+    if (!t) return;
+
+    const modal = document.getElementById('modal-traction-detail');
+    const elName = document.getElementById('modal-store-name');
+    const elUrl = document.getElementById('modal-store-url');
+    const elLogo = document.getElementById('modal-store-logo');
+    const elClics = document.getElementById('modal-clics');
+    const elFavs = document.getElementById('modal-favs');
+    const elCompare = document.getElementById('modal-compare');
+    const elPedidosWa = document.getElementById('modal-pedidos-wa');
+    const elVentasWa = document.getElementById('modal-ventas-wa');
+    const elTicketWa = document.getElementById('modal-ticket-wa');
+    const elPhone = document.getElementById('modal-whatsapp-phone');
+
+    if (elName) elName.textContent = t.nombre;
+    if (elUrl) elUrl.textContent = t.url_base || 'Sin sitio web registrado';
+    if (elLogo) {
+      elLogo.innerHTML = t.logo_url
+        ? `<img src="${t.logo_url}" alt="${t.nombre}" class="h-full w-full object-cover" />`
+        : '☕';
+    }
+    if (elClics) elClics.textContent = String(t.clics_salientes || 0);
+    if (elFavs) elFavs.textContent = String(t.cafes_favoritos || 0);
+    if (elCompare) elCompare.textContent = String(t.en_matriz_comparativa || 0);
+    if (elPedidosWa) elPedidosWa.textContent = String(t.pedidos_recibidos_whatsapp || 0);
+    if (elVentasWa) elVentasWa.textContent = formatCLP(t.ventas_solicitadas_whatsapp_clp || 0) + ' CLP';
+    if (elTicketWa) elTicketWa.textContent = formatCLP(t.ticket_promedio_whatsapp_clp || 0) + ' CLP';
+    if (elPhone) {
+      elPhone.textContent = t.telefono_whatsapp ? `WhatsApp: ${t.telefono_whatsapp}` : 'WhatsApp: No configurado';
+    }
+
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function closeDetailModal() {
+    const modal = document.getElementById('modal-traction-detail');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function exportCSV() {
+    if (!filteredStores || filteredStores.length === 0) {
+      const win = window as any;
+      if (typeof win.plataformaNotify === 'function') {
+        win.plataformaNotify('No hay datos para exportar.', 'warning');
+      }
+      return;
+    }
+
+    const headers = [
+      'ID',
+      'Tostaduría',
+      'Activa',
+      'Productos',
+      'Clics Salientes',
+      'Cafés en Favoritos',
+      'En Matriz Comparativa',
+      'Ventas Solicitadas WhatsApp (CLP)',
+      'Pedidos Recibidos WhatsApp',
+      'Ticket Promedio (CLP)',
+      'WhatsApp',
+      'Web'
+    ];
+
+    const rows = filteredStores.map((t: any) => [
+      t.tienda_id,
+      `"${t.nombre.replace(/"/g, '""')}"`,
+      t.activo ? 'Sí' : 'No',
+      t.total_productos || 0,
+      t.clics_salientes || 0,
+      t.cafes_favoritos || 0,
+      t.en_matriz_comparativa || 0,
+      t.ventas_solicitadas_whatsapp_clp || 0,
+      t.pedidos_recibidos_whatsapp || 0,
+      t.ticket_promedio_whatsapp_clp || 0,
+      `"${t.telefono_whatsapp || ''}"`,
+      `"${t.url_base || ''}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `traccion_tiendas_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    const win = window as any;
+    if (typeof win.plataformaNotify === 'function') {
+      win.plataformaNotify('Reporte CSV descargado correctamente.', 'success');
+    }
+  }
+
+  // Inicialización de Eventos DOM
+  document.addEventListener('DOMContentLoaded', () => {
+    loadTractionData();
+
+    document.getElementById('btn-refresh-traction')?.addEventListener('click', loadTractionData);
+    document.getElementById('input-search-traction')?.addEventListener('input', applyFilters);
+    document.getElementById('select-filter-activity')?.addEventListener('change', applyFilters);
+    document.getElementById('select-sort-traction')?.addEventListener('change', applyFilters);
+    document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
+
+    document.getElementById('btn-close-modal')?.addEventListener('click', closeDetailModal);
+    document.getElementById('btn-close-modal-bottom')?.addEventListener('click', closeDetailModal);
+
+    // Cerrar modal al hacer clic en fondo
+    document.getElementById('modal-traction-detail')?.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeDetailModal();
+    });
+
+    // Escuchar cambios de ambiente multi-tenant (local, supabase)
+    window.addEventListener('ambienteCambiado', () => {
+      loadTractionData();
+    });
+  });
+</script>
+

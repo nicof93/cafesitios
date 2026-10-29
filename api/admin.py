@@ -1,3 +1,10 @@
+
+from api.schemas import (
+    GlobalStoreTractionResponse,
+    GlobalTractionSummary,
+    StoreDeleteResponse,
+    StoreTractionMetricsItem,
+)
 from datetime import datetime, timezone
 import re
 from typing import Any, Dict, List, Literal, Optional
@@ -6,7 +13,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, inspect, select
+from sqlalchemy import case, delete, func, inspect, select
 from sqlalchemy.orm import Session, selectinload
 
 from api.dependencies import get_db_session, require_local_admin
@@ -17,8 +24,15 @@ import os
 from db.database import (
     AuditoriaAccionesTienda,
     DatabaseManager,
+    HistorialPrecio,
+    InteraccionClic,
+    OfertaTienda,
+    PedidoWhatsApp,
     Producto,
+    ProductoNotaCata,
+    Receta,
     Sincronizacion,
+    SincronizacionLog,
     SucursalTienda,
     Tienda,
     TiendaCatalogo,
@@ -1077,6 +1091,90 @@ def update_store_by_id(
     )
 
 
+
+@administracion_router.delete(
+    "/tiendas/{store_id}",
+    response_model=StoreDeleteResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Eliminar una tienda y todos sus datos asociados en cascada",
+)
+@administracion_router.delete("/stores/{store_id}", response_model=StoreDeleteResponse, include_in_schema=False)
+@router.delete(
+    "/tiendas/{store_id}",
+    response_model=StoreDeleteResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+@router.delete(
+    "/stores/{store_id}",
+    response_model=StoreDeleteResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Eliminar una tienda y todos sus datos asociados en cascada",
+)
+def delete_store_by_id(
+    store_id: int,
+    db_session: Session = Depends(get_db_session),
+) -> StoreDeleteResponse:
+    store = db_session.scalars(select(Tienda).where(Tienda.id == store_id)).first()
+    if store is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tienda no encontrada.",
+        )
+
+    store_name = store.nombre
+
+    # 1. Obtener IDs de productos asociados
+    product_ids = list(db_session.scalars(select(Producto.id).where(Producto.tienda_id == store_id)).all())
+
+    if product_ids:
+        # 1.1 IDs de variantes asociadas
+        variant_ids = list(db_session.scalars(select(Variante.id).where(Variante.producto_id.in_(product_ids))).all())
+        if variant_ids:
+            # 1.1.1 Historial de precios
+            db_session.execute(delete(HistorialPrecio).where(HistorialPrecio.variante_id.in_(variant_ids)))
+            # 1.1.2 Clics de variantes
+            db_session.execute(delete(InteraccionClic).where(InteraccionClic.variante_id.in_(variant_ids)))
+
+        # 1.2 Notas de cata de productos
+        db_session.execute(delete(ProductoNotaCata).where(ProductoNotaCata.producto_id.in_(product_ids)))
+
+        # 1.3 Clics de productos
+        db_session.execute(delete(InteraccionClic).where(InteraccionClic.producto_id.in_(product_ids)))
+
+        # 1.4 Recetas asociadas a estos productos
+        db_session.execute(delete(Receta).where(Receta.producto_id.in_(product_ids)))
+
+        # 1.5 Variantes
+        db_session.execute(delete(Variante).where(Variante.producto_id.in_(product_ids)))
+
+        # 1.6 Productos
+        db_session.execute(delete(Producto).where(Producto.tienda_id == store_id))
+
+    # 2. Sincronizaciones asociadas
+    db_session.execute(delete(Sincronizacion).where(Sincronizacion.tienda_id == store_id))
+
+    # 3. Tablas directas de la tienda
+    db_session.execute(delete(Receta).where(Receta.tienda_id == store_id))
+    db_session.execute(delete(PedidoWhatsApp).where(PedidoWhatsApp.tienda_id == store_id))
+    db_session.execute(delete(TiendaCatalogo).where(TiendaCatalogo.tienda_id == store_id))
+    db_session.execute(delete(SucursalTienda).where(SucursalTienda.tienda_id == store_id))
+    db_session.execute(delete(OfertaTienda).where(OfertaTienda.tienda_id == store_id))
+    db_session.execute(delete(UsuarioTienda).where(UsuarioTienda.tienda_id == store_id))
+    db_session.execute(delete(AuditoriaAccionesTienda).where(AuditoriaAccionesTienda.tienda_id == store_id))
+
+    # 4. Eliminar la tienda
+    db_session.delete(store)
+    db_session.commit()
+
+    return StoreDeleteResponse(
+        mensaje=f"Tienda '{store_name}' y todos sus datos asociados fueron eliminados permanentemente.",
+        tienda_id=store_id,
+        tienda_nombre=store_name,
+        exito=True,
+    )
+
+
 @administracion_router.post(
     "/tiendas/probar-catalogo",
     response_model=CatalogTestResponse,
@@ -1911,6 +2009,8 @@ class EnvironmentInput(BaseModel):
     descripcion: Optional[str] = Field(None, max_length=255)
     tipo: str = Field("postgres", max_length=50)
     connection_url: str = Field(..., min_length=5)
+    url_catalogo_base: Optional[str] = Field(None, max_length=255)
+    url_admin_tienda_base: Optional[str] = Field(None, max_length=255)
     color_badge: str = Field("emerald", max_length=30)
     activo: bool = True
     es_protegido: bool = False
@@ -1921,6 +2021,8 @@ class EnvironmentUpdateInput(BaseModel):
     descripcion: Optional[str] = Field(None, max_length=255)
     tipo: Optional[str] = Field(None, max_length=50)
     connection_url: Optional[str] = None
+    url_catalogo_base: Optional[str] = Field(None, max_length=255)
+    url_admin_tienda_base: Optional[str] = Field(None, max_length=255)
     color_badge: Optional[str] = Field(None, max_length=30)
     activo: Optional[bool] = None
     es_protegido: Optional[bool] = None
@@ -2064,6 +2166,7 @@ def test_environment_endpoint(env_id: str) -> Dict[str, Any]:
 )
 def impersonate_store_admin_endpoint(
     store_id: int,
+    request: Request = None,
     db_session: Session = Depends(get_db_session),
 ) -> StoreImpersonationResponse:
     store = db_session.get(Tienda, store_id)
@@ -2073,16 +2176,38 @@ def impersonate_store_admin_endpoint(
             detail=f"Tienda con ID {store_id} no encontrada.",
         )
 
-    # Genera token JWT firmado con rol PLATFORM_SUPERADMIN para la tienda específica
+    target_env = (request.headers.get("x-target-environment") or "local").strip().lower() if request else "local"
+
+    # Genera token JWT firmado con rol PLATFORM_SUPERADMIN para la tienda específica y ambiente
     token = create_store_admin_token(
-        usuario_id="superadmin@cafesitios.cl",
+        usuario_id="SUPERADMIN: superadmin@cafesitios.cl",
         tienda_id=store.id,
         rol="PLATFORM_SUPERADMIN",
         expires_in_seconds=7200,  # 2 horas de validez
+        target_env=target_env,
     )
 
-    frontend_base = os.getenv("FRONTEND_URL", "http://localhost:4321").rstrip("/")
-    redirect_url = f"{frontend_base}/admin-tienda/dashboard?impersonate_token={token}&tienda_id={store.id}"
+    # Registrar trazabilidad de acceso en la auditoría de la tostaduría
+    try:
+        from core.security_store_admin import get_client_ip, log_store_action
+        client_ip = get_client_ip(request) if request else "127.0.0.1"
+        log_store_action(
+            db_session=db_session,
+            tienda_id=store.id,
+            usuario_id="SUPERADMIN: superadmin@cafesitios.cl",
+            accion="IMPERSONACION_INICIADA",
+            entidad="tiendas",
+            entidad_id=store.id,
+            valores_nuevos={"ambiente": target_env, "tienda_nombre": store.nombre, "superadmin": True},
+            ip_origen=client_ip,
+        )
+    except Exception as exc:
+        print(f"Advertencia al registrar auditoría de impersonación: {exc}")
+
+    from db.environments import EnvironmentManager
+    env_urls = EnvironmentManager.get_urls_for_env(target_env)
+    admin_base = (env_urls.get("url_admin_tienda_base") or env_urls.get("url_catalogo_base") or "http://localhost:4321").rstrip("/")
+    redirect_url = f"{admin_base}/admin-tienda/dashboard?impersonate_token={token}&tienda_id={store.id}&target_env={target_env}"
 
     return StoreImpersonationResponse(
         success=True,
@@ -2274,3 +2399,154 @@ def get_stores_storage_report(
 ) -> TiendasStorageResponse:
     reporte = calcular_reporte_almacenamiento_global(db_session)
     return TiendasStorageResponse.model_validate(reporte)
+
+# --- TRACCIÓN Y MÉTRICAS COMERCIALES GLOBALES DE TIENDAS ---
+
+def calcular_traccion_tiendas_global(db_session: Session) -> GlobalStoreTractionResponse:
+    # 1. Total productos activos por tienda
+    stmt_prods = (
+        select(
+            Producto.tienda_id,
+            func.count(Producto.id).label("total_prods")
+        )
+        .where(Producto.activo == True)
+        .group_by(Producto.tienda_id)
+    )
+    prod_counts = {r[0]: int(r[1]) for r in db_session.execute(stmt_prods).all()}
+
+    # 2. Clics e interacciones agrupadas por tienda (outbound, favorites, compare)
+    stmt_interacciones = (
+        select(
+            Producto.tienda_id,
+            func.count(case((InteraccionClic.tipo_evento.ilike("%outbound%"), InteraccionClic.id))).label("outbound"),
+            func.count(case((InteraccionClic.tipo_evento.ilike("%favorite%"), InteraccionClic.id))).label("favorites"),
+            func.count(case((InteraccionClic.tipo_evento.ilike("%compare%"), InteraccionClic.id))).label("compare"),
+        )
+        .join(InteraccionClic, Producto.id == InteraccionClic.producto_id)
+        .group_by(Producto.tienda_id)
+    )
+    rows_interacciones = {
+        r[0]: {
+            "outbound": int(r[1] or 0),
+            "favorites": int(r[2] or 0),
+            "compare": int(r[3] or 0),
+        }
+        for r in db_session.execute(stmt_interacciones).all()
+    }
+
+    # 3. Pedidos y ventas WhatsApp agrupados por tienda
+    stmt_pedidos = (
+        select(
+            PedidoWhatsApp.tienda_id,
+            func.coalesce(func.sum(PedidoWhatsApp.monto_total_clp), 0).label("ventas_clp"),
+            func.count(PedidoWhatsApp.id).label("total_pedidos"),
+        )
+        .group_by(PedidoWhatsApp.tienda_id)
+    )
+    rows_pedidos = {
+        r[0]: {
+            "ventas_clp": int(r[1] or 0),
+            "pedidos": int(r[2] or 0),
+        }
+        for r in db_session.execute(stmt_pedidos).all()
+    }
+
+    # 4. Obtener todas las tiendas
+    tiendas = db_session.execute(select(Tienda).order_by(Tienda.nombre.asc())).scalars().all()
+
+    tiendas_items: List[StoreTractionMetricsItem] = []
+    tot_clics = 0
+    tot_favs = 0
+    tot_comp = 0
+    tot_ventas = 0
+    tot_pedidos = 0
+    tiendas_activas = 0
+    tiendas_con_ventas = 0
+    tiendas_con_clics = 0
+
+    for t in tiendas:
+        if t.activo:
+            tiendas_activas += 1
+
+        inter = rows_interacciones.get(t.id, {"outbound": 0, "favorites": 0, "compare": 0})
+        ped = rows_pedidos.get(t.id, {"ventas_clp": 0, "pedidos": 0})
+
+        clics = inter["outbound"]
+        favs = inter["favorites"]
+        comp = inter["compare"]
+        ventas_clp = ped["ventas_clp"]
+        pedidos_cnt = ped["pedidos"]
+        ticket_prom = round(ventas_clp / pedidos_cnt, 2) if pedidos_cnt > 0 else 0.0
+
+        tot_clics += clics
+        tot_favs += favs
+        tot_comp += comp
+        tot_ventas += ventas_clp
+        tot_pedidos += pedidos_cnt
+
+        if ventas_clp > 0 or pedidos_cnt > 0:
+            tiendas_con_ventas += 1
+        if clics > 0:
+            tiendas_con_clics += 1
+
+        tiendas_items.append(
+            StoreTractionMetricsItem(
+                tienda_id=t.id,
+                nombre=t.nombre,
+                url_base=t.url_base,
+                logo_url=t.logo_url,
+                telefono_whatsapp=t.telefono_whatsapp,
+                activo=bool(t.activo),
+                total_productos=prod_counts.get(t.id, 0),
+                clics_salientes=clics,
+                cafes_favoritos=favs,
+                en_matriz_comparativa=comp,
+                ventas_solicitadas_whatsapp_clp=ventas_clp,
+                pedidos_recibidos_whatsapp=pedidos_cnt,
+                ticket_promedio_whatsapp_clp=ticket_prom,
+            )
+        )
+
+    resumen = GlobalTractionSummary(
+        total_clics_salientes=tot_clics,
+        total_cafes_favoritos=tot_favs,
+        total_en_matriz_comparativa=tot_comp,
+        total_ventas_solicitadas_whatsapp_clp=tot_ventas,
+        total_pedidos_recibidos_whatsapp=tot_pedidos,
+        total_tiendas_activas=tiendas_activas,
+        tiendas_con_ventas_whatsapp=tiendas_con_ventas,
+        tiendas_con_clics=tiendas_con_clics,
+    )
+
+    return GlobalStoreTractionResponse(
+        resumen_global=resumen,
+        tiendas=tiendas_items,
+    )
+
+
+@administracion_router.get(
+    "/tiendas/traccion",
+    response_model=GlobalStoreTractionResponse,
+    summary="Métricas de tracción comercial y conversión de todas las tostadurías",
+    description="Consolida clics salientes, cafés en favoritos, comparador y ventas/pedidos solicitados por WhatsApp.",
+)
+@administracion_router.get(
+    "/stores/traction",
+    response_model=GlobalStoreTractionResponse,
+    include_in_schema=False,
+)
+@router.get(
+    "/tiendas/traccion",
+    response_model=GlobalStoreTractionResponse,
+    include_in_schema=False,
+)
+@router.get(
+    "/stores/traction",
+    response_model=GlobalStoreTractionResponse,
+    include_in_schema=False,
+)
+def get_global_stores_traction(
+    db_session: Session = Depends(get_db_session),
+) -> GlobalStoreTractionResponse:
+    return calcular_traccion_tiendas_global(db_session)
+
