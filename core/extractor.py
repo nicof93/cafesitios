@@ -1,4 +1,5 @@
 import hashlib
+import html
 import json
 import logging
 import re
@@ -71,6 +72,64 @@ PAISES_ORIGEN: Dict[str, str] = {
 }
 
 
+def clean_html_to_text(raw_html: Optional[str]) -> str:
+    """Convierte fragmentos HTML a texto plano limpio preservando la estructura de lineas para regex."""
+    if not raw_html:
+        return ""
+    text = str(raw_html)
+    text = re.sub(r"<(?:script|style|noscript)[^>]*>.*?</(?:script|style|noscript)>", "", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<a\s+[^>]*>(.*?)</a>", r" \1 ", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"</?(?:strong|b|em|i|span|small|mark|u|code)[^>]*>", " ", text, flags=re.IGNORECASE)
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"</?(?:li|p|div|h[1-6]|tr|td|th|ul|ol|table|blockquote|section|header|footer)[^>]*>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = html.unescape(text)
+    lines = [re.sub(r"[ 	]+", " ", line).strip() for line in text.splitlines()]
+    return "\n".join([l for l in lines if l])
+
+
+def normalize_roast_level(raw: Optional[str]) -> Optional[str]:
+    """Normaliza y valida niveles de tueste y escala Agtron, purgando restos de HTML, enlaces y texto invalido."""
+    if not raw:
+        return None
+    val = str(raw).strip()
+    if not val:
+        return None
+    # Descartar si contiene caracteres o tokens de HTML/URL evidentes
+    val_lower = val.lower()
+    if any(token in val_lower for token in ["<", ">", '"', "'", "=", "http", "href", "rel=", "target=", "blog", "guia", "guía", "url"]):
+        return None
+
+    # Tomar primera parte antes de comas o guiones secundarios
+    val_first = re.split(r"[,;–—]", val)[0].strip()
+    val_first_lower = val_first.lower()
+
+    if any(x in val_first_lower for x in ["muy claro", "canela", "cinnamon"]):
+        return "Muy Claro"
+    if any(x in val_first_lower for x in ["medio-claro", "medio claro", "medium light", "medium-light"]):
+        return "Medio-Claro"
+    if any(x in val_first_lower for x in ["claro", "light"]):
+        return "Claro"
+    if any(x in val_first_lower for x in ["medio-oscuro", "medio oscuro", "medium dark", "medium-dark"]):
+        return "Medio-Oscuro"
+    if any(x in val_first_lower for x in ["medio", "medium", "omni"]):
+        return "Medio"
+    if any(x in val_first_lower for x in ["muy oscuro", "french", "italian"]):
+        return "Muy Oscuro"
+    if any(x in val_first_lower for x in ["oscuro", "dark", "espresso"]):
+        return "Oscuro"
+    if "city" in val_first_lower:
+        if "full" in val_first_lower:
+            return "Medio-Oscuro"
+        return "Medio-Claro"
+    if "agtron" in val_first_lower:
+        m_ag = re.search(r"(\d{2,3})", val_first)
+        if m_ag:
+            return f"Agtron {m_ag.group(1)}"
+
+    return None
+
+
 def compute_description_hash(text: Optional[str]) -> str:
     """Calcula el hash MD5 de la descripción limpia para idempotencia y hash diffing."""
     if not text:
@@ -121,6 +180,8 @@ class CoffeeAttributesExtractor:
 
         if not text:
             return extracted
+
+        text = clean_html_to_text(text)
 
         # 1. Notas de cata explícitas: (?:notas|perfil|descriptores|cata)\s*[:|-]\s*([^\n\.<]+) o patrones preposicionales
         match_notas = re.search(
@@ -304,13 +365,16 @@ class CoffeeAttributesExtractor:
 
         if not extracted.get("tueste"):
             match_tueste = re.search(
-                r"(?:tueste|roast(?:\s*level)?|nivel\s*de\s*tueste)\s*[:|–—-]\s*([^\n\.<,]+)",
+                r"(?:^|[\n\r•\-])\s*(?:nivel\s*de\s*tueste|tueste|roast(?:\s*level)?)\s*[:|–—-]\s*([^\n\.<]+)",
                 text,
                 re.IGNORECASE,
             )
             if match_tueste:
-                extracted["tueste"] = match_tueste.group(1).strip().capitalize()
-            else:
+                normalized_roast = normalize_roast_level(match_tueste.group(1))
+                if normalized_roast:
+                    extracted["tueste"] = normalized_roast
+
+            if not extracted.get("tueste"):
                 text_san = sanitize_text(text)
                 if re.search(r"\b(?:tueste\s*claro|light\s*roast)\b", text_san):
                     extracted["tueste"] = "Claro (Agtron ~75-85)"
@@ -512,7 +576,7 @@ class CoffeeAttributesExtractor:
         4. Si Capa 1 y 2 no bastan Y hash es nuevo, invoca Capa 3 (Qwen GGUF).
         5. Normaliza las notas resultantes con SCAFlavorWheelNormalizer.
         """
-        full_text = f"{nombre_producto or ''}\n{text or ''}".strip()
+        full_text = f"{nombre_producto or ''}\n{clean_html_to_text(text)}".strip()
         current_hash = compute_description_hash(full_text)
 
         # 1. Capa 1: RegEx
