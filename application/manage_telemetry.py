@@ -5,8 +5,10 @@ Anonimiza la IP con SHA-256 y persiste interacciones_clics e historial_busquedas
 
 import hashlib
 from typing import Any, Dict, Optional
+from sqlalchemy import select
 from sqlalchemy.orm import Session
-from db.database import HistorialBusqueda, InteraccionClic
+from db.database import HistorialBusqueda, InteraccionClic, Producto, Tienda
+
 
 
 class ManageTelemetryUseCase:
@@ -26,12 +28,39 @@ class ManageTelemetryUseCase:
         metadata_evento: Optional[Dict[str, Any]] = None,
     ) -> InteraccionClic:
         ip_hash = self.hash_ip(client_ip)
+        meta = dict(metadata_evento or {})
+
+        # Resiliencia: si producto_id no viene en cabecera, intentar asociar por metadata
+        if not producto_id:
+            dest_url = meta.get("destination_url") or meta.get("url")
+            p_name = meta.get("product_name") or meta.get("item_name")
+            s_name = meta.get("store_name") or meta.get("item_brand")
+            if dest_url:
+                try:
+                    p = self.session.execute(
+                        select(Producto.id).where(Producto.url_detalle == str(dest_url))
+                    ).scalars().first()
+                    if p:
+                        producto_id = p
+                except Exception:
+                    pass
+            if not producto_id and p_name and s_name:
+                try:
+                    p = self.session.execute(
+                        select(Producto.id)
+                        .join(Tienda, Tienda.id == Producto.tienda_id)
+                        .where(Producto.nombre.ilike(str(p_name).strip()), Tienda.nombre.ilike(str(s_name).strip()))
+                    ).scalars().first()
+                    if p:
+                        producto_id = p
+                except Exception:
+                    pass
         interaccion = InteraccionClic(
             producto_id=producto_id,
             variante_id=variante_id,
             tipo_evento=tipo_evento,
             ip_hash=ip_hash,
-            metadata_evento=metadata_evento or {},
+            metadata_evento=meta,
         )
         self.session.add(interaccion)
         self.session.commit()

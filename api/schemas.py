@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from datetime import datetime
 from typing import Optional, List, Dict, Any, Literal
 
@@ -312,6 +312,56 @@ class TelemetryEventRequest(BaseModel):
     producto_id: Optional[int] = None
     variante_id: Optional[int] = None
     metadata_evento: Dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_telemetry_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Normalizar tipo_evento / event_type
+            if "tipo_evento" not in data and "event_type" in data:
+                data["tipo_evento"] = str(data["event_type"]).strip()
+            
+            # Normalizar metadata_evento / metadata
+            metadata = data.get("metadata_evento")
+            if metadata is None:
+                metadata = data.get("metadata")
+            if not isinstance(metadata, dict):
+                metadata = {}
+            data["metadata_evento"] = metadata
+
+            # Extraer producto_id si viene en metadata o con otros alias
+            if data.get("producto_id") is None:
+                prod_candidate = (
+                    data.get("product_id")
+                    or data.get("productId")
+                    or metadata.get("producto_id")
+                    or metadata.get("product_id")
+                    or metadata.get("item_id")
+                    or metadata.get("cafe_id")
+                    or metadata.get("productId")
+                )
+                if prod_candidate is not None:
+                    try:
+                        data["producto_id"] = int(prod_candidate)
+                    except (ValueError, TypeError):
+                        pass
+
+            # Extraer variante_id si viene en metadata o con otros alias
+            if data.get("variante_id") is None:
+                var_candidate = (
+                    data.get("variant_id")
+                    or data.get("variantId")
+                    or metadata.get("variante_id")
+                    or metadata.get("variant_id")
+                    or metadata.get("variantId")
+                )
+                if var_candidate is not None:
+                    try:
+                        data["variante_id"] = int(var_candidate)
+                    except (ValueError, TypeError):
+                        pass
+
+        return data
 
 class TelemetryEventResponse(BaseModel):
     status: str

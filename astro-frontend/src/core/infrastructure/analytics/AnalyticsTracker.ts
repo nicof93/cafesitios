@@ -28,16 +28,38 @@ export class AnalyticsTracker {
   }
 
   private static sendBeacon(eventType: string, metadata: Record<string, unknown> = {}): void {
-    if (typeof window === 'undefined' || !navigator.sendBeacon) return;
+    if (typeof window === 'undefined') return;
     if (typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || process.env.VITEST)) return;
 
     try {
       const url = `${Environment.getApiBaseUrl()}/api/v1/telemetry/event`;
+      const rawProdId = metadata.product_id || metadata.item_id || metadata.productId || metadata.cafe_id;
+      const productId = rawProdId ? Number(rawProdId) : undefined;
+      const rawVarId = metadata.variant_id || metadata.variante_id;
+      const varianteId = rawVarId ? Number(rawVarId) : undefined;
+
       const payload = JSON.stringify({
+        tipo_evento: eventType,
+        producto_id: Number.isFinite(productId) ? productId : undefined,
+        variante_id: Number.isFinite(varianteId) ? varianteId : undefined,
+        metadata_evento: metadata,
         event_type: eventType,
         metadata
       });
-      navigator.sendBeacon(url, new Blob([payload], { type: 'application/json' }));
+      if (typeof fetch === 'function') {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          keepalive: true
+        }).catch(() => {
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon(url, new Blob([payload], { type: 'application/json' }));
+          }
+        });
+      } else if (navigator.sendBeacon) {
+        navigator.sendBeacon(url, new Blob([payload], { type: 'application/json' }));
+      }
     } catch {
       // Ignorar errores en segundo plano
     }
@@ -71,18 +93,32 @@ export class AnalyticsTracker {
     });
   }
 
-  static trackOutboundClick(storeName: string, productName: string, price: number, destinationUrl: string): void {
+  static trackOutboundClick(storeName: string, productName: string, price: number, destinationUrl: string, productId?: number | string): void {
     this.sendToDataLayer('outbound_click', {
       store_name: storeName,
       product_name: productName,
       price: price,
-      destination_url: destinationUrl
+      destination_url: destinationUrl,
+      product_id: productId ? Number(productId) : undefined,
+      item_id: productId ? Number(productId) : undefined,
     });
   }
 
-  static trackAddToCompare(productId: number, productName?: string): void {
+  static trackAddToFavorites(productId: number | string, productName?: string, storeName?: string, price?: number): void {
+    this.sendToDataLayer('add_to_favorites', {
+      product_id: Number(productId),
+      item_id: Number(productId),
+      product_name: productName,
+      item_name: productName,
+      store_name: storeName,
+      price: price
+    });
+  }
+
+  static trackAddToCompare(productId: number | string, productName?: string, storeName?: string): void {
     this.sendToDataLayer('add_to_compare', {
-      product_id: productId,
+      product_id: Number(productId),
+      item_id: Number(productId),
       product_name: productName
     });
   }

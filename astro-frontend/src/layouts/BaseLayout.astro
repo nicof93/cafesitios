@@ -151,8 +151,11 @@ const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'htt
       const price = Number(target.getAttribute('data-price') || '0');
       const url = target.getAttribute('href') || '';
 
-      AnalyticsTracker.trackOutboundClick(store, name, price, url);
-      AnalyticsTracker.trackSelectItem(name, store, price);
+      const rawProdId = target.getAttribute('data-product-id');
+      const productId = rawProdId ? Number(rawProdId) : undefined;
+      AnalyticsTracker.trackOutboundClick(store, name, price, url, productId);
+      AnalyticsTracker.trackSelectItem(name, store, price, productId);
+
     });
   </script>
 

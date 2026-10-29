@@ -254,6 +254,17 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
     return '$' + Math.round(val || 0).toLocaleString('es-CL');
   }
 
+  const fetchWithEnv = (url: string, opts: RequestInit = {}) => {
+    const win = window as any;
+    if (win.plataformaState && typeof win.plataformaState.fetchWithEnv === 'function') {
+      return win.plataformaState.fetchWithEnv(url, opts);
+    }
+    const rootDiv = document.querySelector('[data-api-base]');
+    const apiBase = rootDiv?.getAttribute('data-api-base') || 'http://localhost:8001';
+    const finalUrl = (typeof url === 'string' && url.startsWith('/api/')) ? `${apiBase.replace(/\/+$/, '')}${url}` : url;
+    return fetch(finalUrl, opts);
+  };
+
   async function loadTractionData() {
     const tbody = document.getElementById('tbody-traction');
     if (!tbody) return;
@@ -268,15 +279,7 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
     `;
 
     try {
-      const win = window as any;
-      let res: Response;
-      if (typeof win.fetchWithEnv === 'function') {
-        res = await win.fetchWithEnv('/api/v1/administracion/tiendas/traccion');
-      } else {
-        const rootDiv = document.querySelector('[data-api-base]');
-        const apiBase = rootDiv?.getAttribute('data-api-base') || 'http://localhost:8001';
-        res = await fetch(`${apiBase}/api/v1/administracion/tiendas/traccion`);
-      }
+      const res = await fetchWithEnv('/api/v1/administracion/tiendas/traccion');
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -584,7 +587,7 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
   }
 
   // Inicialización de Eventos DOM
-  document.addEventListener('DOMContentLoaded', () => {
+  function initTractionEvents() {
     loadTractionData();
 
     document.getElementById('btn-refresh-traction')?.addEventListener('click', loadTractionData);
@@ -602,9 +605,18 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
     });
 
     // Escuchar cambios de ambiente multi-tenant (local, supabase)
+    window.addEventListener('plataforma:env-changed', () => {
+      loadTractionData();
+    });
     window.addEventListener('ambienteCambiado', () => {
       loadTractionData();
     });
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTractionEvents);
+  } else {
+    initTractionEvents();
+  }
 </script>
 

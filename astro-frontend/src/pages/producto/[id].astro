@@ -459,6 +459,8 @@ const captionText = product.descripcion_resumida
               target="_blank" 
               rel="noopener noreferrer"
               data-track-outbound="true"
+              data-product-id={product.id}
+              data-store-id={(product as any).tienda_id || ''}
               data-store={product.tienda}
               data-product-name={product.nombre}
               data-price={currentPrice}
@@ -1068,6 +1070,9 @@ const captionText = product.descripcion_resumida
   btnCompare?.addEventListener('click', () => {
     const id = btnCompare.getAttribute('data-id');
     const name = btnCompare.getAttribute('data-name');
+    if (id) {
+      AnalyticsTracker.trackAddToCompare(Number(id), name || undefined);
+    }
     window.dispatchEvent(new CustomEvent('cafesitios:open-compare-selector', {
       detail: { id: Number(id), name },
     }));
@@ -1075,6 +1080,7 @@ const captionText = product.descripcion_resumida
 
   // Acción "Guardar en Favoritos"
   import { FavoritesAdapter } from '../../core/infrastructure/storage/FavoritesAdapter';
+  import { AnalyticsTracker } from '../../core/infrastructure/analytics/AnalyticsTracker';
 
   const btnFav = document.getElementById('btn-detail-favorite');
   const favIcon = document.getElementById('detail-fav-icon');
@@ -1112,6 +1118,7 @@ const captionText = product.descripcion_resumida
       } as any);
 
       if (isAdded) {
+        AnalyticsTracker.trackAddToFavorites(id, name, store, price);
         favIcon.textContent = '♥';
         favIcon.classList.add('text-rose-600');
         favLabel.textContent = 'Guardado en Favoritos';

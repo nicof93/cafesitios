@@ -249,6 +249,8 @@ if (product.fecha_ultimo_tueste) {
         target="_blank" 
         rel="noopener noreferrer"
         data-track-outbound="true"
+        data-product-id={product.id}
+        data-store-id={product.tienda_id || ''}
         data-store={product.tienda}
         data-product-name={product.nombre}
         data-price={precioClp}
@@ -337,6 +339,7 @@ if (product.fecha_ultimo_tueste) {
 
   // Manejo de Favoritos (Local-First)
   import { FavoritesAdapter } from '../../core/infrastructure/storage/FavoritesAdapter';
+  import { AnalyticsTracker } from '../../core/infrastructure/analytics/AnalyticsTracker';
 
   document.querySelectorAll('.btn-card-favorite').forEach((btn) => {
     const id = btn.getAttribute('data-cafe-id');
@@ -370,6 +373,7 @@ if (product.fecha_ultimo_tueste) {
       } as any);
 
       if (isNowFav) {
+        AnalyticsTracker.trackAddToFavorites(cafeId, name, store, price);
         btn.innerHTML = '♥';
         btn.classList.add('text-rose-600');
         btn.classList.remove('text-stone-400');
