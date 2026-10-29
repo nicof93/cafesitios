@@ -7,7 +7,7 @@ import base64
 import os
 import time
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import func, select, desc, text
+from sqlalchemy import func, select, desc, text, or_
 from sqlalchemy.orm import Session, selectinload
 
 from api.dependencies import get_db_session
