@@ -307,6 +307,7 @@ const jsonLdCatalog = {
           data-notes={notes}
           data-min-price={minPrice || ''}
           data-max-price={maxPrice || ''}
+          data-show-whatsapp={showWhatsApp ? 'true' : 'false'}
         >
           {items.map(product => (
             <ProductCard product={product} />
@@ -372,6 +373,9 @@ const jsonLdCatalog = {
 </BaseLayout>
 
 <script>
+  import { FeatureFlags } from '../core/infrastructure/config/FeatureFlags';
+  import { FavoritesAdapter } from '../core/infrastructure/storage/FavoritesAdapter';
+  import { AnalyticsTracker } from '../core/infrastructure/analytics/AnalyticsTracker';
   // SCROLL INFINITO BASADO EN INTERSECTION OBSERVER
   const grid = document.getElementById('products-grid');
   const sentinel = document.getElementById('infinite-scroll-sentinel');
@@ -389,6 +393,7 @@ const jsonLdCatalog = {
   }
 
   if (grid && sentinel) {
+    const showWhatsApp = grid.getAttribute('data-show-whatsapp') === 'true' || FeatureFlags.isWhatsAppOrdersEnabled();
     let isLoading = false;
     let currentLoaded = parseInt(grid.getAttribute('data-loaded') || '0', 10);
     const totalItems = parseInt(grid.getAttribute('data-total') || '0', 10);
@@ -442,6 +447,22 @@ const jsonLdCatalog = {
                   -${v.descuento_porcentaje}% OFF
                 </span>
               ` : ''}
+
+              <button
+                type="button"
+                class="btn-card-favorite absolute bottom-3 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-stone-400 hover:text-rose-600 shadow-xs backdrop-blur-xs transition hover:scale-110 focus:outline-none"
+                data-cafe-id="${prod.id}"
+                data-name="${prod.nombre}"
+                data-store="${prod.tienda}"
+                data-price="${precioClp}"
+                data-price-kilo="${precioKilo}"
+                data-image="${imagen || ''}"
+                data-url="/producto/${prod.id}"
+                title="Guardar en favoritos"
+                onclick="event.stopPropagation();"
+              >
+                ♡
+              </button>
             </div>
 
             <div class="pt-3.5 space-y-2">
@@ -553,6 +574,8 @@ const jsonLdCatalog = {
                 target="_blank" 
                 rel="noopener noreferrer"
                 data-track-outbound="true"
+                data-product-id="${prod.id}"
+                data-store-id="${prod.tienda_id || ''}"
                 data-store="${prod.tienda}"
                 data-product-name="${prod.nombre}"
                 data-price="${precioClp}"
@@ -630,6 +653,51 @@ const jsonLdCatalog = {
               btn.classList.remove('bg-emerald-600');
             }, 1200);
           });
+        });
+      });
+
+      // Eventos para botón de Favoritos inyectados dinámicamente
+      container.querySelectorAll('.btn-card-favorite').forEach((btn) => {
+        const id = btn.getAttribute('data-cafe-id');
+        if (id && FavoritesAdapter.isFavorite(id)) {
+          btn.innerHTML = '♥';
+          btn.classList.add('text-rose-600');
+          btn.classList.remove('text-stone-400');
+        }
+
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const cafeId = btn.getAttribute('data-cafe-id');
+          const name = btn.getAttribute('data-name') || '';
+          const store = btn.getAttribute('data-store') || '';
+          const price = Number(btn.getAttribute('data-price')) || 0;
+          const priceKilo = Number(btn.getAttribute('data-price-kilo')) || 0;
+          const image = btn.getAttribute('data-image') || undefined;
+          const url = btn.getAttribute('data-url') || undefined;
+
+          if (!cafeId) return;
+
+          const isNowFav = FavoritesAdapter.toggleFavorite({
+            cafe_id: cafeId,
+            nombre: name,
+            tienda: store,
+            precio_clp: price,
+            ultimo_precio_guardado: price,
+            ultimo_precio_kilo_guardado: priceKilo,
+            imagen: image,
+            url_detalle: url,
+          } as any);
+
+          if (isNowFav) {
+            AnalyticsTracker.trackAddToFavorites(cafeId, name, store, price);
+            btn.innerHTML = '♥';
+            btn.classList.add('text-rose-600');
+            btn.classList.remove('text-stone-400');
+          } else {
+            btn.innerHTML = '♡';
+            btn.classList.remove('text-rose-600');
+            btn.classList.add('text-stone-400');
+          }
         });
       });
     };
