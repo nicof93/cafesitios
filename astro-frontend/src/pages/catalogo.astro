@@ -454,6 +454,7 @@ const jsonLdCatalog = {
                 data-cafe-id="${prod.id}"
                 data-name="${prod.nombre}"
                 data-store="${prod.tienda}"
+                data-store-id="${prod.tienda_id || ''}"
                 data-price="${precioClp}"
                 data-price-kilo="${precioKilo}"
                 data-image="${imagen || ''}"
@@ -543,7 +544,7 @@ const jsonLdCatalog = {
 
             <div class="flex items-center justify-between text-xs pt-0.5">
               <label class="inline-flex items-center gap-1.5 cursor-pointer text-stone-500 hover:text-stone-800 select-none py-1 px-0.5" onclick="event.stopPropagation();">
-                <input type="checkbox" class="compare-cb h-3.5 w-3.5 rounded border-stone-300 text-emerald-700 focus:ring-emerald-500" data-id="${prod.id}" data-name="${prod.nombre}" />
+                <input type="checkbox" class="compare-cb h-3.5 w-3.5 rounded border-stone-300 text-emerald-700 focus:ring-emerald-500" data-id="${prod.id}" data-name="${prod.nombre}" data-store="${prod.tienda}" data-store-id="${prod.tienda_id || ''}" />
                 <span class="text-[11px] font-medium">+ Comparar</span>
               </label>
             </div>
@@ -579,7 +580,6 @@ const jsonLdCatalog = {
                 data-store="${prod.tienda}"
                 data-product-name="${prod.nombre}"
                 data-price="${precioClp}"
-                onclick="event.stopPropagation();"
                 class="inline-flex items-center justify-center gap-1.5 w-full rounded-xl ${
                   (showWhatsApp && (prod.tienda_telefono_whatsapp || prod.telefono_whatsapp))
                     ? 'bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold'
@@ -610,8 +610,10 @@ const jsonLdCatalog = {
           const target = e.target as HTMLInputElement;
           const id = target.getAttribute('data-id');
           const name = target.getAttribute('data-name');
+          const store = target.getAttribute('data-store') || undefined;
+          const storeId = target.getAttribute('data-store-id') || undefined;
           window.dispatchEvent(new CustomEvent('cafesitios:toggle-compare', {
-            detail: { id, name, checked: target.checked }
+            detail: { id, name, store, storeId, checked: target.checked }
           }));
         });
       });
@@ -670,6 +672,7 @@ const jsonLdCatalog = {
           const cafeId = btn.getAttribute('data-cafe-id');
           const name = btn.getAttribute('data-name') || '';
           const store = btn.getAttribute('data-store') || '';
+          const storeId = btn.getAttribute('data-store-id') || undefined;
           const price = Number(btn.getAttribute('data-price')) || 0;
           const priceKilo = Number(btn.getAttribute('data-price-kilo')) || 0;
           const image = btn.getAttribute('data-image') || undefined;
@@ -689,7 +692,7 @@ const jsonLdCatalog = {
           } as any);
 
           if (isNowFav) {
-            AnalyticsTracker.trackAddToFavorites(cafeId, name, store, price);
+            AnalyticsTracker.trackAddToFavorites(cafeId, name, store, price, storeId);
             btn.innerHTML = '♥';
             btn.classList.add('text-rose-600');
             btn.classList.remove('text-stone-400');

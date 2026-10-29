@@ -2414,27 +2414,54 @@ def calcular_traccion_tiendas_global(db_session: Session) -> GlobalStoreTraction
     )
     prod_counts = {r[0]: int(r[1]) for r in db_session.execute(stmt_prods).all()}
 
-    # 2. Clics e interacciones agrupadas por tienda (outbound, favorites, compare)
-    stmt_interacciones = (
-        select(
-            Producto.tienda_id,
-            func.count(case((or_(InteraccionClic.tipo_evento.ilike("%outbound%"), InteraccionClic.tipo_evento.ilike("%extern%"), InteraccionClic.tipo_evento.ilike("%clic_tienda%")), InteraccionClic.id))).label("outbound"),
-            func.count(case((or_(InteraccionClic.tipo_evento.ilike("%favorite%"), InteraccionClic.tipo_evento.ilike("%favorit%")), InteraccionClic.id))).label("favorites"),
-            func.count(case((or_(InteraccionClic.tipo_evento.ilike("%compare%"), InteraccionClic.tipo_evento.ilike("%compar%")), InteraccionClic.id))).label("compare"),
-        )
-        .join(InteraccionClic, Producto.id == InteraccionClic.producto_id)
-        .group_by(Producto.tienda_id)
-    )
-    rows_interacciones = {
-        r[0]: {
-            "outbound": int(r[1] or 0),
-            "favorites": int(r[2] or 0),
-            "compare": int(r[3] or 0),
-        }
-        for r in db_session.execute(stmt_interacciones).all()
-    }
+    # 2. Obtener todas las tiendas activas para mapeo y listado
+    tiendas = db_session.execute(select(Tienda).where(Tienda.activo.is_(True)).order_by(Tienda.nombre.asc())).scalars().all()
+    store_name_to_id = {t.nombre.lower().strip(): t.id for t in tiendas}
 
-    # 3. Pedidos y ventas WhatsApp agrupados por tienda
+    # 3. Clics e interacciones agrupadas por tienda (outbound, favorites, compare)
+    # Resiliente: outerjoin con Producto y fallback a metadata_evento para no perder eventos huérfanos
+    rows_interacciones = {t.id: {"outbound": 0, "favorites": 0, "compare": 0} for t in tiendas}
+    try:
+        stmt_interacciones = (
+            select(
+                InteraccionClic.id,
+                InteraccionClic.tipo_evento,
+                InteraccionClic.metadata_evento,
+                Producto.tienda_id,
+            )
+            .outerjoin(Producto, Producto.id == InteraccionClic.producto_id)
+        )
+        for _ev_id, ev_type, meta_raw, p_tienda_id in db_session.execute(stmt_interacciones).all():
+            meta = meta_raw or {}
+            t_id = p_tienda_id
+            if not t_id:
+                t_id = meta.get("tienda_id") or meta.get("store_id")
+            if not t_id:
+                s_name = meta.get("store_name") or meta.get("tienda") or meta.get("tienda_destino") or meta.get("item_brand")
+                if s_name and str(s_name).lower().strip() in store_name_to_id:
+                    t_id = store_name_to_id[str(s_name).lower().strip()]
+            if not t_id:
+                continue
+
+            try:
+                t_id_int = int(t_id)
+            except (ValueError, TypeError):
+                continue
+
+            if t_id_int not in rows_interacciones:
+                rows_interacciones[t_id_int] = {"outbound": 0, "favorites": 0, "compare": 0}
+
+            ev_lower = (ev_type or "").lower()
+            if any(k in ev_lower for k in ("outbound", "extern", "clic_tienda")):
+                rows_interacciones[t_id_int]["outbound"] += 1
+            elif any(k in ev_lower for k in ("favorite", "favorit", "fav")):
+                rows_interacciones[t_id_int]["favorites"] += 1
+            elif any(k in ev_lower for k in ("compare", "compar", "matriz")):
+                rows_interacciones[t_id_int]["compare"] += 1
+    except Exception:
+        pass
+
+    # 4. Pedidos y ventas WhatsApp agrupados por tienda
     stmt_pedidos = (
         select(
             PedidoWhatsApp.tienda_id,
@@ -2450,39 +2477,6 @@ def calcular_traccion_tiendas_global(db_session: Session) -> GlobalStoreTraction
         }
         for r in db_session.execute(stmt_pedidos).all()
     }
-
-    # 4. Obtener todas las tiendas
-    tiendas = db_session.execute(select(Tienda).where(Tienda.activo.is_(True)).order_by(Tienda.nombre.asc())).scalars().all()
-    store_name_to_id = {t.nombre.lower().strip(): t.id for t in tiendas}
-
-    # 4b. Rescate resiliente: asociar eventos huérfanos (sin producto_id) por store_id / store_name en metadata
-    try:
-        orphans = db_session.execute(
-            select(InteraccionClic).where(InteraccionClic.producto_id.is_(None))
-        ).scalars().all()
-        for item in orphans:
-            meta = item.metadata_evento or {}
-            t_id = meta.get("tienda_id") or meta.get("store_id")
-            if not t_id:
-                s_name = meta.get("store_name") or meta.get("tienda") or meta.get("tienda_destino") or meta.get("item_brand")
-                if s_name and str(s_name).lower().strip() in store_name_to_id:
-                    t_id = store_name_to_id[str(s_name).lower().strip()]
-            if t_id:
-                try:
-                    t_id_int = int(t_id)
-                    if t_id_int not in rows_interacciones:
-                        rows_interacciones[t_id_int] = {"outbound": 0, "favorites": 0, "compare": 0}
-                    ev_type = (item.tipo_evento or "").lower()
-                    if "outbound" in ev_type or "extern" in ev_type or "clic_tienda" in ev_type:
-                        rows_interacciones[t_id_int]["outbound"] += 1
-                    elif "favorite" in ev_type or "favorit" in ev_type:
-                        rows_interacciones[t_id_int]["favorites"] += 1
-                    elif "compare" in ev_type or "compar" in ev_type:
-                        rows_interacciones[t_id_int]["compare"] += 1
-                except (ValueError, TypeError):
-                    pass
-    except Exception:
-        pass
 
     tiendas_items: List[StoreTractionMetricsItem] = []
     tot_clics = 0

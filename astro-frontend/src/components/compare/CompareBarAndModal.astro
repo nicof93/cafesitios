@@ -147,7 +147,8 @@
         return;
       }
       selectedCompareIds.add(Number(id));
-      AnalyticsTracker.trackAddToCompare(Number(id), name);
+      const detail = (e as CustomEvent).detail || {};
+      AnalyticsTracker.trackAddToCompare(Number(id), name, detail.store, detail.storeId);
     } else {
       selectedCompareIds.delete(Number(id));
       AnalyticsTracker.trackRemoveFromCompare(Number(id));
@@ -400,6 +401,12 @@
                 href="${p.url_detalle}" 
                 target="_blank" 
                 rel="noopener noreferrer" 
+                data-track-outbound="true"
+                data-product-id="${p.id}"
+                data-store-id="${(p as any).tienda_id || ''}"
+                data-store="${p.tienda}"
+                data-product-name="${p.nombre}"
+                data-price="${v?.precio_clp || 0}"
                 class="flex items-center justify-center gap-1.5 w-full bg-stone-900 hover:bg-emerald-800 text-white text-center font-bold text-xs py-2.5 rounded-xl transition shadow-xs"
               >
                 <span>Ir a la tienda</span>

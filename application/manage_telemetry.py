@@ -30,7 +30,7 @@ class ManageTelemetryUseCase:
         ip_hash = self.hash_ip(client_ip)
         meta = dict(metadata_evento or {})
 
-        # Resiliencia: si producto_id no viene en cabecera, intentar asociar por metadata
+        # Resiliencia: si producto_id no vino, intentar asociar por metadata
         if not producto_id:
             dest_url = meta.get("destination_url") or meta.get("url")
             p_name = meta.get("product_name") or meta.get("item_name")
@@ -55,6 +55,23 @@ class ManageTelemetryUseCase:
                         producto_id = p
                 except Exception:
                     pass
+
+        # Si tenemos producto_id, garantizar que meta tenga tienda_id y store_id
+        if producto_id:
+            try:
+                t_id = self.session.execute(
+                    select(Producto.tienda_id).where(Producto.id == producto_id)
+                ).scalar_one_or_none()
+                if t_id:
+                    meta.setdefault("tienda_id", t_id)
+                    meta.setdefault("store_id", t_id)
+            except Exception:
+                pass
+        elif "store_id" in meta and "tienda_id" not in meta:
+            meta["tienda_id"] = meta["store_id"]
+        elif "tienda_id" in meta and "store_id" not in meta:
+            meta["store_id"] = meta["tienda_id"]
+
         interaccion = InteraccionClic(
             producto_id=producto_id,
             variante_id=variante_id,

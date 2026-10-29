@@ -146,6 +146,26 @@ class TestTelemetryAPI(unittest.TestCase):
         self.assertEqual(item.cafes_favoritos, 1)
         self.assertEqual(item.en_matriz_comparativa, 1)
 
+        # 4b. Enviar múltiples favoritos desde distintos lugares para certificar suma acumulativa
+        self.client.post(
+            "/api/v1/telemetry/event",
+            json={
+                "event_type": "add_to_favorites",
+                "metadata": {"product_id": prod.id, "store_name": "Café Demo", "store_id": tienda.id}
+            }
+        )
+        self.client.post(
+            "/api/v1/telemetry/event",
+            json={
+                "event_type": "add_to_favorites",
+                "metadata": {"product_id": prod.id, "store_name": "Café Demo"}
+            }
+        )
+        traccion_multi_fav = calcular_traccion_tiendas_global(db)
+        self.assertEqual(traccion_multi_fav.resumen_global.total_cafes_favoritos, 3)
+        item_multi = next((t for t in traccion_multi_fav.tiendas if t.tienda_id == tienda.id), None)
+        self.assertEqual(item_multi.cafes_favoritos, 3)
+
         # 5. Tienda inactiva o eliminada no debe aparecer en reporte de tracción
         tienda_inactiva = Tienda(nombre="Tienda Inactiva", url_base="https://inactiva.cl", activo=False)
         db.add(tienda_inactiva)
@@ -155,7 +175,6 @@ class TestTelemetryAPI(unittest.TestCase):
         ids_tiendas = [t.tienda_id for t in traccion_post.tiendas]
         self.assertNotIn(tienda_inactiva.id, ids_tiendas)
 
-        db.close()
         db.close()
 
 

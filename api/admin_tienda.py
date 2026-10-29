@@ -2161,7 +2161,11 @@ def get_store_telemetry_summary(
         .join(Producto, InteraccionClic.producto_id == Producto.id)
         .where(
             Producto.tienda_id == ctx.tienda_id,
-            InteraccionClic.tipo_evento.ilike("%outbound%"),
+            or_(
+                InteraccionClic.tipo_evento.ilike("%outbound%"),
+                InteraccionClic.tipo_evento.ilike("%extern%"),
+                InteraccionClic.tipo_evento.ilike("%clic_tienda%"),
+            ),
         )
     ) or 0
 
@@ -2170,7 +2174,11 @@ def get_store_telemetry_summary(
         .join(Producto, InteraccionClic.producto_id == Producto.id)
         .where(
             Producto.tienda_id == ctx.tienda_id,
-            InteraccionClic.tipo_evento.ilike("%favorite%"),
+            or_(
+                InteraccionClic.tipo_evento.ilike("%favorite%"),
+                InteraccionClic.tipo_evento.ilike("%favorit%"),
+                InteraccionClic.tipo_evento.ilike("%fav%"),
+            ),
         )
     ) or 0
 
@@ -2179,9 +2187,31 @@ def get_store_telemetry_summary(
         .join(Producto, InteraccionClic.producto_id == Producto.id)
         .where(
             Producto.tienda_id == ctx.tienda_id,
-            InteraccionClic.tipo_evento.ilike("%compare%"),
+            or_(
+                InteraccionClic.tipo_evento.ilike("%compare%"),
+                InteraccionClic.tipo_evento.ilike("%compar%"),
+                InteraccionClic.tipo_evento.ilike("%matriz%"),
+            ),
         )
     ) or 0
+
+    try:
+        orphans = db_session.execute(
+            select(InteraccionClic).where(InteraccionClic.producto_id.is_(None))
+        ).scalars().all()
+        for item in orphans:
+            m = item.metadata_evento or {}
+            m_tid = m.get("tienda_id") or m.get("store_id")
+            if m_tid and str(m_tid) == str(ctx.tienda_id):
+                ev = (item.tipo_evento or "").lower()
+                if any(k in ev for k in ("outbound", "extern", "clic_tienda")):
+                    clics_outbound += 1
+                elif any(k in ev for k in ("favorite", "favorit", "fav")):
+                    favoritos += 1
+                elif any(k in ev for k in ("compare", "compar", "matriz")):
+                    comparador += 1
+    except Exception:
+        pass
 
     top_rows = db_session.execute(
         select(

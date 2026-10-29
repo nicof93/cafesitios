@@ -141,22 +141,22 @@ const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'htt
   <script>
     import { AnalyticsTracker } from '../core/infrastructure/analytics/AnalyticsTracker';
 
-    // Manejador global de clics en "Ver en tienda" para telemetría
+    // Manejador global de clics en "Ver en tienda" / "Ir a la tienda" para telemetría (fase de captura)
     document.addEventListener('click', (e) => {
       const target = (e.target as HTMLElement).closest('[data-track-outbound]') as HTMLElement | null;
       if (!target) return;
 
       const store = target.getAttribute('data-store') || '';
+      const storeId = target.getAttribute('data-store-id') || undefined;
       const name = target.getAttribute('data-product-name') || '';
       const price = Number(target.getAttribute('data-price') || '0');
       const url = target.getAttribute('href') || '';
 
       const rawProdId = target.getAttribute('data-product-id');
       const productId = rawProdId ? Number(rawProdId) : undefined;
-      AnalyticsTracker.trackOutboundClick(store, name, price, url, productId);
+      AnalyticsTracker.trackOutboundClick(store, name, price, url, productId, storeId);
       AnalyticsTracker.trackSelectItem(name, store, price, productId);
-
-    });
+    }, true);
   </script>
 
   <!-- VERCEL WEB ANALYTICS -->

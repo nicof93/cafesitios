@@ -491,6 +491,7 @@ const captionText = product.descripcion_resumida
               data-id={product.id}
               data-name={product.nombre}
               data-store={product.tienda}
+              data-store-id={(product as any).tienda_id || ''}
               data-price={currentPrice}
               data-price-kilo={currentPriceKilo}
               data-image={product.imagen || ''}
@@ -837,6 +838,8 @@ const captionText = product.descripcion_resumida
         target="_blank" 
         rel="noopener noreferrer"
         data-track-outbound="true"
+        data-product-id={product.id}
+        data-store-id={(product as any).tienda_id || ''}
         data-store={product.tienda}
         data-product-name={product.nombre}
         data-price={currentPrice}
@@ -1099,6 +1102,7 @@ const captionText = product.descripcion_resumida
       const id = btnFav.getAttribute('data-id');
       const name = btnFav.getAttribute('data-name') || '';
       const store = btnFav.getAttribute('data-store') || '';
+      const storeId = btnFav.getAttribute('data-store-id') || undefined;
       const price = Number(btnFav.getAttribute('data-price')) || 0;
       const priceKilo = Number(btnFav.getAttribute('data-price-kilo')) || 0;
       const image = btnFav.getAttribute('data-image') || undefined;
@@ -1118,7 +1122,7 @@ const captionText = product.descripcion_resumida
       } as any);
 
       if (isAdded) {
-        AnalyticsTracker.trackAddToFavorites(id, name, store, price);
+        AnalyticsTracker.trackAddToFavorites(id, name, store, price, storeId);
         favIcon.textContent = '♥';
         favIcon.classList.add('text-rose-600');
         favLabel.textContent = 'Guardado en Favoritos';

@@ -132,6 +132,11 @@ try {
                   href={item.link_detalle?.startsWith('http') ? item.link_detalle : `/producto/${item.producto_id}`}
                   target={item.link_detalle?.startsWith('http') ? "_blank" : "_self"}
                   rel="noopener noreferrer"
+                  data-track-outbound={item.link_detalle?.startsWith('http') ? "true" : undefined}
+                  data-product-id={item.producto_id}
+                  data-store={item.tienda}
+                  data-product-name={item.nombre_producto}
+                  data-price={item.precio_actual}
                   class="btn-oferta-comprar rounded-xl bg-stone-900 hover:bg-emerald-900 text-white font-bold text-xs py-2 text-center transition shadow-2xs flex items-center justify-center gap-1"
                   data-oferta-id={item.oferta_id}
                 >

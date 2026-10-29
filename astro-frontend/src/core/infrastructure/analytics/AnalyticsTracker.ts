@@ -93,9 +93,11 @@ export class AnalyticsTracker {
     });
   }
 
-  static trackOutboundClick(storeName: string, productName: string, price: number, destinationUrl: string, productId?: number | string): void {
+  static trackOutboundClick(storeName: string, productName: string, price: number, destinationUrl: string, productId?: number | string, storeId?: number | string): void {
     this.sendToDataLayer('outbound_click', {
       store_name: storeName,
+      store_id: storeId,
+      tienda_id: storeId,
       product_name: productName,
       price: price,
       destination_url: destinationUrl,
@@ -104,22 +106,27 @@ export class AnalyticsTracker {
     });
   }
 
-  static trackAddToFavorites(productId: number | string, productName?: string, storeName?: string, price?: number): void {
+  static trackAddToFavorites(productId: number | string, productName?: string, storeName?: string, price?: number, storeId?: number | string): void {
     this.sendToDataLayer('add_to_favorites', {
       product_id: Number(productId),
       item_id: Number(productId),
       product_name: productName,
       item_name: productName,
       store_name: storeName,
+      store_id: storeId,
+      tienda_id: storeId,
       price: price
     });
   }
 
-  static trackAddToCompare(productId: number | string, productName?: string, storeName?: string): void {
+  static trackAddToCompare(productId: number | string, productName?: string, storeName?: string, storeId?: number | string): void {
     this.sendToDataLayer('add_to_compare', {
       product_id: Number(productId),
       item_id: Number(productId),
-      product_name: productName
+      product_name: productName,
+      store_name: storeName,
+      store_id: storeId,
+      tienda_id: storeId
     });
   }
 

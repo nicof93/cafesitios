@@ -86,6 +86,7 @@ if (product.fecha_ultimo_tueste) {
         data-cafe-id={product.id}
         data-name={product.nombre}
         data-store={product.tienda}
+        data-store-id={product.tienda_id || ''}
         data-price={precioClp}
         data-price-kilo={precioKilo}
         data-image={product.imagen || ''}
@@ -213,6 +214,8 @@ if (product.fecha_ultimo_tueste) {
           class="compare-cb h-3.5 w-3.5 rounded border-stone-300 text-emerald-700 focus:ring-emerald-500"
           data-id={product.id}
           data-name={product.nombre}
+          data-store={product.tienda}
+          data-store-id={product.tienda_id || ''}
         />
         <span class="text-[11px] font-medium">+ Comparar</span>
       </label>
@@ -254,7 +257,6 @@ if (product.fecha_ultimo_tueste) {
         data-store={product.tienda}
         data-product-name={product.nombre}
         data-price={precioClp}
-        onclick="event.stopPropagation();"
         class={`inline-flex items-center justify-center gap-1.5 w-full rounded-xl ${
           (showWhatsApp && product.tienda_telefono_whatsapp)
             ? 'bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold'
@@ -331,8 +333,10 @@ if (product.fecha_ultimo_tueste) {
       const target = e.target as HTMLInputElement;
       const id = target.getAttribute('data-id');
       const name = target.getAttribute('data-name');
+      const store = target.getAttribute('data-store') || undefined;
+      const storeId = target.getAttribute('data-store-id') || undefined;
       window.dispatchEvent(new CustomEvent('cafesitios:toggle-compare', {
-        detail: { id, name, checked: target.checked }
+        detail: { id, name, store, storeId, checked: target.checked }
       }));
     });
   });
@@ -354,6 +358,7 @@ if (product.fecha_ultimo_tueste) {
       const cafeId = btn.getAttribute('data-cafe-id');
       const name = btn.getAttribute('data-name') || '';
       const store = btn.getAttribute('data-store') || '';
+      const storeId = btn.getAttribute('data-store-id') || undefined;
       const price = Number(btn.getAttribute('data-price')) || 0;
       const priceKilo = Number(btn.getAttribute('data-price-kilo')) || 0;
       const image = btn.getAttribute('data-image') || undefined;
@@ -373,7 +378,7 @@ if (product.fecha_ultimo_tueste) {
       } as any);
 
       if (isNowFav) {
-        AnalyticsTracker.trackAddToFavorites(cafeId, name, store, price);
+        AnalyticsTracker.trackAddToFavorites(cafeId, name, store, price, storeId);
         btn.innerHTML = '♥';
         btn.classList.add('text-rose-600');
         btn.classList.remove('text-stone-400');
