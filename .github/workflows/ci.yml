@@ -37,6 +37,7 @@ jobs:
         env:
           ENVIRONMENT: test
           SECRET_KEY: test-secret-key-for-ci
+          DATABASE_URL: sqlite:///:memory:
           PYTHONPATH: .
         run: |
           set -o pipefail

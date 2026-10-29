@@ -47,7 +47,17 @@ class TestSyncErrorClassification(unittest.TestCase):
 
     def test_pickers_long_lote_persistence_without_truncation_error(self):
         """Valida que un lote largo (> 100 chars como en Pickers) no cause StringDataRightTruncation."""
-        db = DatabaseManager()
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
+        from db.database import Base
+
+        engine = create_engine("sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})
+        Base.metadata.create_all(engine)
+        db = DatabaseManager(db_url="sqlite://")
+        db.engine = engine
+        db.SessionLocal = sessionmaker(bind=engine)
+
         long_lote = "Bourbon, Caturra y Catuaí— son en realidad una familia: Caturra es una mutación de Bourbon, y Catuaí es hija de Caturra"
         self.assertGreater(len(long_lote), 100)
 
