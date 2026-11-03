@@ -440,7 +440,15 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
       </div>
       <div id="sync-modal-summary" class="p-4 rounded-xl bg-stone-50 border border-stone-200 text-xs"></div>
       <div class="max-h-60 overflow-y-auto rounded-xl border border-stone-200 divide-y divide-stone-100" id="sync-modal-list"></div>
-      <div class="flex justify-end pt-2">
+      <div class="flex items-center justify-between pt-2 border-t border-stone-200">
+        <a
+          id="btn-goto-moderation-sync-modal"
+          href="/plataforma/moderacion"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900 hover:bg-amber-100 transition shadow-xs"
+        >
+          <span>🛡️</span>
+          <span>Ver catálogo en Moderación</span>
+        </a>
         <button type="button" id="btn-confirm-sync-modal" class="rounded-xl bg-stone-900 px-5 py-2 text-xs font-bold text-white hover:bg-stone-800 transition">
           Cerrar
         </button>
@@ -892,6 +900,14 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
                   <span>🔄</span>
                   <span>Sincronizar</span>
                 </button>
+                <a
+                  href="/plataforma/moderacion?tienda=${encodeURIComponent(store.nombre)}"
+                  class="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900 hover:bg-amber-100 transition shadow-xs"
+                  title="Ver y moderar el catálogo exclusivo de ${store.nombre}"
+                >
+                  <span>🛡️</span>
+                  <span>Moderar</span>
+                </a>
                 <button
                   type="button"
                   class="btn-impersonate-store inline-flex items-center gap-1 rounded-lg border border-purple-300 bg-purple-50 px-2.5 py-1 text-xs font-bold text-purple-900 hover:bg-purple-100 transition shadow-xs"
@@ -1103,6 +1119,18 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
         if (titleEl) titleEl.textContent = title;
         if (subtitleEl) subtitleEl.textContent = subtitle;
         if (summaryEl) summaryEl.innerHTML = summaryHtml;
+
+        const gotoModBtn = document.getElementById('btn-goto-moderation-sync-modal');
+        if (gotoModBtn) {
+          if (detailsList && detailsList.length === 1 && (detailsList[0].nombre || detailsList[0].tienda_nombre)) {
+            const sName = detailsList[0].nombre || detailsList[0].tienda_nombre;
+            gotoModBtn.href = `/plataforma/moderacion?tienda=${encodeURIComponent(sName)}`;
+            gotoModBtn.classList.remove('hidden');
+          } else {
+            gotoModBtn.href = '/plataforma/moderacion';
+            gotoModBtn.classList.remove('hidden');
+          }
+        }
 
         if (listEl) {
           if (!detailsList || detailsList.length === 0) {

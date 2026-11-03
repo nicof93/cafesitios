@@ -1846,6 +1846,11 @@ def list_moderation_products(
     store_lower = store_name.strip().lower() if store_name and store_name.strip() else None
 
     for prod, tienda in rows:
+        if store_lower and store_lower not in (tienda.nombre or "").lower():
+            continue
+        if q_lower and q_lower not in (prod.nombre or "").lower():
+            continue
+
         oculto = bool(getattr(prod, "oculto_catalogo", False))
         reason = detect_non_coffee_suspicion(prod.nombre, prod.descripcion)
         cat = classify_product_category(prod.nombre)
@@ -1858,11 +1863,6 @@ def list_moderation_products(
                 total_sospechosos += 1
             if cat == "cafe":
                 total_visibles_cafe += 1
-
-        if store_lower and store_lower not in (tienda.nombre or "").lower():
-            continue
-        if q_lower and q_lower not in (prod.nombre or "").lower():
-            continue
 
         if mode == "suspected" and not (es_sospechoso and not oculto):
             continue
