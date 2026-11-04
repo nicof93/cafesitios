@@ -1,5 +1,6 @@
 ---
 import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
+import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
 ---
 
 <StoreAdminLayout title="Configuración de Tostaduría | Cafesitios Admin" activeNav="configuracion">
@@ -147,19 +148,37 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       </div>
     </div>
 
-    <!-- 3. CONEXIÓN DE CATÁLOGOS AUTOMÁTICOS & SCRAPING -->
-    <div id="sec-catalogos" class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-6">
-      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+    <!-- 3. CONEXIÓN DE CATÁLOGOS AUTOMÁTICOS & SINCRONIZACIÓN -->
+    <div id="seccion-sincronizacion" class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-6 scroll-mt-20">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-stone-100 pb-4">
         <div>
           <div class="flex items-center gap-2 text-base font-bold text-stone-900">
             <span>🔄</span>
             <span>Fuentes de Sincronización Automática (Scraping)</span>
           </div>
-          <p class="text-xs text-stone-500 mt-0.5">URLs de colecciones de Shopify o WooCommerce vinculadas a tu tostaduría.</p>
+          <p class="text-xs text-stone-500 mt-0.5">URLs de colecciones de Shopify, WooCommerce o Jumpseller vinculadas a tu tostaduría.</p>
         </div>
-        <span class="rounded-full bg-emerald-100 text-emerald-900 px-2.5 py-0.5 text-xs font-bold">
-          Multi-Catálogo Activo
-        </span>
+        <div class="flex items-center gap-2">
+          <!-- Botón directo de Sincronización con Cooldown -->
+          <button
+            type="button"
+            id="btn-sync-catalog-config"
+            class="inline-flex items-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 text-xs font-bold transition shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            title="Descargar y actualizar productos ahora"
+          >
+            <span id="sync-icon-config">🔄</span>
+            <span id="sync-btn-text-config">Sincronizar Catálogo Ahora</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Alerta o estado de cooldown -->
+      <div id="sync-cooldown-notice" class="hidden rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 font-medium flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span>⏱️</span>
+          <span id="sync-cooldown-text-config">Cooldown activo: disponible en 30m</span>
+        </div>
+        <span class="text-[11px] text-amber-800">1 sync cada 30 min</span>
       </div>
 
       <!-- Formulario para agregar y probar nueva URL -->
@@ -211,76 +230,88 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
     </div>
   </div>
 
-  <!-- MODAL DE PROBADOR DE CATÁLOGO (DRY-RUN) -->
-  <div id="modal-catalog-test" class="hidden fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl border border-stone-200 shadow-xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
-      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
-        <div class="flex items-center gap-2">
-          <span class="text-lg">🧪</span>
-          <h3 class="text-base font-bold text-stone-900">Resultado de Prueba en Seco (Dry-Run)</h3>
-        </div>
-        <button type="button" id="btn-close-test-modal" class="text-stone-400 hover:text-stone-700 font-bold text-sm">✕</button>
-      </div>
-
-      <div id="catalog-test-content" class="flex-1 overflow-y-auto space-y-3 text-xs">
-        <!-- Inyectado dinámicamente -->
-      </div>
-
-      <div class="border-t border-stone-100 pt-3 flex justify-end">
-        <button type="button" id="btn-close-test-modal-footer" class="rounded-xl bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs px-4 py-2">
-          Entendido
-        </button>
-      </div>
+  <!-- SLIDE-OVER DRAWER DE PROBADOR DE CATÁLOGO (DRY-RUN) -->
+  <SlideOverDrawer
+    id="drawer-catalog-test"
+    title="Resultado de Prueba en Seco (Dry-Run)"
+    subtitle="Inspección en vivo de productos detectados sin alterar la base de datos"
+    icon="🧪"
+    maxWidth="max-w-xl"
+  >
+    <div id="catalog-test-content" class="space-y-3">
+      <!-- Inyectado dinámicamente -->
     </div>
-  </div>
 
-  <!-- MODAL PARA CREAR SUCURSAL -->
-  <div id="modal-branch" class="hidden fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl border border-stone-200 shadow-xl max-w-md w-full p-6 space-y-4">
-      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
-        <h3 class="text-base font-bold text-stone-900">Nueva Sucursal o Cafetería</h3>
-        <button type="button" id="btn-close-branch-modal" class="text-stone-400 hover:text-stone-700 font-bold text-sm">✕</button>
+    <Fragment slot="footer">
+      <button
+        type="button"
+        id="btn-close-test-drawer-footer"
+        class="rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs px-5 py-2 transition shadow-xs"
+      >
+        Entendido
+      </button>
+    </Fragment>
+  </SlideOverDrawer>
+
+  <!-- SLIDE-OVER DRAWER PARA CREAR SUCURSAL (CERO POPUPS) -->
+  <SlideOverDrawer
+    id="drawer-branch"
+    title="Nueva Sucursal o Cafetería"
+    subtitle="Registra las coordenadas físicas de tu sede para el comparador geográfico"
+    icon="📍"
+    maxWidth="max-w-lg"
+  >
+    <form id="form-branch" class="space-y-4">
+      <div>
+        <label for="branch-name" class="block font-bold text-stone-700 mb-1">Nombre de la Sucursal *</label>
+        <input type="text" id="branch-name" required placeholder="Ej: Barra Providencia" class="w-full rounded-xl border border-stone-300 px-3.5 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white" />
       </div>
 
-      <form id="form-branch" class="space-y-3 text-xs">
-        <div>
-          <label class="block font-bold text-stone-700 mb-1">Nombre de la Sucursal</label>
-          <input type="text" id="branch-name" required placeholder="Ej: Barra Providencia" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
-        </div>
-        <div>
-          <label class="block font-bold text-stone-700 mb-1">Dirección Completa</label>
-          <input type="text" id="branch-address" required placeholder="Av. Providencia 1234" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
-        </div>
-        <div>
-          <label class="block font-bold text-stone-700 mb-1">Comuna / Ciudad</label>
-          <input type="text" id="branch-commune" required placeholder="Providencia, Santiago" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block font-bold text-stone-700 mb-1">Latitud</label>
-            <input type="number" step="any" id="branch-lat" placeholder="-33.425" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
-          </div>
-          <div>
-            <label class="block font-bold text-stone-700 mb-1">Longitud</label>
-            <input type="number" step="any" id="branch-lng" placeholder="-70.615" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
-          </div>
-        </div>
-        <div>
-          <label class="block font-bold text-stone-700 mb-1">Horario de Atención</label>
-          <input type="text" id="branch-hours" placeholder="Lun a Vie 8:00 - 19:00" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
-        </div>
+      <div>
+        <label for="branch-address" class="block font-bold text-stone-700 mb-1">Dirección Completa *</label>
+        <input type="text" id="branch-address" required placeholder="Av. Providencia 1234" class="w-full rounded-xl border border-stone-300 px-3.5 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white" />
+      </div>
 
-        <div class="pt-3 border-t border-stone-100 flex justify-end gap-2">
-          <button type="button" id="btn-cancel-branch" class="rounded-xl border border-stone-300 px-4 py-2 font-bold text-stone-600 hover:bg-stone-100">
-            Cancelar
-          </button>
-          <button type="submit" id="btn-save-branch" class="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 font-bold shadow-xs">
-            Guardar Sucursal
-          </button>
+      <div>
+        <label for="branch-commune" class="block font-bold text-stone-700 mb-1">Comuna / Ciudad *</label>
+        <input type="text" id="branch-commune" required placeholder="Providencia, Santiago" class="w-full rounded-xl border border-stone-300 px-3.5 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="branch-lat" class="block font-bold text-stone-700 mb-1">Latitud</label>
+          <input type="number" step="any" id="branch-lat" placeholder="-33.425" class="w-full rounded-xl border border-stone-300 px-3.5 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white" />
         </div>
-      </form>
-    </div>
-  </div>
+        <div>
+          <label for="branch-lng" class="block font-bold text-stone-700 mb-1">Longitud</label>
+          <input type="number" step="any" id="branch-lng" placeholder="-70.615" class="w-full rounded-xl border border-stone-300 px-3.5 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white" />
+        </div>
+      </div>
+
+      <div>
+        <label for="branch-hours" class="block font-bold text-stone-700 mb-1">Horario de Atención</label>
+        <input type="text" id="branch-hours" placeholder="Lun a Vie 8:00 - 19:00" class="w-full rounded-xl border border-stone-300 px-3.5 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white" />
+      </div>
+    </form>
+
+    <Fragment slot="footer">
+      <button
+        type="button"
+        id="btn-cancel-branch"
+        class="rounded-xl border border-stone-300 bg-white px-4 py-2 font-bold text-xs text-stone-700 hover:bg-stone-100 transition"
+      >
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        form="form-branch"
+        id="btn-save-branch"
+        class="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white px-5 py-2 font-bold text-xs transition shadow-xs focus:ring-2 focus:ring-emerald-600"
+      >
+        Guardar Sucursal
+      </button>
+    </Fragment>
+  </SlideOverDrawer>
 
   <script is:inline>
     (function initStoreConfiguracion() {
@@ -310,22 +341,143 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       const profDiasTueste = document.getElementById('prof-dias-tueste');
       const profFechaTueste = document.getElementById('prof-fecha-tueste');
 
-      // Catálogos
+      // Catálogos y Prueba en Seco (Slide-Over Drawer)
       const catalogsContainer = document.getElementById('catalogs-list-container');
       const inputCatalogUrl = document.getElementById('input-new-catalog-url');
       const inputCatalogLabel = document.getElementById('input-new-catalog-label');
       const btnTestCatalog = document.getElementById('btn-test-catalog-url');
       const btnAddCatalog = document.getElementById('btn-add-catalog-url');
-      const modalTest = document.getElementById('modal-catalog-test');
+      const drawerTest = document.getElementById('drawer-catalog-test');
+      const drawerTestBackdrop = document.getElementById('drawer-catalog-test-backdrop');
       const testContent = document.getElementById('catalog-test-content');
+      const btnCloseTest = document.getElementById('drawer-catalog-test-close-btn');
+      const btnCloseTestFooter = document.getElementById('btn-close-test-drawer-footer');
 
-      // Sucursales
+      function openTestDrawer() {
+        if (!drawerTest) return;
+        drawerTest.classList.remove('translate-x-full');
+        if (drawerTestBackdrop) {
+          drawerTestBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+          drawerTestBackdrop.classList.add('opacity-100', 'pointer-events-auto');
+        }
+      }
+
+      function closeTestDrawer() {
+        if (!drawerTest) return;
+        drawerTest.classList.add('translate-x-full');
+        if (drawerTestBackdrop) {
+          drawerTestBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+          drawerTestBackdrop.classList.add('opacity-0', 'pointer-events-none');
+        }
+      }
+
+      btnCloseTest?.addEventListener('click', closeTestDrawer);
+      btnCloseTestFooter?.addEventListener('click', closeTestDrawer);
+      drawerTestBackdrop?.addEventListener('click', closeTestDrawer);
+
+      // Sucursales (Slide-Over Drawer)
       const branchesContainer = document.getElementById('branches-list-container');
       const btnNewBranch = document.getElementById('btn-new-branch');
-      const modalBranch = document.getElementById('modal-branch');
+      const drawerBranch = document.getElementById('drawer-branch');
+      const drawerBranchBackdrop = document.getElementById('drawer-branch-backdrop');
       const formBranch = document.getElementById('form-branch');
-      const btnCloseBranch = document.getElementById('btn-close-branch-modal');
+      const btnCloseBranch = document.getElementById('drawer-branch-close-btn');
       const btnCancelBranch = document.getElementById('btn-cancel-branch');
+
+      function openBranchDrawer() {
+        if (!drawerBranch) return;
+        if (formBranch) formBranch.reset();
+        drawerBranch.classList.remove('translate-x-full');
+        if (drawerBranchBackdrop) {
+          drawerBranchBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+          drawerBranchBackdrop.classList.add('opacity-100', 'pointer-events-auto');
+        }
+      }
+
+      function closeBranchDrawer() {
+        if (!drawerBranch) return;
+        drawerBranch.classList.add('translate-x-full');
+        if (drawerBranchBackdrop) {
+          drawerBranchBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+          drawerBranchBackdrop.classList.add('opacity-0', 'pointer-events-none');
+        }
+        if (formBranch) formBranch.reset();
+      }
+
+      btnNewBranch?.addEventListener('click', openBranchDrawer);
+      btnCloseBranch?.addEventListener('click', closeBranchDrawer);
+      btnCancelBranch?.addEventListener('click', closeBranchDrawer);
+      drawerBranchBackdrop?.addEventListener('click', closeBranchDrawer);
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (drawerTest && !drawerTest.classList.contains('translate-x-full')) closeTestDrawer();
+          if (drawerBranch && !drawerBranch.classList.contains('translate-x-full')) closeBranchDrawer();
+        }
+      });
+
+      // Sincronización Voluntaria Bajo Demanda con Cooldown
+      const btnSyncConfig = document.getElementById('btn-sync-catalog-config');
+      const syncBtnTextConfig = document.getElementById('sync-btn-text-config');
+      const syncIconConfig = document.getElementById('sync-icon-config');
+      const syncCooldownNotice = document.getElementById('sync-cooldown-notice');
+      const syncCooldownTextConfig = document.getElementById('sync-cooldown-text-config');
+      let syncCooldownInterval = null;
+
+      function startSyncCooldownTimer(seconds) {
+        if (!btnSyncConfig) return;
+        btnSyncConfig.disabled = true;
+        if (syncCooldownNotice) syncCooldownNotice.classList.remove('hidden');
+        let rem = seconds;
+
+        function tick() {
+          const m = Math.floor(rem / 60);
+          const s = rem % 60;
+          const timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
+          if (syncBtnTextConfig) syncBtnTextConfig.textContent = `⏳ Cooldown (${timeStr})`;
+          if (syncCooldownTextConfig) syncCooldownTextConfig.textContent = `Cooldown activo: disponible en ${m}m ${s}s`;
+
+          if (rem <= 0) {
+            clearInterval(syncCooldownInterval);
+            btnSyncConfig.disabled = false;
+            if (syncBtnTextConfig) syncBtnTextConfig.textContent = 'Sincronizar Catálogo Ahora';
+            if (syncCooldownNotice) syncCooldownNotice.classList.add('hidden');
+          }
+          rem -= 1;
+        }
+
+        tick();
+        clearInterval(syncCooldownInterval);
+        syncCooldownInterval = setInterval(tick, 1000);
+      }
+
+      btnSyncConfig?.addEventListener('click', async () => {
+        btnSyncConfig.disabled = true;
+        if (syncIconConfig) syncIconConfig.textContent = '⏳';
+        if (syncBtnTextConfig) syncBtnTextConfig.textContent = 'Sincronizando catálogo...';
+
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/sincronizar`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || 'Fallo al iniciar sincronización.');
+
+          window.cafesitiosAlert(
+            'Catálogo Sincronizado',
+            `Se actualizaron ${data.productos_actualizados || 0} productos y se detectaron ${data.productos_nuevos || 0} nuevos cafés.\nDuración: ${data.duracion_segundos || 0}s`,
+            'success'
+          );
+          startSyncCooldownTimer(data.cooldown_restante_segundos || 1800);
+          loadProfile();
+        } catch (err) {
+          window.cafesitiosAlert('Error de Sincronización', err.message, 'error');
+          if (syncIconConfig) syncIconConfig.textContent = '🔄';
+          if (syncBtnTextConfig) syncBtnTextConfig.textContent = 'Sincronizar Catálogo Ahora';
+          btnSyncConfig.disabled = false;
+        }
+      });
 
       async function loadProfile() {
         try {
@@ -441,7 +593,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           return;
         }
 
-        modalTest?.classList.remove('hidden');
+        openTestDrawer();
         if (testContent) testContent.innerHTML = '<p class="text-stone-500 py-6 text-center">Ejecutando prueba en seco (Dry-run)...</p>';
 
         try {
@@ -473,9 +625,6 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           testContent.innerHTML = `<div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 font-bold">Error: ${err.message}</div>`;
         }
       });
-
-      document.getElementById('btn-close-test-modal')?.addEventListener('click', () => modalTest?.classList.add('hidden'));
-      document.getElementById('btn-close-test-modal-footer')?.addEventListener('click', () => modalTest?.classList.add('hidden'));
 
       // Sucursales
       async function loadBranches() {
@@ -515,10 +664,6 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         } catch (_) {}
       }
 
-      btnNewBranch?.addEventListener('click', () => modalBranch?.classList.remove('hidden'));
-      btnCloseBranch?.addEventListener('click', () => modalBranch?.classList.add('hidden'));
-      btnCancelBranch?.addEventListener('click', () => modalBranch?.classList.add('hidden'));
-
       formBranch?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const payload = {
@@ -540,8 +685,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
             body: JSON.stringify(payload)
           });
           if (!res.ok) throw new Error('Error al crear sucursal.');
-          modalBranch?.classList.add('hidden');
-          formBranch.reset();
+          closeBranchDrawer();
           loadBranches();
         } catch (err) {
           window.cafesitiosAlert('Error Sucursal', err.message, 'error');

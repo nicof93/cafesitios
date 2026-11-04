@@ -1,5 +1,6 @@
 ---
 import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
+import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
 ---
 
 <StoreAdminLayout title="Dashboard de Tostaduría | Cafesitios Admin" activeNav="dashboard">
@@ -587,84 +588,28 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       </div>
     </div>
 
-    <!-- MODAL DE PROBADOR DE CATÁLOGO (DRY-RUN) -->
-    <div id="modal-test-catalog-result" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-        <div class="flex items-center justify-between border-b border-stone-200 pb-3">
-          <h3 class="text-base font-bold text-stone-900" id="test-catalog-result-title">Resultado de Prueba de Catálogo</h3>
-          <button type="button" id="btn-close-test-catalog" class="text-stone-400 hover:text-stone-600 font-bold text-lg">✕</button>
-        </div>
-        <div id="test-catalog-result-body" class="p-4 rounded-xl bg-stone-50 text-xs text-stone-700 space-y-2">
-          <!-- Inyectado dinámicamente -->
-        </div>
-        <div class="flex justify-end pt-2">
-          <button
-            type="button"
-            id="btn-confirm-test-catalog"
-            class="rounded-xl bg-stone-900 px-5 py-2 text-xs font-bold text-white hover:bg-stone-800 transition"
-          >
-            Cerrar
-          </button>
-        </div>
+    <!-- SLIDE-OVER DRAWER DE RESULTADO DE SINCRONIZACIÓN (CERO POPUPS) -->
+    <SlideOverDrawer
+      id="drawer-sync-result"
+      title="Sincronización de Catálogo"
+      subtitle="Detalle de la ingesta bajo demanda de productos y precios"
+      icon="🔄"
+      maxWidth="max-w-lg"
+    >
+      <div id="sync-feedback-body" class="p-4 rounded-2xl bg-stone-50 border border-stone-200 text-xs text-stone-700 space-y-3">
+        <!-- Inyectado por JS -->
       </div>
-    </div>
 
-    <!-- MODAL PARA CREAR SUCURSAL -->
-    <div id="modal-branch" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-        <div class="flex items-center justify-between border-b border-stone-200 pb-3">
-          <h3 class="text-base font-bold text-stone-900">Nueva Cafetería o Sucursal</h3>
-          <button type="button" id="btn-close-branch-modal" class="text-stone-400 hover:text-stone-600 font-bold text-lg">✕</button>
-        </div>
-        <form id="form-branch" class="space-y-3 text-xs">
-          <div>
-            <label class="block font-semibold text-stone-700 mb-1">Nombre del Local *</label>
-            <input type="text" id="branch-nombre" required placeholder="Cafetería Lastarria" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
-          </div>
-          <div>
-            <label class="block font-semibold text-stone-700 mb-1">Dirección *</label>
-            <input type="text" id="branch-direccion" required placeholder="José Victorino Lastarria 288" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block font-semibold text-stone-700 mb-1">Comuna *</label>
-              <input type="text" id="branch-comuna" required placeholder="Santiago" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
-            </div>
-            <div>
-              <label class="block font-semibold text-stone-700 mb-1">Región</label>
-              <input type="text" id="branch-region" placeholder="Metropolitana" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
-            </div>
-          </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <button type="button" id="btn-cancel-branch" class="rounded-xl border border-stone-300 px-4 py-2 font-semibold text-stone-700 hover:bg-stone-100 transition">Cancelar</button>
-            <button type="submit" class="rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-2 font-bold text-white transition shadow-xs">Guardar Local</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-
-    <!-- MODAL DE RESULTADO DE SINCRONIZACIÓN -->
-    <div id="modal-sync-feedback" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-        <div class="flex items-center justify-between border-b border-stone-200 pb-3">
-          <h3 class="text-base font-bold text-stone-900" id="sync-feedback-title">Sincronización de Catálogo</h3>
-          <button type="button" id="btn-close-sync-feedback" class="text-stone-400 hover:text-stone-600 font-bold text-lg">✕</button>
-        </div>
-        <div id="sync-feedback-body" class="p-4 rounded-xl bg-stone-50 text-xs text-stone-700 space-y-2">
-          <!-- Inyectado por JS -->
-        </div>
-        <div class="flex justify-end pt-2">
-          <button
-            type="button"
-            id="btn-confirm-sync-feedback"
-            class="rounded-xl bg-stone-900 px-5 py-2 text-xs font-bold text-white hover:bg-stone-800 transition"
-          >
-            Entendido
-          </button>
-        </div>
-      </div>
-    </div>
+      <Fragment slot="footer">
+        <button
+          type="button"
+          id="btn-confirm-sync-drawer"
+          class="rounded-xl bg-stone-900 hover:bg-stone-800 px-5 py-2 text-xs font-bold text-white transition shadow-xs"
+        >
+          Entendido
+        </button>
+      </Fragment>
+    </SlideOverDrawer>
 
   </div>
 
@@ -691,9 +636,11 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       const syncIcon = document.getElementById('sync-icon');
       const syncSpinner = document.getElementById('sync-spinner');
       const syncCooldownText = document.getElementById('sync-cooldown-text');
-      const modalFeedback = document.getElementById('modal-sync-feedback');
-      const feedbackTitle = document.getElementById('sync-feedback-title');
+      const drawerFeedback = document.getElementById('drawer-sync-result');
+      const drawerFeedbackBackdrop = document.getElementById('drawer-sync-result-backdrop');
       const feedbackBody = document.getElementById('sync-feedback-body');
+      const btnCloseSyncDrawer = document.getElementById('drawer-sync-result-close-btn');
+      const btnConfirmSyncDrawer = document.getElementById('btn-confirm-sync-drawer');
 
       let cooldownInterval = null;
 
@@ -723,23 +670,35 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       }
 
       function showFeedbackModal(title, contentHtml) {
-        if (feedbackTitle) feedbackTitle.textContent = title;
         if (feedbackBody) feedbackBody.innerHTML = contentHtml;
-        if (modalFeedback) {
-          modalFeedback.classList.remove('hidden');
-          modalFeedback.classList.add('flex');
+        if (drawerFeedback) {
+          drawerFeedback.classList.remove('translate-x-full');
+          if (drawerFeedbackBackdrop) {
+            drawerFeedbackBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+            drawerFeedbackBackdrop.classList.add('opacity-100', 'pointer-events-auto');
+          }
         }
       }
 
-      function closeFeedbackModal() {
-        if (modalFeedback) {
-          modalFeedback.classList.add('hidden');
-          modalFeedback.classList.remove('flex');
+      function closeFeedbackDrawer() {
+        if (drawerFeedback) {
+          drawerFeedback.classList.add('translate-x-full');
+          if (drawerFeedbackBackdrop) {
+            drawerFeedbackBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+            drawerFeedbackBackdrop.classList.add('opacity-0', 'pointer-events-none');
+          }
         }
       }
 
-      document.getElementById('btn-close-sync-feedback')?.addEventListener('click', closeFeedbackModal);
-      document.getElementById('btn-confirm-sync-feedback')?.addEventListener('click', closeFeedbackModal);
+      btnCloseSyncDrawer?.addEventListener('click', closeFeedbackDrawer);
+      btnConfirmSyncDrawer?.addEventListener('click', closeFeedbackDrawer);
+      drawerFeedbackBackdrop?.addEventListener('click', closeFeedbackDrawer);
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && drawerFeedback && !drawerFeedback.classList.contains('translate-x-full')) {
+          closeFeedbackDrawer();
+        }
+      });
 
 
       // --- FASE 2: GESTIÓN DE CATÁLOGOS, PROBADOR Y SUCURSALES ---
