@@ -1123,7 +1123,7 @@ class DatabaseManager:
                             'en_oferta': var_data['en_oferta'],
                             'descuento_porcentaje': var_data['descuento_porcentaje'],
                             'precio_por_kilo': kilo_saneado,
-                            'es_estimado': var_data.get('es_estimado', True),
+                            'es_estimado': False if var_data.get('formato_gramos') == 1000 else var_data.get('es_estimado', True),
                             'disponible': var_data['disponible'],
                             'fecha_creacion': fecha_actual,
                             'fecha_actualizacion': fecha_actual,
@@ -1325,7 +1325,7 @@ class DatabaseManager:
                                 precio_actual=of.get("precio_actual", 0),
                                 formato_gramos=of.get("formato_gramos", 250),
                                 precio_por_kilo=_sanitize_precio_por_kilo(of.get("precio_por_kilo", 0.0)),
-                                es_estimado=of.get("es_estimado", True),
+                                es_estimado=False if of.get("formato_gramos") == 1000 else of.get("es_estimado", True),
                                 link_detalle=link,
                                 disponible=of.get("disponible", True),
                                 ultima_actualizacion=fecha_actual,
@@ -1336,7 +1336,7 @@ class DatabaseManager:
                             oferta.precio_actual = of.get("precio_actual", oferta.precio_actual)
                             oferta.formato_gramos = of.get("formato_gramos", oferta.formato_gramos)
                             oferta.precio_por_kilo = _sanitize_precio_por_kilo(of.get("precio_por_kilo", oferta.precio_por_kilo))
-                            oferta.es_estimado = of.get("es_estimado", oferta.es_estimado)
+                            oferta.es_estimado = False if oferta.formato_gramos == 1000 else of.get("es_estimado", oferta.es_estimado)
                             oferta.disponible = of.get("disponible", oferta.disponible)
                             oferta.ultima_actualizacion = fecha_actual
 

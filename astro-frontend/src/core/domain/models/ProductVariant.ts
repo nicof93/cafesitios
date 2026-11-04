@@ -41,7 +41,8 @@ export class ProductVariant {
     this.precio_clp = Math.max(0, Math.floor(props.precio_clp || 0));
     this.precio_original_clp = Math.max(0, Math.floor(props.precio_original_clp || props.precio_clp || 0));
     this.formato_gramos = props.formato_gramos > 0 ? props.formato_gramos : 250;
-    this.es_estimado = Boolean(props.es_estimado);
+    // Si el formato es exactamente 1000g (1kg), el precio de la bolsa es oficial por kilo y no estimado
+    this.es_estimado = this.formato_gramos === 1000 ? false : Boolean(props.es_estimado);
     this.precio_por_kilo = props.precio_por_kilo > 0
       ? props.precio_por_kilo
       : ProductVariant.calcularPrecioPorKilo(this.precio_clp, this.formato_gramos);

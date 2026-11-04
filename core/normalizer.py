@@ -349,6 +349,10 @@ def calcular_precio_kilo(
         except (ValueError, TypeError):
             pass
 
+    # Regla: Si el formato es exactamente 1000g (1kg), el precio de la bolsa es el precio real por kilo (no es estimado)
+    if formato_gramos == 1000 and precio_clp > 0:
+        return round(float(precio_clp), 2), False
+
     if precio_clp > 0 and formato_gramos > 0:
         precio_calculado = (float(precio_clp) / float(formato_gramos)) * 1000.0
         if precio_calculado >= 100000000.0:

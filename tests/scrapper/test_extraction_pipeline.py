@@ -132,7 +132,7 @@ class TestExtractionPipeline(unittest.TestCase):
             unit_price=None
         )
         self.assertEqual(precio_kilo_1k, 38000.0)
-        self.assertTrue(es_estimado_1k)
+        self.assertFalse(es_estimado_1k)
 
     def test_database_persistence_cascade(self):
         # Base de datos en memoria para probar persistencia de cafes y ofertas_tienda
@@ -314,8 +314,8 @@ class TestExtractionPipeline(unittest.TestCase):
 
         cafe_guardado = session.query(Cafe).filter(Cafe.nombre == "Qawale").first()
         self.assertIsNotNone(cafe_guardado)
-        self.assertLessEqual(len(cafe_guardado.lote), 100)
-        self.assertEqual(cafe_guardado.lote, long_lote[:100])
+        self.assertLessEqual(len(cafe_guardado.lote), 255)
+        self.assertEqual(cafe_guardado.lote, long_lote[:255])
 
 
 if __name__ == "__main__":

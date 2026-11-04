@@ -229,7 +229,7 @@ def sincronizar_tienda(
                     'precio_actual': var.get('precio_clp', 0),
                     'formato_gramos': var.get('formato_gramos', 250),
                     'precio_por_kilo': var.get('precio_por_kilo', 0.0),
-                    'es_estimado': var.get('es_estimado', True),
+                    'es_estimado': False if var.get('formato_gramos') == 1000 else var.get('es_estimado', True),
                     'link_detalle': f"{producto.get('url_detalle')}?variant={var.get('id_variante_externo')}",
                     'disponible': var.get('disponible', True),
                 })

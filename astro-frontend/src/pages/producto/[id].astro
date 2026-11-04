@@ -578,7 +578,7 @@ const captionText = product.descripcion_resumida
                 <td class="py-3.5 px-3 align-top whitespace-nowrap">
                   <span class="inline-flex items-center gap-1 font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-lg">
                     ${group.precio_por_kilo.toLocaleString('es-CL')}/kg
-                    {group.es_estimado && (
+                    {(group.es_estimado && group.formato_gramos !== 1000) && (
                       <span class="rounded bg-amber-100 text-amber-800 px-1 py-0.2 text-[8px] font-bold">Est.</span>
                     )}
                   </span>
