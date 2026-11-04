@@ -92,3 +92,4 @@ def calcular_balance_roi(
         "ratio_cobertura_porcentaje": ratio_cobertura,
         "mensaje_retorno": mensaje,
     }
+

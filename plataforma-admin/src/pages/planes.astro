@@ -608,40 +608,47 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
                   data-action="toggles"
                   data-tienda-id="${t.tienda_id}"
                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold ${hasOverrides ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-stone-100 text-stone-700 border border-stone-200'} hover:bg-stone-200 transition"
-                  title="Configurar toggles de módulos para esta tienda"
+                  title="Módulos y Toggles: Activar o apagar funcionalidades específicas para ${t.nombre} (${activeFeaturesCount} módulos activos)"
+                  aria-label="Configurar módulos y toggles de ${t.nombre}"
                 >
                   <span>⚡</span>
                   <span>${activeFeaturesCount} act.</span>
                   ${hasOverrides ? '<span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>' : ''}
                 </button>
               </td>
-              <td class="py-3 px-4 text-right space-x-1 whitespace-nowrap">
-                <button
-                  type="button"
-                  data-action="pago"
-                  data-tienda-id="${t.tienda_id}"
-                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-700 text-white hover:bg-emerald-800 transition"
-                >
-                  <span>🧾</span>
-                  <span>Cobro</span>
-                </button>
-                <button
-                  type="button"
-                  data-action="historial"
-                  data-tienda-id="${t.tienda_id}"
-                  class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-stone-100 text-stone-700 hover:bg-stone-200 transition"
-                >
-                  <span>📜</span>
-                </button>
-                <button
-                  type="button"
-                  data-action="editar-sub"
-                  data-tienda-id="${t.tienda_id}"
-                  class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-stone-100 text-stone-700 hover:bg-stone-200 transition"
-                  title="Configurar plan y cobro"
-                >
-                  <span>⚙️</span>
-                </button>
+              <td class="py-3 px-4 text-right whitespace-nowrap">
+                <div class="inline-flex items-center justify-end gap-1.5">
+                  <button
+                    type="button"
+                    data-action="pago"
+                    data-tienda-id="${t.tienda_id}"
+                    class="inline-flex items-center justify-center h-7.5 w-7.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition shadow-2xs"
+                    title="Registrar cobro: Ingresar un nuevo pago o confirmar cobro del plan para ${t.nombre}"
+                    aria-label="Registrar cobro para ${t.nombre}"
+                  >
+                    <span class="text-xs">🧾</span>
+                  </button>
+                  <button
+                    type="button"
+                    data-action="historial"
+                    data-tienda-id="${t.tienda_id}"
+                    class="inline-flex items-center justify-center h-7.5 w-7.5 rounded-lg border border-stone-200 bg-stone-100 text-stone-700 hover:bg-stone-200 transition shadow-2xs"
+                    title="Historial de pagos: Ver registro de cobros y facturación de ${t.nombre}"
+                    aria-label="Historial de pagos de ${t.nombre}"
+                  >
+                    <span class="text-xs">📜</span>
+                  </button>
+                  <button
+                    type="button"
+                    data-action="editar-sub"
+                    data-tienda-id="${t.tienda_id}"
+                    class="inline-flex items-center justify-center h-7.5 w-7.5 rounded-lg border border-stone-200 bg-stone-100 text-stone-700 hover:bg-stone-200 transition shadow-2xs"
+                    title="Configurar suscripción: Modificar tarifa acordada, día de cobro y estado para ${t.nombre}"
+                    aria-label="Configurar plan y cobro para ${t.nombre}"
+                  >
+                    <span class="text-xs">⚙️</span>
+                  </button>
+                </div>
               </td>
             </tr>
           `;
@@ -1107,3 +1114,4 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
     })();
   </script>
 </AdminLteLayout>
+
