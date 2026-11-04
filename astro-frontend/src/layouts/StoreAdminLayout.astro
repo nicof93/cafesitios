@@ -5,7 +5,7 @@ import '../styles/global.css';
 
 interface Props {
   title?: string;
-  activeNav?: 'dashboard' | 'productos' | 'recetas' | 'ventas' | 'configuracion' | 'auditoria';
+  activeNav?: 'dashboard' | 'productos' | 'recetas' | 'ventas' | 'configuracion' | 'auditoria' | 'suscripcion';
 }
 
 const { title = "Panel de Tostaduría | Cafesitios Admin", activeNav = "dashboard" } = Astro.props;
@@ -18,6 +18,7 @@ const navLabels: Record<string, string> = {
   ventas: "Ventas & Leads",
   configuracion: "Configuración",
   auditoria: "Auditoría de Acciones",
+  suscripcion: "Plan & Facturación",
 };
 
 const currentNavLabel = navLabels[activeNav] || "Dashboard";
@@ -153,6 +154,19 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
           >
             <span class="text-base shrink-0" aria-hidden="true">💬</span>
             <span class="nav-text">Ventas & Leads</span>
+          </a>
+
+          <a
+            href="/admin-tienda/suscripcion"
+            class={`nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition ${
+              activeNav === 'suscripcion'
+                ? 'bg-emerald-800 text-white shadow-sm'
+                : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+            }`}
+            title="Mi Plan, Cobranza y Retorno ROI"
+          >
+            <span class="text-base shrink-0" aria-hidden="true">💳</span>
+            <span class="nav-text">Plan & Facturación</span>
           </a>
 
           <a
