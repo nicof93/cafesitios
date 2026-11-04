@@ -16,6 +16,9 @@ CONFIG_FILE_PATH = Path(__file__).resolve().parent.parent / "ambientes.json"
 
 def _get_default_environments() -> List[Dict[str, Any]]:
     supabase_url = os.getenv("SUPABASE_DATABASE_URL") or os.getenv("SUPABASE_DB_URL") or ""
+    local_frontend = os.getenv("FRONTEND_URL", "http://localhost:4321").rstrip("/")
+    prod_frontend = os.getenv("SUPABASE_FRONTEND_URL", "https://cafesitios.cl").rstrip("/")
+
     return [
         {
             "id": "local",
@@ -23,6 +26,8 @@ def _get_default_environments() -> List[Dict[str, Any]]:
             "descripcion": "Base de datos local de desarrollo en Docker o PostgreSQL local.",
             "tipo": "postgres",
             "connection_url": settings.database_url,
+            "url_catalogo_base": local_frontend,
+            "url_admin_tienda_base": local_frontend,
             "color_badge": "amber",
             "activo": True,
             "es_protegido": False,
@@ -34,6 +39,8 @@ def _get_default_environments() -> List[Dict[str, Any]]:
             "descripcion": "Base de datos PostgreSQL en la nube (Supabase Cloud).",
             "tipo": "supabase",
             "connection_url": supabase_url,
+            "url_catalogo_base": prod_frontend,
+            "url_admin_tienda_base": prod_frontend,
             "color_badge": "red",
             "activo": True,
             "es_protegido": True,
@@ -82,14 +89,28 @@ class EnvironmentManager:
                 envs.append(default_env)
                 changed = True
             else:
-                # Actualizar URL del sistema si viene de variables de entorno frescas
+                # Actualizar URL del sistema si viene de variables de entorno frescas o faltan URLs
                 for e in envs:
-                    if e["id"] == "local" and not e.get("connection_url"):
-                        e["connection_url"] = settings.database_url
-                        changed = True
-                    elif e["id"] == "supabase" and not e.get("connection_url") and default_env["connection_url"]:
-                        e["connection_url"] = default_env["connection_url"]
-                        changed = True
+                    if e["id"] == "local":
+                        if not e.get("connection_url"):
+                            e["connection_url"] = settings.database_url
+                            changed = True
+                        if not e.get("url_catalogo_base"):
+                            e["url_catalogo_base"] = default_env["url_catalogo_base"]
+                            changed = True
+                        if not e.get("url_admin_tienda_base"):
+                            e["url_admin_tienda_base"] = default_env["url_admin_tienda_base"]
+                            changed = True
+                    elif e["id"] == "supabase":
+                        if not e.get("connection_url") and default_env["connection_url"]:
+                            e["connection_url"] = default_env["connection_url"]
+                            changed = True
+                        if not e.get("url_catalogo_base"):
+                            e["url_catalogo_base"] = default_env["url_catalogo_base"]
+                            changed = True
+                        if not e.get("url_admin_tienda_base"):
+                            e["url_admin_tienda_base"] = default_env["url_admin_tienda_base"]
+                            changed = True
 
         if changed:
             cls._write_config(envs)
@@ -151,6 +172,8 @@ class EnvironmentManager:
             "descripcion": data.get("descripcion", "").strip(),
             "tipo": data.get("tipo", "postgres").strip().lower(),
             "connection_url": data.get("connection_url", "").strip(),
+            "url_catalogo_base": (data.get("url_catalogo_base") or ("https://cafesitios.cl" if env_id == "supabase" else "http://localhost:4321")).strip().rstrip("/"),
+            "url_admin_tienda_base": (data.get("url_admin_tienda_base") or data.get("url_catalogo_base") or ("https://cafesitios.cl" if env_id == "supabase" else "http://localhost:4321")).strip().rstrip("/"),
             "color_badge": data.get("color_badge", "emerald"),
             "activo": bool(data.get("activo", True)),
             "es_protegido": bool(data.get("es_protegido", False)),
@@ -189,6 +212,10 @@ class EnvironmentManager:
             current["tipo"] = data["tipo"].strip().lower()
         if "connection_url" in data and data["connection_url"]:
             current["connection_url"] = data["connection_url"].strip()
+        if "url_catalogo_base" in data and data["url_catalogo_base"] is not None:
+            current["url_catalogo_base"] = data["url_catalogo_base"].strip().rstrip("/")
+        if "url_admin_tienda_base" in data and data["url_admin_tienda_base"] is not None:
+            current["url_admin_tienda_base"] = data["url_admin_tienda_base"].strip().rstrip("/")
         if "color_badge" in data and data["color_badge"]:
             current["color_badge"] = data["color_badge"].strip()
         if "activo" in data and data["activo"] is not None:
@@ -207,6 +234,25 @@ class EnvironmentManager:
             pass
 
         return current
+
+    @classmethod
+    def get_urls_for_env(cls, env_id: Optional[str] = None) -> Dict[str, str]:
+        """Retorna las URLs base de catálogo y admin de tienda para el ambiente dado."""
+        clean_id = (env_id or "local").strip().lower()
+        env = cls.get_environment(clean_id)
+        if env:
+            cat_url = env.get("url_catalogo_base") or ("https://cafesitios.cl" if clean_id == "supabase" else "http://localhost:4321")
+            adm_url = env.get("url_admin_tienda_base") or cat_url
+            return {
+                "url_catalogo_base": cat_url.rstrip("/"),
+                "url_admin_tienda_base": adm_url.rstrip("/"),
+            }
+
+        fallback_url = "https://cafesitios.cl" if clean_id == "supabase" else "http://localhost:4321"
+        return {
+            "url_catalogo_base": fallback_url,
+            "url_admin_tienda_base": fallback_url,
+        }
 
     @classmethod
     def delete_environment(cls, env_id: str) -> bool:

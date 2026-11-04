@@ -1,6 +1,6 @@
 from typing import List, Literal, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import asc, distinct, func, not_, or_
+from sqlalchemy import asc, case, distinct, func, not_, or_
 
 from domain.repositories import ICoffeeRepository
 from domain.models import CoffeeProductDomain, VariantDomain
@@ -223,11 +223,18 @@ class PostgresCoffeeRepository(ICoffeeRepository):
         )
 
         precio_orden = Variante.precio_por_kilo if sort_by == "kilo" else Variante.precio_clp
+        # Regla RN-02: Si entre las variantes está el formato de 1000g (1kg), usar ese precio oficial y no estimar $/kg desde otros formatos
+        es_1kg = case((Variante.formato_gramos == 1000, 0), else_=1)
+        orden_particion = (
+            (asc(es_1kg), asc(precio_orden), asc(Variante.id))
+            if sort_by == "kilo"
+            else (asc(precio_orden), asc(Variante.id))
+        )
         variantes_ordenadas = query.with_entities(
             Variante.id.label("variante_id"),
             func.row_number().over(
                 partition_by=Producto.id,
-                order_by=(asc(precio_orden), asc(Variante.id)),
+                order_by=orden_particion,
             ).label("posicion"),
         ).order_by(None).subquery()
 
@@ -316,11 +323,12 @@ class PostgresCoffeeRepository(ICoffeeRepository):
 
         query = query.order_by(asc(Variante.precio_por_kilo))
 
+        es_1kg = case((Variante.formato_gramos == 1000, 0), else_=1)
         variantes_ordenadas = query.with_entities(
             Variante.id.label("variante_id"),
             func.row_number().over(
                 partition_by=Producto.id,
-                order_by=(asc(Variante.precio_por_kilo), asc(Variante.id)),
+                order_by=(asc(es_1kg), asc(Variante.precio_por_kilo), asc(Variante.id)),
             ).label("posicion"),
         ).order_by(None).subquery()
 

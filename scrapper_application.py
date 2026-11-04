@@ -25,6 +25,7 @@ from scrapper.coffee_metadata import (
 )
 import logging
 from core.extractor import CoffeeAttributesExtractor
+from core.error_classifier import clasificar_error_sincronizacion
 from scrapper.driver_factory import DriverFactory
 from scrapper.shopify_driver import ShopifyDriver
 from scrapper.woocommerce_driver import WooCommerceDriver
@@ -228,7 +229,7 @@ def sincronizar_tienda(
                     'precio_actual': var.get('precio_clp', 0),
                     'formato_gramos': var.get('formato_gramos', 250),
                     'precio_por_kilo': var.get('precio_por_kilo', 0.0),
-                    'es_estimado': var.get('es_estimado', True),
+                    'es_estimado': False if var.get('formato_gramos') == 1000 else var.get('es_estimado', True),
                     'link_detalle': f"{producto.get('url_detalle')}?variant={var.get('id_variante_externo')}",
                     'disponible': var.get('disponible', True),
                 })
@@ -265,15 +266,20 @@ def sincronizar_tienda(
             "productos_eliminados": conteos.get('eliminados', 0),
             "duracion_segundos": duracion,
             "error": None,
+            "codigo_error": "OK",
+            "categoria_error": None,
+            "mensaje_amigable": None,
         }
     except Exception as error:
         duracion = round(time.monotonic() - inicio, 2)
+        diag = clasificar_error_sincronizacion(error)
+        detalle_err = f"[{diag['codigo']}] {str(error)}"
         if sincronizacion_id is not None:
             try:
                 db.finalizar_sincronizacion(
                     sincronizacion_id,
                     'fallido',
-                    detalle_error=str(error),
+                    detalle_error=detalle_err,
                 )
             except Exception:
                 pass
@@ -287,6 +293,9 @@ def sincronizar_tienda(
             "productos_eliminados": 0,
             "duracion_segundos": duracion,
             "error": str(error),
+            "codigo_error": diag["codigo"],
+            "categoria_error": diag["categoria"],
+            "mensaje_amigable": diag["mensaje_amigable"],
         }
 
 

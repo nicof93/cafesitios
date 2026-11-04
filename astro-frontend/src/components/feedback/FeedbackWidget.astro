@@ -2,19 +2,20 @@
 ---
 
 <!-- CU-11: BOTÓN FLOTANTE DE FEEDBACK Y DIALOG -->
-<button 
-  id="btn-open-feedback" 
-  type="button" 
-  class="fixed bottom-6 left-6 z-40 bg-stone-900/90 hover:bg-emerald-800 text-white py-2.5 px-4 rounded-full shadow-lg flex items-center gap-2 text-xs font-semibold backdrop-blur-xs border border-stone-700/60 transition-all duration-200 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" 
-  title="Danos tu sugerencia o reporta un problema"
->
-  <span aria-hidden="true">☕</span>
-  <span class="tracking-tight">Pensamos en los amantes del café</span>
-</button>
+<div id="feedback-widget-root">
+  <button 
+    id="btn-open-feedback" 
+    type="button" 
+    class="pointer-events-auto bg-stone-900/90 hover:bg-emerald-800 text-white py-2 px-3.5 sm:py-2.5 sm:px-4 rounded-full shadow-lg flex items-center gap-2 text-xs font-semibold backdrop-blur-xs border border-stone-700/60 transition-all duration-200 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" 
+    title="Danos tu sugerencia o reporta un problema"
+  >
+    <span aria-hidden="true" class="text-sm">💡</span>
+    <span class="tracking-tight font-bold text-xs">Sugerencia</span>
+  </button>
 
 <dialog 
   id="feedback-dialog"
-  class="fixed inset-0 z-50 m-auto w-[92%] max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-stone-200 backdrop:bg-stone-950/60 backdrop:backdrop-blur-sm"
+  class="pointer-events-auto fixed inset-0 z-50 m-auto w-[92%] max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-stone-200 backdrop:bg-stone-950/60 backdrop:backdrop-blur-sm"
 >
   <div class="flex items-center justify-between pb-3 border-b border-stone-100">
     <div class="flex items-center gap-2">
@@ -141,3 +142,5 @@
     }
   });
 </script>
+
+</div>

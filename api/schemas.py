@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from datetime import datetime
 from typing import Optional, List, Dict, Any, Literal
 
@@ -124,6 +124,8 @@ class ProductDetailResponse(BaseModel):
     notas_sugeridas: List[ProductTastingNoteResponse] = Field(default_factory=list)
     variantes: List[ProductVariantDetailResponse]
     recetas: List[ProductRecipeResponse] = Field(default_factory=list)
+    oculto_catalogo: bool = False
+    activo: bool = True
 
 # --- CU-03: Comparativa Side-by-Side ---
 class CompareVariantItem(BaseModel):
@@ -311,6 +313,56 @@ class TelemetryEventRequest(BaseModel):
     variante_id: Optional[int] = None
     metadata_evento: Dict[str, Any] = Field(default_factory=dict)
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_telemetry_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Normalizar tipo_evento / event_type
+            if "tipo_evento" not in data and "event_type" in data:
+                data["tipo_evento"] = str(data["event_type"]).strip()
+            
+            # Normalizar metadata_evento / metadata
+            metadata = data.get("metadata_evento")
+            if metadata is None:
+                metadata = data.get("metadata")
+            if not isinstance(metadata, dict):
+                metadata = {}
+            data["metadata_evento"] = metadata
+
+            # Extraer producto_id si viene en metadata o con otros alias
+            if data.get("producto_id") is None:
+                prod_candidate = (
+                    data.get("product_id")
+                    or data.get("productId")
+                    or metadata.get("producto_id")
+                    or metadata.get("product_id")
+                    or metadata.get("item_id")
+                    or metadata.get("cafe_id")
+                    or metadata.get("productId")
+                )
+                if prod_candidate is not None:
+                    try:
+                        data["producto_id"] = int(prod_candidate)
+                    except (ValueError, TypeError):
+                        pass
+
+            # Extraer variante_id si viene en metadata o con otros alias
+            if data.get("variante_id") is None:
+                var_candidate = (
+                    data.get("variant_id")
+                    or data.get("variantId")
+                    or metadata.get("variante_id")
+                    or metadata.get("variant_id")
+                    or metadata.get("variantId")
+                )
+                if var_candidate is not None:
+                    try:
+                        data["variante_id"] = int(var_candidate)
+                    except (ValueError, TypeError):
+                        pass
+
+        return data
+
 class TelemetryEventResponse(BaseModel):
     status: str
     event_id: int
@@ -435,3 +487,45 @@ class MarketAnalyticsResponse(BaseModel):
     tiendas_mas_competitivas: List[MarketStoreDiscountSummary] = Field(default_factory=list)
     distribucion_tueste: List[MarketDistributionItem] = Field(default_factory=list)
     distribucion_proceso: List[MarketDistributionItem] = Field(default_factory=list)
+
+# --- TRACCIÓN Y MÉTRICAS COMERCIALES GLOBALES DE TIENDAS ---
+
+class StoreTractionMetricsItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    tienda_id: int
+    nombre: str
+    url_base: Optional[str] = None
+    logo_url: Optional[str] = None
+    telefono_whatsapp: Optional[str] = None
+    activo: bool = True
+    total_productos: int = 0
+    clics_salientes: int = 0
+    cafes_favoritos: int = 0
+    en_matriz_comparativa: int = 0
+    ventas_solicitadas_whatsapp_clp: int = 0
+    pedidos_recibidos_whatsapp: int = 0
+    ticket_promedio_whatsapp_clp: float = 0.0
+
+class GlobalTractionSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total_clics_salientes: int = 0
+    total_cafes_favoritos: int = 0
+    total_en_matriz_comparativa: int = 0
+    total_ventas_solicitadas_whatsapp_clp: int = 0
+    total_pedidos_recibidos_whatsapp: int = 0
+    total_tiendas_activas: int = 0
+    tiendas_con_ventas_whatsapp: int = 0
+    tiendas_con_clics: int = 0
+
+class GlobalStoreTractionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    resumen_global: GlobalTractionSummary = Field(default_factory=GlobalTractionSummary)
+    tiendas: List[StoreTractionMetricsItem] = Field(default_factory=list)
+
+
+class StoreDeleteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    mensaje: str
+    tienda_id: int
+    tienda_nombre: str
+    exito: bool = True

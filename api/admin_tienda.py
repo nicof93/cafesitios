@@ -7,14 +7,16 @@ import base64
 import os
 import time
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import func, select, desc, text
+from sqlalchemy import func, select, desc, text, or_
 from sqlalchemy.orm import Session, selectinload
 
 from api.dependencies import get_db_session
 from core.security_store_admin import (
     StoreAdminContext,
     anti_brute_force,
+    create_password_reset_token,
     create_store_admin_token,
+    decode_password_reset_token,
     get_client_ip,
     get_current_store_admin,
     hash_store_password,
@@ -138,6 +140,16 @@ class StoreAdminLoginResponse(BaseModel):
 class StoreChangePasswordRequest(BaseModel):
     password_actual: Optional[str] = None
     password_nuevo: str = Field(..., min_length=6, max_length=100)
+
+
+class StoreForgotPasswordRequest(BaseModel):
+    email: str = Field(..., min_length=4, max_length=255)
+    turnstile_token: Optional[str] = None
+
+
+class StoreResetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=10)
+    nueva_password: str = Field(..., min_length=6, max_length=100)
 
 
 class StoreAdminProfileResponse(BaseModel):
@@ -598,6 +610,120 @@ def change_store_admin_password(
     return {
         "exito": True,
         "mensaje": "Contraseña actualizada exitosamente. Ya puedes utilizar tu nueva clave de acceso.",
+    }
+
+
+@router.post(
+    "/auth/solicitar-recuperacion",
+    summary="Solicitar enlace de recuperación de contraseña por correo electrónico",
+)
+def request_password_reset(
+    payload: StoreForgotPasswordRequest,
+    request: Request,
+    db_session: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    client_ip = get_client_ip(request)
+    identifier = payload.email.strip().lower()
+
+    if payload.turnstile_token and not verify_anti_bot_token(payload.turnstile_token, client_ip):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Fallo en la validación de seguridad anti-bot.",
+        )
+
+    user_store = db_session.scalars(
+        select(UsuarioTienda).where(
+            (UsuarioTienda.usuario_id == identifier)
+            | (func.lower(UsuarioTienda.usuario_id) == identifier)
+        )
+    ).first()
+
+    if user_store:
+        tienda = db_session.scalars(select(Tienda).where(Tienda.id == user_store.tienda_id)).first()
+        tienda_nombre = tienda.nombre if tienda else "Tostaduría"
+        reset_token = create_password_reset_token(
+            usuario_id=user_store.usuario_id,
+            tienda_id=user_store.tienda_id,
+            expires_in_seconds=7200,
+        )
+
+        app_url = os.getenv("PUBLIC_APP_URL", "https://cafesitios.cl").rstrip("/")
+        reset_url = f"{app_url}/admin-tienda/restablecer-password?token={reset_token}"
+
+        from core.email_service import EmailService
+        EmailService.send_password_reset_email(
+            to_email=user_store.usuario_id,
+            tienda_nombre=tienda_nombre,
+            reset_url=reset_url,
+        )
+
+        log_store_action(
+            db_session=db_session,
+            tienda_id=user_store.tienda_id,
+            usuario_id=user_store.usuario_id,
+            accion="SOLICITAR_RECUPERACION_PASSWORD",
+            entidad="usuarios_tienda",
+            entidad_id=user_store.tienda_id,
+            valores_nuevos={"email": identifier},
+            ip_origen=client_ip,
+        )
+
+    return {
+        "exito": True,
+        "mensaje": "Si el correo está registrado como administrador, recibirás las instrucciones de recuperación en breve.",
+    }
+
+
+@router.post(
+    "/auth/restablecer-password",
+    summary="Restablecer la contraseña usando un token de recuperación válido",
+)
+def reset_store_admin_password(
+    payload: StoreResetPasswordRequest,
+    request: Request,
+    db_session: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    decoded = decode_password_reset_token(payload.token)
+    if not decoded:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El enlace de recuperación es inválido o ha expirado. Por favor solicita uno nuevo.",
+        )
+
+    user_id = decoded.get("usuario_id")
+    tienda_id = decoded.get("tienda_id")
+
+    user_store = db_session.scalars(
+        select(UsuarioTienda).where(
+            UsuarioTienda.usuario_id == user_id,
+            UsuarioTienda.tienda_id == tienda_id,
+        )
+    ).first()
+
+    if not user_store:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cuenta de administrador no encontrada.",
+        )
+
+    user_store.password_hash = hash_store_password(payload.nueva_password.strip())
+    user_store.debe_cambiar_password = False
+    db_session.commit()
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=tienda_id,
+        usuario_id=user_id,
+        accion="RESTABLECER_PASSWORD_EXITOSO",
+        entidad="usuarios_tienda",
+        entidad_id=tienda_id,
+        valores_nuevos={"debe_cambiar_password": False},
+        ip_origen=get_client_ip(request),
+    )
+
+    return {
+        "exito": True,
+        "mensaje": "Contraseña restablecida exitosamente. Ya puedes iniciar sesión con tu nueva clave.",
     }
 
 
@@ -2035,7 +2161,11 @@ def get_store_telemetry_summary(
         .join(Producto, InteraccionClic.producto_id == Producto.id)
         .where(
             Producto.tienda_id == ctx.tienda_id,
-            InteraccionClic.tipo_evento.ilike("%outbound%"),
+            or_(
+                InteraccionClic.tipo_evento.ilike("%outbound%"),
+                InteraccionClic.tipo_evento.ilike("%extern%"),
+                InteraccionClic.tipo_evento.ilike("%clic_tienda%"),
+            ),
         )
     ) or 0
 
@@ -2044,7 +2174,11 @@ def get_store_telemetry_summary(
         .join(Producto, InteraccionClic.producto_id == Producto.id)
         .where(
             Producto.tienda_id == ctx.tienda_id,
-            InteraccionClic.tipo_evento.ilike("%favorite%"),
+            or_(
+                InteraccionClic.tipo_evento.ilike("%favorite%"),
+                InteraccionClic.tipo_evento.ilike("%favorit%"),
+                InteraccionClic.tipo_evento.ilike("%fav%"),
+            ),
         )
     ) or 0
 
@@ -2053,9 +2187,31 @@ def get_store_telemetry_summary(
         .join(Producto, InteraccionClic.producto_id == Producto.id)
         .where(
             Producto.tienda_id == ctx.tienda_id,
-            InteraccionClic.tipo_evento.ilike("%compare%"),
+            or_(
+                InteraccionClic.tipo_evento.ilike("%compare%"),
+                InteraccionClic.tipo_evento.ilike("%compar%"),
+                InteraccionClic.tipo_evento.ilike("%matriz%"),
+            ),
         )
     ) or 0
+
+    try:
+        orphans = db_session.execute(
+            select(InteraccionClic).where(InteraccionClic.producto_id.is_(None))
+        ).scalars().all()
+        for item in orphans:
+            m = item.metadata_evento or {}
+            m_tid = m.get("tienda_id") or m.get("store_id")
+            if m_tid and str(m_tid) == str(ctx.tienda_id):
+                ev = (item.tipo_evento or "").lower()
+                if any(k in ev for k in ("outbound", "extern", "clic_tienda")):
+                    clics_outbound += 1
+                elif any(k in ev for k in ("favorite", "favorit", "fav")):
+                    favoritos += 1
+                elif any(k in ev for k in ("compare", "compar", "matriz")):
+                    comparador += 1
+    except Exception:
+        pass
 
     top_rows = db_session.execute(
         select(

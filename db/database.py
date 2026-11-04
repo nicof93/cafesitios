@@ -299,7 +299,7 @@ class Cafe(Base):
     finca_productor = Column(String(255), nullable=True)
     variedad = Column(String(255), nullable=True)
     proceso = Column(String(255), nullable=True)
-    lote = Column(String(100), nullable=True)
+    lote = Column(String(255), nullable=True)
     notas_cata = Column(ARRAY(String).with_variant(JSON, 'sqlite'), nullable=True)
     notas_normalizadas = Column(ARRAY(String).with_variant(JSON, 'sqlite'), nullable=True)
     hash_descripcion = Column(String(32), nullable=True, index=True)
@@ -873,8 +873,8 @@ class DatabaseManager:
             ).first()
             if tienda is None:
                 raise ValueError(f"La tienda activa con id {tienda_id} no existe.")
-            if any(producto['tienda'] != tienda.nombre for producto in catalogo):
-                raise ValueError('Cada sincronización debe contener productos de una sola tienda.')
+            for producto in catalogo:
+                producto['tienda'] = tienda.nombre
 
             productos_a_insertar = []
             productos_a_actualizar = []
@@ -1123,7 +1123,7 @@ class DatabaseManager:
                             'en_oferta': var_data['en_oferta'],
                             'descuento_porcentaje': var_data['descuento_porcentaje'],
                             'precio_por_kilo': kilo_saneado,
-                            'es_estimado': var_data.get('es_estimado', True),
+                            'es_estimado': False if var_data.get('formato_gramos') == 1000 else var_data.get('es_estimado', True),
                             'disponible': var_data['disponible'],
                             'fecha_creacion': fecha_actual,
                             'fecha_actualizacion': fecha_actual,
@@ -1246,9 +1246,13 @@ class DatabaseManager:
             for i in range(0, len(catalogo_cascada), batch_size):
                 lote = catalogo_cascada[i:i + batch_size]
                 for item in lote:
-                    # 1. Obtener o crear Café
-                    nombre = item.get("nombre", "").strip()
-                    origen = item.get("origen")
+                    # 1. Obtener o crear Café (sanitizando longitud para evitar StringDataRightTruncation)
+                    nombre = (item.get("nombre") or "").strip()[:255] or "Café"
+                    origen = (item.get("origen") or "").strip()[:255] or None
+                    finca_productor = (item.get("finca_productor") or "").strip()[:255] or None
+                    variedad = (item.get("variedad") or "").strip()[:255] or None
+                    proceso = (item.get("proceso") or "").strip()[:255] or None
+                    lote_val = (item.get("lote") or "").strip()[:255] or None
                     hash_desc = item.get("hash_descripcion")
 
                     cafe = None
@@ -1264,10 +1268,10 @@ class DatabaseManager:
                         cafe = Cafe(
                             nombre=nombre,
                             origen=origen,
-                            finca_productor=item.get("finca_productor"),
-                            variedad=item.get("variedad"),
-                            proceso=item.get("proceso"),
-                            lote=item.get("lote"),
+                            finca_productor=finca_productor,
+                            variedad=variedad,
+                            proceso=proceso,
+                            lote=lote_val,
                             notas_cata=item.get("notas_cata", []),
                             notas_normalizadas=item.get("notas_normalizadas", []),
                             hash_descripcion=hash_desc,
@@ -1280,10 +1284,15 @@ class DatabaseManager:
                     else:
                         # Actualizar atributos si cambiaron o se enriquecieron
                         cambiado = False
-                        for attr in ["finca_productor", "variedad", "proceso", "lote"]:
-                            val = item.get(attr)
-                            if val and getattr(cafe, attr) != val:
-                                setattr(cafe, attr, val)
+                        attr_map = {
+                            "finca_productor": finca_productor,
+                            "variedad": variedad,
+                            "proceso": proceso,
+                            "lote": lote_val,
+                        }
+                        for attr, clean_val in attr_map.items():
+                            if clean_val and getattr(cafe, attr) != clean_val:
+                                setattr(cafe, attr, clean_val)
                                 cambiado = True
                         if item.get("notas_cata") and cafe.notas_cata != item.get("notas_cata"):
                             cafe.notas_cata = item.get("notas_cata")
@@ -1316,7 +1325,7 @@ class DatabaseManager:
                                 precio_actual=of.get("precio_actual", 0),
                                 formato_gramos=of.get("formato_gramos", 250),
                                 precio_por_kilo=_sanitize_precio_por_kilo(of.get("precio_por_kilo", 0.0)),
-                                es_estimado=of.get("es_estimado", True),
+                                es_estimado=False if of.get("formato_gramos") == 1000 else of.get("es_estimado", True),
                                 link_detalle=link,
                                 disponible=of.get("disponible", True),
                                 ultima_actualizacion=fecha_actual,
@@ -1327,7 +1336,7 @@ class DatabaseManager:
                             oferta.precio_actual = of.get("precio_actual", oferta.precio_actual)
                             oferta.formato_gramos = of.get("formato_gramos", oferta.formato_gramos)
                             oferta.precio_por_kilo = _sanitize_precio_por_kilo(of.get("precio_por_kilo", oferta.precio_por_kilo))
-                            oferta.es_estimado = of.get("es_estimado", oferta.es_estimado)
+                            oferta.es_estimado = False if oferta.formato_gramos == 1000 else of.get("es_estimado", oferta.es_estimado)
                             oferta.disponible = of.get("disponible", oferta.disponible)
                             oferta.ultima_actualizacion = fecha_actual
 

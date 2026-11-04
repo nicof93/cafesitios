@@ -283,7 +283,7 @@ import AdminLteLayout from '../layouts/AdminLteLayout.astro';
 
   <script is:inline>
     (async function initDashboard() {
-      const API_BASE = 'http://localhost:8000';
+      const API_BASE = document.querySelector('[data-api-base]')?.dataset.apiBase || 'http://localhost:8001';
       let currentFilter = 'all';
       let cachedStores = [];
 

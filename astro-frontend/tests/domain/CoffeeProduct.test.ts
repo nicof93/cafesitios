@@ -42,6 +42,61 @@ describe('CoffeeProduct Entity', () => {
     expect(best?.precio_por_kilo).toBe(50000);
   });
 
+  it('prioriza la variante oficial de 1000g (1kg) evitando estimar el precio por kilo desde un formato de 2000g o 250g', () => {
+    const product = new CoffeeProduct({
+      id: 15,
+      nombre: 'Café Colombia - El Vergel',
+      tienda: 'Cafeterra',
+      url_detalle: 'https://cafeterra.cl/products/el-vergel',
+      variantes: [
+        {
+          id: 1,
+          opcion: '2kg',
+          precio_clp: 57900,
+          precio_original_clp: 57900,
+          precio_por_kilo: 28950,
+          formato_gramos: 2000,
+          disponible: true,
+          en_oferta: false,
+          descuento_porcentaje: 0,
+          es_estimado: false
+        },
+        {
+          id: 2,
+          opcion: '1kg',
+          precio_clp: 31900,
+          precio_original_clp: 31900,
+          precio_por_kilo: 31900,
+          formato_gramos: 1000,
+          disponible: true,
+          en_oferta: false,
+          descuento_porcentaje: 0,
+          es_estimado: false
+        },
+        {
+          id: 3,
+          opcion: '250g',
+          precio_clp: 11490,
+          precio_original_clp: 11490,
+          precio_por_kilo: 45960,
+          formato_gramos: 250,
+          disponible: true,
+          en_oferta: false,
+          descuento_porcentaje: 0,
+          es_estimado: false
+        }
+      ]
+    });
+
+    const best = product.getBestVariant(true);
+    expect(best).toBeDefined();
+    // Debe seleccionar la variante oficial de 1000g ($31.900) y no la estimada por kilo de 2000g ($28.950)
+    expect(best?.formato_gramos).toBe(1000);
+    expect(best?.precio_clp).toBe(31900);
+    expect(best?.precio_por_kilo).toBe(31900);
+    expect(best?.es_estimado).toBe(false);
+  });
+
   it('ignora variantes agotadas si se requiere disponible', () => {
     const product = new CoffeeProduct({
       id: 11,

@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from main import app
+from plataforma_backend import app
 from db.database import Base, DatabaseManager
 from db.environments import EnvironmentManager
 

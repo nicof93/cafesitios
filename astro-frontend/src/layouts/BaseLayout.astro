@@ -6,8 +6,10 @@ import FlavorQuizModal from '../components/quiz/FlavorQuizModal.astro';
 import FeedbackWidget from '../components/feedback/FeedbackWidget.astro';
 import CartDrawer from '../components/cart/CartDrawer.astro';
 import CafesitiosPopupModal from '../components/common/CafesitiosPopupModal.astro';
+import PublicSommelierChatbot from '../components/chat/PublicSommelierChatbot.astro';
 import Analytics from '@vercel/analytics/astro';
 import { Environment } from '../core/infrastructure/config/Environment';
+import { FeatureFlags } from '../core/infrastructure/config/FeatureFlags';
 import '../styles/global.css';
 
 interface Props {
@@ -31,6 +33,7 @@ const {
 const gtmId = Environment.getGtmId();
 const gaId = Environment.getGaMeasurementId();
 const showWhatsAppOrders = Environment.isWhatsAppOrdersEnabled();
+const showSommelier = FeatureFlags.isChatbotSommelierEnabled();
 const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'https://cafesitios.cl').href;
 ---
 
@@ -125,27 +128,35 @@ const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'htt
   <!-- COMPONENTES GLOBALES INTERACTIVOS -->
   <CompareBarAndModal />
   <FlavorQuizModal />
-  <FeedbackWidget />
-  {showWhatsAppOrders && <CartDrawer />}
   <CafesitiosPopupModal />
+
+  <!-- ACCIONES FLOTANTES (ESQUINA INFERIOR DERECHA) -->
+  <div class="fixed bottom-6 right-4 sm:right-6 z-40 flex flex-col items-end gap-2.5 pointer-events-none" id="floating-actions-container">
+    {showWhatsAppOrders && <CartDrawer />}
+    {showSommelier && <PublicSommelierChatbot />}
+    <FeedbackWidget />
+  </div>
 
   <!-- SCRIPTS GLOBALES CLIENTE -->
   <script>
     import { AnalyticsTracker } from '../core/infrastructure/analytics/AnalyticsTracker';
 
-    // Manejador global de clics en "Ver en tienda" para telemetría
+    // Manejador global de clics en "Ver en tienda" / "Ir a la tienda" para telemetría (fase de captura)
     document.addEventListener('click', (e) => {
       const target = (e.target as HTMLElement).closest('[data-track-outbound]') as HTMLElement | null;
       if (!target) return;
 
       const store = target.getAttribute('data-store') || '';
+      const storeId = target.getAttribute('data-store-id') || undefined;
       const name = target.getAttribute('data-product-name') || '';
       const price = Number(target.getAttribute('data-price') || '0');
       const url = target.getAttribute('href') || '';
 
-      AnalyticsTracker.trackOutboundClick(store, name, price, url);
-      AnalyticsTracker.trackSelectItem(name, store, price);
-    });
+      const rawProdId = target.getAttribute('data-product-id');
+      const productId = rawProdId ? Number(rawProdId) : undefined;
+      AnalyticsTracker.trackOutboundClick(store, name, price, url, productId, storeId);
+      AnalyticsTracker.trackSelectItem(name, store, price, productId);
+    }, true);
   </script>
 
   <!-- VERCEL WEB ANALYTICS -->

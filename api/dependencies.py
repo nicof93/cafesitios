@@ -13,6 +13,16 @@ def get_db_session(request: Request = None) -> Generator[Session, None, None]:
     if request is not None and hasattr(request, "headers"):
         if is_localhost_request(request):
             env_target = request.headers.get("x-target-environment")
+            if not env_target:
+                auth = request.headers.get("authorization") or ""
+                if auth.lower().startswith("bearer "):
+                    try:
+                        from core.security_store_admin import decode_store_admin_token
+                        payload = decode_store_admin_token(auth[7:].strip())
+                        if payload and payload.get("target_env"):
+                            env_target = payload.get("target_env")
+                    except Exception:
+                        pass
 
     db = DatabaseManager.get_instance_for_env(env_target)
     session = db.SessionLocal()

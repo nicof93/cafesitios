@@ -1,7 +1,7 @@
 ---
 import AdminLteLayout from '../layouts/AdminLteLayout.astro';
 
-const apiBaseUrl = "http://localhost:8000";
+const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://localhost:8001";
 ---
 
 <AdminLteLayout 
@@ -33,6 +33,36 @@ const apiBaseUrl = "http://localhost:8000";
           <span>Ocultar Sospechosos Filtrados</span>
         </button>
       </div>
+    </div>
+
+    <!-- BANNER DE FILTRADO ACTIVO POR TIENDA -->
+    <div 
+      id="banner-store-filter" 
+      class="hidden items-center justify-between rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50/90 via-sky-50/50 to-white p-4 shadow-xs mb-6"
+    >
+      <div class="flex items-center gap-3">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 text-xl shrink-0">
+          🏪
+        </span>
+        <div class="min-w-0">
+          <p class="text-xs font-bold text-indigo-950 flex items-center gap-1.5 flex-wrap">
+            <span>Filtrando catálogo exclusivo de:</span>
+            <span id="banner-store-name" class="font-black text-indigo-900 underline underline-offset-2"></span>
+            <span class="rounded-full bg-indigo-200/80 text-indigo-800 text-[10px] font-extrabold px-2 py-0.5">Filtro activo</span>
+          </p>
+          <p class="text-[11px] text-indigo-700/80 mt-0.5">
+            Los KPIs superiores (sospechosos, ocultos, visibles) y la grilla muestran únicamente los productos de esta tienda.
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        id="btn-clear-store-filter"
+        class="inline-flex items-center gap-1.5 rounded-xl border border-indigo-300 bg-white px-3.5 py-2 text-xs font-bold text-indigo-900 shadow-2xs hover:bg-indigo-50 hover:border-indigo-400 transition shrink-0 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      >
+        <span>✕</span>
+        <span>Ver productos de todas las tiendas</span>
+      </button>
     </div>
 
     <!-- KPIS Y RESUMEN DE MODERACIÓN -->
@@ -126,7 +156,7 @@ const apiBaseUrl = "http://localhost:8000";
         return;
       }
 
-      const API_BASE = 'http://localhost:8000';
+      const API_BASE = document.querySelector('[data-api-base]')?.dataset.apiBase || 'http://localhost:8001';
 
       const fetchWithEnv = (url, opts = {}) => {
         if (window.plataformaState && typeof window.plataformaState.fetchWithEnv === 'function') {
@@ -137,10 +167,43 @@ const apiBaseUrl = "http://localhost:8000";
         return fetch(url, { ...opts, headers });
       };
 
-      let currentModMode = 'suspected';
-      let currentModStore = '';
-      let currentModSearch = '';
+      const urlParams = new URLSearchParams(window.location.search);
+      let currentModMode = urlParams.get('mode') || 'suspected';
+      let currentModStore = urlParams.get('tienda') || urlParams.get('store_name') || '';
+      let currentModSearch = urlParams.get('q') || '';
       let cachedModerationItems = [];
+
+      function updateStoreFilterBanner() {
+        const banner = document.getElementById('banner-store-filter');
+        const bannerName = document.getElementById('banner-store-name');
+        const modStoreFilter = document.getElementById('mod-store-filter');
+        if (!banner) return;
+
+        if (currentModStore && currentModStore.trim()) {
+          if (bannerName) bannerName.textContent = currentModStore;
+          banner.classList.remove('hidden');
+          banner.classList.add('flex');
+          if (modStoreFilter && modStoreFilter.value !== currentModStore) {
+            modStoreFilter.value = currentModStore;
+          }
+        } else {
+          banner.classList.add('hidden');
+          banner.classList.remove('flex');
+          if (modStoreFilter && modStoreFilter.value !== '') {
+            modStoreFilter.value = '';
+          }
+        }
+      }
+
+      function clearStoreFilter() {
+        currentModStore = '';
+        const url = new URL(window.location.href);
+        url.searchParams.delete('tienda');
+        url.searchParams.delete('store_name');
+        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+        updateStoreFilterBanner();
+        loadModerationProducts();
+      }
 
       // Cargar opciones del selector de tiendas
       async function loadStoresFilter() {
@@ -154,7 +217,12 @@ const apiBaseUrl = "http://localhost:8000";
             const currentVal = modStoreFilter.value;
             modStoreFilter.innerHTML = '<option value="">Todas las tiendas</option>' + 
               tiendas.map((t) => `<option value="${t.nombre}">${t.nombre}</option>`).join('');
-            modStoreFilter.value = currentVal;
+            if (currentModStore) {
+              modStoreFilter.value = currentModStore;
+            } else {
+              modStoreFilter.value = currentVal;
+            }
+            updateStoreFilterBanner();
           }
         } catch (e) {
           console.error("Error al cargar tiendas para filtro de moderación:", e);
@@ -256,9 +324,19 @@ const apiBaseUrl = "http://localhost:8000";
                   const errData = await patchRes.json().catch(() => ({}));
                   throw new Error(errData.detail || `Error HTTP ${patchRes.status} al actualizar visibilidad`);
                 }
+                if (window.plataformaNotify) {
+                  window.plataformaNotify(
+                    !current ? 'Producto ocultado del catálogo público.' : 'Producto marcado como visible en el catálogo.',
+                    'success'
+                  );
+                }
                 loadModerationProducts();
               } catch (err) {
-                alert(`Error: ${err.message}`);
+                if (window.plataformaNotify) {
+                  window.plataformaNotify(`Error: ${err.message}`, 'error');
+                } else {
+                  console.error('Error al actualizar visibilidad:', err);
+                }
                 btn.disabled = false;
               }
             });
@@ -284,7 +362,20 @@ const apiBaseUrl = "http://localhost:8000";
 
       document.getElementById('mod-store-filter')?.addEventListener('change', (e) => {
         currentModStore = e.target.value;
+        const url = new URL(window.location.href);
+        if (currentModStore) {
+          url.searchParams.set('tienda', currentModStore);
+        } else {
+          url.searchParams.delete('tienda');
+          url.searchParams.delete('store_name');
+        }
+        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+        updateStoreFilterBanner();
         loadModerationProducts();
+      });
+
+      document.getElementById('btn-clear-store-filter')?.addEventListener('click', () => {
+        clearStoreFilter();
       });
 
       document.getElementById('mod-search-input')?.addEventListener('input', (e) => {
@@ -299,28 +390,48 @@ const apiBaseUrl = "http://localhost:8000";
           .map((i) => i.id);
 
         if (!suspectedVisibleIds.length) {
-          alert('No hay productos sospechosos visibles en este listado para ocultar.');
-          return;
-        }
-
-        if (!confirm(`¿Deseas ocultar ${suspectedVisibleIds.length} productos sospechosos del catálogo general?`)) {
-          return;
-        }
-
-        try {
-          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/products/bulk-visibility`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ product_ids: suspectedVisibleIds, oculto_catalogo: true }),
-          });
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.detail || `Error HTTP ${res.status} al ocultar en lote`);
+          if (window.plataformaNotify) {
+            window.plataformaNotify('No hay productos sospechosos visibles en este listado para ocultar.', 'warning');
+          } else {
+            console.warn('No hay productos sospechosos visibles para ocultar.');
           }
-          alert(`${suspectedVisibleIds.length} productos ocultados del catálogo.`);
-          loadModerationProducts();
-        } catch (err) {
-          alert(`Error: ${err.message}`);
+          return;
+        }
+
+        const ejecutarOcultamientoMasivo = async () => {
+          try {
+            const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/products/bulk-visibility`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ product_ids: suspectedVisibleIds, oculto_catalogo: true }),
+            });
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(errData.detail || `Error HTTP ${res.status} al ocultar en lote`);
+            }
+            if (window.plataformaNotify) {
+              window.plataformaNotify(`${suspectedVisibleIds.length} productos sospechosos ocultados del catálogo con éxito.`, 'success');
+            } else {
+              console.log(`${suspectedVisibleIds.length} productos sospechosos ocultados.`);
+            }
+            loadModerationProducts();
+          } catch (err) {
+            if (window.plataformaNotify) {
+              window.plataformaNotify(`Error: ${err.message}`, 'error');
+            } else {
+              console.error('Error en bulk hide:', err);
+            }
+          }
+        };
+
+        if (window.plataformaState && typeof window.plataformaState.confirmAction === 'function') {
+          window.plataformaState.confirmAction({
+            title: 'Ocultar Productos Sospechosos',
+            message: `¿Deseas ocultar ${suspectedVisibleIds.length} productos sospechosos del catálogo general?`,
+            onProceed: ejecutarOcultamientoMasivo
+          });
+        } else {
+          await ejecutarOcultamientoMasivo();
         }
       });
 
@@ -331,6 +442,7 @@ const apiBaseUrl = "http://localhost:8000";
       });
 
       // Inicialización
+      updateStoreFilterBanner();
       loadStoresFilter();
       loadModerationProducts();
     })();

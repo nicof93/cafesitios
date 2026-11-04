@@ -53,6 +53,8 @@ cafe-sitios/
 ├── infrastructure/          # Adaptadores E/S y Persistencia
 │   └── postgres_repository.py # Implementación SQLAlchemy 2.0 de ProductRepository
 ├── api/                     # Capa HTTP (FastAPI)
+│   ├── app_public.py        # Fábrica de aplicación FastAPI: Público + Portal de Tiendas (Parte 1)
+│   ├── app_plataforma.py    # Fábrica de aplicación FastAPI: Plataforma Superadmin (Parte 2)
 │   ├── router.py            # Orquestador y re-exportador de rutas (ES canónico / EN alias)
 │   ├── products.py          # Catálogo (/api/v1/productos, alias /api/v1/products) y comparador
 │   ├── stores.py            # Directorio de tiendas y sucursales (/api/v1/tiendas, alias /stores)
@@ -72,7 +74,8 @@ cafe-sitios/
 ├── plataforma-admin/        # Administrador Local Multi-Ambiente y Bitácora Barista (/plataforma en :4322)
 ├── tests/                   # Pruebas automatizadas con unittest
 ├── scrapper_application.py  # Entrypoint ETL / Sincronización
-└── main.py                  # Entrypoint API FastAPI
+├── plataforma_backend.py    # Entrypoint API Plataforma Superadmin (puerto 8001)
+└── main.py                  # Entrypoint API Sitio Público y Tiendas (puerto 8000)
 ```
 
 ---
@@ -105,7 +108,8 @@ Todos los comandos se ejecutan desde la raíz del proyecto.
 3. **Ejecución local:**
    ```powershell
    python scrapper_application.py          # Correr scraper / sincronización
-   python -m uvicorn main:app --reload      # Correr API FastAPI
+   python -m uvicorn main:app --port 8000 --reload        # Backend 1: Sitio Público y Admin Tiendas (:8000)
+   python plataforma_backend.py                           # Backend 2: Plataforma Superadmin (:8001)
    cd astro-frontend; npm run dev           # Correr Sitio Público (localhost:4321)
    cd plataforma-admin; npm run dev         # Correr Administrador Local (localhost:4322/plataforma)
    ```

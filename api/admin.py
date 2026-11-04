@@ -1,29 +1,45 @@
+
+from api.schemas import (
+    GlobalStoreTractionResponse,
+    GlobalTractionSummary,
+    StoreDeleteResponse,
+    StoreTractionMetricsItem,
+)
 from datetime import datetime, timezone
 import re
 from typing import Any, Dict, List, Literal, Optional
 from urllib.parse import urlparse
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, inspect, select
+from sqlalchemy import case, delete, func, inspect, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from api.dependencies import get_db_session, require_local_admin
-from core.storage_manager import get_tienda_storage_info
+from core.storage_manager import calcular_reporte_almacenamiento_global, get_tienda_storage_info
 from api.stores import extract_official_website
 from core.security_store_admin import create_store_admin_token, hash_store_password
 import os
 from db.database import (
+    AuditoriaAccionesTienda,
     DatabaseManager,
+    HistorialPrecio,
+    InteraccionClic,
+    OfertaTienda,
+    PedidoWhatsApp,
     Producto,
+    ProductoNotaCata,
+    Receta,
     Sincronizacion,
+    SincronizacionLog,
     SucursalTienda,
     Tienda,
     TiendaCatalogo,
     UsuarioTienda,
     Variante,
 )
+from core.error_classifier import clasificar_error_sincronizacion
 from domain.search_normalizer import (
     classify_product_category,
     detect_non_coffee_suspicion,
@@ -146,6 +162,9 @@ class AdminStoreItem(BaseModel):
     total_imagenes_subidas: int = 0
     catalogos: List[CatalogOutput] = Field(default_factory=list)
     sucursales: List[BranchOutput] = Field(default_factory=list)
+    ultimo_error_sincronizacion: Optional[str] = None
+    codigo_error_sincronizacion: Optional[str] = None
+    categoria_error_sincronizacion: Optional[str] = None
 
 
 class AdminStoresListResponse(BaseModel):
@@ -170,6 +189,9 @@ class SingleStoreSyncResponse(BaseModel):
     productos_eliminados: int = 0
     duracion_segundos: float
     error: Optional[str] = None
+    codigo_error: Optional[str] = None
+    categoria_error: Optional[str] = None
+    mensaje_amigable: Optional[str] = None
     mensaje: str
 
 
@@ -218,6 +240,31 @@ class CatalogTestResponse(BaseModel):
     primer_producto: Optional[CatalogTestFirstProduct] = None
     mensaje: str
     error_detalle: Optional[str] = None
+    codigo_error: Optional[str] = None
+    categoria_error: Optional[str] = None
+
+
+class GlobalStoreAuditItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    tienda_id: int
+    tienda_nombre: str
+    usuario_id: str
+    accion: str
+    entidad: str
+    entidad_id: Optional[int] = None
+    valores_previos: Optional[Dict[str, Any]] = None
+    valores_nuevos: Optional[Dict[str, Any]] = None
+    ip_origen: Optional[str] = None
+    fecha_registro: datetime
+
+
+class GlobalStoreAuditListResponse(BaseModel):
+    total: int
+    page: int
+    per_page: int
+    total_tiendas: int
+    registros: List[GlobalStoreAuditItem]
 
 
 class StoresExportResponse(BaseModel):
@@ -411,6 +458,13 @@ def _sync_store_admin_user(
             debe_cambiar_password=True,
         )
         db_session.add(new_user)
+        try:
+            from core.email_service import EmailService
+            tienda_obj = db_session.scalars(select(Tienda).where(Tienda.id == store_id)).first()
+            tienda_nombre = tienda_obj.nombre if tienda_obj else "Tostaduría"
+            EmailService.send_welcome_email(to_email=email_clean, tienda_nombre=tienda_nombre)
+        except Exception as email_err:
+            logger.warning(f"No se pudo enviar correo de bienvenida a {email_clean}: {email_err}")
     db_session.flush()
     return email_clean or (existing.usuario_id if existing else None)
 
@@ -639,6 +693,9 @@ def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminSto
         total_prods = (cnt.cantidad_productos_visibles + cnt.cantidad_ocultos) if cnt else 0
         is_pending = (total_prods == 0) or (last_sync_status != "exitoso")
 
+        raw_err = last_sync.detalle_error if (last_sync and last_sync_status == "fallido") else None
+        diag_err = clasificar_error_sincronizacion(raw_err) if raw_err else None
+
         adm_user = store_admin_obj_map.get(s.id)
         storage = get_tienda_storage_info(s.id, getattr(s, "limite_almacenamiento_mb", 250))
         items.append(
@@ -667,6 +724,9 @@ def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminSto
                 logo_url=getattr(s, "logo_url", None),
                 catalogos=catalogos_out,
                 sucursales=branches,
+                ultimo_error_sincronizacion=raw_err,
+                codigo_error_sincronizacion=diag_err["codigo"] if diag_err else None,
+                categoria_error_sincronizacion=diag_err["categoria"] if diag_err else None,
             )
         )
 
@@ -1031,6 +1091,90 @@ def update_store_by_id(
     )
 
 
+
+@administracion_router.delete(
+    "/tiendas/{store_id}",
+    response_model=StoreDeleteResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Eliminar una tienda y todos sus datos asociados en cascada",
+)
+@administracion_router.delete("/stores/{store_id}", response_model=StoreDeleteResponse, include_in_schema=False)
+@router.delete(
+    "/tiendas/{store_id}",
+    response_model=StoreDeleteResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+@router.delete(
+    "/stores/{store_id}",
+    response_model=StoreDeleteResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Eliminar una tienda y todos sus datos asociados en cascada",
+)
+def delete_store_by_id(
+    store_id: int,
+    db_session: Session = Depends(get_db_session),
+) -> StoreDeleteResponse:
+    store = db_session.scalars(select(Tienda).where(Tienda.id == store_id)).first()
+    if store is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tienda no encontrada.",
+        )
+
+    store_name = store.nombre
+
+    # 1. Obtener IDs de productos asociados
+    product_ids = list(db_session.scalars(select(Producto.id).where(Producto.tienda_id == store_id)).all())
+
+    if product_ids:
+        # 1.1 IDs de variantes asociadas
+        variant_ids = list(db_session.scalars(select(Variante.id).where(Variante.producto_id.in_(product_ids))).all())
+        if variant_ids:
+            # 1.1.1 Historial de precios
+            db_session.execute(delete(HistorialPrecio).where(HistorialPrecio.variante_id.in_(variant_ids)))
+            # 1.1.2 Clics de variantes
+            db_session.execute(delete(InteraccionClic).where(InteraccionClic.variante_id.in_(variant_ids)))
+
+        # 1.2 Notas de cata de productos
+        db_session.execute(delete(ProductoNotaCata).where(ProductoNotaCata.producto_id.in_(product_ids)))
+
+        # 1.3 Clics de productos
+        db_session.execute(delete(InteraccionClic).where(InteraccionClic.producto_id.in_(product_ids)))
+
+        # 1.4 Recetas asociadas a estos productos
+        db_session.execute(delete(Receta).where(Receta.producto_id.in_(product_ids)))
+
+        # 1.5 Variantes
+        db_session.execute(delete(Variante).where(Variante.producto_id.in_(product_ids)))
+
+        # 1.6 Productos
+        db_session.execute(delete(Producto).where(Producto.tienda_id == store_id))
+
+    # 2. Sincronizaciones asociadas
+    db_session.execute(delete(Sincronizacion).where(Sincronizacion.tienda_id == store_id))
+
+    # 3. Tablas directas de la tienda
+    db_session.execute(delete(Receta).where(Receta.tienda_id == store_id))
+    db_session.execute(delete(PedidoWhatsApp).where(PedidoWhatsApp.tienda_id == store_id))
+    db_session.execute(delete(TiendaCatalogo).where(TiendaCatalogo.tienda_id == store_id))
+    db_session.execute(delete(SucursalTienda).where(SucursalTienda.tienda_id == store_id))
+    db_session.execute(delete(OfertaTienda).where(OfertaTienda.tienda_id == store_id))
+    db_session.execute(delete(UsuarioTienda).where(UsuarioTienda.tienda_id == store_id))
+    db_session.execute(delete(AuditoriaAccionesTienda).where(AuditoriaAccionesTienda.tienda_id == store_id))
+
+    # 4. Eliminar la tienda
+    db_session.delete(store)
+    db_session.commit()
+
+    return StoreDeleteResponse(
+        mensaje=f"Tienda '{store_name}' y todos sus datos asociados fueron eliminados permanentemente.",
+        tienda_id=store_id,
+        tienda_nombre=store_name,
+        exito=True,
+    )
+
+
 @administracion_router.post(
     "/tiendas/probar-catalogo",
     response_model=CatalogTestResponse,
@@ -1158,6 +1302,8 @@ def test_store_catalog(payload: CatalogTestRequest) -> CatalogTestResponse:
         except Exception as exc:
             errores.append(f"{driver_cls.__name__}: {str(exc)}")
 
+    error_str = " | ".join(errores)
+    diag = clasificar_error_sincronizacion(error_str)
     return CatalogTestResponse(
         legible=False,
         plataforma_solicitada=plataforma_solicitada,
@@ -1165,9 +1311,28 @@ def test_store_catalog(payload: CatalogTestRequest) -> CatalogTestResponse:
         url_probada=url_probada,
         total_productos_detectados=0,
         primer_producto=None,
-        mensaje="No fue posible leer productos desde la URL ingresada con el driver seleccionado.",
-        error_detalle=" | ".join(errores),
+        mensaje=f"No fue posible leer productos: {diag['categoria']}.",
+        error_detalle=error_str,
+        codigo_error=diag["codigo"],
+        categoria_error=diag["categoria"],
     )
+
+
+def _resolve_db_manager(request: Optional[Request] = None, db_session: Optional[Session] = None) -> DatabaseManager:
+    """Retorna la instancia adecuada de DatabaseManager respetando el ambiente multi-tenant (X-Target-Environment)."""
+    env_target = None
+    if request is not None and hasattr(request, "headers"):
+        env_target = request.headers.get("x-target-environment")
+    if env_target:
+        return DatabaseManager.get_instance_for_env(env_target)
+    if db_session is not None:
+        try:
+            bind = db_session.get_bind()
+            if bind and hasattr(bind, "url"):
+                return DatabaseManager(db_url=str(bind.url))
+        except Exception:
+            pass
+    return DatabaseManager()
 
 
 @administracion_router.post(
@@ -1189,8 +1354,10 @@ def test_store_catalog(payload: CatalogTestRequest) -> CatalogTestResponse:
     status_code=status.HTTP_200_OK,
     summary="Sincronizar el catálogo de una tostaduría específica",
 )
+
 def sync_single_store(
     store_id: int,
+    request: Request = None,
     db_session: Session = Depends(get_db_session),
 ) -> SingleStoreSyncResponse:
     has_catalogos_table = True
@@ -1226,13 +1393,14 @@ def sync_single_store(
         "plataforma": store.plataforma or "desconocida",
         "catalogos": catalogos_list,
     }
-    db_manager = DatabaseManager()
+    db_manager = _resolve_db_manager(request, db_session)
     res = sincronizar_tienda(tienda_dict, db=db_manager)
+    diag = clasificar_error_sincronizacion(res.get("error")) if not res["exito"] else None
     mensaje = (
         f"Sincronización exitosa: {res['total_productos']} productos sincronizados "
         f"({res['productos_nuevos']} nuevos, {res['productos_actualizados']} actualizados) en {res['duracion_segundos']}s."
         if res["exito"]
-        else f"Error al sincronizar: {res['error']}"
+        else f"[{diag['categoria'] if diag else 'Error'}] {res['error']}"
     )
     return SingleStoreSyncResponse(
         tienda_id=res["tienda_id"],
@@ -1247,6 +1415,9 @@ def sync_single_store(
         productos_eliminados=res.get("productos_eliminados", 0),
         duracion_segundos=res["duracion_segundos"],
         error=res["error"],
+        codigo_error=diag["codigo"] if diag else None,
+        categoria_error=diag["categoria"] if diag else None,
+        mensaje_amigable=diag["mensaje_amigable"] if diag else None,
         mensaje=mensaje,
     )
 
@@ -1280,9 +1451,10 @@ def sync_single_store(
     summary="Alias para sincronizar tiendas pendientes",
 )
 def sync_unsynced_stores(
+    request: Request = None,
     db_session: Session = Depends(get_db_session),
 ) -> BatchSyncResponse:
-    db_manager = DatabaseManager()
+    db_manager = _resolve_db_manager(request, db_session)
     unsynced = db_manager.listar_tiendas_no_sincronizadas()
     if not unsynced:
         return BatchSyncResponse(
@@ -1364,9 +1536,10 @@ def sync_unsynced_stores(
     summary="Alias para sincronización masiva",
 )
 def sync_all_stores(
+    request: Request = None,
     db_session: Session = Depends(get_db_session),
 ) -> BatchSyncResponse:
-    db_manager = DatabaseManager()
+    db_manager = _resolve_db_manager(request, db_session)
     tiendas = db_manager.listar_tiendas_activas()
     if not tiendas:
         return BatchSyncResponse(
@@ -1673,6 +1846,11 @@ def list_moderation_products(
     store_lower = store_name.strip().lower() if store_name and store_name.strip() else None
 
     for prod, tienda in rows:
+        if store_lower and store_lower not in (tienda.nombre or "").lower():
+            continue
+        if q_lower and q_lower not in (prod.nombre or "").lower():
+            continue
+
         oculto = bool(getattr(prod, "oculto_catalogo", False))
         reason = detect_non_coffee_suspicion(prod.nombre, prod.descripcion)
         cat = classify_product_category(prod.nombre)
@@ -1685,11 +1863,6 @@ def list_moderation_products(
                 total_sospechosos += 1
             if cat == "cafe":
                 total_visibles_cafe += 1
-
-        if store_lower and store_lower not in (tienda.nombre or "").lower():
-            continue
-        if q_lower and q_lower not in (prod.nombre or "").lower():
-            continue
 
         if mode == "suspected" and not (es_sospechoso and not oculto):
             continue
@@ -1836,6 +2009,8 @@ class EnvironmentInput(BaseModel):
     descripcion: Optional[str] = Field(None, max_length=255)
     tipo: str = Field("postgres", max_length=50)
     connection_url: str = Field(..., min_length=5)
+    url_catalogo_base: Optional[str] = Field(None, max_length=255)
+    url_admin_tienda_base: Optional[str] = Field(None, max_length=255)
     color_badge: str = Field("emerald", max_length=30)
     activo: bool = True
     es_protegido: bool = False
@@ -1846,6 +2021,8 @@ class EnvironmentUpdateInput(BaseModel):
     descripcion: Optional[str] = Field(None, max_length=255)
     tipo: Optional[str] = Field(None, max_length=50)
     connection_url: Optional[str] = None
+    url_catalogo_base: Optional[str] = Field(None, max_length=255)
+    url_admin_tienda_base: Optional[str] = Field(None, max_length=255)
     color_badge: Optional[str] = Field(None, max_length=30)
     activo: Optional[bool] = None
     es_protegido: Optional[bool] = None
@@ -1989,6 +2166,7 @@ def test_environment_endpoint(env_id: str) -> Dict[str, Any]:
 )
 def impersonate_store_admin_endpoint(
     store_id: int,
+    request: Request = None,
     db_session: Session = Depends(get_db_session),
 ) -> StoreImpersonationResponse:
     store = db_session.get(Tienda, store_id)
@@ -1998,16 +2176,38 @@ def impersonate_store_admin_endpoint(
             detail=f"Tienda con ID {store_id} no encontrada.",
         )
 
-    # Genera token JWT firmado con rol PLATFORM_SUPERADMIN para la tienda específica
+    target_env = (request.headers.get("x-target-environment") or "local").strip().lower() if request else "local"
+
+    # Genera token JWT firmado con rol PLATFORM_SUPERADMIN para la tienda específica y ambiente
     token = create_store_admin_token(
-        usuario_id="superadmin@cafesitios.cl",
+        usuario_id="SUPERADMIN: superadmin@cafesitios.cl",
         tienda_id=store.id,
         rol="PLATFORM_SUPERADMIN",
         expires_in_seconds=7200,  # 2 horas de validez
+        target_env=target_env,
     )
 
-    frontend_base = os.getenv("FRONTEND_URL", "http://localhost:4321").rstrip("/")
-    redirect_url = f"{frontend_base}/admin-tienda/dashboard?impersonate_token={token}&tienda_id={store.id}"
+    # Registrar trazabilidad de acceso en la auditoría de la tostaduría
+    try:
+        from core.security_store_admin import get_client_ip, log_store_action
+        client_ip = get_client_ip(request) if request else "127.0.0.1"
+        log_store_action(
+            db_session=db_session,
+            tienda_id=store.id,
+            usuario_id="SUPERADMIN: superadmin@cafesitios.cl",
+            accion="IMPERSONACION_INICIADA",
+            entidad="tiendas",
+            entidad_id=store.id,
+            valores_nuevos={"ambiente": target_env, "tienda_nombre": store.nombre, "superadmin": True},
+            ip_origen=client_ip,
+        )
+    except Exception as exc:
+        print(f"Advertencia al registrar auditoría de impersonación: {exc}")
+
+    from db.environments import EnvironmentManager
+    env_urls = EnvironmentManager.get_urls_for_env(target_env)
+    admin_base = (env_urls.get("url_admin_tienda_base") or env_urls.get("url_catalogo_base") or "http://localhost:4321").rstrip("/")
+    redirect_url = f"{admin_base}/admin-tienda/dashboard?impersonate_token={token}&tienda_id={store.id}&target_env={target_env}"
 
     return StoreImpersonationResponse(
         success=True,
@@ -2016,3 +2216,361 @@ def impersonate_store_admin_endpoint(
         token=token,
         redirect_url=redirect_url,
     )
+
+
+@administracion_router.get(
+    "/auditoria-tiendas",
+    response_model=GlobalStoreAuditListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Consultar trazabilidad global de acciones realizadas por todas las tostadurías",
+)
+@administracion_router.get(
+    "/stores/audit-logs",
+    response_model=GlobalStoreAuditListResponse,
+    include_in_schema=False,
+)
+@router.get(
+    "/auditoria-tiendas",
+    response_model=GlobalStoreAuditListResponse,
+    include_in_schema=False,
+)
+@router.get(
+    "/stores/audit-logs",
+    response_model=GlobalStoreAuditListResponse,
+    include_in_schema=False,
+)
+def list_global_store_audit_logs(
+    tienda_id: Optional[int] = Query(None, description="Filtrar por ID de tienda"),
+    accion: Optional[str] = Query(None, description="Filtrar por acción específica"),
+    entidad: Optional[str] = Query(None, description="Filtrar por tipo de entidad"),
+    search: Optional[str] = Query(None, description="Búsqueda por usuario, entidad, acción o tienda"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(30, ge=1, le=100),
+    db_session: Session = Depends(get_db_session),
+) -> GlobalStoreAuditListResponse:
+    query = (
+        select(AuditoriaAccionesTienda, Tienda.nombre.label("tienda_nombre"))
+        .join(Tienda, AuditoriaAccionesTienda.tienda_id == Tienda.id, isouter=True)
+    )
+
+    if tienda_id is not None:
+        query = query.where(AuditoriaAccionesTienda.tienda_id == tienda_id)
+    if accion and accion.strip():
+        query = query.where(AuditoriaAccionesTienda.accion == accion.strip())
+    if entidad and entidad.strip():
+        query = query.where(AuditoriaAccionesTienda.entidad == entidad.strip())
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.where(
+            (AuditoriaAccionesTienda.usuario_id.ilike(term))
+            | (AuditoriaAccionesTienda.accion.ilike(term))
+            | (AuditoriaAccionesTienda.entidad.ilike(term))
+            | (Tienda.nombre.ilike(term))
+        )
+
+    total = db_session.scalar(
+        select(func.count()).select_from(query.subquery())
+    ) or 0
+
+    total_tiendas = db_session.scalar(
+        select(func.count(func.distinct(AuditoriaAccionesTienda.tienda_id)))
+    ) or 0
+
+    offset = (page - 1) * per_page
+    query = query.order_by(AuditoriaAccionesTienda.fecha_registro.desc()).offset(offset).limit(per_page)
+    results = db_session.execute(query).all()
+
+    items = [
+        GlobalStoreAuditItem(
+            id=log.id,
+            tienda_id=log.tienda_id,
+            tienda_nombre=tienda_nombre or f"Tienda #{log.tienda_id}",
+            usuario_id=log.usuario_id,
+            accion=log.accion,
+            entidad=log.entidad,
+            entidad_id=log.entidad_id,
+            valores_previos=log.valores_previos,
+            valores_nuevos=log.valores_nuevos,
+            ip_origen=log.ip_origen,
+            fecha_registro=log.fecha_registro,
+        )
+        for log, tienda_nombre in results
+    ]
+
+    return GlobalStoreAuditListResponse(
+        total=total,
+        page=page,
+        per_page=per_page,
+        total_tiendas=total_tiendas,
+        registros=items,
+    )
+
+
+# --- DTOs y Endpoints de Almacenamiento y Peso de BD por Tienda ---
+
+class TiendaImageStorageSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total_archivos: int
+    peso_bytes: int
+    peso_mb: float
+    porcentaje_usado: float
+    estado_cuota: str
+
+
+class TableStorageDetailSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    filas: int
+    bytes: int
+
+
+class TiendaDbStorageSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total_filas: int
+    peso_bytes: int
+    peso_kb: float
+    peso_mb: float
+    desglose_tablas: Dict[str, TableStorageDetailSchema]
+
+
+class TiendaStorageReportItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    tienda_id: int
+    nombre: str
+    url_base: Optional[str] = None
+    plataforma: Optional[str] = None
+    activo: bool
+    logo_url: Optional[str] = None
+    limite_almacenamiento_mb: int
+    imagenes: TiendaImageStorageSchema
+    base_datos: TiendaDbStorageSchema
+    peso_total_mb: float
+
+
+class GlobalStorageStoreSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    tienda_id: int
+    nombre: str
+    peso_imagenes_bytes: Optional[int] = None
+    peso_imagenes_mb: Optional[float] = None
+    peso_bd_bytes: Optional[int] = None
+    peso_bd_mb: Optional[float] = None
+
+
+class GlobalStorageSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total_tiendas: int
+    total_imagenes: int
+    total_imagenes_mb: float
+    total_filas_bd: int
+    total_bd_mb: float
+    total_combinado_mb: float
+    tienda_mayor_consumo_imagenes: Optional[GlobalStorageStoreSummary] = None
+    tienda_mayor_consumo_bd: Optional[GlobalStorageStoreSummary] = None
+
+
+class TiendasStorageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    resumen_global: GlobalStorageSummary
+    tiendas: List[TiendaStorageReportItem]
+
+
+@administracion_router.get(
+    "/tiendas/almacenamiento",
+    response_model=TiendasStorageResponse,
+    summary="Auditoría de Almacenamiento y BD por Tienda",
+)
+@administracion_router.get(
+    "/stores/storage-report",
+    response_model=TiendasStorageResponse,
+    include_in_schema=False,
+)
+@router.get(
+    "/tiendas/almacenamiento",
+    response_model=TiendasStorageResponse,
+    include_in_schema=False,
+)
+@router.get(
+    "/stores/storage-report",
+    response_model=TiendasStorageResponse,
+    include_in_schema=False,
+)
+def get_stores_storage_report(
+    db_session: Session = Depends(get_db_session),
+) -> TiendasStorageResponse:
+    reporte = calcular_reporte_almacenamiento_global(db_session)
+    return TiendasStorageResponse.model_validate(reporte)
+
+# --- TRACCIÓN Y MÉTRICAS COMERCIALES GLOBALES DE TIENDAS ---
+
+def calcular_traccion_tiendas_global(db_session: Session) -> GlobalStoreTractionResponse:
+    # 1. Total productos activos por tienda
+    stmt_prods = (
+        select(
+            Producto.tienda_id,
+            func.count(Producto.id).label("total_prods")
+        )
+        .where(Producto.activo == True)
+        .group_by(Producto.tienda_id)
+    )
+    prod_counts = {r[0]: int(r[1]) for r in db_session.execute(stmt_prods).all()}
+
+    # 2. Obtener todas las tiendas activas para mapeo y listado
+    tiendas = db_session.execute(select(Tienda).where(Tienda.activo.is_(True)).order_by(Tienda.nombre.asc())).scalars().all()
+    store_name_to_id = {t.nombre.lower().strip(): t.id for t in tiendas}
+
+    # 3. Clics e interacciones agrupadas por tienda (outbound, favorites, compare)
+    # Resiliente: outerjoin con Producto y fallback a metadata_evento para no perder eventos huérfanos
+    rows_interacciones = {t.id: {"outbound": 0, "favorites": 0, "compare": 0} for t in tiendas}
+    try:
+        stmt_interacciones = (
+            select(
+                InteraccionClic.id,
+                InteraccionClic.tipo_evento,
+                InteraccionClic.metadata_evento,
+                Producto.tienda_id,
+            )
+            .outerjoin(Producto, Producto.id == InteraccionClic.producto_id)
+        )
+        for _ev_id, ev_type, meta_raw, p_tienda_id in db_session.execute(stmt_interacciones).all():
+            meta = meta_raw or {}
+            t_id = p_tienda_id
+            if not t_id:
+                t_id = meta.get("tienda_id") or meta.get("store_id")
+            if not t_id:
+                s_name = meta.get("store_name") or meta.get("tienda") or meta.get("tienda_destino") or meta.get("item_brand")
+                if s_name and str(s_name).lower().strip() in store_name_to_id:
+                    t_id = store_name_to_id[str(s_name).lower().strip()]
+            if not t_id:
+                continue
+
+            try:
+                t_id_int = int(t_id)
+            except (ValueError, TypeError):
+                continue
+
+            if t_id_int not in rows_interacciones:
+                rows_interacciones[t_id_int] = {"outbound": 0, "favorites": 0, "compare": 0}
+
+            ev_lower = (ev_type or "").lower()
+            if any(k in ev_lower for k in ("outbound", "extern", "clic_tienda")):
+                rows_interacciones[t_id_int]["outbound"] += 1
+            elif any(k in ev_lower for k in ("favorite", "favorit", "fav")):
+                rows_interacciones[t_id_int]["favorites"] += 1
+            elif any(k in ev_lower for k in ("compare", "compar", "matriz")):
+                rows_interacciones[t_id_int]["compare"] += 1
+    except Exception:
+        pass
+
+    # 4. Pedidos y ventas WhatsApp agrupados por tienda
+    stmt_pedidos = (
+        select(
+            PedidoWhatsApp.tienda_id,
+            func.coalesce(func.sum(PedidoWhatsApp.monto_total_clp), 0).label("ventas_clp"),
+            func.count(PedidoWhatsApp.id).label("total_pedidos"),
+        )
+        .group_by(PedidoWhatsApp.tienda_id)
+    )
+    rows_pedidos = {
+        r[0]: {
+            "ventas_clp": int(r[1] or 0),
+            "pedidos": int(r[2] or 0),
+        }
+        for r in db_session.execute(stmt_pedidos).all()
+    }
+
+    tiendas_items: List[StoreTractionMetricsItem] = []
+    tot_clics = 0
+    tot_favs = 0
+    tot_comp = 0
+    tot_ventas = 0
+    tot_pedidos = 0
+    tiendas_activas = 0
+    tiendas_con_ventas = 0
+    tiendas_con_clics = 0
+
+    for t in tiendas:
+        if t.activo:
+            tiendas_activas += 1
+
+        inter = rows_interacciones.get(t.id, {"outbound": 0, "favorites": 0, "compare": 0})
+        ped = rows_pedidos.get(t.id, {"ventas_clp": 0, "pedidos": 0})
+
+        clics = inter["outbound"]
+        favs = inter["favorites"]
+        comp = inter["compare"]
+        ventas_clp = ped["ventas_clp"]
+        pedidos_cnt = ped["pedidos"]
+        ticket_prom = round(ventas_clp / pedidos_cnt, 2) if pedidos_cnt > 0 else 0.0
+
+        tot_clics += clics
+        tot_favs += favs
+        tot_comp += comp
+        tot_ventas += ventas_clp
+        tot_pedidos += pedidos_cnt
+
+        if ventas_clp > 0 or pedidos_cnt > 0:
+            tiendas_con_ventas += 1
+        if clics > 0:
+            tiendas_con_clics += 1
+
+        tiendas_items.append(
+            StoreTractionMetricsItem(
+                tienda_id=t.id,
+                nombre=t.nombre,
+                url_base=t.url_base,
+                logo_url=t.logo_url,
+                telefono_whatsapp=t.telefono_whatsapp,
+                activo=bool(t.activo),
+                total_productos=prod_counts.get(t.id, 0),
+                clics_salientes=clics,
+                cafes_favoritos=favs,
+                en_matriz_comparativa=comp,
+                ventas_solicitadas_whatsapp_clp=ventas_clp,
+                pedidos_recibidos_whatsapp=pedidos_cnt,
+                ticket_promedio_whatsapp_clp=ticket_prom,
+            )
+        )
+
+    resumen = GlobalTractionSummary(
+        total_clics_salientes=tot_clics,
+        total_cafes_favoritos=tot_favs,
+        total_en_matriz_comparativa=tot_comp,
+        total_ventas_solicitadas_whatsapp_clp=tot_ventas,
+        total_pedidos_recibidos_whatsapp=tot_pedidos,
+        total_tiendas_activas=tiendas_activas,
+        tiendas_con_ventas_whatsapp=tiendas_con_ventas,
+        tiendas_con_clics=tiendas_con_clics,
+    )
+
+    return GlobalStoreTractionResponse(
+        resumen_global=resumen,
+        tiendas=tiendas_items,
+    )
+
+
+@administracion_router.get(
+    "/tiendas/traccion",
+    response_model=GlobalStoreTractionResponse,
+    summary="Métricas de tracción comercial y conversión de todas las tostadurías",
+    description="Consolida clics salientes, cafés en favoritos, comparador y ventas/pedidos solicitados por WhatsApp.",
+)
+@administracion_router.get(
+    "/stores/traction",
+    response_model=GlobalStoreTractionResponse,
+    include_in_schema=False,
+)
+@router.get(
+    "/tiendas/traccion",
+    response_model=GlobalStoreTractionResponse,
+    include_in_schema=False,
+)
+@router.get(
+    "/stores/traction",
+    response_model=GlobalStoreTractionResponse,
+    include_in_schema=False,
+)
+def get_global_stores_traction(
+    db_session: Session = Depends(get_db_session),
+) -> GlobalStoreTractionResponse:
+    return calcular_traccion_tiendas_global(db_session)
+

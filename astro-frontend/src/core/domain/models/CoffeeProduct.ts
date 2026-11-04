@@ -214,6 +214,14 @@ export class CoffeeProduct {
       : this.variantes;
     
     const pool = candidatas.length > 0 ? candidatas : this.variantes;
+
+    // Regla de Negocio: Si entre las variantes está el formato de 1000g (1kg),
+    // no se estima el precio por kilo extrapolando de otros formatos, sino que se usa ese.
+    const variantes1kg = pool.filter(v => v.formato_gramos === 1000);
+    if (variantes1kg.length > 0) {
+      return [...variantes1kg].sort((a, b) => a.precio_por_kilo - b.precio_por_kilo)[0];
+    }
+
     return [...pool].sort((a, b) => a.precio_por_kilo - b.precio_por_kilo)[0];
   }
 
