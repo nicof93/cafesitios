@@ -887,53 +887,55 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
                   }
               </div>
             </td>
-            <td class="px-4 py-3 text-center">
-              <div class="flex items-center justify-center gap-2">
+            <td class="px-4 py-3 text-center whitespace-nowrap">
+              <div class="inline-flex items-center justify-center gap-1.5">
                 <button
                   type="button"
-                  class="btn-sync-single-store inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition shadow-xs"
+                  class="btn-sync-single-store inline-flex items-center justify-center h-8 w-8 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 hover:border-emerald-400 transition shadow-2xs cursor-pointer active:scale-95"
                   data-id="${store.id}"
                   data-name="${store.nombre}"
                   data-last-sync="${store.ultima_sincronizacion || ''}"
-                  title="Sincronizar ahora el catálogo de esta tienda"
+                  title="Sincronizar catálogo: Descargar y actualizar productos y precios de ${store.nombre}"
+                  aria-label="Sincronizar catálogo de ${store.nombre}"
                 >
-                  <span>🔄</span>
-                  <span>Sincronizar</span>
+                  <span class="text-sm">🔄</span>
                 </button>
                 <a
                   href="/plataforma/moderacion?tienda=${encodeURIComponent(store.nombre)}"
-                  class="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900 hover:bg-amber-100 transition shadow-xs"
-                  title="Ver y moderar el catálogo exclusivo de ${store.nombre}"
+                  class="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:border-amber-400 transition shadow-2xs cursor-pointer active:scale-95"
+                  title="Moderar catálogo: Ver, clasificar y auditar los productos de ${store.nombre}"
+                  aria-label="Moderar catálogo de ${store.nombre}"
                 >
-                  <span>🛡️</span>
-                  <span>Moderar</span>
+                  <span class="text-sm">🛡️</span>
                 </a>
                 <button
                   type="button"
-                  class="btn-impersonate-store inline-flex items-center gap-1 rounded-lg border border-purple-300 bg-purple-50 px-2.5 py-1 text-xs font-bold text-purple-900 hover:bg-purple-100 transition shadow-xs"
+                  class="btn-impersonate-store inline-flex items-center justify-center h-8 w-8 rounded-lg border border-purple-300 bg-purple-50 text-purple-800 hover:bg-purple-100 hover:border-purple-400 transition shadow-2xs cursor-pointer active:scale-95"
                   data-id="${store.id}"
                   data-name="${store.nombre}"
-                  title="Abrir y auditar el panel administrativo de esta tostaduría"
+                  title="Ver Panel: Acceder y auditar el portal administrativo de ${store.nombre}"
+                  aria-label="Acceder al panel administrativo de ${store.nombre}"
                 >
-                  <span>👁️</span>
-                  <span>Ver Panel</span>
+                  <span class="text-sm">👁️</span>
                 </button>
                 <button
                   type="button"
-                  class="btn-edit-store text-stone-600 hover:text-stone-900 font-bold px-2 py-1 text-xs transition"
+                  class="btn-edit-store inline-flex items-center justify-center h-8 w-8 rounded-lg border border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-200 hover:text-stone-900 hover:border-stone-300 transition shadow-2xs cursor-pointer active:scale-95"
                   data-store='${JSON.stringify(store).replace(/'/g, "&#39;")}'
+                  title="Editar tienda: Modificar datos de ecommerce, sucursales y contacto de ${store.nombre}"
+                  aria-label="Editar datos de ${store.nombre}"
                 >
-                  ✏️ Editar
+                  <span class="text-sm">✏️</span>
                 </button>
                 <button
                   type="button"
-                  class="btn-delete-store inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100 hover:text-rose-900 transition shadow-xs"
+                  class="btn-delete-store inline-flex items-center justify-center h-8 w-8 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-900 hover:border-rose-300 transition shadow-2xs cursor-pointer active:scale-95"
                   data-id="${store.id}"
                   data-name="${store.nombre}"
-                  title="Eliminar tienda permanentemente"
+                  title="Eliminar tienda: Borrar permanentemente ${store.nombre} y su catálogo del sistema"
+                  aria-label="Eliminar ${store.nombre}"
                 >
-                  <span>🗑️</span>
-                  <span>Eliminar</span>
+                  <span class="text-sm">🗑️</span>
                 </button>
               </div>
             </td>
@@ -946,8 +948,10 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
             const id = btn.getAttribute('data-id');
             const name = btn.getAttribute('data-name') || 'Tienda';
             const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<span>⏳</span><span>Abriendo...</span>';
+            const originalTitle = btn.getAttribute('title') || '';
+            btn.innerHTML = '<span class="inline-block animate-spin text-xs">⏳</span>';
             btn.disabled = true;
+            btn.setAttribute('title', 'Accediendo al panel administrativo...');
 
             try {
               const res = await fetchWithEnv(`${API_BASE}/api/v1/administracion/tiendas/${id}/impersonar`, {
@@ -990,6 +994,7 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
             } finally {
               btn.innerHTML = originalHtml;
               btn.disabled = false;
+              btn.setAttribute('title', originalTitle);
             }
           });
         });
@@ -1013,8 +1018,10 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
 
             const executeDelete = async () => {
               const originalHtml = btn.innerHTML;
-              btn.innerHTML = '<span>⏳</span><span>Borrando...</span>';
+              const originalTitle = btn.getAttribute('title') || '';
+              btn.innerHTML = '<span class="inline-block animate-spin text-xs">⏳</span>';
               btn.disabled = true;
+              btn.setAttribute('title', 'Eliminando tienda...');
 
               try {
                 const res = await fetchWithEnv(`${API_BASE}/api/v1/administracion/tiendas/${id}`, {
@@ -1038,6 +1045,7 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
               } finally {
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
+                btn.setAttribute('title', originalTitle);
               }
             };
 
@@ -1175,9 +1183,11 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
       // --- Sincronizar Tienda por ID ---
       async function syncStoreById(id, name, btnElement = null) {
         const originalHtml = btnElement ? btnElement.innerHTML : '';
+        const originalTitle = btnElement ? (btnElement.getAttribute('title') || '') : '';
         if (btnElement) {
           btnElement.disabled = true;
-          btnElement.innerHTML = '<span>⏳</span><span>Sincronizando...</span>';
+          btnElement.innerHTML = '<span class="inline-block animate-spin text-xs">⏳</span>';
+          btnElement.setAttribute('title', 'Sincronizando catálogo...');
         }
 
         try {
@@ -1234,6 +1244,7 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           if (btnElement) {
             btnElement.disabled = false;
             btnElement.innerHTML = originalHtml;
+            btnElement.setAttribute('title', originalTitle);
           }
         }
       }

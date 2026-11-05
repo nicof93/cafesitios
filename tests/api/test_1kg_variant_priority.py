@@ -158,3 +158,4 @@ class Test1KgVariantPriority(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

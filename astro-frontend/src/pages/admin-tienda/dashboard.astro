@@ -1,672 +1,456 @@
 ---
 import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
+import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
 ---
 
-<StoreAdminLayout title="Dashboard de Tostaduría | Cafesitios Admin" activeNav="dashboard">
-  <div class="space-y-8">
+<StoreAdminLayout title="Panel de Tostaduría | Cafesitios Admin" activeNav="dashboard">
+  <div class="space-y-6">
     <!-- Header de Bienvenida y Acción de Sincronización -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-stone-200 shadow-xs">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-2xl border border-stone-200 shadow-xs">
       <div>
-        <div class="flex items-center gap-3">
-          <img 
-            id="dash-store-logo" 
-            src="" 
-            alt="Logo de tostaduría" 
-            class="h-9 w-9 rounded-xl object-contain bg-stone-50 border border-stone-200 p-1 hidden shrink-0"
-          />
-          <span id="dash-store-logo-placeholder" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 text-base font-bold">
-            ☕
-          </span>
-          <div class="flex items-center gap-2">
-            <h1 class="text-xl sm:text-2xl font-black text-stone-900" id="dash-store-title">Mi Tostaduría</h1>
-            <span class="rounded-full bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 font-bold" id="dash-store-status">Activa</span>
-          </div>
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">☕</span>
+          <h1 class="text-xl sm:text-2xl font-black text-stone-900" id="welcome-title">Panel de Control</h1>
         </div>
-        <p class="text-xs text-stone-500 mt-1">Panel de control de catálogo, sincronización y auditoría (Favicon automático de solo lectura).</p>
+        <p class="text-xs text-stone-500 mt-1">
+          Visión panorámica de demanda, rendimiento en el mercado nacional y sincronización de catálogo.
+        </p>
       </div>
 
-      <!-- BOTÓN DE SINCRONIZACIÓN VOLUNTARIA BAJO DEMANDA -->
-      <div class="flex flex-col sm:items-end gap-1.5">
+      <div class="flex flex-col items-start sm:items-end gap-1.5 shrink-0">
+        <!-- BOTÓN DE SINCRONIZACIÓN VOLUNTARIA BAJO DEMANDA -->
         <button
           type="button"
           id="btn-sync-catalog"
-          class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-5 py-2.5 text-xs font-bold text-white transition shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="inline-flex items-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 text-xs font-bold transition shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          title="Descargar y actualizar productos ahora"
         >
-          <span id="sync-spinner" class="hidden animate-spin">⏳</span>
           <span id="sync-icon">🔄</span>
-          <span id="sync-btn-text">Sincronizar catálogo ahora</span>
+          <span id="sync-btn-text">Sincronizar Catálogo Ahora</span>
         </button>
-        <span class="text-[11px] text-stone-400" id="sync-cooldown-text">Máximo 1 sincronización cada 30 min</span>
+        <span class="text-[10px] text-stone-400" id="sync-cooldown-text">Máximo 1 sincronización cada 30 min</span>
       </div>
     </div>
 
-    <!-- TARJETAS DE KPIS PRINCIPALES -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-xs space-y-2">
+    <!-- TARJETAS DE KPIS PRINCIPALES (GRID 4 COLS) -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs space-y-1">
         <span class="text-[10px] uppercase font-bold tracking-wider text-stone-400">Total Productos</span>
-        <div class="text-3xl font-black text-stone-900" id="kpi-total-products">0</div>
-        <span class="text-[11px] text-emerald-700 font-semibold">En catálogo público</span>
+        <div class="text-2xl sm:text-3xl font-black text-stone-900" id="kpi-total-products">0</div>
+        <span class="text-[10px] text-emerald-700 font-semibold block">En catálogo público</span>
       </div>
 
-      <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-xs space-y-2">
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs space-y-1">
         <span class="text-[10px] uppercase font-bold tracking-wider text-stone-400">Plataforma</span>
-        <div class="text-xl font-black text-stone-900 uppercase" id="kpi-platform">WooCommerce</div>
-        <span class="text-[11px] text-stone-500">Driver nativo configurado</span>
+        <div class="text-lg sm:text-xl font-black text-stone-900 uppercase" id="kpi-platform">WooCommerce</div>
+        <span class="text-[10px] text-stone-500 block">Driver nativo configurado</span>
       </div>
 
-      <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-xs space-y-2">
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs space-y-1">
         <span class="text-[10px] uppercase font-bold tracking-wider text-stone-400">Última Sincronización</span>
-        <div class="text-sm font-black text-stone-900 truncate" id="kpi-last-sync-date">Sin registros</div>
-        <span class="text-[11px] font-semibold" id="kpi-sync-result">Estado: N/A</span>
+        <div class="text-xs sm:text-sm font-black text-stone-900 truncate" id="kpi-last-sync-date">Sin registros</div>
+        <span class="text-[10px] font-semibold block truncate" id="kpi-sync-result">Estado: N/A</span>
       </div>
 
-      <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-xs space-y-2">
-        <span class="text-[10px] uppercase font-bold tracking-wider text-stone-400">Rol de Usuario</span>
-        <div class="text-sm font-black text-emerald-800" id="kpi-user-role">STORE_ADMIN</div>
-        <span class="text-[11px] text-stone-500">Aislamiento por tienda activo</span>
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs space-y-1">
+        <span class="text-[10px] uppercase font-bold tracking-wider text-stone-400">Rol de Acceso</span>
+        <div class="text-xs sm:text-sm font-black text-emerald-800" id="kpi-user-role">STORE_ADMIN</div>
+        <span class="text-[10px] text-stone-500 block">Multi-tenant activo</span>
       </div>
     </div>
 
-    <!-- FASE 3: TELEMETRÍA COMERCIAL E INTENCIÓN DE COMPRA (2.2) -->
-    <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-6">
-      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
-        <div>
-          <div class="flex items-center gap-2 text-base font-bold text-stone-900">
-            <span>📈</span>
-            <span>Telemetría Comercial e Intención de Compra</span>
+    <!-- FILA 2: GRID MODULAR 2 COLUMNAS (TRACCIÓN & DEMANDA vs BENCHMARK & MERCADO) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- COLUMNA IZQUIERDA: TRACCIÓN COMERCIAL Y CANAL WHATSAPP (7 COLS) -->
+      <div class="lg:col-span-7 space-y-6">
+        
+        <!-- TELEMETRÍA COMERCIAL E INTENCIÓN DE COMPRA -->
+        <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-xs space-y-4">
+          <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+            <div>
+              <div class="flex items-center gap-2 text-sm font-bold text-stone-900">
+                <span>📈</span>
+                <span>Telemetría Comercial e Intención de Compra</span>
+              </div>
+              <p class="text-[11px] text-stone-500 mt-0.5">Demanda real derivada desde Cafésitios hacia tu tienda.</p>
+            </div>
+            <span class="rounded-full bg-purple-100 text-purple-900 px-2.5 py-0.5 text-[10px] font-bold">Tiempo Real</span>
           </div>
-          <p class="text-xs text-stone-500 mt-0.5">Demanda real derivada desde Cafesitios hacia tu e-commerce.</p>
-        </div>
-        <span class="rounded-full bg-purple-100 text-purple-900 px-2.5 py-0.5 text-xs font-bold">Tiempo Real</span>
-      </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="p-4 rounded-xl bg-purple-50/50 border border-purple-200/60 space-y-1">
-          <span class="text-[10px] uppercase font-bold text-purple-700">Clics Salientes a tu Tienda</span>
-          <div class="text-2xl font-black text-purple-950" id="telem-outbound-clicks">0</div>
-          <p class="text-[11px] text-purple-800/80">Usuarios derivados a comprar</p>
+          <div class="grid grid-cols-3 gap-2.5 sm:gap-3">
+            <div class="p-3 rounded-xl bg-purple-50/50 border border-purple-200/60 space-y-0.5">
+              <span class="text-[9px] uppercase font-bold text-purple-700 block">Clics Salientes</span>
+              <div class="text-xl sm:text-2xl font-black text-purple-950" id="telem-outbound-clicks">0</div>
+              <p class="text-[10px] text-purple-800/80 leading-tight">Visitas a tu web</p>
+            </div>
+
+            <div class="p-3 rounded-xl bg-rose-50/50 border border-rose-200/60 space-y-0.5">
+              <span class="text-[9px] uppercase font-bold text-rose-700 block">En Favoritos</span>
+              <div class="text-xl sm:text-2xl font-black text-rose-950" id="telem-favorites">0</div>
+              <p class="text-[10px] text-rose-800/80 leading-tight">Guardados</p>
+            </div>
+
+            <div class="p-3 rounded-xl bg-teal-50/50 border border-teal-200/60 space-y-0.5">
+              <span class="text-[9px] uppercase font-bold text-teal-700 block">Comparativas</span>
+              <div class="text-xl sm:text-2xl font-black text-teal-950" id="telem-compare">0</div>
+              <p class="text-[10px] text-teal-800/80 leading-tight">Cara a cara</p>
+            </div>
+          </div>
+
+          <!-- Top Cafés con Mayor Demanda -->
+          <div class="space-y-1.5 pt-1">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">Top 3 Cafés con Mayor Interés</span>
+            <div id="telem-top-cafes-container" class="space-y-1.5">
+              <div class="text-xs text-stone-400 italic py-1">Cargando métricas de interés...</div>
+            </div>
+          </div>
         </div>
 
-        <div class="p-4 rounded-xl bg-rose-50/50 border border-rose-200/60 space-y-1">
-          <span class="text-[10px] uppercase font-bold text-rose-700">Cafés en Favoritos</span>
-          <div class="text-2xl font-black text-rose-950" id="telem-favorites">0</div>
-          <p class="text-[11px] text-rose-800/80">Guardados por compradores</p>
-        </div>
+        <!-- MÓDULO WHATSAPP COMMERCE Y PEDIDOS RECIBIDOS -->
+        <div class="rounded-2xl border-2 border-emerald-500/20 bg-gradient-to-br from-emerald-50/40 via-white to-amber-50/20 p-5 shadow-xs space-y-4">
+          <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+            <div>
+              <div class="flex items-center gap-2 text-sm font-bold text-stone-900">
+                <span>💬</span>
+                <span>WhatsApp Comercial de Ventas</span>
+              </div>
+              <p class="text-[11px] text-stone-500 mt-0.5">Pedidos armados enviados directamente a tu chat sin comisión (0%).</p>
+            </div>
+            <a href="/admin-tienda/ventas" class="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 hover:underline">
+              Ver detalle en Ventas →
+            </a>
+          </div>
 
-        <div class="p-4 rounded-xl bg-teal-50/50 border border-teal-200/60 space-y-1">
-          <span class="text-[10px] uppercase font-bold text-teal-700">En Matriz Comparativa</span>
-          <div class="text-2xl font-black text-teal-950" id="telem-compare">0</div>
-          <p class="text-[11px] text-teal-800/80">Apariciones cara a cara</p>
-        </div>
-      </div>
-
-      <!-- Top Cafés con Mayor Demanda -->
-      <div class="space-y-2">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-stone-700">Top 3 Cafés con Mayor Interés</h4>
-        <div id="telem-top-cafes-container" class="space-y-2">
-          <div class="text-xs text-stone-400 italic">Cargando métricas de interés...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- SECCIÓN WHATSAPP COMMERCE: CONTACTO, MÉTRICAS Y PROYECCIÓN FINANCIERA -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Configuración WhatsApp de Ventas -->
-      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
-        <div class="flex items-center gap-2 text-stone-900 font-bold text-base">
-          <span>💬</span>
-          <span>WhatsApp Comercial de Ventas</span>
-        </div>
-        <p class="text-xs text-stone-500">
-          Los clientes de Cafesitios te enviarán sus pedidos directamente a este número con el detalle armado.
-        </p>
-
-        <form id="form-whatsapp-config" class="space-y-3">
-          <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1">
-              Número de WhatsApp
-            </label>
-            <div class="flex items-center gap-1.5">
-              <span class="px-2.5 py-2 rounded-xl bg-stone-100 border border-stone-300 text-xs font-bold text-stone-700 select-none">
+          <!-- Configuración rápida de WhatsApp y métricas compactas -->
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+            <form id="form-whatsapp-config" class="sm:col-span-6 flex items-center gap-1.5">
+              <span class="px-2 py-1.5 rounded-lg bg-stone-100 border border-stone-300 text-xs font-bold text-stone-700 select-none">
                 🇨🇱 +56
               </span>
               <input
                 type="tel"
                 id="input-whatsapp-phone"
                 placeholder="912345678"
-                class="flex-1 rounded-xl border border-stone-300 px-3 py-2 text-xs font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                class="flex-1 rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-emerald-600"
               />
-            </div>
-            <p class="text-[10px] text-stone-400 mt-1">Ingresa los 9 dígitos móviles (ej: 912345678).</p>
-          </div>
+              <button
+                type="submit"
+                id="btn-save-whatsapp"
+                class="rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-1.5 px-3 transition shrink-0"
+              >
+                Guardar
+              </button>
+            </form>
+            <p id="msg-whatsapp-status" class="text-[10px] hidden font-semibold col-span-12"></p>
 
-          <button
-            type="submit"
-            id="btn-save-whatsapp"
-            class="w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-4 transition shadow-xs"
-          >
-            Guardar WhatsApp de Ventas
-          </button>
-          <p id="msg-whatsapp-status" class="text-[11px] text-center hidden font-semibold"></p>
-        </form>
-      </div>
-
-      <!-- Métricas de WhatsApp y Proyección Financiera (KPI 1 & KPI 2) -->
-      <div class="lg:col-span-2 rounded-2xl border-2 border-emerald-500/20 bg-gradient-to-br from-emerald-50/50 via-white to-amber-50/30 p-6 shadow-xs flex flex-col justify-between space-y-4">
-        <div>
-          <div class="flex items-center justify-between">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-bold uppercase tracking-wider">
-              <span>📈</span> Módulo de Proyección Comercial
-            </span>
-            <span class="text-[11px] text-stone-400 font-medium">Últimos 30 días</span>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-            <!-- KPI 1 -->
-            <div class="p-4 rounded-xl bg-white border border-emerald-100 shadow-2xs space-y-1">
-              <span class="text-[10px] uppercase font-bold text-stone-400">Ventas Solicitadas vía WhatsApp</span>
-              <div class="text-2xl font-black text-emerald-900" id="kpi-whatsapp-sales">$0 CLP</div>
-              <p class="text-[11px] text-stone-500 font-medium" id="kpi-whatsapp-orders-count">0 pedidos recibidos</p>
-            </div>
-
-            <!-- Proyección Pasarela +18% -->
-            <div class="p-4 rounded-xl bg-white border border-amber-200/80 shadow-2xs space-y-1">
-              <span class="text-[10px] uppercase font-bold text-amber-800">Crecimiento Estimado Pasarela (+18%)</span>
-              <div class="text-2xl font-black text-amber-900" id="kpi-whatsapp-boost">+$0 CLP</div>
-              <p class="text-[11px] text-stone-500 font-medium">Incremento estimado con pago integrado</p>
+            <div class="sm:col-span-6 grid grid-cols-2 gap-2 text-center">
+              <div class="p-2 rounded-lg bg-white border border-emerald-100 shadow-2xs">
+                <span class="text-[9px] uppercase font-bold text-stone-400 block">Ventas</span>
+                <span class="text-sm font-black text-emerald-900" id="kpi-whatsapp-sales">$0 CLP</span>
+                <p class="text-[10px] text-stone-500 font-medium" id="kpi-whatsapp-orders-count">0 pedidos recibidos</p>
+              </div>
+              <div class="p-2 rounded-lg bg-white border border-amber-200/80 shadow-2xs">
+                <span class="text-[9px] uppercase font-bold text-amber-800 block">Proyección (+18%)</span>
+                <span class="text-sm font-black text-amber-900" id="kpi-whatsapp-boost">+$0 CLP</span>
+                <p class="text-[10px] text-stone-400 font-medium">Con pasarela</p>
+              </div>
             </div>
           </div>
 
-          <!-- Cuadro Analítico Destacado KPI 2 -->
-          <div class="mt-4 p-4 rounded-xl bg-white/90 border border-stone-200 text-xs text-stone-700 leading-relaxed shadow-2xs">
-            <div class="flex items-start gap-2.5">
-              <span class="text-lg mt-0.5">💡</span>
-              <p id="kpi-whatsapp-projection-text">
-                Tus clientes han solicitado $0 CLP en pedidos por WhatsApp este mes. Si gestionaras los pagos directamente en la plataforma con la futura pasarela Cafesitios, podrías aumentar tu tasa de conversión en un 18% estimado y automatizar la confirmación de inventario.
-              </p>
+          <!-- Cuadro analítico de proyección visible -->
+          <div class="p-2.5 rounded-lg bg-white/90 border border-stone-200 text-[11px] text-stone-600 leading-relaxed shadow-2xs flex items-start gap-2">
+            <span class="text-sm shrink-0">💡</span>
+            <p id="kpi-whatsapp-projection-text">
+              Tus clientes han solicitado pedidos por WhatsApp este mes. Gestionar pagos automatizados puede acelerar tus conversiones.
+            </p>
+          </div>
+
+          <!-- Tabla compacta de pedidos con scroll interno -->
+          <div class="overflow-x-auto max-h-44 overflow-y-auto rounded-xl border border-stone-100 bg-white">
+            <table class="w-full text-left text-[11px] text-stone-600">
+              <thead class="sticky top-0 bg-stone-50 text-[9px] uppercase tracking-wider text-stone-400 font-bold border-b border-stone-200">
+                <tr>
+                  <th class="py-2 px-3">Fecha</th>
+                  <th class="py-2 px-3">Detalle</th>
+                  <th class="py-2 px-3 text-right">Total</th>
+                  <th class="py-2 px-3 text-center">Estado</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-whatsapp-orders" class="divide-y divide-stone-100">
+                <tr>
+                  <td colspan="4" class="py-4 text-center text-stone-400 text-xs">Cargando pedidos recibidos...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLUMNA DERECHA: BENCHMARK PRIVADO Y OPORTUNIDADES (5 COLS) -->
+      <div class="lg:col-span-5 space-y-6">
+        
+        <!-- BENCHMARK PRIVADO DE PRECIOS -->
+        <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-xs space-y-3">
+          <div class="border-b border-stone-100 pb-2.5">
+            <div class="flex items-center gap-2 text-sm font-bold text-stone-900">
+              <span>📊</span>
+              <span>Benchmark Privado de Precios ($/kg)</span>
+            </div>
+            <p class="text-[11px] text-stone-500 mt-0.5">Comparativa anónima de tus precios frente al mercado.</p>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="rounded-xl border border-stone-100 bg-stone-50/70 p-2.5">
+              <span class="block text-[9px] font-bold uppercase text-stone-400">Tu Tostaduría</span>
+              <span class="text-sm font-extrabold text-stone-900" id="bench-store-avg">$0/kg</span>
+            </div>
+            <div class="rounded-xl border border-stone-100 bg-stone-50/70 p-2.5">
+              <span class="block text-[9px] font-bold uppercase text-stone-400">Promedio Mercado</span>
+              <span class="text-sm font-extrabold text-stone-700" id="bench-market-avg">$0/kg</span>
+            </div>
+            <div class="rounded-xl border border-stone-100 bg-stone-50/70 p-2.5">
+              <span class="block text-[9px] font-bold uppercase text-stone-400">Posicionamiento</span>
+              <span class="text-[11px] font-bold text-emerald-800" id="bench-posicion">Analizando...</span>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- TABLA DE HISTORIAL DE PEDIDOS RECIBIDOS POR WHATSAPP -->
-    <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-stone-100 pb-4">
-        <div>
-          <h2 class="text-sm font-bold text-stone-900 flex items-center gap-2">
-            <span>🛒</span> Pedidos Recibidos vía WhatsApp
-          </h2>
-          <p class="text-xs text-stone-500">Historial de encargos generados por usuarios desde Cafesitios.</p>
-        </div>
-        <span class="text-xs font-bold text-stone-500" id="whatsapp-orders-count-badge">0 pedidos</span>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs text-stone-600">
-          <thead class="bg-stone-50 text-[10px] uppercase tracking-wider text-stone-400 font-bold border-y border-stone-200">
-            <tr>
-              <th class="py-2.5 px-3">Fecha y Hora</th>
-              <th class="py-2.5 px-3">Detalle de Ítems</th>
-              <th class="py-2.5 px-3 text-right">Monto Estimado</th>
-              <th class="py-2.5 px-3 text-center">Estado</th>
-            </tr>
-          </thead>
-          <tbody id="tbody-whatsapp-orders" class="divide-y divide-stone-100">
-            <tr>
-              <td colspan="4" class="py-6 text-center text-stone-400">Cargando pedidos recibidos...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ACCESOS RÁPIDOS Y RESUMEN -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Tarjeta Gestión de Catálogo -->
-      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs flex flex-col justify-between space-y-4">
-        <div>
-          <div class="flex items-center gap-2 text-stone-900 font-bold text-base">
-            <span>📦</span>
-            <span>Gestión de Catálogo y Precios</span>
-          </div>
-          <p class="text-xs text-stone-500 mt-2">
-            Revisa los cafés detectados en tu tienda, actualiza precios, orígenes, procesos o añade manualmente nuevas variedades exclusivas.
-          </p>
-        </div>
-        <div>
-          <a
-            href="/admin-tienda/productos"
-            class="inline-flex items-center gap-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white px-4 py-2 text-xs font-bold transition shadow-xs"
-          >
-            <span>Ver Mis Productos</span>
-            <span>→</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- Tarjeta Auditoría -->
-      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs flex flex-col justify-between space-y-4">
-        <div>
-          <div class="flex items-center gap-2 text-stone-900 font-bold text-base">
-            <span>🛡️</span>
-            <span>Registro de Auditoría de Acciones</span>
-          </div>
-          <p class="text-xs text-stone-500 mt-2">
-            Monitorea el historial cronológico de altas, ediciones y sincronizaciones ejecutadas por los administradores de tu tienda.
-          </p>
-        </div>
-        <div>
-          <a
-            href="/admin-tienda/auditoria"
-            class="inline-flex items-center gap-2 rounded-xl border border-stone-300 hover:bg-stone-100 text-stone-800 px-4 py-2 text-xs font-bold transition shadow-xs"
-          >
-            <span>Ver Registro de Auditoría</span>
-            <span>→</span>
-          </a>
-        </div>
-      </div>
-    </div>
-
-    <!-- FASE 2: GESTIÓN DE COLECCIONES DE SCRAPING Y PROBADOR EN SECO -->
-    <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-6">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-stone-100 pb-4">
-        <div>
-          <div class="flex items-center gap-2 text-base font-bold text-stone-900">
-            <span>🛒</span>
-            <span>URLs de Catálogo y Colecciones de Scraping</span>
-          </div>
-          <p class="text-xs text-stone-500 mt-1">
-            Administra los enlaces de tu e-commerce que el motor de Cafesitios escanea automáticamente (ej. /collections/grano, /cafe-kilo).
-          </p>
-        </div>
-      </div>
-
-      <!-- Formulario para agregar y probar nueva URL -->
-      <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-3">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-stone-700">Añadir o Probar Nueva Colección</h4>
-        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-          <div class="sm:col-span-7 space-y-1">
-            <label class="block text-[11px] font-semibold text-stone-600">URL del Catálogo o Colección *</label>
-            <input
-              type="url"
-              id="input-new-catalog-url"
-              placeholder="https://mitienda.cl/collections/cafe-de-especialidad"
-              class="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs text-stone-800 placeholder-stone-400 focus:border-emerald-600 focus:outline-none"
-            />
-          </div>
-          <div class="sm:col-span-3 space-y-1">
-            <label class="block text-[11px] font-semibold text-stone-600">Etiqueta (opcional)</label>
-            <input
-              type="text"
-              id="input-new-catalog-label"
-              placeholder="Línea Filtros"
-              class="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs text-stone-800 placeholder-stone-400 focus:border-emerald-600 focus:outline-none"
-            />
-          </div>
-          <div class="sm:col-span-2 flex gap-2">
-            <button
-              type="button"
-              id="btn-test-catalog-url"
-              class="flex-1 inline-flex items-center justify-center gap-1 rounded-xl border border-purple-300 bg-purple-50 hover:bg-purple-100 px-3 py-2 text-xs font-bold text-purple-900 transition shadow-xs"
-              title="Probar en seco si la URL es legible antes de guardarla"
-            >
-              <span>🧪</span>
-              <span>Probar</span>
-            </button>
-            <button
-              type="button"
-              id="btn-add-catalog-url"
-              class="flex-1 inline-flex items-center justify-center gap-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-3 py-2 text-xs font-bold text-white transition shadow-xs"
-              title="Guardar URL de colección"
-            >
-              <span>+</span>
-              <span>Guardar</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Lista de URLs registradas -->
-      <div id="catalogs-list-container" class="space-y-2">
-        <div class="text-xs text-stone-400 italic">Cargando colecciones registradas...</div>
-      </div>
-    </div>
-
-    <!-- FASE 2: PERFIL DE MARCA Y CAFETERÍAS / SUCURSALES FÍSICAS -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-      <!-- Formulario de Perfil de Marca -->
-      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
-        <div class="border-b border-stone-100 pb-3">
-          <div class="flex items-center gap-2 text-base font-bold text-stone-900">
-            <span>🏷️</span>
-            <span>Perfil de Marca y Ubicación Principal</span>
-          </div>
-          <p class="text-xs text-stone-500 mt-1">Configuración visible en el directorio público y fichas de producto.</p>
-        </div>
-
-        <form id="form-store-profile" class="space-y-3 text-xs">
           <div>
-            <label class="block font-semibold text-stone-700 mb-1">Dirección Matriz / Tostaduría</label>
-            <input type="text" id="prof-direccion" placeholder="Av. Providencia 1234" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block font-semibold text-stone-700 mb-1">Comuna</label>
-              <input type="text" id="prof-comuna" placeholder="Providencia" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+            <span class="text-[10px] font-bold text-stone-600 block mb-1">Desglose por Origen:</span>
+            <div id="bench-origins-container" class="space-y-1 text-xs max-h-32 overflow-y-auto">
+              <div class="text-stone-400 text-xs italic">Cargando desglose...</div>
             </div>
-            <div>
-              <label class="block font-semibold text-stone-700 mb-1">WhatsApp de Ventas (+56)</label>
-              <input type="text" id="prof-whatsapp" placeholder="+56912345678" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
-            </div>
-          </div>
-          <div>
-            <label class="block font-semibold text-stone-700 mb-1">URL de Logotipo (PNG/SVG transparente)</label>
-            <input type="url" id="prof-logo-url" placeholder="https://mitienda.cl/logo.png" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block font-semibold text-stone-700 mb-1">Monto Mínimo Envío Gratis ($)</label>
-              <input type="number" id="prof-envio-gratis" placeholder="Ej. 30000" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
-            </div>
-            <div class="flex items-center pt-5">
-              <label class="inline-flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" id="prof-retiro-tienda" class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
-                <span class="font-semibold text-stone-700">Ofrece Retiro en Tienda</span>
-              </label>
-            </div>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block font-semibold text-stone-700 mb-1">Días de Tueste Habitual</label>
-              <input type="text" id="prof-dias-tueste" placeholder="Ej. Martes y Jueves" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
-            </div>
-            <div>
-              <label class="block font-semibold text-stone-700 mb-1">Fecha Último Tueste</label>
-              <input type="date" id="prof-fecha-tueste" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
-            </div>
-          </div>
-          <div class="flex justify-end pt-2">
-            <button type="submit" id="btn-save-profile" class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-2 text-xs font-bold text-white transition shadow-xs">
-              <span>💾</span>
-              <span>Guardar Perfil</span>
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <!-- Sucursales y Cafeterías Físicas (Geolocalización) -->
-      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
-        <div class="flex items-center justify-between border-b border-stone-100 pb-3">
-          <div>
-            <div class="flex items-center gap-2 text-base font-bold text-stone-900">
-              <span>📍</span>
-              <span>Cafeterías y Puntos de Retiro</span>
-            </div>
-            <p class="text-xs text-stone-500 mt-1">Alimenta el ordenamiento por cercanía GPS en el directorio de tiendas.</p>
-          </div>
-          <button
-            type="button"
-            id="btn-open-branch-modal"
-            class="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition shadow-xs"
-          >
-            <span>+</span>
-            <span>Añadir Local</span>
-          </button>
-        </div>
-
-        <div id="branches-list-container" class="space-y-2">
-          <div class="text-xs text-stone-400 italic">Cargando sucursales...</div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- FASE 4: BANDEJA DE INCONSISTENCIAS DE SCRAPING -->
-    <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
-      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
-        <div class="flex items-center gap-2 text-base font-bold text-stone-900">
-          <span>⚠️</span>
-          <span>Bandeja de Inconsistencias de Scraping</span>
-          <span id="inconsistencies-badge" class="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-900">0 detectadas</span>
-        </div>
-        <a href="/admin-tienda/productos" class="text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline">
-          Corregir en Catálogo →
-        </a>
-      </div>
-      <p class="text-xs text-stone-500">
-        Productos detectados con posibles anomalías (precios en $0, gramajes fuera de rango, ítems que no son café o falta de imagen).
-      </p>
-      <div id="inconsistencies-list-container" class="space-y-2 max-h-56 overflow-y-auto">
-        <p class="text-xs text-stone-400 italic py-2">Sin inconsistencias detectadas. Tu catálogo está en perfecto estado.</p>
-      </div>
-    </div>
-
-    <!-- FASE 4: BENCHMARK PRIVADO DE PRECIOS & DEMANDA NO CUBIERTA -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      
-      <!-- Benchmark Privado -->
-      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
-        <div class="border-b border-stone-100 pb-3">
-          <div class="flex items-center gap-2 text-base font-bold text-stone-900">
-            <span>📊</span>
-            <span>Benchmark Privado de Precios ($/kg)</span>
-          </div>
-          <p class="text-xs text-stone-500 mt-1">Comparación anónima de tus precios por kilo frente al promedio del mercado nacional.</p>
-        </div>
-
-        <div class="grid grid-cols-3 gap-3 text-center">
-          <div class="rounded-xl border border-stone-100 bg-stone-50/70 p-3">
-            <span class="block text-[10px] font-bold uppercase text-stone-400">Tu Tostaduría</span>
-            <span class="text-base font-extrabold text-stone-900" id="bench-store-avg">$0/kg</span>
-          </div>
-          <div class="rounded-xl border border-stone-100 bg-stone-50/70 p-3">
-            <span class="block text-[10px] font-bold uppercase text-stone-400">Promedio Mercado</span>
-            <span class="text-base font-extrabold text-stone-700" id="bench-market-avg">$0/kg</span>
-          </div>
-          <div class="rounded-xl border border-stone-100 bg-stone-50/70 p-3">
-            <span class="block text-[10px] font-bold uppercase text-stone-400">Posicionamiento</span>
-            <span class="text-xs font-bold text-emerald-800" id="bench-posicion">Analizando...</span>
           </div>
         </div>
 
-        <div>
-          <span class="text-[11px] font-bold text-stone-600 block mb-2">Desglose por Origen:</span>
-          <div id="bench-origins-container" class="space-y-1.5 text-xs">
-            <div class="text-stone-400 text-xs italic">Cargando desglose de orígenes...</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Demanda Insatisfecha y Oportunidades -->
-      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
-        <div class="border-b border-stone-100 pb-3">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2 text-base font-bold text-stone-900">
+        <!-- DEMANDA INSATISFECHA Y OPORTUNIDADES DE CATÁLOGO -->
+        <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-xs space-y-3">
+          <div class="flex items-center justify-between border-b border-stone-100 pb-2.5">
+            <div class="flex items-center gap-2 text-sm font-bold text-stone-900">
               <span>🎯</span>
-              <span>Oportunidades de Catálogo y Demanda</span>
+              <span>Oportunidades de Catálogo</span>
             </div>
-            <span class="rounded-full bg-amber-100 text-amber-900 px-2 py-0.5 text-[10px] font-bold">Algoritmo Inteligente</span>
+            <span class="rounded-full bg-amber-100 text-amber-900 px-2 py-0.5 text-[9px] font-bold">Algoritmo</span>
           </div>
-          <p class="text-xs text-stone-500 mt-1">Orígenes más cotizados por usuarios en Cafesitios que aún no tienes publicados.</p>
-        </div>
 
-        <!-- EXPLICACIÓN CLARA DE CÓMO SE CALCULAN LAS OPORTUNIDADES -->
-        <div class="p-3 bg-stone-50/90 rounded-xl border border-stone-200/80 text-xs text-stone-600 space-y-1">
-          <div class="flex items-center gap-1.5 font-bold text-stone-800 text-[11px]">
-            <span>ℹ️</span>
-            <span>¿Cómo se sugieren estas oportunidades?</span>
-          </div>
-          <p class="text-[11px] leading-relaxed text-stone-600">
-            Nuestro motor analiza de forma continua el volumen de búsquedas, interés y visitas en Cafesitios para identificar los orígenes con mayor demanda en el mercado chileno. Luego, <strong>compara ese ranking con tu catálogo activo</strong>: aquellos orígenes de alta rotación comercial que aún no comercializas se destacan automáticamente como oportunidades clave para ampliar tu oferta y captar nuevos compradores.
-          </p>
-        </div>
-
-        <div>
-          <span class="text-[11px] font-bold text-stone-600 block mb-1.5">Orígenes Recomendados para Incorporar:</span>
-          <div id="demand-opportunities-container" class="flex flex-wrap gap-2 text-xs">
+          <p class="text-[11px] text-stone-500">Orígenes más cotizados por usuarios que aún no comercializas:</p>
+          <div id="demand-opportunities-container" class="flex flex-wrap gap-1.5 text-xs">
             <span class="text-stone-400 text-xs italic">Analizando mercado...</span>
           </div>
-        </div>
 
-        <div class="pt-2 border-t border-stone-100 space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-[11px] font-bold text-stone-600">Top Orígenes más buscados en Chile:</span>
-            <!-- Selector de Vista: Gráfico de Barras vs Lista -->
-            <div class="inline-flex rounded-lg border border-stone-200 bg-stone-100 p-0.5 text-[10px] font-bold">
-              <button 
-                type="button" 
-                id="btn-view-origins-bars" 
-                class="px-2 py-0.5 rounded-md bg-white text-stone-900 shadow-2xs transition" 
-                title="Ver demanda como gráfico de barras"
-              >
-                📊 Barras
-              </button>
-              <button 
-                type="button" 
-                id="btn-view-origins-list" 
-                class="px-2 py-0.5 rounded-md text-stone-500 hover:text-stone-900 transition" 
-                title="Ver demanda como lista"
-              >
-                📋 Lista
-              </button>
+          <div class="pt-2 border-t border-stone-100 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[10px] font-bold text-stone-600">Top Orígenes más buscados:</span>
+              <div class="inline-flex rounded-lg border border-stone-200 bg-stone-100 p-0.5 text-[9px] font-bold">
+                <button type="button" id="btn-view-origins-bars" class="px-2 py-0.5 rounded-md bg-white text-stone-900 shadow-2xs transition">📊 Barras</button>
+                <button type="button" id="btn-view-origins-list" class="px-2 py-0.5 rounded-md text-stone-500 hover:text-stone-900 transition">📋 Lista</button>
+              </div>
+            </div>
+            <div id="demand-top-origins-container" class="space-y-1.5 text-xs pt-1 max-h-36 overflow-y-auto">
+              <div class="text-stone-400 text-xs italic">Cargando orígenes...</div>
             </div>
           </div>
-
-          <!-- Contenedor dinámico de gráfico de barras / lista -->
-          <div id="demand-top-origins-container" class="space-y-2.5 text-xs pt-1">
-            <div class="text-stone-400 text-xs italic">Cargando orígenes...</div>
-          </div>
         </div>
+
       </div>
 
     </div>
 
-    <!-- FASE 4: WIDGET EMBEBIBLE "VERIFICADO EN CAFESITIOS" -->
-    <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
-      <div class="flex items-center justify-between border-b border-stone-100 pb-3">
-        <div class="flex items-center gap-2 text-base font-bold text-stone-900">
-          <span>✨</span>
-          <span>Sello Oficial "Verificado en Cafesitios" (Widget)</span>
-        </div>
-        <span class="rounded-full bg-emerald-100 text-emerald-900 px-2.5 py-0.5 text-[10px] font-bold">Badge DTC</span>
-      </div>
-      <p class="text-xs text-stone-500">
-        Inserta este badge en el footer o cabecera de tu tienda online para generar confianza en tus clientes y respaldar tus precios transparentes.
-      </p>
-
-      <div class="flex flex-col sm:flex-row items-center gap-4 bg-stone-50 p-4 rounded-xl border border-stone-200">
-        <!-- Vista previa -->
-        <div class="shrink-0 flex items-center justify-center p-3 bg-white rounded-lg border border-stone-200 shadow-2xs">
-          <div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#1c1917;color:#fff;border-radius:10px;font-family:sans-serif;font-size:11px;font-weight:bold;">
-            <span>☕</span>
-            <span>Verificado en Cafesitios</span>
+    <!-- FILA 3: GRID 2 COLUMNAS (CALIDAD DE CATÁLOGO & WIDGET OFICIAL) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- BANDEJA DE INCONSISTENCIAS DE SCRAPING (6 COLS) -->
+      <div class="lg:col-span-6 rounded-2xl border border-stone-200 bg-white p-5 shadow-xs space-y-3">
+        <div class="flex items-center justify-between border-b border-stone-100 pb-2.5">
+          <div class="flex items-center gap-2 text-sm font-bold text-stone-900">
+            <span>⚠️</span>
+            <span>Bandeja de Inconsistencias de Scraping</span>
+            <span id="inconsistencies-badge" class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900">0 detectadas</span>
           </div>
+          <a href="/admin-tienda/productos" class="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 hover:underline">
+            Corregir en Catálogo →
+          </a>
         </div>
+        <p class="text-[11px] text-stone-500">
+          Productos detectados con posibles anomalías (precios en $0, gramajes fuera de rango o falta de imagen).
+        </p>
+        <div id="inconsistencies-list-container" class="space-y-1.5 max-h-36 overflow-y-auto">
+          <p class="text-xs text-stone-400 italic py-1">Sin inconsistencias detectadas. Catálogo óptimo.</p>
+        </div>
+      </div>
 
-        <!-- Código para copiar -->
-        <div class="flex-1 w-full space-y-1">
-          <div class="relative">
+      <!-- WIDGET EMBEBIBLE "VERIFICADO EN CAFESITIOS" (6 COLS) -->
+      <div class="lg:col-span-6 rounded-2xl border border-stone-200 bg-white p-5 shadow-xs space-y-3">
+        <div class="flex items-center justify-between border-b border-stone-100 pb-2.5">
+          <div class="flex items-center gap-2 text-sm font-bold text-stone-900">
+            <span>✨</span>
+            <span>Sello Oficial "Verificado en Cafesitios" (Widget)</span>
+          </div>
+          <span class="rounded-full bg-emerald-100 text-emerald-900 px-2 py-0.5 text-[9px] font-bold">Badge DTC</span>
+        </div>
+        <p class="text-[11px] text-stone-500">
+          Inserta este badge en tu tienda online para generar confianza en tus clientes:
+        </p>
+        <div class="flex items-center gap-3 bg-stone-50 p-2.5 rounded-xl border border-stone-200">
+          <div class="shrink-0 flex items-center justify-center p-2 bg-white rounded-lg border border-stone-200 shadow-2xs">
+            <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:#1c1917;color:#fff;border-radius:8px;font-family:sans-serif;font-size:10px;font-weight:bold;">
+              <span>☕</span>
+              <span>Verificado en Cafesitios</span>
+            </div>
+          </div>
+          <div class="flex-1 min-w-0 space-y-1">
             <textarea
               id="widget-embed-code"
               readonly
-              rows="2"
-              class="w-full font-mono text-[11px] bg-white border border-stone-300 rounded-lg p-2 text-stone-700 select-all focus:outline-none"
+              rows="1"
+              class="w-full font-mono text-[10px] bg-white border border-stone-300 rounded-lg p-1.5 text-stone-700 select-all focus:outline-none"
             >&lt;a href="https://cafesitios.cl" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#1c1917;color:#fff;border-radius:10px;font-family:sans-serif;font-size:11px;font-weight:bold;text-decoration:none;"&gt;&lt;span&gt;☕&lt;/span&gt;&lt;span&gt;Verificado en Cafesitios&lt;/span&gt;&lt;/a&gt;</textarea>
+            <button
+              type="button"
+              id="btn-copy-widget"
+              class="inline-flex items-center gap-1.5 rounded-lg bg-stone-800 hover:bg-stone-900 text-white px-2.5 py-1 text-[11px] font-bold transition shadow-2xs"
+            >
+              <span>📋</span>
+              <span id="btn-copy-widget-text">Copiar Código HTML</span>
+            </button>
           </div>
-          <button
-            type="button"
-            id="btn-copy-widget"
-            class="inline-flex items-center gap-1.5 rounded-lg bg-stone-800 hover:bg-stone-900 text-white px-3 py-1 text-xs font-bold transition shadow-2xs"
-          >
-            <span>📋</span>
-            <span id="btn-copy-widget-text">Copiar Código HTML</span>
-          </button>
         </div>
       </div>
+
     </div>
 
-    <!-- MODAL DE PROBADOR DE CATÁLOGO (DRY-RUN) -->
-    <div id="modal-test-catalog-result" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-        <div class="flex items-center justify-between border-b border-stone-200 pb-3">
-          <h3 class="text-base font-bold text-stone-900" id="test-catalog-result-title">Resultado de Prueba de Catálogo</h3>
-          <button type="button" id="btn-close-test-catalog" class="text-stone-400 hover:text-stone-600 font-bold text-lg">✕</button>
+    <!-- FILA 4: ACORDEÓN COLAPSABLE DE CONFIGURACIÓN RÁPIDA (DESPACHO, TUESTE, COLECCIONES Y SUCURSALES) -->
+    <details class="group rounded-2xl border border-stone-200 bg-white p-5 shadow-xs transition-all">
+      <summary class="flex items-center justify-between cursor-pointer list-none select-none">
+        <div class="flex items-center gap-2.5 font-bold text-stone-900 text-sm">
+          <span>⚙️</span>
+          <span>Configuración Rápida de Tienda, Despacho y Sucursales Físicas</span>
         </div>
-        <div id="test-catalog-result-body" class="p-4 rounded-xl bg-stone-50 text-xs text-stone-700 space-y-2">
-          <!-- Inyectado dinámicamente -->
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-stone-400 group-open:hidden">Desplegar opciones rápidas ▼</span>
+          <span class="text-xs text-stone-400 hidden group-open:inline">Plegar ▲</span>
         </div>
-        <div class="flex justify-end pt-2">
-          <button
-            type="button"
-            id="btn-confirm-test-catalog"
-            class="rounded-xl bg-stone-900 px-5 py-2 text-xs font-bold text-white hover:bg-stone-800 transition"
-          >
-            Cerrar
-          </button>
-        </div>
-      </div>
-    </div>
+      </summary>
 
-    <!-- MODAL PARA CREAR SUCURSAL -->
-    <div id="modal-branch" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-        <div class="flex items-center justify-between border-b border-stone-200 pb-3">
-          <h3 class="text-base font-bold text-stone-900">Nueva Cafetería o Sucursal</h3>
-          <button type="button" id="btn-close-branch-modal" class="text-stone-400 hover:text-stone-600 font-bold text-lg">✕</button>
-        </div>
-        <form id="form-branch" class="space-y-3 text-xs">
-          <div>
-            <label class="block font-semibold text-stone-700 mb-1">Nombre del Local *</label>
-            <input type="text" id="branch-nombre" required placeholder="Cafetería Lastarria" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+      <div class="pt-4 border-t border-stone-100 mt-4 space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Formulario de Perfil de Marca -->
+          <div class="space-y-3">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-stone-700">Políticas de Despacho y Tueste</h4>
+            <form id="form-store-profile" class="space-y-3 text-xs">
+              <div>
+                <label class="block font-semibold text-stone-700 mb-1">Dirección Matriz / Tostaduría</label>
+                <input type="text" id="prof-direccion" placeholder="Av. Providencia 1234" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-semibold text-stone-700 mb-1">Comuna</label>
+                  <input type="text" id="prof-comuna" placeholder="Providencia" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+                </div>
+                <div>
+                  <label class="block font-semibold text-stone-700 mb-1">WhatsApp (+56)</label>
+                  <input type="text" id="prof-whatsapp" placeholder="+56912345678" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+                </div>
+              </div>
+              <div>
+                <label class="block font-semibold text-stone-700 mb-1">URL de Logotipo</label>
+                <input type="url" id="prof-logo-url" placeholder="https://mitienda.cl/logo.png" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-semibold text-stone-700 mb-1">Envío Gratis desde ($)</label>
+                  <input type="number" id="prof-envio-gratis" placeholder="30000" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+                </div>
+                <div class="flex items-center pt-5">
+                  <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="prof-retiro-tienda" class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+                    <span class="font-semibold text-stone-700">Retiro en Tienda</span>
+                  </label>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-semibold text-stone-700 mb-1">Días de Tueste</label>
+                  <input type="text" id="prof-dias-tueste" placeholder="Ej. Martes y Jueves" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+                </div>
+                <div>
+                  <label class="block font-semibold text-stone-700 mb-1">Fecha Último Tueste</label>
+                  <input type="date" id="prof-fecha-tueste" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+                </div>
+              </div>
+              <div class="flex justify-end pt-2">
+                <button type="submit" id="btn-save-profile" class="rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-2 text-xs font-bold text-white transition shadow-xs">
+                  Guardar Cambios de Perfil
+                </button>
+              </div>
+            </form>
           </div>
-          <div>
-            <label class="block font-semibold text-stone-700 mb-1">Dirección *</label>
-            <input type="text" id="branch-direccion" required placeholder="José Victorino Lastarria 288" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block font-semibold text-stone-700 mb-1">Comuna *</label>
-              <input type="text" id="branch-comuna" required placeholder="Santiago" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+
+          <!-- Colecciones y Sucursales en Columna 2 del Acordeón -->
+          <div class="space-y-4">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-stone-700">Colecciones de Catálogo</h4>
+                <a href="/admin-tienda/configuracion#seccion-sincronizacion" class="text-[11px] font-bold text-emerald-700 hover:underline">
+                  Gestión Completa →
+                </a>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                <input type="url" id="input-new-catalog-url" placeholder="https://mitienda.cl/collections/cafe" class="sm:col-span-8 rounded-lg border border-stone-300 px-2.5 py-1.5 text-xs text-stone-900" />
+                <input type="text" id="input-new-catalog-label" placeholder="Etiqueta" class="sm:col-span-4 rounded-lg border border-stone-300 px-2.5 py-1.5 text-xs text-stone-900" />
+              </div>
+              <div class="flex gap-2 justify-end">
+                <button type="button" id="btn-test-catalog-url" class="rounded-lg border border-purple-200 bg-purple-50 text-purple-900 px-3 py-1 text-xs font-bold">Probar</button>
+                <button type="button" id="btn-add-catalog-url" class="rounded-lg bg-emerald-700 text-white px-3 py-1 text-xs font-bold">+ Agregar</button>
+              </div>
+              <div id="catalogs-list-container" class="space-y-1 text-xs max-h-28 overflow-y-auto pt-1">
+                <div class="text-xs text-stone-400 italic">Cargando colecciones...</div>
+              </div>
             </div>
-            <div>
-              <label class="block font-semibold text-stone-700 mb-1">Región</label>
-              <input type="text" id="branch-region" placeholder="Metropolitana" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-stone-800 focus:border-emerald-600 focus:outline-none" />
+
+            <div class="space-y-2 pt-2 border-t border-stone-100">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-stone-700">Sucursales Físicas</h4>
+                <a href="/admin-tienda/configuracion#sec-sucursales" class="text-[11px] font-bold text-emerald-700 hover:underline">
+                  Administrar Sedes →
+                </a>
+              </div>
+              <div id="branches-list-container" class="space-y-1 text-xs max-h-28 overflow-y-auto">
+                <div class="text-xs text-stone-400 italic">Cargando sucursales...</div>
+              </div>
             </div>
           </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <button type="button" id="btn-cancel-branch" class="rounded-xl border border-stone-300 px-4 py-2 font-semibold text-stone-700 hover:bg-stone-100 transition">Cancelar</button>
-            <button type="submit" class="rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-2 font-bold text-white transition shadow-xs">Guardar Local</button>
-          </div>
-        </form>
-      </div>
-    </div>
 
-
-    <!-- MODAL DE RESULTADO DE SINCRONIZACIÓN -->
-    <div id="modal-sync-feedback" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-        <div class="flex items-center justify-between border-b border-stone-200 pb-3">
-          <h3 class="text-base font-bold text-stone-900" id="sync-feedback-title">Sincronización de Catálogo</h3>
-          <button type="button" id="btn-close-sync-feedback" class="text-stone-400 hover:text-stone-600 font-bold text-lg">✕</button>
-        </div>
-        <div id="sync-feedback-body" class="p-4 rounded-xl bg-stone-50 text-xs text-stone-700 space-y-2">
-          <!-- Inyectado por JS -->
-        </div>
-        <div class="flex justify-end pt-2">
-          <button
-            type="button"
-            id="btn-confirm-sync-feedback"
-            class="rounded-xl bg-stone-900 px-5 py-2 text-xs font-bold text-white hover:bg-stone-800 transition"
-          >
-            Entendido
-          </button>
         </div>
       </div>
-    </div>
+    </details>
 
   </div>
+
+  <!-- SLIDE-OVER DRAWER DE RESULTADO DE SINCRONIZACIÓN (CERO POPUPS) -->
+  <SlideOverDrawer
+    id="drawer-sync-result"
+    title="Resultado de Sincronización"
+    subtitle="Detalle de productos actualizados en tu catálogo"
+    icon="🔄"
+    maxWidth="max-w-md"
+  >
+    <div id="sync-feedback-body" class="space-y-3">
+      <!-- Inyectado por JS -->
+    </div>
+    <Fragment slot="footer">
+      <button
+        type="button"
+        id="btn-close-sync-drawer-footer"
+        class="rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs px-5 py-2 transition shadow-xs"
+      >
+        Entendido
+      </button>
+    </Fragment>
+  </SlideOverDrawer>
+
 
   <script is:inline>
     (function initStoreDashboard() {
@@ -691,9 +475,11 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       const syncIcon = document.getElementById('sync-icon');
       const syncSpinner = document.getElementById('sync-spinner');
       const syncCooldownText = document.getElementById('sync-cooldown-text');
-      const modalFeedback = document.getElementById('modal-sync-feedback');
-      const feedbackTitle = document.getElementById('sync-feedback-title');
+      const drawerFeedback = document.getElementById('drawer-sync-result');
+      const drawerFeedbackBackdrop = document.getElementById('drawer-sync-result-backdrop');
       const feedbackBody = document.getElementById('sync-feedback-body');
+      const btnCloseSyncDrawer = document.getElementById('drawer-sync-result-close-btn');
+      const btnConfirmSyncDrawer = document.getElementById('btn-confirm-sync-drawer');
 
       let cooldownInterval = null;
 
@@ -723,23 +509,35 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       }
 
       function showFeedbackModal(title, contentHtml) {
-        if (feedbackTitle) feedbackTitle.textContent = title;
         if (feedbackBody) feedbackBody.innerHTML = contentHtml;
-        if (modalFeedback) {
-          modalFeedback.classList.remove('hidden');
-          modalFeedback.classList.add('flex');
+        if (drawerFeedback) {
+          drawerFeedback.classList.remove('translate-x-full');
+          if (drawerFeedbackBackdrop) {
+            drawerFeedbackBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+            drawerFeedbackBackdrop.classList.add('opacity-100', 'pointer-events-auto');
+          }
         }
       }
 
-      function closeFeedbackModal() {
-        if (modalFeedback) {
-          modalFeedback.classList.add('hidden');
-          modalFeedback.classList.remove('flex');
+      function closeFeedbackDrawer() {
+        if (drawerFeedback) {
+          drawerFeedback.classList.add('translate-x-full');
+          if (drawerFeedbackBackdrop) {
+            drawerFeedbackBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+            drawerFeedbackBackdrop.classList.add('opacity-0', 'pointer-events-none');
+          }
         }
       }
 
-      document.getElementById('btn-close-sync-feedback')?.addEventListener('click', closeFeedbackModal);
-      document.getElementById('btn-confirm-sync-feedback')?.addEventListener('click', closeFeedbackModal);
+      btnCloseSyncDrawer?.addEventListener('click', closeFeedbackDrawer);
+      btnConfirmSyncDrawer?.addEventListener('click', closeFeedbackDrawer);
+      drawerFeedbackBackdrop?.addEventListener('click', closeFeedbackDrawer);
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && drawerFeedback && !drawerFeedback.classList.contains('translate-x-full')) {
+          closeFeedbackDrawer();
+        }
+      });
 
 
       // --- FASE 2: GESTIÓN DE CATÁLOGOS, PROBADOR Y SUCURSALES ---

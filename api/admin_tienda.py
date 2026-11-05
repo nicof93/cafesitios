@@ -30,7 +30,9 @@ from db.database import (
     HistorialPrecio,
     InteraccionClic,
     NotaCata,
+    PagoTienda,
     PedidoWhatsApp,
+    PlanTienda,
     Producto,
     ProductoNotaCata,
     Receta,
@@ -44,6 +46,8 @@ from db.database import (
 )
 from scrapper_application import sincronizar_tienda
 from api.admin import CatalogTestRequest, CatalogTestResponse, test_store_catalog
+from api.schemas import TiendaPortalSuscripcionResponse, PlanTiendaSchema, PagoTiendaSchema, TiendaBalanceRoiSchema
+from core.billing_utils import calcular_balance_roi, calcular_funcionalidades_efectivas, calcular_proxima_fecha_pago
 
 
 router = APIRouter(prefix="/api/v1/admin/tienda", tags=["Admin Tienda Multi-Inquilino"])
@@ -2730,3 +2734,118 @@ def add_store_product_note(
         "estado": "confirmada",
         "es_fuera_de_rueda": es_fuera,
     }
+
+
+# ============================================================================
+# SUSCRIPCIÓN, FACTURACIÓN Y BALANCE DE RETORNO COMERCIAL (ROI)
+# ============================================================================
+
+@router.get(
+    "/suscripcion",
+    response_model=TiendaPortalSuscripcionResponse,
+    summary="Consultar suscripción, próximo cobro, historial de pagos y balance ROI",
+)
+def get_store_subscription_portal(
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+) -> TiendaPortalSuscripcionResponse:
+    tienda = db_session.execute(
+        select(Tienda).options(selectinload(Tienda.plan)).where(Tienda.id == ctx.tienda_id)
+    ).scalar_one_or_none()
+    if not tienda:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tienda no encontrada",
+        )
+
+    plan = tienda.plan
+    precio_mensual = (
+        tienda.precio_acordado_clp
+        if tienda.precio_acordado_clp is not None
+        else (plan.precio_mensual_clp if plan else 0)
+    )
+
+    proxima_fecha = calcular_proxima_fecha_pago(tienda.dia_pago_mensual)
+    hoy = datetime.now()
+    dias_restantes = max(0, (proxima_fecha.date() - hoy.date()).days)
+
+    funcionalidades = calcular_funcionalidades_efectivas(
+        plan.funcionalidades if plan else None,
+        tienda.funcionalidades_override,
+    )
+
+    # Últimos 6 meses de pagos
+    pagos = db_session.execute(
+        select(PagoTienda)
+        .where(PagoTienda.tienda_id == ctx.tienda_id)
+        .order_by(PagoTienda.fecha_pago.desc(), PagoTienda.id.desc())
+        .limit(6)
+    ).scalars().all()
+    pagos_items = [PagoTiendaSchema.model_validate(p) for p in pagos]
+
+    # Métricas de los últimos 30 días para ROI
+    hace_30_dias = hoy - timedelta(days=30)
+
+    # WhatsApp leads/pedidos
+    ventas_ws = db_session.execute(
+        select(
+            func.count(PedidoWhatsApp.id),
+            func.coalesce(func.sum(PedidoWhatsApp.monto_total_clp), 0),
+        ).where(
+            PedidoWhatsApp.tienda_id == ctx.tienda_id,
+            PedidoWhatsApp.fecha_creacion >= hace_30_dias,
+            PedidoWhatsApp.estado != "CANCELADO",
+        )
+    ).first()
+    pedidos_count = int(ventas_ws[0] or 0)
+    ventas_clp = int(ventas_ws[1] or 0)
+
+    # Clics salientes derivados a la tostaduría
+    clics_count = db_session.scalar(
+        select(func.count(InteraccionClic.id))
+        .join(Producto, InteraccionClic.producto_id == Producto.id)
+        .where(
+            Producto.tienda_id == ctx.tienda_id,
+            InteraccionClic.fecha_creacion >= hace_30_dias,
+            or_(
+                InteraccionClic.tipo_evento.ilike("%outbound%"),
+                InteraccionClic.tipo_evento.ilike("%extern%"),
+                InteraccionClic.tipo_evento.ilike("%clic_tienda%"),
+            ),
+        )
+    ) or 0
+
+    balance = calcular_balance_roi(
+        ventas_whatsapp_clp=ventas_clp,
+        total_pedidos_whatsapp=pedidos_count,
+        clics_salientes=clics_count,
+        costo_mensual_clp=precio_mensual,
+    )
+
+    plan_schema = None
+    if plan:
+        plan_schema = PlanTiendaSchema(
+            id=plan.id,
+            nombre=plan.nombre,
+            codigo=plan.codigo,
+            precio_mensual_clp=plan.precio_mensual_clp,
+            descripcion=plan.descripcion,
+            limite_almacenamiento_mb=plan.limite_almacenamiento_mb,
+            funcionalidades=plan.funcionalidades or {},
+            activo=plan.activo,
+            total_tiendas=0,
+            fecha_creacion=plan.fecha_creacion,
+            fecha_actualizacion=plan.fecha_actualizacion,
+        )
+
+    return TiendaPortalSuscripcionResponse(
+        plan=plan_schema,
+        precio_mensual_clp=precio_mensual,
+        dia_pago_mensual=tienda.dia_pago_mensual,
+        fecha_proximo_pago=proxima_fecha.strftime("%Y-%m-%d"),
+        dias_para_proximo_pago=dias_restantes,
+        estado_pago=tienda.estado_pago or "AL_DIA",
+        funcionalidades_activas=funcionalidades,
+        historial_pagos=pagos_items,
+        balance_roi=TiendaBalanceRoiSchema(**balance),
+    )

@@ -25,6 +25,43 @@ REQUIRED_LEGACY_TABLES = BASELINE_TABLES - {'estado_sincronizacion'}
 def _utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
+
+class PlanTienda(Base):
+    __tablename__ = 'planes_tienda'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    nombre = Column(String(100), nullable=False)
+    codigo = Column(String(50), unique=True, nullable=False, index=True)
+    precio_mensual_clp = Column(Integer, nullable=False, default=0, server_default='0')
+    descripcion = Column(String(255), nullable=True)
+    limite_almacenamiento_mb = Column(Integer, nullable=False, default=250, server_default='250')
+    funcionalidades = Column(JSON, nullable=False, default=dict)
+    activo = Column(Boolean, nullable=False, default=True, server_default='true')
+    fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
+    fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
+
+    tiendas = relationship("Tienda", back_populates="plan")
+
+
+class PagoTienda(Base):
+    __tablename__ = 'pagos_tienda'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tienda_id = Column(Integer, ForeignKey('tiendas.id', ondelete='CASCADE'), nullable=False, index=True)
+    monto_clp = Column(Integer, nullable=False)
+    fecha_pago = Column(DateTime, nullable=False, default=_utcnow)
+    periodo_mes = Column(Integer, nullable=False)
+    periodo_anio = Column(Integer, nullable=False)
+    estado = Column(String(50), nullable=False, default='PAGADO', server_default='PAGADO')
+    metodo_pago = Column(String(50), nullable=False, default='TRANSFERENCIA', server_default='TRANSFERENCIA')
+    referencia_comprobante = Column(String(150), nullable=True)
+    notas = Column(Text, nullable=True)
+    fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
+
+    tienda = relationship("Tienda", back_populates="pagos")
+
+    __table_args__ = (
+        Index('idx_pagos_tienda_fecha', 'tienda_id', 'fecha_pago'),
+    )
+
 class Tienda(Base):
     __tablename__ = 'tiendas'
     id = Column(Integer, primary_key=True)
@@ -43,8 +80,15 @@ class Tienda(Base):
     dias_tueste = Column(String(100), nullable=True)
     fecha_ultimo_tueste = Column(Date, nullable=True)
     limite_almacenamiento_mb = Column(Integer, nullable=False, default=250, server_default='250')
+    plan_id = Column(Integer, ForeignKey('planes_tienda.id', ondelete='SET NULL'), nullable=True, index=True)
+    dia_pago_mensual = Column(Integer, nullable=False, default=5, server_default='5')
+    precio_acordado_clp = Column(Integer, nullable=True)
+    estado_pago = Column(String(50), nullable=False, default='AL_DIA', server_default='AL_DIA')
+    funcionalidades_override = Column(JSON, nullable=True)
     fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
     fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
+    plan = relationship("PlanTienda", back_populates="tiendas")
+    pagos = relationship("PagoTienda", back_populates="tienda", cascade="all, delete-orphan")
     productos = relationship("Producto", back_populates="tienda", cascade="all, delete-orphan")
     sincronizaciones = relationship("Sincronizacion", back_populates="tienda", cascade="all, delete-orphan")
     sucursales = relationship("SucursalTienda", back_populates="tienda", cascade="all, delete-orphan")

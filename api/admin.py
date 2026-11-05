@@ -2,8 +2,14 @@
 from api.schemas import (
     GlobalStoreTractionResponse,
     GlobalTractionSummary,
+    PagoTiendaCreate,
+    PagoTiendaSchema,
+    PlanTiendaCreateUpdate,
+    PlanTiendaSchema,
     StoreDeleteResponse,
     StoreTractionMetricsItem,
+    TiendaSuscripcionItem,
+    TiendaSuscripcionUpdate,
 )
 from datetime import datetime, timezone
 import re
@@ -27,7 +33,9 @@ from db.database import (
     HistorialPrecio,
     InteraccionClic,
     OfertaTienda,
+    PagoTienda,
     PedidoWhatsApp,
+    PlanTienda,
     Producto,
     ProductoNotaCata,
     Receta,
@@ -39,6 +47,7 @@ from db.database import (
     UsuarioTienda,
     Variante,
 )
+from core.billing_utils import calcular_funcionalidades_efectivas, calcular_proxima_fecha_pago
 from core.error_classifier import clasificar_error_sincronizacion
 from domain.search_normalizer import (
     classify_product_category,
@@ -2574,3 +2583,336 @@ def get_global_stores_traction(
 ) -> GlobalStoreTractionResponse:
     return calcular_traccion_tiendas_global(db_session)
 
+
+
+# ============================================================================
+# GESTIÓN DE PLANES, SUSCRIPCIONES Y COBRANZAS DE TIENDAS
+# ============================================================================
+
+@administracion_router.get(
+    "/planes",
+    response_model=List[PlanTiendaSchema],
+    summary="Listar planes de suscripción para tiendas",
+)
+@router.get("/planes", response_model=List[PlanTiendaSchema], include_in_schema=False)
+@administracion_router.get("/plans", response_model=List[PlanTiendaSchema], include_in_schema=False)
+@router.get("/plans", response_model=List[PlanTiendaSchema], include_in_schema=False)
+def get_admin_planes(db_session: Session = Depends(get_db_session)) -> List[PlanTiendaSchema]:
+    planes = db_session.execute(
+        select(PlanTienda).order_by(PlanTienda.precio_mensual_clp.asc())
+    ).scalars().all()
+    
+    counts = dict(
+        db_session.execute(
+            select(Tienda.plan_id, func.count(Tienda.id))
+            .where(Tienda.plan_id.is_not(None))
+            .group_by(Tienda.plan_id)
+        ).all()
+    )
+    
+    res = []
+    for p in planes:
+        item = PlanTiendaSchema(
+            id=p.id,
+            nombre=p.nombre,
+            codigo=p.codigo,
+            precio_mensual_clp=p.precio_mensual_clp,
+            descripcion=p.descripcion,
+            limite_almacenamiento_mb=p.limite_almacenamiento_mb,
+            funcionalidades=p.funcionalidades or {},
+            activo=p.activo,
+            total_tiendas=counts.get(p.id, 0),
+            fecha_creacion=p.fecha_creacion,
+            fecha_actualizacion=p.fecha_actualizacion,
+        )
+        res.append(item)
+    return res
+
+
+@administracion_router.post(
+    "/planes",
+    response_model=PlanTiendaSchema,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear nuevo plan de suscripción",
+)
+@router.post("/planes", response_model=PlanTiendaSchema, status_code=status.HTTP_201_CREATED, include_in_schema=False)
+def create_admin_plan(
+    payload: PlanTiendaCreateUpdate,
+    db_session: Session = Depends(get_db_session),
+) -> PlanTiendaSchema:
+    codigo_clean = payload.codigo.strip().lower()
+    existente = db_session.execute(
+        select(PlanTienda).where(func.lower(PlanTienda.codigo) == codigo_clean)
+    ).scalar_one_or_none()
+    if existente:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Ya existe un plan con el código '{payload.codigo}'",
+        )
+    now = datetime.utcnow()
+    nuevo = PlanTienda(
+        nombre=payload.nombre.strip(),
+        codigo=codigo_clean,
+        precio_mensual_clp=payload.precio_mensual_clp,
+        descripcion=payload.descripcion.strip() if payload.descripcion else None,
+        limite_almacenamiento_mb=payload.limite_almacenamiento_mb,
+        funcionalidades=payload.funcionalidades,
+        activo=payload.activo,
+        fecha_creacion=now,
+        fecha_actualizacion=now,
+    )
+    db_session.add(nuevo)
+    db_session.commit()
+    db_session.refresh(nuevo)
+    return PlanTiendaSchema.model_validate(nuevo)
+
+
+@administracion_router.put(
+    "/planes/{plan_id}",
+    response_model=PlanTiendaSchema,
+    summary="Actualizar plan de suscripción y sus funcionalidades",
+)
+@router.put("/planes/{plan_id}", response_model=PlanTiendaSchema, include_in_schema=False)
+def update_admin_plan(
+    plan_id: int,
+    payload: PlanTiendaCreateUpdate,
+    db_session: Session = Depends(get_db_session),
+) -> PlanTiendaSchema:
+    plan = db_session.get(PlanTienda, plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan con ID {plan_id} no encontrado",
+        )
+    codigo_clean = payload.codigo.strip().lower()
+    if codigo_clean != plan.codigo.lower():
+        existente = db_session.execute(
+            select(PlanTienda).where(
+                func.lower(PlanTienda.codigo) == codigo_clean,
+                PlanTienda.id != plan_id,
+            )
+        ).scalar_one_or_none()
+        if existente:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Ya existe otro plan con el código '{payload.codigo}'",
+            )
+        plan.codigo = codigo_clean
+
+    plan.nombre = payload.nombre.strip()
+    plan.precio_mensual_clp = payload.precio_mensual_clp
+    plan.descripcion = payload.descripcion.strip() if payload.descripcion else None
+    plan.limite_almacenamiento_mb = payload.limite_almacenamiento_mb
+    plan.funcionalidades = payload.funcionalidades
+    plan.activo = payload.activo
+    plan.fecha_actualizacion = datetime.utcnow()
+
+    db_session.commit()
+    db_session.refresh(plan)
+
+    total_tiendas = db_session.execute(
+        select(func.count(Tienda.id)).where(Tienda.plan_id == plan_id)
+    ).scalar_one() or 0
+
+    schema = PlanTiendaSchema.model_validate(plan)
+    schema.total_tiendas = total_tiendas
+    return schema
+
+
+@administracion_router.get(
+    "/tiendas-suscripciones",
+    response_model=List[TiendaSuscripcionItem],
+    summary="Listar tiendas con su plan, día de pago y estado comercial",
+)
+@router.get("/tiendas-suscripciones", response_model=List[TiendaSuscripcionItem], include_in_schema=False)
+@administracion_router.get("/stores/subscriptions", response_model=List[TiendaSuscripcionItem], include_in_schema=False)
+@router.get("/stores/subscriptions", response_model=List[TiendaSuscripcionItem], include_in_schema=False)
+def get_admin_tiendas_suscripciones(
+    db_session: Session = Depends(get_db_session),
+) -> List[TiendaSuscripcionItem]:
+    tiendas = db_session.execute(
+        select(Tienda).options(selectinload(Tienda.plan)).order_by(Tienda.nombre.asc())
+    ).scalars().all()
+
+    items = []
+    hoy = datetime.now()
+    for t in tiendas:
+        plan = t.plan
+        precio_efectivo = t.precio_acordado_clp if t.precio_acordado_clp is not None else (plan.precio_mensual_clp if plan else 0)
+        proxima_fecha = calcular_proxima_fecha_pago(t.dia_pago_mensual, hoy)
+        funcionalidades_efectivas = calcular_funcionalidades_efectivas(
+            plan.funcionalidades if plan else None,
+            t.funcionalidades_override,
+        )
+        items.append(
+            TiendaSuscripcionItem(
+                tienda_id=t.id,
+                nombre=t.nombre,
+                plan_id=t.plan_id,
+                plan_nombre=plan.nombre if plan else "Sin Plan Asignado",
+                plan_codigo=plan.codigo if plan else None,
+                dia_pago_mensual=t.dia_pago_mensual,
+                precio_acordado_clp=t.precio_acordado_clp,
+                precio_efectivo_clp=precio_efectivo,
+                estado_pago=t.estado_pago or "AL_DIA",
+                proximo_pago_fecha=proxima_fecha.strftime("%Y-%m-%d"),
+                funcionalidades_override=t.funcionalidades_override,
+                funcionalidades_efectivas=funcionalidades_efectivas,
+            )
+        )
+    return items
+
+
+@administracion_router.put(
+    "/tiendas/{tienda_id}/suscripcion",
+    response_model=TiendaSuscripcionItem,
+    summary="Actualizar plan, día de cobro, precio pactado y toggles de funcionalidades de una tienda",
+)
+@router.put("/tiendas/{tienda_id}/suscripcion", response_model=TiendaSuscripcionItem, include_in_schema=False)
+def update_admin_tienda_suscripcion(
+    tienda_id: int,
+    payload: TiendaSuscripcionUpdate,
+    db_session: Session = Depends(get_db_session),
+) -> TiendaSuscripcionItem:
+    tienda = db_session.get(Tienda, tienda_id)
+    if not tienda:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tienda con ID {tienda_id} no encontrada",
+        )
+    if payload.plan_id is not None:
+        if payload.plan_id > 0:
+            plan = db_session.get(PlanTienda, payload.plan_id)
+            if not plan:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"El plan con ID {payload.plan_id} no existe",
+                )
+            tienda.plan_id = payload.plan_id
+            tienda.limite_almacenamiento_mb = plan.limite_almacenamiento_mb
+        else:
+            tienda.plan_id = None
+
+    if payload.dia_pago_mensual is not None:
+        tienda.dia_pago_mensual = payload.dia_pago_mensual
+
+    if "precio_acordado_clp" in payload.model_fields_set:
+        tienda.precio_acordado_clp = payload.precio_acordado_clp
+
+    if payload.estado_pago is not None:
+        tienda.estado_pago = payload.estado_pago
+
+    if "funcionalidades_override" in payload.model_fields_set:
+        tienda.funcionalidades_override = payload.funcionalidades_override
+
+    db_session.commit()
+    db_session.refresh(tienda)
+
+    plan = db_session.get(PlanTienda, tienda.plan_id) if tienda.plan_id else None
+    precio_efectivo = tienda.precio_acordado_clp if tienda.precio_acordado_clp is not None else (plan.precio_mensual_clp if plan else 0)
+    proxima_fecha = calcular_proxima_fecha_pago(tienda.dia_pago_mensual)
+    funcionalidades_efectivas = calcular_funcionalidades_efectivas(
+        plan.funcionalidades if plan else None,
+        tienda.funcionalidades_override,
+    )
+
+    return TiendaSuscripcionItem(
+        tienda_id=tienda.id,
+        nombre=tienda.nombre,
+        plan_id=tienda.plan_id,
+        plan_nombre=plan.nombre if plan else "Sin Plan Asignado",
+        plan_codigo=plan.codigo if plan else None,
+        dia_pago_mensual=tienda.dia_pago_mensual,
+        precio_acordado_clp=tienda.precio_acordado_clp,
+        precio_efectivo_clp=precio_efectivo,
+        estado_pago=tienda.estado_pago or "AL_DIA",
+        proximo_pago_fecha=proxima_fecha.strftime("%Y-%m-%d"),
+        funcionalidades_override=tienda.funcionalidades_override,
+        funcionalidades_efectivas=funcionalidades_efectivas,
+    )
+
+
+@administracion_router.get(
+    "/tiendas/{tienda_id}/pagos",
+    response_model=List[PagoTiendaSchema],
+    summary="Listar historial de pagos de una tienda",
+)
+@router.get("/tiendas/{tienda_id}/pagos", response_model=List[PagoTiendaSchema], include_in_schema=False)
+def get_admin_tienda_pagos(
+    tienda_id: int,
+    db_session: Session = Depends(get_db_session),
+) -> List[PagoTiendaSchema]:
+    tienda = db_session.get(Tienda, tienda_id)
+    if not tienda:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tienda con ID {tienda_id} no encontrada",
+        )
+    pagos = db_session.execute(
+        select(PagoTienda)
+        .where(PagoTienda.tienda_id == tienda_id)
+        .order_by(PagoTienda.fecha_pago.desc(), PagoTienda.id.desc())
+    ).scalars().all()
+    return [PagoTiendaSchema.model_validate(p) for p in pagos]
+
+
+@administracion_router.post(
+    "/tiendas/{tienda_id}/pagos",
+    response_model=PagoTiendaSchema,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar un pago de suscripción para una tienda",
+)
+@router.post("/tiendas/{tienda_id}/pagos", response_model=PagoTiendaSchema, status_code=status.HTTP_201_CREATED, include_in_schema=False)
+def create_admin_tienda_pago(
+    tienda_id: int,
+    payload: PagoTiendaCreate,
+    db_session: Session = Depends(get_db_session),
+) -> PagoTiendaSchema:
+    tienda = db_session.get(Tienda, tienda_id)
+    if not tienda:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tienda con ID {tienda_id} no encontrada",
+        )
+    fecha_pago = payload.fecha_pago or datetime.utcnow()
+    pago = PagoTienda(
+        tienda_id=tienda_id,
+        monto_clp=payload.monto_clp,
+        fecha_pago=fecha_pago,
+        periodo_mes=payload.periodo_mes,
+        periodo_anio=payload.periodo_anio,
+        estado=payload.estado.strip().upper(),
+        metodo_pago=payload.metodo_pago.strip().upper(),
+        referencia_comprobante=payload.referencia_comprobante.strip() if payload.referencia_comprobante else None,
+        notas=payload.notas.strip() if payload.notas else None,
+        fecha_creacion=datetime.utcnow(),
+    )
+    db_session.add(pago)
+
+    if pago.estado == "PAGADO":
+        tienda.estado_pago = "AL_DIA"
+
+    db_session.commit()
+    db_session.refresh(pago)
+    return PagoTiendaSchema.model_validate(pago)
+
+
+@administracion_router.delete(
+    "/tiendas/{tienda_id}/pagos/{pago_id}",
+    summary="Eliminar o anular un registro de pago",
+)
+@router.delete("/tiendas/{tienda_id}/pagos/{pago_id}", include_in_schema=False)
+def delete_admin_tienda_pago(
+    tienda_id: int,
+    pago_id: int,
+    db_session: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    pago = db_session.get(PagoTienda, pago_id)
+    if not pago or pago.tienda_id != tienda_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Registro de pago {pago_id} no encontrado para la tienda {tienda_id}",
+        )
+    db_session.delete(pago)
+    db_session.commit()
+    return {"mensaje": "Pago eliminado correctamente", "id": pago_id}

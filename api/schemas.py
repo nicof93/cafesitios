@@ -529,3 +529,110 @@ class StoreDeleteResponse(BaseModel):
     tienda_id: int
     tienda_nombre: str
     exito: bool = True
+
+
+
+# --- PLANES DE SUSCRIPCIÓN, FACTURACIÓN Y RETORNO COMERCIAL (ROI) ---
+
+class PlanTiendaSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    nombre: str
+    codigo: str
+    precio_mensual_clp: int = 0
+    descripcion: Optional[str] = None
+    limite_almacenamiento_mb: int = 250
+    funcionalidades: Dict[str, bool] = Field(default_factory=dict)
+    activo: bool = True
+    total_tiendas: int = 0
+    fecha_creacion: Optional[datetime] = None
+    fecha_actualizacion: Optional[datetime] = None
+
+
+class PlanTiendaCreateUpdate(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    nombre: str = Field(..., min_length=2, max_length=100)
+    codigo: str = Field(..., min_length=2, max_length=50)
+    precio_mensual_clp: int = Field(0, ge=0)
+    descripcion: Optional[str] = None
+    limite_almacenamiento_mb: int = Field(250, ge=10)
+    funcionalidades: Dict[str, bool] = Field(default_factory=dict)
+    activo: bool = True
+
+
+class PagoTiendaSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    tienda_id: int
+    monto_clp: int
+    fecha_pago: datetime
+    periodo_mes: int
+    periodo_anio: int
+    estado: str = "PAGADO"
+    metodo_pago: str = "TRANSFERENCIA"
+    referencia_comprobante: Optional[str] = None
+    notas: Optional[str] = None
+    fecha_creacion: Optional[datetime] = None
+
+
+class PagoTiendaCreate(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    monto_clp: int = Field(..., ge=0)
+    fecha_pago: Optional[datetime] = None
+    periodo_mes: int = Field(..., ge=1, le=12)
+    periodo_anio: int = Field(..., ge=2020, le=2100)
+    estado: str = Field("PAGADO", max_length=50)
+    metodo_pago: str = Field("TRANSFERENCIA", max_length=50)
+    referencia_comprobante: Optional[str] = None
+    notas: Optional[str] = None
+
+
+class TiendaSuscripcionItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    tienda_id: int
+    nombre: str
+    plan_id: Optional[int] = None
+    plan_nombre: Optional[str] = None
+    plan_codigo: Optional[str] = None
+    dia_pago_mensual: int = 5
+    precio_acordado_clp: Optional[int] = None
+    precio_efectivo_clp: int = 0
+    estado_pago: str = "AL_DIA"
+    proximo_pago_fecha: Optional[str] = None
+    funcionalidades_override: Optional[Dict[str, bool]] = None
+    funcionalidades_efectivas: Dict[str, bool] = Field(default_factory=dict)
+
+
+class TiendaSuscripcionUpdate(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    plan_id: Optional[int] = None
+    dia_pago_mensual: Optional[int] = Field(None, ge=1, le=31)
+    precio_acordado_clp: Optional[int] = Field(None, ge=0)
+    estado_pago: Optional[str] = Field(None, max_length=50)
+    funcionalidades_override: Optional[Dict[str, bool]] = None
+
+
+class TiendaBalanceRoiSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total_pedidos_whatsapp: int = 0
+    monto_ventas_whatsapp_clp: int = 0
+    total_clics_salientes: int = 0
+    valor_estimado_clics_clp: int = 0
+    valor_total_generado_clp: int = 0
+    costo_mensual_suscripcion_clp: int = 0
+    balance_neto_clp: int = 0
+    ratio_cobertura_porcentaje: float = 0.0
+    mensaje_retorno: str = ""
+
+
+class TiendaPortalSuscripcionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    plan: Optional[PlanTiendaSchema] = None
+    precio_mensual_clp: int = 0
+    dia_pago_mensual: int = 5
+    fecha_proximo_pago: str = ""
+    dias_para_proximo_pago: int = 0
+    estado_pago: str = "AL_DIA"
+    funcionalidades_activas: Dict[str, bool] = Field(default_factory=dict)
+    historial_pagos: List[PagoTiendaSchema] = Field(default_factory=list)
+    balance_roi: TiendaBalanceRoiSchema = Field(default_factory=TiendaBalanceRoiSchema)

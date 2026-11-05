@@ -3,7 +3,7 @@ import '../styles/adminlte.css';
 
 interface Props {
   title?: string;
-  activeNav?: 'dashboard' | 'tiendas' | 'moderacion' | 'administracion' | 'bitacora' | 'sincronizaciones' | 'auditoria' | 'almacenamiento' | 'traccion' | 'ambientes';
+  activeNav?: 'dashboard' | 'tiendas' | 'moderacion' | 'administracion' | 'bitacora' | 'sincronizaciones' | 'auditoria' | 'almacenamiento' | 'traccion' | 'planes' | 'ambientes';
   breadcrumb?: Array<{ label: string; url?: string }>;
 }
 
@@ -194,6 +194,18 @@ const {
           >
             <span class="text-base" aria-hidden="true">📜</span>
             <span class="nav-text">Trazabilidad de Tiendas</span>
+          </a>
+
+          <a 
+            href="/plataforma/planes" 
+            class={`nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition ${
+              activeNav === 'planes' 
+                ? 'bg-emerald-800 text-white shadow-sm' 
+                : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+            }`}
+          >
+            <span class="text-base" aria-hidden="true">💳</span>
+            <span class="nav-text">Planes y Facturación</span>
           </a>
 
           <a 

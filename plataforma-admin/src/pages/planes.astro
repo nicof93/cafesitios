@@ -1,0 +1,1185 @@
+---
+import AdminLteLayout from '../layouts/AdminLteLayout.astro';
+
+const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://localhost:8001";
+---
+
+<AdminLteLayout 
+  title="Planes de Suscripción y Facturación de Tiendas | Plataforma Admin"
+  activeNav="planes"
+  breadcrumb={[{ label: "Inicio", url: "/plataforma/" }, { label: "Planes y Facturación" }]}
+>
+  <div class="space-y-6" data-api-base={apiBaseUrl}>
+    
+    <!-- CABECERA DE LA PÁGINA -->
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-stone-200/80 pb-6">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-black tracking-tight text-stone-900 flex items-center gap-2">
+          <span>💳</span>
+          <span>Planes, Cobranzas y Toggles de Tienda</span>
+        </h1>
+        <p class="mt-1 text-xs text-stone-500 max-w-2xl">
+          Configuración de planes comerciales, asignación de cobros mensuales (día de pago y valor acordado), matriz de activación/apagado de funcionalidades y registro de pagos.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          id="btn-nuevo-plan"
+          class="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-800 transition active:scale-95"
+        >
+          <span>➕</span>
+          <span>Crear Nuevo Plan</span>
+        </button>
+        <button
+          type="button"
+          id="btn-recargar-todo"
+          class="inline-flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-xs font-semibold text-stone-700 shadow-xs hover:bg-stone-50 transition active:scale-95"
+        >
+          <span>🔄</span>
+          <span>Refrescar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TARJETAS DE RESUMEN KPI -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs flex items-center gap-4">
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-700 text-2xl font-black shrink-0">
+          📦
+        </span>
+        <div class="min-w-0">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">Planes Comerciales</span>
+          <h3 class="text-xl font-black text-stone-900 truncate" id="kpi-total-planes">-</h3>
+          <span class="text-[11px] text-stone-500 font-medium">Activos en plataforma</span>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs flex items-center gap-4">
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 text-2xl font-black shrink-0">
+          🏪
+        </span>
+        <div class="min-w-0">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">Tiendas con Plan</span>
+          <h3 class="text-xl font-black text-stone-900 truncate" id="kpi-tiendas-suscritas">-</h3>
+          <span class="text-[11px] text-stone-500 font-medium" id="kpi-tiendas-sin-plan">- sin plan asignado</span>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs flex items-center gap-4">
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-700 text-2xl font-black shrink-0">
+          💰
+        </span>
+        <div class="min-w-0">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">Facturación Mensual (MRR)</span>
+          <h3 class="text-xl font-black text-stone-900 truncate" id="kpi-facturacion-mensual">- CLP</h3>
+          <span class="text-[11px] text-stone-500 font-medium">Suma de valores acordados</span>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-xs flex items-center gap-4">
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-700 text-2xl font-black shrink-0">
+          🗓️
+        </span>
+        <div class="min-w-0">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">Próximos Cobros (7 días)</span>
+          <h3 class="text-xl font-black text-stone-900 truncate" id="kpi-proximos-vencimientos">-</h3>
+          <span class="text-[11px] text-stone-500 font-medium">Vencimientos inmediatos</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTAÑAS DE VISTA -->
+    <div class="flex items-center gap-2 border-b border-stone-200 pb-2">
+      <button
+        type="button"
+        id="tab-btn-tiendas"
+        class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-emerald-800 text-white shadow-xs"
+      >
+        <span>🏪</span>
+        <span>Facturación y Cobranzas por Tienda</span>
+      </button>
+      <button
+        type="button"
+        id="tab-btn-planes"
+        class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 text-stone-600 hover:bg-stone-100"
+      >
+        <span>📦</span>
+        <span>Configuración de Planes y Módulos Base</span>
+      </button>
+    </div>
+
+    <!-- SECCIÓN 1: FACTURACIÓN Y TIENDAS -->
+    <div id="view-tiendas" class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="relative max-w-sm w-full">
+          <input
+            type="text"
+            id="search-tiendas"
+            placeholder="Buscar tienda por nombre..."
+            class="w-full rounded-xl border border-stone-200 bg-white py-2 pl-9 pr-3 text-xs placeholder:text-stone-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+          />
+          <span class="absolute left-3 top-2.5 text-stone-400 text-xs">🔍</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-stone-500 font-medium">
+          <span>Filtrar estado:</span>
+          <select id="filter-estado-pago" class="rounded-xl border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-stone-700">
+            <option value="ALL">Todos los estados</option>
+            <option value="AL_DIA">Al día</option>
+            <option value="PENDIENTE">Pendiente</option>
+            <option value="MOROSO">Moroso</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xs">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-stone-200 bg-stone-50/80 text-[11px] font-bold text-stone-600 uppercase tracking-wider">
+                <th class="py-3 px-4">Tienda</th>
+                <th class="py-3 px-4">Plan Actual</th>
+                <th class="py-3 px-4">Día de Cobro</th>
+                <th class="py-3 px-4">Valor Mensual</th>
+                <th class="py-3 px-4">Próximo Vencimiento</th>
+                <th class="py-3 px-4">Estado Pago</th>
+                <th class="py-3 px-4 text-center">Toggles Módulos</th>
+                <th class="py-3 px-4 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-tiendas" class="divide-y divide-stone-100 text-stone-700">
+              <tr>
+                <td colspan="8" class="py-8 text-center text-stone-400">
+                  <span class="inline-block animate-spin mr-2">🔄</span> Cargando estado de cobranzas...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 2: PLANES Y MÓDULOS BASE -->
+    <div id="view-planes" class="space-y-4 hidden">
+      <div id="grid-planes" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="col-span-full py-12 text-center text-stone-400">
+          <span class="inline-block animate-spin mr-2">🔄</span> Cargando planes comerciales...
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BACKDROP PARA SLIDE-OVER DRAWERS (PLANES Y COBRANZAS) -->
+  <div
+    id="planes-drawer-backdrop"
+    class="fixed inset-0 z-40 bg-stone-950/40 backdrop-blur-xs transition-opacity duration-300 opacity-0 pointer-events-none"
+    aria-hidden="true"
+  ></div>
+
+  <!-- SLIDE-OVER DRAWER: CREAR / EDITAR PLAN -->
+  <aside
+    id="modal-plan"
+    role="dialog"
+    aria-modal="true"
+    class="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg lg:max-w-xl transform flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out translate-x-full border-l border-stone-200"
+  >
+    <div class="flex items-center justify-between border-b border-stone-200 bg-[#FCFBF7]/90 backdrop-blur-md px-6 py-4 shrink-0">
+      <h3 id="modal-plan-title" class="text-base font-black text-stone-900 flex items-center gap-2">
+        <span>📦</span>
+        <span>Configurar Plan Comercial</span>
+      </h3>
+      <button type="button" id="btn-cerrar-modal-plan" class="h-8 w-8 inline-flex items-center justify-center rounded-xl text-stone-400 hover:text-stone-800 hover:bg-stone-100 transition text-base font-bold" title="Cerrar (Esc)">✕</button>
+    </div>
+
+    <form id="form-plan" class="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+      <input type="hidden" id="plan-id" />
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">Nombre del Plan *</label>
+          <input type="text" id="plan-nombre" required placeholder="Ej. Pro Tostaduría" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">Código Único *</label>
+          <input type="text" id="plan-codigo" required placeholder="Ej. plan_pro" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">Precio Mensual (CLP) *</label>
+          <input type="number" id="plan-precio" min="0" required placeholder="19990" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">Cuota Almacenamiento (MB)</label>
+          <input type="number" id="plan-storage" min="10" value="500" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">Descripción</label>
+        <textarea id="plan-descripcion" rows="2" placeholder="Beneficios clave del plan..." class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"></textarea>
+      </div>
+
+      <!-- MATRIZ DE TOGGLES POR DEFECTO -->
+      <div class="rounded-2xl border border-stone-200 bg-stone-50/70 p-4 space-y-2.5">
+        <span class="block text-[11px] font-extrabold text-stone-800 uppercase tracking-wider mb-2">Módulos Incluidos en este Plan</span>
+        
+        <label class="flex items-center justify-between text-xs cursor-pointer">
+          <span class="text-stone-700 font-medium">💬 Pedidos y Ventas por WhatsApp</span>
+          <input type="checkbox" id="feat-whatsapp" class="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500" />
+        </label>
+        <label class="flex items-center justify-between text-xs cursor-pointer">
+          <span class="text-stone-700 font-medium">☕ Recetas Oficiales del Tostador</span>
+          <input type="checkbox" id="feat-recetas" class="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500" />
+        </label>
+        <label class="flex items-center justify-between text-xs cursor-pointer">
+          <span class="text-stone-700 font-medium">📊 Radar de Demanda de Búsquedas</span>
+          <input type="checkbox" id="feat-radar" class="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500" />
+        </label>
+        <label class="flex items-center justify-between text-xs cursor-pointer">
+          <span class="text-stone-700 font-medium">📈 Benchmark de Precios de Mercado</span>
+          <input type="checkbox" id="feat-benchmark" class="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500" />
+        </label>
+        <label class="flex items-center justify-between text-xs cursor-pointer">
+          <span class="text-stone-700 font-medium">🖼️ Fotos HD y Galería Extra</span>
+          <input type="checkbox" id="feat-fotos" class="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500" />
+        </label>
+        <label class="flex items-center justify-between text-xs cursor-pointer">
+          <span class="text-stone-700 font-medium">⭐ Posicionamiento Destacado en Catálogo</span>
+          <input type="checkbox" id="feat-destacado" class="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500" />
+        </label>
+      </div>
+    </form>
+
+    <div class="flex items-center justify-end gap-2.5 px-6 py-3.5 border-t border-stone-200 bg-stone-50/90 shrink-0">
+      <button type="button" id="btn-cancelar-plan" class="rounded-xl border border-stone-300 bg-white px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-100 transition">Cancelar</button>
+      <button type="submit" form="form-plan" id="btn-guardar-plan" class="rounded-xl bg-emerald-700 hover:bg-emerald-800 px-5 py-2 text-xs font-bold text-white transition shadow-xs">Guardar Plan</button>
+    </div>
+  </aside>
+
+  <!-- SLIDE-OVER DRAWER: EDITAR SUSCRIPCIÓN DE TIENDA -->
+  <aside
+    id="modal-suscripcion-tienda"
+    role="dialog"
+    aria-modal="true"
+    class="fixed inset-y-0 right-0 z-50 flex w-full max-w-md lg:max-w-lg transform flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out translate-x-full border-l border-stone-200"
+  >
+    <div class="flex items-center justify-between border-b border-stone-200 bg-[#FCFBF7]/90 backdrop-blur-md px-6 py-4 shrink-0">
+      <div>
+        <h3 class="text-base font-black text-stone-900 flex items-center gap-2">
+          <span>⚙️</span>
+          <span>Configuración Comercial</span>
+        </h3>
+        <p id="sub-tienda-nombre" class="text-xs text-stone-500 font-medium mt-0.5"></p>
+      </div>
+      <button type="button" id="btn-cerrar-modal-sub" class="h-8 w-8 inline-flex items-center justify-center rounded-xl text-stone-400 hover:text-stone-800 hover:bg-stone-100 transition text-base font-bold" title="Cerrar (Esc)">✕</button>
+    </div>
+
+    <form id="form-suscripcion-tienda" class="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+      <input type="hidden" id="sub-tienda-id" />
+
+      <div>
+        <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">Plan Comercial</label>
+        <select id="sub-plan-id" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs bg-white text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+          <option value="0">Sin Plan Asignado</option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">Día de Pago (1-31)</label>
+          <input type="number" id="sub-dia-pago" min="1" max="31" required class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">Estado de Pago</label>
+          <select id="sub-estado-pago" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs bg-white text-stone-800 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-600">
+            <option value="AL_DIA">Al día</option>
+            <option value="PENDIENTE">Pendiente</option>
+            <option value="MOROSO">Moroso</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">Precio Acordado Especial (CLP)</label>
+        <input type="number" id="sub-precio-acordado" placeholder="Dejar vacío para usar precio del plan" min="0" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+        <span class="text-[10px] text-stone-400 mt-1 block">Si se define, sobreescribe el valor del plan para clientes con convenios especiales.</span>
+      </div>
+    </form>
+
+    <div class="flex items-center justify-end gap-2.5 px-6 py-3.5 border-t border-stone-200 bg-stone-50/90 shrink-0">
+      <button type="button" id="btn-cancelar-sub" class="rounded-xl border border-stone-300 bg-white px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-100 transition">Cancelar</button>
+      <button type="submit" form="form-suscripcion-tienda" id="btn-guardar-sub" class="rounded-xl bg-emerald-700 hover:bg-emerald-800 px-5 py-2 text-xs font-bold text-white transition shadow-xs">Guardar Cambios</button>
+    </div>
+  </aside>
+
+  <!-- SLIDE-OVER DRAWER: TOGGLES INDIVIDUALES DE LA TIENDA -->
+  <aside
+    id="modal-toggles-tienda"
+    role="dialog"
+    aria-modal="true"
+    class="fixed inset-y-0 right-0 z-50 flex w-full max-w-md lg:max-w-lg transform flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out translate-x-full border-l border-stone-200"
+  >
+    <div class="flex items-center justify-between border-b border-stone-200 bg-[#FCFBF7]/90 backdrop-blur-md px-6 py-4 shrink-0">
+      <div>
+        <h3 class="text-base font-black text-stone-900 flex items-center gap-2">
+          <span>⚡</span>
+          <span>Toggles y Módulos</span>
+        </h3>
+        <p id="toggles-tienda-nombre" class="text-xs text-stone-500 font-medium mt-0.5"></p>
+      </div>
+      <button type="button" id="btn-cerrar-modal-toggles" class="h-8 w-8 inline-flex items-center justify-center rounded-xl text-stone-400 hover:text-stone-800 hover:bg-stone-100 transition text-base font-bold" title="Cerrar (Esc)">✕</button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+      <input type="hidden" id="toggles-tienda-id" />
+      <p class="text-xs text-stone-600 leading-relaxed">
+        Permite activar o apagar módulos para esta tostaduría específica, sin importar el plan comercial que tenga asignado.
+      </p>
+      <div class="rounded-2xl border border-stone-200 bg-stone-50/70 p-4 space-y-3" id="toggles-switches-container">
+        <!-- Renderizado dinámico de switches -->
+      </div>
+    </div>
+
+    <div class="flex items-center justify-end gap-2.5 px-6 py-3.5 border-t border-stone-200 bg-stone-50/90 shrink-0">
+      <button type="button" id="btn-cancelar-toggles" class="rounded-xl border border-stone-300 bg-white px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-100 transition">Cancelar</button>
+      <button type="button" id="btn-guardar-toggles" class="rounded-xl bg-emerald-700 hover:bg-emerald-800 px-5 py-2 text-xs font-bold text-white transition shadow-xs">Guardar Toggles</button>
+    </div>
+  </aside>
+
+  <!-- SLIDE-OVER DRAWER: REGISTRAR PAGO -->
+  <aside
+    id="modal-registrar-pago"
+    role="dialog"
+    aria-modal="true"
+    class="fixed inset-y-0 right-0 z-50 flex w-full max-w-md lg:max-w-lg transform flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out translate-x-full border-l border-stone-200"
+  >
+    <div class="flex items-center justify-between border-b border-stone-200 bg-[#FCFBF7]/90 backdrop-blur-md px-6 py-4 shrink-0">
+      <div>
+        <h3 class="text-base font-black text-stone-900 flex items-center gap-2">
+          <span>🧾</span>
+          <span>Registrar Pago de Mensualidad</span>
+        </h3>
+        <p id="pago-tienda-nombre" class="text-xs text-stone-500 font-medium mt-0.5"></p>
+      </div>
+      <button type="button" id="btn-cerrar-modal-pago" class="h-8 w-8 inline-flex items-center justify-center rounded-xl text-stone-400 hover:text-stone-800 hover:bg-stone-100 transition text-base font-bold" title="Cerrar (Esc)">✕</button>
+    </div>
+
+    <form id="form-registrar-pago" class="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+      <input type="hidden" id="pago-tienda-id" />
+
+      <div>
+        <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">Monto Cancelado (CLP) *</label>
+        <input type="number" id="pago-monto" min="0" required class="w-full rounded-xl border border-stone-300 px-3 py-2 text-sm font-black text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">Período Mes *</label>
+          <select id="pago-mes" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs bg-white text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+            <option value="1">Enero</option>
+            <option value="2">Febrero</option>
+            <option value="3">Marzo</option>
+            <option value="4">Abril</option>
+            <option value="5">Mayo</option>
+            <option value="6">Junio</option>
+            <option value="7">Julio</option>
+            <option value="8">Agosto</option>
+            <option value="9">Septiembre</option>
+            <option value="10">Octubre</option>
+            <option value="11">Noviembre</option>
+            <option value="12">Diciembre</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">Período Año *</label>
+          <input type="number" id="pago-anio" min="2024" max="2035" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">Método de Pago</label>
+          <select id="pago-metodo" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs bg-white text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+            <option value="TRANSFERENCIA">Transferencia</option>
+            <option value="WEBPAY">Webpay / Débito</option>
+            <option value="EFECTIVO">Efectivo</option>
+            <option value="OTRO">Otro</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">N° Comprobante / Ref</label>
+          <input type="text" id="pago-referencia" placeholder="Ej. TRF-123456" class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">Notas Internas</label>
+        <textarea id="pago-notas" rows="2" placeholder="Observaciones de la transferencia..." class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"></textarea>
+      </div>
+    </form>
+
+    <div class="flex items-center justify-end gap-2.5 px-6 py-3.5 border-t border-stone-200 bg-stone-50/90 shrink-0">
+      <button type="button" id="btn-cancelar-pago" class="rounded-xl border border-stone-300 bg-white px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-100 transition">Cancelar</button>
+      <button type="submit" form="form-registrar-pago" id="btn-guardar-pago" class="rounded-xl bg-emerald-700 hover:bg-emerald-800 px-5 py-2 text-xs font-bold text-white transition shadow-xs">Registrar Pago</button>
+    </div>
+  </aside>
+
+  <!-- SLIDE-OVER DRAWER: HISTORIAL DE PAGOS DE LA TIENDA -->
+  <aside
+    id="modal-historial-pagos"
+    role="dialog"
+    aria-modal="true"
+    class="fixed inset-y-0 right-0 z-50 flex w-full max-w-xl lg:max-w-2xl transform flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out translate-x-full border-l border-stone-200"
+  >
+    <div class="flex items-center justify-between border-b border-stone-200 bg-[#FCFBF7]/90 backdrop-blur-md px-6 py-4 shrink-0">
+      <div>
+        <h3 class="text-base font-black text-stone-900 flex items-center gap-2">
+          <span>📜</span>
+          <span>Historial de Pagos</span>
+        </h3>
+        <p id="historial-tienda-nombre" class="text-xs text-stone-500 font-medium mt-0.5"></p>
+      </div>
+      <button type="button" id="btn-cerrar-modal-historial" class="h-8 w-8 inline-flex items-center justify-center rounded-xl text-stone-400 hover:text-stone-800 hover:bg-stone-100 transition text-base font-bold" title="Cerrar (Esc)">✕</button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+      <div class="overflow-hidden rounded-2xl border border-stone-200">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead class="sticky top-0 bg-stone-50 text-[10px] font-bold text-stone-500 uppercase tracking-wider border-b border-stone-200">
+            <tr>
+              <th class="py-2.5 px-3">Fecha</th>
+              <th class="py-2.5 px-3">Período</th>
+              <th class="py-2.5 px-3">Monto</th>
+              <th class="py-2.5 px-3">Método & Ref</th>
+              <th class="py-2.5 px-3">Estado</th>
+              <th class="py-2.5 px-3 text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-historial-pagos" class="divide-y divide-stone-100 text-stone-700">
+            <!-- Renderizado dinámico -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="flex justify-end px-6 py-3.5 border-t border-stone-200 bg-stone-50/90 shrink-0">
+      <button type="button" id="btn-cerrar-historial-bottom" class="rounded-xl border border-stone-300 bg-white px-5 py-2 text-xs font-bold text-stone-700 hover:bg-stone-100 transition">Cerrar</button>
+    </div>
+  </aside>
+
+  <!-- SCRIPT CLIENTE PARA PLATAFORMA ADMIN -->
+  <script is:inline>
+    (function() {
+      const container = document.querySelector('[data-api-base]');
+      const API_BASE = container ? container.getAttribute('data-api-base') : 'http://localhost:8001';
+
+      let planesData = [];
+      let tiendasData = [];
+      let tiendaSeleccionada = null;
+
+      // Elementos de la vista
+      const viewTiendas = document.getElementById('view-tiendas');
+      const viewPlanes = document.getElementById('view-planes');
+      const tabBtnTiendas = document.getElementById('tab-btn-tiendas');
+      const tabBtnPlanes = document.getElementById('tab-btn-planes');
+
+      // KPIs
+      const kpiTotalPlanes = document.getElementById('kpi-total-planes');
+      const kpiTiendasSuscritas = document.getElementById('kpi-tiendas-suscritas');
+      const kpiTiendasSinPlan = document.getElementById('kpi-tiendas-sin-plan');
+      const kpiFacturacionMensual = document.getElementById('kpi-facturacion-mensual');
+      const kpiProximosVencimientos = document.getElementById('kpi-proximos-vencimientos');
+
+      // Filtros
+      const searchTiendas = document.getElementById('search-tiendas');
+      const filterEstadoPago = document.getElementById('filter-estado-pago');
+
+      // Modales / Slide-Over Drawers
+      const modalPlan = document.getElementById('modal-plan');
+      const modalSuscripcion = document.getElementById('modal-suscripcion-tienda');
+      const modalToggles = document.getElementById('modal-toggles-tienda');
+      const modalPago = document.getElementById('modal-registrar-pago');
+      const modalHistorial = document.getElementById('modal-historial-pagos');
+      const planesDrawerBackdrop = document.getElementById('planes-drawer-backdrop');
+
+      function openDrawer(el) {
+        if (!el) return;
+        el.classList.remove('translate-x-full');
+        if (planesDrawerBackdrop) {
+          planesDrawerBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+          planesDrawerBackdrop.classList.add('opacity-100', 'pointer-events-auto');
+        }
+      }
+
+      function closeDrawer(el) {
+        if (!el) return;
+        el.classList.add('translate-x-full');
+        const openDrawers = document.querySelectorAll('aside.fixed.inset-y-0.right-0:not(.translate-x-full)');
+        if (openDrawers.length === 0 && planesDrawerBackdrop) {
+          planesDrawerBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+          planesDrawerBackdrop.classList.add('opacity-0', 'pointer-events-none');
+        }
+      }
+
+      // Shim transparente para que showModal() y close() operen como Slide-Over Drawers
+      [modalPlan, modalSuscripcion, modalToggles, modalPago, modalHistorial].forEach(drawer => {
+        if (drawer) {
+          drawer.showModal = () => openDrawer(drawer);
+          drawer.close = () => closeDrawer(drawer);
+        }
+      });
+
+      planesDrawerBackdrop?.addEventListener('click', () => {
+        [modalPlan, modalSuscripcion, modalToggles, modalPago, modalHistorial].forEach(d => closeDrawer(d));
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          [modalPlan, modalSuscripcion, modalToggles, modalPago, modalHistorial].forEach(d => closeDrawer(d));
+        }
+      });
+
+      // Toggles de pestañas
+      tabBtnTiendas.addEventListener('click', () => {
+        tabBtnTiendas.className = 'px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-emerald-800 text-white shadow-xs';
+        tabBtnPlanes.className = 'px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 text-stone-600 hover:bg-stone-100';
+        viewTiendas.classList.remove('hidden');
+        viewPlanes.classList.add('hidden');
+      });
+
+      tabBtnPlanes.addEventListener('click', () => {
+        tabBtnPlanes.className = 'px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-emerald-800 text-white shadow-xs';
+        tabBtnTiendas.className = 'px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 text-stone-600 hover:bg-stone-100';
+        viewPlanes.classList.remove('hidden');
+        viewTiendas.classList.add('hidden');
+      });
+
+      document.getElementById('btn-recargar-todo').addEventListener('click', () => {
+        cargarTodo();
+      });
+
+      // =====================================================================
+      // CARGAR DATOS DESDE LA API SUPERADMIN
+      // =====================================================================
+      async function cargarTodo() {
+        try {
+          const [resPlanes, resTiendas] = await Promise.all([
+            fetch(`${API_BASE}/api/v1/administracion/planes`).then(r => r.json()),
+            fetch(`${API_BASE}/api/v1/administracion/tiendas-suscripciones`).then(r => r.json())
+          ]);
+
+          planesData = Array.isArray(resPlanes) ? resPlanes : [];
+          tiendasData = Array.isArray(resTiendas) ? resTiendas : [];
+
+          actualizarKPIs();
+          renderizarPlanes();
+          renderizarTiendas();
+          poblarSelectPlanes();
+        } catch (err) {
+          console.error("Error cargando planes y suscripciones:", err);
+        }
+      }
+
+      function actualizarKPIs() {
+        kpiTotalPlanes.textContent = planesData.length;
+        
+        const conPlan = tiendasData.filter(t => t.plan_id && t.plan_id > 0);
+        kpiTiendasSuscritas.textContent = `${conPlan.length} de ${tiendasData.length}`;
+        kpiTiendasSinPlan.textContent = `${tiendasData.length - conPlan.length} sin plan`;
+
+        const totalMRR = tiendasData.reduce((acc, t) => acc + (t.precio_efectivo_clp || 0), 0);
+        kpiFacturacionMensual.textContent = `$${totalMRR.toLocaleString('es-CL')} CLP`;
+
+        // Próximos 7 días
+        const hoy = new Date();
+        const en7Dias = new Date();
+        en7Dias.setDate(hoy.getDate() + 7);
+
+        const proximos = tiendasData.filter(t => {
+          if (!t.proximo_pago_fecha) return false;
+          const fecha = new Date(t.proximo_pago_fecha);
+          return fecha >= hoy && fecha <= en7Dias;
+        });
+        kpiProximosVencimientos.textContent = `${proximos.length} tiendas`;
+      }
+
+      function poblarSelectPlanes() {
+        const select = document.getElementById('sub-plan-id');
+        select.innerHTML = '<option value="0">Sin Plan Asignado</option>';
+        planesData.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = `${p.nombre} ($${p.precio_mensual_clp.toLocaleString('es-CL')} CLP)`;
+          select.appendChild(opt);
+        });
+      }
+
+      // =====================================================================
+      // RENDERIZADO DE TABLA DE TIENDAS Y COBRANZAS
+      // =====================================================================
+      function renderizarTiendas() {
+        const tbody = document.getElementById('tbody-tiendas');
+        const q = (searchTiendas.value || '').toLowerCase().trim();
+        const filtroEstado = filterEstadoPago.value;
+
+        const filtradas = tiendasData.filter(t => {
+          const matchQ = t.nombre.toLowerCase().includes(q);
+          const matchEstado = filtroEstado === 'ALL' || t.estado_pago === filtroEstado;
+          return matchQ && matchEstado;
+        });
+
+        if (filtradas.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-stone-400">No se encontraron tiendas que coincidan con la búsqueda.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = filtradas.map(t => {
+          let badgeEstado = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+          if (t.estado_pago === 'PENDIENTE') badgeEstado = 'bg-amber-50 text-amber-700 border-amber-200';
+          else if (t.estado_pago === 'MOROSO') badgeEstado = 'bg-rose-50 text-rose-700 border-rose-200';
+
+          const activeFeaturesCount = Object.values(t.funcionalidades_efectivas || {}).filter(Boolean).length;
+          const hasOverrides = t.funcionalidades_override && Object.keys(t.funcionalidades_override).length > 0;
+
+          return `
+            <tr class="hover:bg-stone-50/60 transition">
+              <td class="py-3 px-4 font-bold text-stone-900">
+                ${t.nombre}
+              </td>
+              <td class="py-3 px-4">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-stone-100 text-stone-700 border border-stone-200">
+                  ${t.plan_nombre || 'Sin Plan'}
+                </span>
+              </td>
+              <td class="py-3 px-4 font-mono font-bold text-stone-700">
+                Día ${t.dia_pago_mensual}
+              </td>
+              <td class="py-3 px-4 font-bold text-stone-900">
+                $${t.precio_efectivo_clp.toLocaleString('es-CL')}
+                ${t.precio_acordado_clp !== null ? '<span class="block text-[10px] text-emerald-600 font-normal">Pactado</span>' : ''}
+              </td>
+              <td class="py-3 px-4 text-stone-600 font-mono text-[11px]">
+                ${t.proximo_pago_fecha || '-'}
+              </td>
+              <td class="py-3 px-4">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${badgeEstado}">
+                  ${t.estado_pago || 'AL_DIA'}
+                </span>
+              </td>
+              <td class="py-3 px-4 text-center">
+                <button
+                  type="button"
+                  data-action="toggles"
+                  data-tienda-id="${t.tienda_id}"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold ${hasOverrides ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-stone-100 text-stone-700 border border-stone-200'} hover:bg-stone-200 transition"
+                  title="Módulos y Toggles: Activar o apagar funcionalidades específicas para ${t.nombre} (${activeFeaturesCount} módulos activos)"
+                  aria-label="Configurar módulos y toggles de ${t.nombre}"
+                >
+                  <span>⚡</span>
+                  <span>${activeFeaturesCount} act.</span>
+                  ${hasOverrides ? '<span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>' : ''}
+                </button>
+              </td>
+              <td class="py-3 px-4 text-right whitespace-nowrap">
+                <div class="inline-flex items-center justify-end gap-1.5">
+                  <button
+                    type="button"
+                    data-action="pago"
+                    data-tienda-id="${t.tienda_id}"
+                    class="inline-flex items-center justify-center h-7.5 w-7.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition shadow-2xs"
+                    title="Registrar cobro: Ingresar un nuevo pago o confirmar cobro del plan para ${t.nombre}"
+                    aria-label="Registrar cobro para ${t.nombre}"
+                  >
+                    <span class="text-xs">🧾</span>
+                  </button>
+                  <button
+                    type="button"
+                    data-action="historial"
+                    data-tienda-id="${t.tienda_id}"
+                    class="inline-flex items-center justify-center h-7.5 w-7.5 rounded-lg border border-stone-200 bg-stone-100 text-stone-700 hover:bg-stone-200 transition shadow-2xs"
+                    title="Historial de pagos: Ver registro de cobros y facturación de ${t.nombre}"
+                    aria-label="Historial de pagos de ${t.nombre}"
+                  >
+                    <span class="text-xs">📜</span>
+                  </button>
+                  <button
+                    type="button"
+                    data-action="editar-sub"
+                    data-tienda-id="${t.tienda_id}"
+                    class="inline-flex items-center justify-center h-7.5 w-7.5 rounded-lg border border-stone-200 bg-stone-100 text-stone-700 hover:bg-stone-200 transition shadow-2xs"
+                    title="Configurar suscripción: Modificar tarifa acordada, día de cobro y estado para ${t.nombre}"
+                    aria-label="Configurar plan y cobro para ${t.nombre}"
+                  >
+                    <span class="text-xs">⚙️</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        // Listeners para botones de acción
+        tbody.querySelectorAll('[data-action]').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = parseInt(btn.getAttribute('data-tienda-id'), 10);
+            const tienda = tiendasData.find(x => x.tienda_id === id);
+            if (!tienda) return;
+            const action = btn.getAttribute('data-action');
+
+            if (action === 'toggles') abrirModalToggles(tienda);
+            else if (action === 'pago') abrirModalRegistrarPago(tienda);
+            else if (action === 'historial') abrirModalHistorial(tienda);
+            else if (action === 'editar-sub') abrirModalSuscripcion(tienda);
+          });
+        });
+      }
+
+      searchTiendas.addEventListener('input', renderizarTiendas);
+      filterEstadoPago.addEventListener('change', renderizarTiendas);
+
+      // =====================================================================
+      // RENDERIZADO DE PLANES COMERCIALES
+      // =====================================================================
+      function renderizarPlanes() {
+        const grid = document.getElementById('grid-planes');
+        if (planesData.length === 0) {
+          grid.innerHTML = '<div class="col-span-full py-8 text-center text-stone-400">No hay planes registrados. Crea uno nuevo.</div>';
+          return;
+        }
+
+        const featureLabels = {
+          whatsapp_orders: "💬 Ventas WhatsApp",
+          recetas_oficiales: "☕ Recetas Oficiales",
+          radar_demanda: "📊 Radar Demanda",
+          benchmark_precios: "📈 Benchmark Precios",
+          fotos_hd_extra: "🖼️ Fotos HD Extra",
+          destacado_catalogo: "⭐ Destacado en Catálogo"
+        };
+
+        grid.innerHTML = planesData.map(p => {
+          const feats = p.funcionalidades || {};
+          return `
+            <div class="rounded-3xl border border-stone-200 bg-white p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+              <div class="space-y-4">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <h3 class="text-base font-extrabold text-stone-900">${p.nombre}</h3>
+                    <span class="text-[10px] font-mono text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded">${p.codigo}</span>
+                  </div>
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    ${p.total_tiendas} tostadurías
+                  </span>
+                </div>
+
+                <div>
+                  <span class="text-2xl font-black text-stone-900">$${p.precio_mensual_clp.toLocaleString('es-CL')}</span>
+                  <span class="text-xs text-stone-400 font-medium"> CLP / mes</span>
+                  <span class="block text-[11px] text-stone-500 mt-1">Cuota: ${p.limite_almacenamiento_mb} MB en disco</span>
+                </div>
+
+                <p class="text-xs text-stone-600 line-clamp-2">
+                  ${p.descripcion || 'Sin descripción.'}
+                </p>
+
+                <div class="pt-3 border-t border-stone-100 space-y-1.5">
+                  <span class="block text-[10px] font-bold uppercase text-stone-400 tracking-wider">Módulos:</span>
+                  ${Object.entries(featureLabels).map(([k, label]) => {
+                    const active = Boolean(feats[k]);
+                    return `
+                      <div class="flex items-center justify-between text-[11px]">
+                        <span class="${active ? 'text-stone-700 font-medium' : 'text-stone-400 line-through'}">${label}</span>
+                        <span class="${active ? 'text-emerald-600 font-bold' : 'text-stone-300'}">${active ? '✓' : '✕'}</span>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+
+              <div class="pt-5 mt-4 border-t border-stone-100 flex justify-end">
+                <button
+                  type="button"
+                  data-edit-plan="${p.id}"
+                  class="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 transition"
+                >
+                  <span>✏️</span>
+                  <span>Editar Plan</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        grid.querySelectorAll('[data-edit-plan]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = parseInt(btn.getAttribute('data-edit-plan'), 10);
+            const plan = planesData.find(x => x.id === id);
+            if (plan) abrirModalPlan(plan);
+          });
+        });
+      }
+
+      // =====================================================================
+      // MODAL: PLANES
+      // =====================================================================
+      document.getElementById('btn-nuevo-plan').addEventListener('click', () => {
+        abrirModalPlan(null);
+      });
+
+      function abrirModalPlan(plan) {
+        const titleEl = document.getElementById('modal-plan-title');
+        const idInput = document.getElementById('plan-id');
+        const nombreInput = document.getElementById('plan-nombre');
+        const codigoInput = document.getElementById('plan-codigo');
+        const precioInput = document.getElementById('plan-precio');
+        const storageInput = document.getElementById('plan-storage');
+        const descInput = document.getElementById('plan-descripcion');
+
+        if (plan) {
+          titleEl.innerHTML = `<span>✏️</span><span>Editar ${plan.nombre}</span>`;
+          idInput.value = plan.id;
+          nombreInput.value = plan.nombre;
+          codigoInput.value = plan.codigo;
+          codigoInput.disabled = true; // No mutar código primario
+          precioInput.value = plan.precio_mensual_clp;
+          storageInput.value = plan.limite_almacenamiento_mb;
+          descInput.value = plan.descripcion || '';
+
+          const feats = plan.funcionalidades || {};
+          document.getElementById('feat-whatsapp').checked = Boolean(feats.whatsapp_orders);
+          document.getElementById('feat-recetas').checked = Boolean(feats.recetas_oficiales);
+          document.getElementById('feat-radar').checked = Boolean(feats.radar_demanda);
+          document.getElementById('feat-benchmark').checked = Boolean(feats.benchmark_precios);
+          document.getElementById('feat-fotos').checked = Boolean(feats.fotos_hd_extra);
+          document.getElementById('feat-destacado').checked = Boolean(feats.destacado_catalogo);
+        } else {
+          titleEl.innerHTML = `<span>➕</span><span>Crear Nuevo Plan</span>`;
+          idInput.value = '';
+          nombreInput.value = '';
+          codigoInput.value = '';
+          codigoInput.disabled = false;
+          precioInput.value = '19990';
+          storageInput.value = '500';
+          descInput.value = '';
+
+          document.getElementById('feat-whatsapp').checked = true;
+          document.getElementById('feat-recetas').checked = true;
+          document.getElementById('feat-radar').checked = false;
+          document.getElementById('feat-benchmark').checked = false;
+          document.getElementById('feat-fotos').checked = true;
+          document.getElementById('feat-destacado').checked = false;
+        }
+
+        modalPlan.showModal();
+      }
+
+      document.getElementById('btn-cerrar-modal-plan').addEventListener('click', () => modalPlan.close());
+      document.getElementById('btn-cancelar-plan').addEventListener('click', () => modalPlan.close());
+
+      document.getElementById('form-plan').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('plan-id').value;
+        const payload = {
+          nombre: document.getElementById('plan-nombre').value.trim(),
+          codigo: document.getElementById('plan-codigo').value.trim(),
+          precio_mensual_clp: parseInt(document.getElementById('plan-precio').value, 10) || 0,
+          limite_almacenamiento_mb: parseInt(document.getElementById('plan-storage').value, 10) || 250,
+          descripcion: document.getElementById('plan-descripcion').value.trim() || null,
+          funcionalidades: {
+            whatsapp_orders: document.getElementById('feat-whatsapp').checked,
+            recetas_oficiales: document.getElementById('feat-recetas').checked,
+            radar_demanda: document.getElementById('feat-radar').checked,
+            benchmark_precios: document.getElementById('feat-benchmark').checked,
+            fotos_hd_extra: document.getElementById('feat-fotos').checked,
+            destacado_catalogo: document.getElementById('feat-destacado').checked,
+          },
+          activo: true,
+        };
+
+        try {
+          const url = id 
+            ? `${API_BASE}/api/v1/administracion/planes/${id}`
+            : `${API_BASE}/api/v1/administracion/planes`;
+          const method = id ? 'PUT' : 'POST';
+
+          const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (!res.ok) {
+            const err = await res.json();
+            alert(`Error: ${err.detail || 'No se pudo guardar el plan'}`);
+            return;
+          }
+
+          modalPlan.close();
+          cargarTodo();
+        } catch (err) {
+          alert(`Error de red al guardar el plan: ${err.message}`);
+        }
+      });
+
+      // =====================================================================
+      // MODAL: SUSCRIPCIÓN Y COBRANZA DE TIENDA
+      // =====================================================================
+      function abrirModalSuscripcion(tienda) {
+        document.getElementById('sub-tienda-id').value = tienda.tienda_id;
+        document.getElementById('sub-tienda-nombre').textContent = tienda.nombre;
+        document.getElementById('sub-plan-id').value = tienda.plan_id || 0;
+        document.getElementById('sub-dia-pago').value = tienda.dia_pago_mensual || 5;
+        document.getElementById('sub-estado-pago').value = tienda.estado_pago || 'AL_DIA';
+        document.getElementById('sub-precio-acordado').value = tienda.precio_acordado_clp !== null ? tienda.precio_acordado_clp : '';
+
+        modalSuscripcion.showModal();
+      }
+
+      document.getElementById('btn-cerrar-modal-sub').addEventListener('click', () => modalSuscripcion.close());
+      document.getElementById('btn-cancelar-sub').addEventListener('click', () => modalSuscripcion.close());
+
+      document.getElementById('form-suscripcion-tienda').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tiendaId = document.getElementById('sub-tienda-id').value;
+        const planId = parseInt(document.getElementById('sub-plan-id').value, 10);
+        const precioAcordadoStr = document.getElementById('sub-precio-acordado').value.trim();
+
+        const payload = {
+          plan_id: planId > 0 ? planId : null,
+          dia_pago_mensual: parseInt(document.getElementById('sub-dia-pago').value, 10),
+          estado_pago: document.getElementById('sub-estado-pago').value,
+          precio_acordado_clp: precioAcordadoStr !== '' ? parseInt(precioAcordadoStr, 10) : null
+        };
+
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/administracion/tiendas/${tiendaId}/suscripcion`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            alert(`Error: ${err.detail || 'No se pudo actualizar la suscripción'}`);
+            return;
+          }
+          modalSuscripcion.close();
+          cargarTodo();
+        } catch (err) {
+          alert(`Error de conexión: ${err.message}`);
+        }
+      });
+
+      // =====================================================================
+      // MODAL: TOGGLES DE MÓDULOS ESPECÍFICOS DE LA TIENDA
+      // =====================================================================
+      function abrirModalToggles(tienda) {
+        tiendaSeleccionada = tienda;
+        document.getElementById('toggles-tienda-id').value = tienda.tienda_id;
+        document.getElementById('toggles-tienda-nombre').textContent = `${tienda.nombre} (Plan: ${tienda.plan_nombre || 'Sin Plan'})`;
+
+        const container = document.getElementById('toggles-switches-container');
+        const featureLabels = {
+          whatsapp_orders: "💬 Pedidos y Ventas por WhatsApp",
+          recetas_oficiales: "☕ Recetas Oficiales del Tostador",
+          radar_demanda: "📊 Radar de Demanda de Búsquedas",
+          benchmark_precios: "📈 Benchmark de Precios de Mercado",
+          fotos_hd_extra: "🖼️ Fotos HD y Galería Extra",
+          destacado_catalogo: "⭐ Posicionamiento Destacado en Catálogo"
+        };
+
+        const efectivas = tienda.funcionalidades_efectivas || {};
+        const overrides = tienda.funcionalidades_override || {};
+
+        container.innerHTML = Object.entries(featureLabels).map(([k, label]) => {
+          const isActive = Boolean(efectivas[k]);
+          const isOverridden = k in overrides;
+          return `
+            <div class="flex items-center justify-between p-2 rounded-xl bg-white border border-stone-200/80">
+              <div class="min-w-0 pr-2">
+                <span class="block text-xs font-bold text-stone-800">${label}</span>
+                <span class="text-[10px] text-stone-400">
+                  ${isOverridden ? '⚡ Override individual activo' : 'Heredado del plan base'}
+                </span>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                <input type="checkbox" data-toggle-key="${k}" class="sr-only peer" ${isActive ? 'checked' : ''} />
+                <div class="w-9 h-5 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+              </label>
+            </div>
+          `;
+        }).join('');
+
+        modalToggles.showModal();
+      }
+
+      document.getElementById('btn-cerrar-modal-toggles').addEventListener('click', () => modalToggles.close());
+      document.getElementById('btn-cancelar-toggles').addEventListener('click', () => modalToggles.close());
+
+      document.getElementById('btn-guardar-toggles').addEventListener('click', async () => {
+        if (!tiendaSeleccionada) return;
+        const tiendaId = tiendaSeleccionada.tienda_id;
+        const switches = document.querySelectorAll('[data-toggle-key]');
+
+        const newOverrides = {};
+        switches.forEach(sw => {
+          const k = sw.getAttribute('data-toggle-key');
+          newOverrides[k] = sw.checked;
+        });
+
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/administracion/tiendas/${tiendaId}/suscripcion`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ funcionalidades_override: newOverrides })
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            alert(`Error: ${err.detail || 'No se pudieron actualizar los toggles'}`);
+            return;
+          }
+          modalToggles.close();
+          cargarTodo();
+        } catch (err) {
+          alert(`Error de red: ${err.message}`);
+        }
+      });
+
+      // =====================================================================
+      // MODAL: REGISTRAR PAGO
+      // =====================================================================
+      function abrirModalRegistrarPago(tienda) {
+        document.getElementById('pago-tienda-id').value = tienda.tienda_id;
+        document.getElementById('pago-tienda-nombre').textContent = `${tienda.nombre} (Valor acordado: $${tienda.precio_efectivo_clp.toLocaleString('es-CL')} CLP)`;
+        document.getElementById('pago-monto').value = tienda.precio_efectivo_clp || 0;
+
+        const hoy = new Date();
+        document.getElementById('pago-mes').value = hoy.getMonth() + 1;
+        document.getElementById('pago-anio').value = hoy.getFullYear();
+        document.getElementById('pago-referencia').value = '';
+        document.getElementById('pago-notas').value = '';
+
+        modalPago.showModal();
+      }
+
+      document.getElementById('btn-cerrar-modal-pago').addEventListener('click', () => modalPago.close());
+      document.getElementById('btn-cancelar-pago').addEventListener('click', () => modalPago.close());
+
+      document.getElementById('form-registrar-pago').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tiendaId = document.getElementById('pago-tienda-id').value;
+        const payload = {
+          monto_clp: parseInt(document.getElementById('pago-monto').value, 10),
+          periodo_mes: parseInt(document.getElementById('pago-mes').value, 10),
+          periodo_anio: parseInt(document.getElementById('pago-anio').value, 10),
+          metodo_pago: document.getElementById('pago-metodo').value,
+          referencia_comprobante: document.getElementById('pago-referencia').value.trim() || null,
+          notas: document.getElementById('pago-notas').value.trim() || null,
+          estado: 'PAGADO',
+        };
+
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/administracion/tiendas/${tiendaId}/pagos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            alert(`Error: ${err.detail || 'No se pudo registrar el pago'}`);
+            return;
+          }
+          modalPago.close();
+          cargarTodo();
+          alert("¡Pago registrado exitosamente!");
+        } catch (err) {
+          alert(`Error de conexión: ${err.message}`);
+        }
+      });
+
+      // =====================================================================
+      // MODAL: HISTORIAL DE PAGOS
+      // =====================================================================
+      async function abrirModalHistorial(tienda) {
+        document.getElementById('historial-tienda-nombre').textContent = tienda.nombre;
+        const tbody = document.getElementById('tbody-historial-pagos');
+        tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-stone-400">Cargando pagos...</td></tr>';
+        modalHistorial.showModal();
+
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/administracion/tiendas/${tienda.tienda_id}/pagos`);
+          const pagos = await res.json();
+
+          if (!Array.isArray(pagos) || pagos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-stone-400">No hay pagos registrados para esta tienda.</td></tr>';
+            return;
+          }
+
+          const nombresMeses = ["", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+          tbody.innerHTML = pagos.map(p => {
+            const f = new Date(p.fecha_pago).toLocaleDateString('es-CL');
+            return `
+              <tr class="hover:bg-stone-50 transition">
+                <td class="py-2.5 px-3 font-mono text-[11px] text-stone-600">${f}</td>
+                <td class="py-2.5 px-3 font-bold text-stone-800">${nombresMeses[p.periodo_mes]} ${p.periodo_anio}</td>
+                <td class="py-2.5 px-3 font-black text-stone-900">$${p.monto_clp.toLocaleString('es-CL')}</td>
+                <td class="py-2.5 px-3 text-stone-600">
+                  <span class="block text-[11px] font-semibold">${p.metodo_pago}</span>
+                  <span class="text-[10px] text-stone-400 font-mono">${p.referencia_comprobante || 'Sin ref.'}</span>
+                </td>
+                <td class="py-2.5 px-3">
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    ${p.estado}
+                  </span>
+                </td>
+                <td class="py-2.5 px-3 text-right">
+                  <button
+                    type="button"
+                    data-eliminar-pago="${p.id}"
+                    data-tienda-id="${tienda.tienda_id}"
+                    class="text-rose-600 hover:text-rose-800 text-xs font-semibold px-2 py-1 rounded hover:bg-rose-50 transition"
+                  >
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
+            `;
+          }).join('');
+
+          tbody.querySelectorAll('[data-eliminar-pago]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              const pagoId = btn.getAttribute('data-eliminar-pago');
+              const tId = btn.getAttribute('data-tienda-id');
+              if (!confirm(`¿Eliminar el registro de pago #${pagoId}?`)) return;
+
+              try {
+                const delRes = await fetch(`${API_BASE}/api/v1/administracion/tiendas/${tId}/pagos/${pagoId}`, {
+                  method: 'DELETE'
+                });
+                if (delRes.ok) {
+                  abrirModalHistorial(tienda);
+                } else {
+                  alert("No se pudo eliminar el pago");
+                }
+              } catch (e) {
+                alert(`Error al eliminar: ${e.message}`);
+              }
+            });
+          });
+        } catch (err) {
+          tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-rose-500">Error al cargar historial: ${err.message}</td></tr>`;
+        }
+      }
+
+      document.getElementById('btn-cerrar-modal-historial').addEventListener('click', () => modalHistorial.close());
+      document.getElementById('btn-cerrar-historial-bottom').addEventListener('click', () => modalHistorial.close());
+
+      // Carga inicial
+      cargarTodo();
+    })();
+  </script>
+</AdminLteLayout>
+

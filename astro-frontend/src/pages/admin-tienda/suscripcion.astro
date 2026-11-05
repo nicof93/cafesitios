@@ -1,0 +1,383 @@
+---
+import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
+---
+
+<StoreAdminLayout title="Mi Plan & Facturación | Cafesitios Admin" activeNav="suscripcion">
+  <div class="space-y-8">
+    
+    <!-- HEADER DE LA SECCIÓN -->
+    <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">💳</span>
+          <h1 class="text-xl sm:text-2xl font-black text-stone-900">Plan, Cobranzas y Retorno de Inversión</h1>
+        </div>
+        <p class="text-xs text-stone-500 mt-1 max-w-2xl">
+          Transparencia total sobre tu suscripción: próximo pago programado, historial de facturación de los últimos 6 meses y el retorno real (ROI) que Cafésitios genera para tu tostaduría.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span id="badge-estado-cuenta" class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-900 text-xs font-bold px-3.5 py-1.5 border border-emerald-200">
+          <span class="h-2 w-2 rounded-full bg-emerald-600 animate-pulse"></span>
+          <span>Cuenta al Día</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- TARJETAS PRINCIPALES: PRÓXIMO PAGO, RETORNO ROI Y PLAN ACTUAL -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      
+      <!-- 1. PRÓXIMO PAGO -->
+      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs flex flex-col justify-between space-y-4">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">Próximo Vencimiento</span>
+            <span class="text-xl">🗓️</span>
+          </div>
+          <h3 id="card-proximo-monto" class="text-3xl font-black text-stone-900 mt-2">$0 <span class="text-sm font-semibold text-stone-400">CLP</span></h3>
+          <p id="card-proxima-fecha" class="text-xs font-bold text-stone-700 mt-1">Cargando fecha...</p>
+        </div>
+
+        <div class="pt-4 border-t border-stone-100 flex items-center justify-between text-xs">
+          <span id="card-dia-fijo" class="text-stone-500 font-medium">Día fijo de corte: -</span>
+          <span id="card-dias-restantes" class="inline-flex items-center px-2 py-0.5 rounded-md font-bold bg-stone-100 text-stone-700 text-[11px]">
+            - días
+          </span>
+        </div>
+      </div>
+
+      <!-- 2. BALANCE RETORNO FINANCIERO (ROI) -->
+      <div class="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-6 shadow-xs flex flex-col justify-between space-y-4">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-extrabold uppercase tracking-wider text-emerald-800">Retorno Generado (30 días)</span>
+            <span class="text-xl">📈</span>
+          </div>
+          <h3 id="card-roi-generado" class="text-3xl font-black text-emerald-950 mt-2">$0 <span class="text-sm font-semibold text-emerald-700">CLP</span></h3>
+          <p id="card-roi-balance-neto" class="text-xs font-bold text-emerald-800 mt-1">Calculando retorno neto...</p>
+        </div>
+
+        <div class="pt-4 border-t border-emerald-200/60 flex items-center justify-between text-xs">
+          <span class="text-emerald-700 font-medium">Cobertura de Gastos:</span>
+          <span id="card-roi-ratio" class="inline-flex items-center px-2.5 py-1 rounded-lg font-black bg-emerald-700 text-white text-xs shadow-xs">
+            0%
+          </span>
+        </div>
+      </div>
+
+      <!-- 3. PLAN ACTUAL Y ALMACENAMIENTO -->
+      <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs flex flex-col justify-between space-y-4">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">Tu Plan Comercial</span>
+            <span class="text-xl">⭐</span>
+          </div>
+          <h3 id="card-plan-nombre" class="text-2xl font-black text-stone-900 mt-2">Plan Activo</h3>
+          <p id="card-plan-desc" class="text-xs text-stone-500 mt-1 line-clamp-2">Cargando beneficios del plan...</p>
+        </div>
+
+        <div class="pt-4 border-t border-stone-100 flex items-center justify-between text-xs">
+          <span id="card-plan-storage" class="text-stone-600 font-medium">Almacenamiento: - MB</span>
+          <span class="text-emerald-700 font-bold">Activo</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- GRID MODULAR 2 COLUMNAS (REDUCCIÓN DE SCROLL VERTICAL) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- COLUMNA IZQUIERDA: AMORTIZACIÓN ROI Y MÓDULOS ACTIVOS (7 COLS) -->
+      <div class="lg:col-span-7 space-y-6">
+        
+        <!-- BALANCE DETALLADO DE AMORTIZACIÓN Y RETORNO -->
+        <div class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-stone-100 pb-3">
+            <div>
+              <h2 class="text-base font-black text-stone-900 flex items-center gap-2">
+                <span>⚖️</span>
+                <span>¿Cómo se amortiza tu suscripción en Cafésitios?</span>
+              </h2>
+              <p class="text-[11px] text-stone-500 mt-0.5">
+                Comparamos el costo mensual contra el valor económico de las ventas directas y visitas generadas.
+              </p>
+            </div>
+
+            <div id="badge-roi-status" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-emerald-100 text-emerald-900 shrink-0">
+              <span>✅</span>
+              <span>Gastos Cubiertos</span>
+            </div>
+          </div>
+
+          <!-- MATRIZ DE COMPARACIÓN ECONÓMICA -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="rounded-xl border border-stone-200 bg-stone-50 p-3 space-y-1">
+              <span class="text-[9px] font-bold text-stone-500 uppercase tracking-wider block">Ventas WhatsApp</span>
+              <p id="kpi-whatsapp-monto" class="text-lg font-black text-stone-900">$0</p>
+              <span id="kpi-whatsapp-pedidos" class="text-[10px] text-stone-500 block">0 pedidos</span>
+            </div>
+
+            <div class="rounded-xl border border-stone-200 bg-stone-50 p-3 space-y-1">
+              <span class="text-[9px] font-bold text-stone-500 uppercase tracking-wider block">Clics Web</span>
+              <p id="kpi-clics-monto" class="text-lg font-black text-stone-900">$0</p>
+              <span id="kpi-clics-cantidad" class="text-[10px] text-stone-500 block">0 visitas</span>
+            </div>
+
+            <div class="rounded-xl border border-stone-200 bg-stone-50 p-3 space-y-1">
+              <span class="text-[9px] font-bold text-stone-500 uppercase tracking-wider block">Costo Plan</span>
+              <p id="kpi-costo-plan" class="text-lg font-black text-stone-900">$0</p>
+              <span class="text-[10px] text-stone-500 block">Inversión mensual</span>
+            </div>
+
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 space-y-1">
+              <span class="text-[9px] font-extrabold text-emerald-800 uppercase tracking-wider block">Ganancia Neta</span>
+              <p id="kpi-ganancia-neta" class="text-lg font-black text-emerald-950">+$0</p>
+              <span id="kpi-ratio-cobertura" class="text-[10px] font-bold text-emerald-800 block">0% cubierto</span>
+            </div>
+          </div>
+
+          <!-- MENSAJE DE TRANSPARENCIA Y FIDELIZACIÓN -->
+          <div class="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 flex items-start gap-2.5">
+            <span class="text-lg shrink-0">💡</span>
+            <div class="text-[11px] text-stone-700 leading-relaxed">
+              <p id="mensaje-roi-explicativo" class="font-bold text-stone-900">
+                Calculando balance financiero del período...
+              </p>
+              <p class="text-stone-500 mt-0.5 text-[10px]">
+                Cafésitios no cobra porcentajes por venta (0% comisiones vs 18% en marketplaces). Con un par de pedidos al mes, el servicio se amortiza por completo.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- MÓDULOS Y FUNCIONALIDADES ACTIVAS -->
+        <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-xs space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-stone-700 flex items-center gap-2">
+            <span>⚡</span>
+            <span>Módulos y Beneficios Habilitados en tu Cuenta</span>
+          </h3>
+          <div id="grid-features-activas" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <!-- Renderizado dinámico de beneficios -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLUMNA DERECHA: HISTORIAL DE PAGOS CON SCROLL INTERNO (5 COLS) -->
+      <div class="lg:col-span-5 space-y-4">
+        <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-xs space-y-3">
+          <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+            <div>
+              <h3 class="text-sm font-bold text-stone-900 flex items-center gap-1.5">
+                <span>📜</span>
+                <span>Historial de Pagos</span>
+              </h3>
+              <p class="text-[11px] text-stone-400">Últimos 6 meses de facturación</p>
+            </div>
+            <span class="text-[10px] font-mono font-bold text-stone-400 bg-stone-100 px-2 py-0.5 rounded-md">Auditoría</span>
+          </div>
+
+          <!-- Contenedor con scroll interno para evitar alargar la pantalla verticalmente -->
+          <div class="overflow-x-auto max-h-[380px] overflow-y-auto rounded-xl border border-stone-100">
+            <table class="w-full text-left text-[11px] border-collapse">
+              <thead class="sticky top-0 bg-stone-50 border-b border-stone-200 text-[10px] font-bold text-stone-500 uppercase tracking-wider">
+                <tr>
+                  <th class="py-2.5 px-3">Fecha / Período</th>
+                  <th class="py-2.5 px-3">Monto</th>
+                  <th class="py-2.5 px-3">Método / Ref</th>
+                  <th class="py-2.5 px-3 text-right">Estado</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-pagos-tienda" class="divide-y divide-stone-100 text-stone-700">
+                <tr>
+                  <td colspan="4" class="py-8 text-center text-stone-400 text-xs">
+                    <span class="inline-block animate-spin mr-2">🔄</span> Cargando historial de facturación...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- SCRIPT CLIENTE PARA EL PORTAL DE LA TIENDA -->
+  <script is:inline>
+    (function() {
+      const token = sessionStorage.getItem('store_admin_token') || localStorage.getItem('store_admin_token');
+      if (!token) {
+        window.location.href = '/admin-tienda/login';
+        return;
+      }
+
+      const mainEl = document.querySelector('body[data-api-base]');
+      let API_BASE = mainEl ? (mainEl.getAttribute('data-api-base') || '').trim() : '';
+      if (!API_BASE) {
+        API_BASE = `http://${window.location.hostname}:8000`;
+      } else if (API_BASE.includes('localhost') && window.location.hostname === '127.0.0.1') {
+        API_BASE = API_BASE.replace('localhost', '127.0.0.1');
+      } else if (API_BASE.includes('127.0.0.1') && window.location.hostname === 'localhost') {
+        API_BASE = API_BASE.replace('127.0.0.1', 'localhost');
+      }
+
+      const nombresMeses = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+      async function cargarSuscripcion() {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/suscripcion`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          if (!res.ok) {
+            if (res.status === 401 || res.status === 403) {
+              window.location.href = '/admin-tienda/login';
+            }
+            return;
+          }
+
+          const data = await res.json();
+          renderizarVista(data);
+        } catch (err) {
+          console.error("Error cargando suscripción:", err);
+        }
+      }
+
+      function renderizarVista(data) {
+        // 1. Tarjeta Próximo Cobro
+        document.getElementById('card-proximo-monto').innerHTML = `$${(data.precio_mensual_clp || 0).toLocaleString('es-CL')} <span class="text-sm font-semibold text-stone-400">CLP</span>`;
+        
+        if (data.fecha_proximo_pago) {
+          const partes = data.fecha_proximo_pago.split('-');
+          if (partes.length === 3) {
+            const anio = partes[0];
+            const mesNum = parseInt(partes[1], 10);
+            const dia = parseInt(partes[2], 10);
+            document.getElementById('card-proxima-fecha').textContent = `${dia} de ${nombresMeses[mesNum]}, ${anio}`;
+          }
+        }
+        document.getElementById('card-dia-fijo').textContent = `Día fijo de corte: ${data.dia_pago_mensual}`;
+        document.getElementById('card-dias-restantes').textContent = data.dias_para_proximo_pago === 0 
+          ? 'Vence hoy' 
+          : `Faltan ${data.dias_para_proximo_pago} días`;
+
+        // Badge Estado de Cuenta
+        const badgeCuenta = document.getElementById('badge-estado-cuenta');
+        if (data.estado_pago === 'AL_DIA') {
+          badgeCuenta.className = 'inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-900 text-xs font-bold px-3.5 py-1.5 border border-emerald-200';
+          badgeCuenta.innerHTML = '<span class="h-2 w-2 rounded-full bg-emerald-600 animate-pulse"></span><span>Cuenta al Día</span>';
+        } else {
+          badgeCuenta.className = 'inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-900 text-xs font-bold px-3.5 py-1.5 border border-amber-200';
+          badgeCuenta.innerHTML = '<span class="h-2 w-2 rounded-full bg-amber-600"></span><span>Pago Pendiente</span>';
+        }
+
+        // 2. Tarjeta y Sección ROI
+        const roi = data.balance_roi || {};
+        document.getElementById('card-roi-generado').innerHTML = `$${(roi.valor_total_generado_clp || 0).toLocaleString('es-CL')} <span class="text-sm font-semibold text-emerald-700">CLP</span>`;
+        
+        const balanceNeto = roi.balance_neto_clp || 0;
+        document.getElementById('card-roi-balance-neto').textContent = balanceNeto >= 0
+          ? `+$${balanceNeto.toLocaleString('es-CL')} de retorno neto`
+          : `-$${Math.abs(balanceNeto).toLocaleString('es-CL')} balance período`;
+
+        document.getElementById('card-roi-ratio').textContent = `${roi.ratio_cobertura_porcentaje || 0}%`;
+
+        document.getElementById('kpi-whatsapp-monto').textContent = `$${(roi.monto_ventas_whatsapp_clp || 0).toLocaleString('es-CL')}`;
+        document.getElementById('kpi-whatsapp-pedidos').textContent = `${roi.total_pedidos_whatsapp || 0} pedidos solicitados`;
+
+        document.getElementById('kpi-clics-monto').textContent = `$${(roi.valor_estimado_clics_clp || 0).toLocaleString('es-CL')}`;
+        document.getElementById('kpi-clics-cantidad').textContent = `${roi.total_clics_salientes || 0} clics a tu tienda ($350 c/u)`;
+
+        document.getElementById('kpi-costo-plan').textContent = `$${(roi.costo_mensual_suscripcion_clp || 0).toLocaleString('es-CL')}`;
+
+        const kpiGanancia = document.getElementById('kpi-ganancia-neta');
+        kpiGanancia.textContent = `${balanceNeto >= 0 ? '+' : '-'}$${Math.abs(balanceNeto).toLocaleString('es-CL')}`;
+        document.getElementById('kpi-ratio-cobertura').textContent = `${roi.ratio_cobertura_porcentaje || 0}% de cobertura total`;
+
+        document.getElementById('mensaje-roi-explicativo').textContent = roi.mensaje_retorno || 'Tu inversión se encuentra respaldada por la visibilidad y ventas obtenidas.';
+
+        // 3. Plan y Beneficios
+        const plan = data.plan;
+        if (plan) {
+          document.getElementById('card-plan-nombre').textContent = plan.nombre;
+          document.getElementById('card-plan-desc').textContent = plan.descripcion || 'Plan comercial activo.';
+          document.getElementById('card-plan-storage').textContent = `Almacenamiento: ${plan.limite_almacenamiento_mb} MB`;
+        } else {
+          document.getElementById('card-plan-nombre').textContent = 'Plan Base Gratuito';
+          document.getElementById('card-plan-desc').textContent = 'Presencia en el comparador nacional de café.';
+          document.getElementById('card-plan-storage').textContent = 'Almacenamiento: 100 MB';
+        }
+
+        // Grid de Funcionalidades Activas
+        const featureLabels = {
+          whatsapp_orders: { icon: "💬", title: "Pedidos por WhatsApp", desc: "Recepción de pedidos directos sin comisiones" },
+          recetas_oficiales: { icon: "☕", title: "Recetas Oficiales", desc: "Publicación de recetas SCA recomendadas" },
+          radar_demanda: { icon: "📊", title: "Radar de Demanda", desc: "Tendencias y búsquedas en tiempo real" },
+          benchmark_precios: { icon: "📈", title: "Benchmark de Mercado", desc: "Comparativa de precios y formatos de la competencia" },
+          fotos_hd_extra: { icon: "🖼️", title: "Fotos HD y Galería", desc: "Imágenes de alta resolución para tus cafés" },
+          destacado_catalogo: { icon: "⭐", title: "Catálogo Destacado", desc: "Prioridad en resultados de búsqueda" }
+        };
+
+        const gridFeats = document.getElementById('grid-features-activas');
+        const feats = data.funcionalidades_activas || {};
+        
+        gridFeats.innerHTML = Object.entries(featureLabels).map(([k, info]) => {
+          const active = Boolean(feats[k]);
+          return `
+            <div class="rounded-xl border ${active ? 'border-emerald-200 bg-emerald-50/40' : 'border-stone-200 bg-stone-50/50 opacity-60'} p-3.5 flex items-start gap-3">
+              <span class="text-xl shrink-0">${info.icon}</span>
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <h4 class="text-xs font-bold text-stone-900">${info.title}</h4>
+                  <span class="text-[10px] font-extrabold ${active ? 'text-emerald-700' : 'text-stone-400'}">
+                    ${active ? '✓ Activo' : 'No incluido'}
+                  </span>
+                </div>
+                <p class="text-[11px] text-stone-500 mt-0.5 leading-snug">${info.desc}</p>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // 4. Tabla de Historial de Pagos
+        const tbody = document.getElementById('tbody-pagos-tienda');
+        const pagos = data.historial_pagos || [];
+
+        if (pagos.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6" class="py-8 text-center text-stone-400">
+                Aún no registras pagos facturados en los últimos 6 meses. Tu cuenta se encuentra activa.
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = pagos.map(p => {
+          const f = new Date(p.fecha_pago).toLocaleDateString('es-CL');
+          return `
+            <tr class="hover:bg-stone-50 transition">
+              <td class="py-3 px-4 font-mono text-stone-600">${f}</td>
+              <td class="py-3 px-4 font-bold text-stone-800">${nombresMeses[p.periodo_mes]} ${p.periodo_anio}</td>
+              <td class="py-3 px-4 font-black text-stone-900">$${p.monto_clp.toLocaleString('es-CL')}</td>
+              <td class="py-3 px-4 text-stone-600">${p.metodo_pago}</td>
+              <td class="py-3 px-4 font-mono text-[11px] text-stone-500">${p.referencia_comprobante || 'Transferencia directa'}</td>
+              <td class="py-3 px-4 text-right">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                  ${p.estado}
+                </span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      cargarSuscripcion();
+    })();
+  </script>
+</StoreAdminLayout>
+
