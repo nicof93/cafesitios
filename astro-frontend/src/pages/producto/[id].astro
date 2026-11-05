@@ -147,27 +147,57 @@ const captionText = product.descripcion_resumida
   ogImage={product.imagen}
 >
   <div class="space-y-10 pb-24">
-    {product.oculto_catalogo && (
-      <aside aria-label="Aviso de modo vista previa" class="rounded-2xl bg-amber-50 border border-amber-200/90 p-4 flex items-center justify-between gap-3 text-amber-900 shadow-xs">
+    {(!product.activo || product.oculto_catalogo || previewToken) && (
+      <aside aria-label="Aviso de modo vista previa" class={`rounded-2xl p-4 flex items-center justify-between gap-3 shadow-xs border ${
+        !product.activo 
+          ? 'bg-rose-50/90 border-rose-200/90 text-rose-950' 
+          : 'bg-amber-50 border border-amber-200/90 text-amber-900'
+      }`}>
         <div class="flex items-center gap-3">
-          <span class="text-2xl" aria-hidden="true">👁️‍🗨️</span>
+          <span class="text-2xl" aria-hidden="true">{!product.activo ? '⚠️' : '👁️‍🗨️'}</span>
           <div>
-            <p class="text-xs font-bold uppercase tracking-wider text-amber-800">Modo Vista Previa de Tienda</p>
-            <p class="text-xs text-amber-700">Este café se encuentra <strong>oculto en el catálogo público</strong>. Puedes previsualizarlo porque accediste desde la administración de tu tostaduría.</p>
+            <p class="text-xs font-bold uppercase tracking-wider">
+              Modo Vista Previa de Tienda
+            </p>
+            <p class="text-xs opacity-90">
+              {!product.activo && product.oculto_catalogo
+                ? 'Este café se encuentra inactivo (fuera de línea) y oculto del catálogo público. Solo los administradores con token pueden visualizarlo.'
+                : !product.activo
+                  ? 'Este café se encuentra actualmente inactivo (fuera de línea). Los compradores no pueden verlo en el catálogo público.'
+                  : product.oculto_catalogo
+                    ? 'Este café se encuentra oculto en el catálogo público. Puedes previsualizarlo porque accediste con permisos de administración.'
+                    : 'Estás previsualizando la ficha con tu token de administración de tostaduría.'}
+            </p>
           </div>
         </div>
-        <span class="rounded-full bg-amber-200/90 px-2.5 py-1 text-[11px] font-bold text-amber-900 shrink-0">
-          Oculto en catálogo
-        </span>
+        <div class="flex items-center gap-2 shrink-0">
+          {!product.activo && (
+            <span class="rounded-full bg-rose-200 px-2.5 py-1 text-[11px] font-bold text-rose-900">
+              Inactivo
+            </span>
+          )}
+          {product.oculto_catalogo && (
+            <span class="rounded-full bg-amber-200/90 px-2.5 py-1 text-[11px] font-bold text-amber-900">
+              Oculto en catálogo
+            </span>
+          )}
+        </div>
       </aside>
     )}
 
     <!-- BREADCRUMB / RETORNO RÁPIDO -->
     <nav class="flex items-center gap-2 text-xs text-stone-500" aria-label="Ruta de navegación">
-      <a href="/" class="hover:text-emerald-800 transition flex items-center gap-1">
-        <span>←</span>
-        <span>Volver al Catálogo</span>
-      </a>
+      {previewToken ? (
+        <a href="/admin-tienda/productos" class="hover:text-emerald-800 transition flex items-center gap-1 font-semibold text-emerald-700">
+          <span>←</span>
+          <span>Volver al Catálogo de Tienda</span>
+        </a>
+      ) : (
+        <a href="/" class="hover:text-emerald-800 transition flex items-center gap-1">
+          <span>←</span>
+          <span>Volver al Catálogo</span>
+        </a>
+      )}
       <span class="text-stone-300">/</span>
       <span class="text-stone-400 font-medium">{product.tienda}</span>
       <span class="text-stone-300">/</span>

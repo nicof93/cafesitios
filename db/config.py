@@ -77,5 +77,12 @@ class Settings:
             return raw_flag.strip().lower() in ("true", "1", "yes", "on")
         return True
 
+    @property
+    def is_store_posts_enabled(self) -> bool:
+        raw_flag = os.getenv("ENABLE_STORE_POSTS")
+        if raw_flag is not None and raw_flag.strip() != "":
+            return raw_flag.strip().lower() in ("true", "1", "yes", "on")
+        return True
+
 settings = Settings()
 

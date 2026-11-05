@@ -121,5 +121,120 @@ class TestHiddenProductPreview(unittest.TestCase):
         self.assertEqual(data["id"], 10)
 
 
+
+    def test_inactive_product_without_token_returns_404(self):
+        prod_inactive = Producto(
+            id=11,
+            tienda_id=1,
+            nombre="Caturra Inactivo Alfa",
+            url_detalle="https://alfa.cl/caturra",
+            activo=False,
+            oculto_catalogo=False,
+        )
+        self.db.add(prod_inactive)
+        self.db.flush()
+        var = Variante(
+            id=102,
+            producto_id=11,
+            id_variante_externo="var-ext-102",
+            opcion="Grano entero",
+            formato_gramos=250,
+            precio_clp=12000,
+            precio_original_clp=12000,
+            precio_por_kilo=48000,
+            disponible=True,
+        )
+        self.db.add(var)
+        self.db.commit()
+
+        res = self.client.get("/api/v1/products/11/detail")
+        self.assertEqual(res.status_code, 404)
+
+    def test_inactive_product_with_owner_token_returns_200(self):
+        prod_inactive = Producto(
+            id=12,
+            tienda_id=1,
+            nombre="Bourbon Inactivo Alfa",
+            url_detalle="https://alfa.cl/bourbon",
+            activo=False,
+            oculto_catalogo=True,
+        )
+        self.db.add(prod_inactive)
+        self.db.flush()
+        var = Variante(
+            id=103,
+            producto_id=12,
+            id_variante_externo="var-ext-103",
+            opcion="Grano entero",
+            formato_gramos=250,
+            precio_clp=15000,
+            precio_original_clp=15000,
+            precio_por_kilo=60000,
+            disponible=True,
+        )
+        self.db.add(var)
+        self.db.commit()
+
+        res = self.client.get(f"/api/v1/products/12/detail?preview_token={self.token_store1}")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["id"], 12)
+        self.assertFalse(data["activo"])
+        self.assertTrue(data["oculto_catalogo"])
+
+    def test_inactive_store_product_with_owner_token_returns_200(self):
+        store_inactive = Tienda(
+            id=3,
+            nombre="Tostaduría Inactiva Gamma",
+            url_base="https://gamma.cl",
+            activo=False,
+        )
+        self.db.add(store_inactive)
+        self.db.flush()
+        prod = Producto(
+            id=30,
+            tienda_id=3,
+            nombre="Pacamara Gamma",
+            url_detalle="https://gamma.cl/pacamara",
+            activo=False,
+            oculto_catalogo=False,
+        )
+        self.db.add(prod)
+        self.db.flush()
+        var = Variante(
+            id=104,
+            producto_id=30,
+            id_variante_externo="var-ext-104",
+            opcion="Grano entero",
+            formato_gramos=250,
+            precio_clp=14000,
+            precio_original_clp=14000,
+            precio_por_kilo=56000,
+            disponible=True,
+        )
+        self.db.add(var)
+        self.db.commit()
+
+        token_gamma = create_store_admin_token(usuario_id="user-gamma", tienda_id=3)
+        res = self.client.get(f"/api/v1/products/30/detail?preview_token={token_gamma}")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["id"], 30)
+
+        # Without token, should be 404
+        res_no_tok = self.client.get("/api/v1/products/30/detail")
+        self.assertEqual(res_no_tok.status_code, 404)
+
+    def test_platform_superadmin_can_preview_any_product(self):
+        token_super = create_store_admin_token(
+            usuario_id="super-1",
+            tienda_id=None,
+            rol="PLATFORM_SUPERADMIN"
+        )
+        res = self.client.get(f"/api/v1/products/10/detail?preview_token={token_super}")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["id"], 10)
+
+
 if __name__ == "__main__":
     unittest.main()

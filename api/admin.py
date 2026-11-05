@@ -1,5 +1,11 @@
 
 from api.schemas import (
+    FeedbackItemResponse,
+    NovedadCreateRequest,
+    NovedadItemResponse,
+    NovedadUpdateRequest,
+    PaginatedFeedbackResponse,
+    PaginatedNovedadesResponse,
     GlobalStoreTractionResponse,
     GlobalTractionSummary,
     PagoTiendaCreate,
@@ -32,6 +38,8 @@ from db.database import (
     DatabaseManager,
     HistorialPrecio,
     InteraccionClic,
+    NovedadTienda,
+    SugerenciaFeedback,
     OfertaTienda,
     PagoTienda,
     PedidoWhatsApp,
@@ -2916,3 +2924,267 @@ def delete_admin_tienda_pago(
     db_session.delete(pago)
     db_session.commit()
     return {"mensaje": "Pago eliminado correctamente", "id": pago_id}
+
+
+# --- SUPERADMIN: GESTIÓN GLOBAL DE NOVEDADES Y ANUNCIOS ---
+
+def _admin_novedad_dto(n: NovedadTienda) -> NovedadItemResponse:
+    return NovedadItemResponse(
+        id=n.id,
+        tienda_id=n.tienda_id,
+        tienda_nombre=n.tienda.nombre if n.tienda else "Tostaduría",
+        tienda_logo_url=getattr(n.tienda, "logo_url", None) if n.tienda else None,
+        tienda_url_base=n.tienda.url_base if n.tienda else None,
+        titulo=n.titulo,
+        descripcion=n.descripcion,
+        link_url=n.link_url,
+        imagen_url=n.imagen_url,
+        categoria_tipo=n.categoria_tipo,
+        fecha_inicio=n.fecha_inicio,
+        fecha_fin=n.fecha_fin,
+        activo=bool(n.activo),
+        creado_por_rol=n.creado_por_rol or "STORE_ADMIN",
+        fecha_creacion=n.fecha_creacion,
+        fecha_actualizacion=n.fecha_actualizacion,
+    )
+
+
+@administracion_router.get(
+    "/novedades",
+    response_model=PaginatedNovedadesResponse,
+    summary="Listar todas las novedades y anuncios (Superadmin)",
+)
+@router.get("/novedades", response_model=PaginatedNovedadesResponse, include_in_schema=False)
+def get_admin_novedades(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    tienda_id: Optional[int] = Query(None),
+    tipo: Optional[str] = Query(None),
+    activo: Optional[bool] = Query(None),
+    search: Optional[str] = Query(None),
+    db_session: Session = Depends(get_db_session),
+) -> PaginatedNovedadesResponse:
+    base_query = select(NovedadTienda).join(Tienda, NovedadTienda.tienda_id == Tienda.id)
+
+    if tienda_id is not None:
+        base_query = base_query.where(NovedadTienda.tienda_id == tienda_id)
+    if activo is not None:
+        base_query = base_query.where(NovedadTienda.activo == activo)
+    if tipo and tipo.strip():
+        clean_tipo = tipo.strip().lower()
+        if clean_tipo in ("sin_categoria", "ninguna", "none", "null", "vacio"):
+            base_query = base_query.where(NovedadTienda.categoria_tipo.is_(None))
+        else:
+            base_query = base_query.where(NovedadTienda.categoria_tipo == clean_tipo)
+    if search and search.strip():
+        term = f"%{search.strip().lower()}%"
+        base_query = base_query.where(
+            or_(
+                func.lower(NovedadTienda.titulo).like(term),
+                func.lower(NovedadTienda.descripcion).like(term),
+                func.lower(Tienda.nombre).like(term),
+            )
+        )
+
+    count_stmt = select(func.count()).select_from(base_query.subquery())
+    total_count = db_session.execute(count_stmt).scalar() or 0
+
+    offset = (page - 1) * limit
+    total_pages = (total_count + limit - 1) // limit if total_count > 0 else 1
+
+    stmt = (
+        base_query
+        .options(selectinload(NovedadTienda.tienda))
+        .order_by(NovedadTienda.fecha_creacion.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    items = db_session.execute(stmt).scalars().all()
+
+    return PaginatedNovedadesResponse(
+        total=total_count,
+        page=page,
+        limit=limit,
+        total_paginas=total_pages,
+        has_more=page < total_pages,
+        items=[_admin_novedad_dto(i) for i in items]
+    )
+
+
+@administracion_router.post(
+    "/novedades",
+    response_model=NovedadItemResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear novedad en nombre de cualquier tostaduría (Superadmin)",
+)
+@router.post("/novedades", response_model=NovedadItemResponse, status_code=status.HTTP_201_CREATED, include_in_schema=False)
+def create_admin_novedad(
+    payload: NovedadCreateRequest,
+    db_session: Session = Depends(get_db_session),
+) -> NovedadItemResponse:
+    if not payload.tienda_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debe especificar 'tienda_id' para asociar la novedad a una tostaduría."
+        )
+
+    tienda = db_session.get(Tienda, payload.tienda_id)
+    if not tienda:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tienda con ID {payload.tienda_id} no encontrada."
+        )
+
+    item = NovedadTienda(
+        tienda_id=tienda.id,
+        titulo=payload.titulo.strip(),
+        descripcion=payload.descripcion.strip(),
+        link_url=payload.link_url.strip() if payload.link_url else None,
+        imagen_url=payload.imagen_url.strip() if payload.imagen_url else None,
+        categoria_tipo=payload.categoria_tipo.strip().lower() if payload.categoria_tipo and payload.categoria_tipo.strip() else None,
+        fecha_inicio=payload.fecha_inicio,
+        fecha_fin=payload.fecha_fin,
+        activo=payload.activo,
+        creado_por_rol="PLATFORM_SUPERADMIN",
+    )
+    db_session.add(item)
+    db_session.commit()
+    db_session.refresh(item)
+    return _admin_novedad_dto(item)
+
+
+@administracion_router.put(
+    "/novedades/{novedad_id}",
+    response_model=NovedadItemResponse,
+    summary="Actualizar cualquier novedad o anuncio (Superadmin)",
+)
+@router.put("/novedades/{novedad_id}", response_model=NovedadItemResponse, include_in_schema=False)
+def update_admin_novedad(
+    novedad_id: int,
+    payload: NovedadUpdateRequest,
+    db_session: Session = Depends(get_db_session),
+) -> NovedadItemResponse:
+    item = db_session.get(NovedadTienda, novedad_id)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Novedad no encontrada.")
+
+    if payload.titulo is not None:
+        item.titulo = payload.titulo.strip()
+    if payload.descripcion is not None:
+        item.descripcion = payload.descripcion.strip()
+    if payload.link_url is not None:
+        item.link_url = payload.link_url.strip() if payload.link_url else None
+    if payload.imagen_url is not None:
+        item.imagen_url = payload.imagen_url.strip() if payload.imagen_url else None
+    if "categoria_tipo" in payload.model_fields_set:
+        item.categoria_tipo = payload.categoria_tipo.strip().lower() if payload.categoria_tipo and payload.categoria_tipo.strip() else None
+    if "fecha_inicio" in payload.model_fields_set:
+        item.fecha_inicio = payload.fecha_inicio
+    if "fecha_fin" in payload.model_fields_set:
+        item.fecha_fin = payload.fecha_fin
+    if payload.activo is not None:
+        item.activo = payload.activo
+
+    db_session.commit()
+    db_session.refresh(item)
+    return _admin_novedad_dto(item)
+
+
+@administracion_router.delete(
+    "/novedades/{novedad_id}",
+    summary="Eliminar novedad comercial (Superadmin)",
+)
+@router.delete("/novedades/{novedad_id}", include_in_schema=False)
+def delete_admin_novedad(
+    novedad_id: int,
+    db_session: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    item = db_session.get(NovedadTienda, novedad_id)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Novedad no encontrada.")
+    db_session.delete(item)
+    db_session.commit()
+    return {"ok": True, "mensaje": "Novedad eliminada correctamente", "id": novedad_id}
+
+
+# --- SUPERADMIN: BUZÓN DE SUGERENCIAS Y FEEDBACK DE USUARIOS ---
+
+@administracion_router.get(
+    "/feedback",
+    response_model=PaginatedFeedbackResponse,
+    summary="Listar opiniones y sugerencias recibidas (Superadmin)",
+)
+@administracion_router.get("/sugerencias", response_model=PaginatedFeedbackResponse, include_in_schema=False)
+@router.get("/feedback", response_model=PaginatedFeedbackResponse, include_in_schema=False)
+@router.get("/sugerencias", response_model=PaginatedFeedbackResponse, include_in_schema=False)
+def get_admin_feedback(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    categoria: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    db_session: Session = Depends(get_db_session),
+) -> PaginatedFeedbackResponse:
+    base_query = select(SugerenciaFeedback)
+
+    if categoria and categoria.strip():
+        base_query = base_query.where(SugerenciaFeedback.categoria == categoria.strip().lower())
+    if search and search.strip():
+        term = f"%{search.strip().lower()}%"
+        base_query = base_query.where(
+            or_(
+                func.lower(SugerenciaFeedback.mensaje).like(term),
+                func.lower(SugerenciaFeedback.contacto_opcional).like(term),
+            )
+        )
+
+    # Contar total
+    count_stmt = select(func.count()).select_from(base_query.subquery())
+    total_count = db_session.execute(count_stmt).scalar() or 0
+
+    # Conteo por categoría general
+    cat_stmt = select(SugerenciaFeedback.categoria, func.count(SugerenciaFeedback.id)).group_by(SugerenciaFeedback.categoria)
+    cat_counts = dict(db_session.execute(cat_stmt).all())
+
+    offset = (page - 1) * limit
+    total_pages = (total_count + limit - 1) // limit if total_count > 0 else 1
+
+    stmt = base_query.order_by(SugerenciaFeedback.fecha_creacion.desc()).offset(offset).limit(limit)
+    items = db_session.execute(stmt).scalars().all()
+
+    return PaginatedFeedbackResponse(
+        total=total_count,
+        page=page,
+        limit=limit,
+        total_paginas=total_pages,
+        conteo_por_categoria=cat_counts,
+        items=[
+            FeedbackItemResponse(
+                id=i.id,
+                categoria=i.categoria,
+                mensaje=i.mensaje,
+                contacto_opcional=i.contacto_opcional,
+                ip_hash=i.ip_hash,
+                fecha_creacion=i.fecha_creacion,
+            )
+            for i in items
+        ]
+    )
+
+
+@administracion_router.delete(
+    "/feedback/{feedback_id}",
+    summary="Eliminar sugerencia o feedback recibido (Superadmin)",
+)
+@administracion_router.delete("/sugerencias/{feedback_id}", include_in_schema=False)
+@router.delete("/feedback/{feedback_id}", include_in_schema=False)
+@router.delete("/sugerencias/{feedback_id}", include_in_schema=False)
+def delete_admin_feedback(
+    feedback_id: int,
+    db_session: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    item = db_session.get(SugerenciaFeedback, feedback_id)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feedback no encontrado.")
+    db_session.delete(item)
+    db_session.commit()
+    return {"ok": True, "mensaje": "Feedback eliminado correctamente", "id": feedback_id}

@@ -636,3 +636,85 @@ class TiendaPortalSuscripcionResponse(BaseModel):
     funcionalidades_activas: Dict[str, bool] = Field(default_factory=dict)
     historial_pagos: List[PagoTiendaSchema] = Field(default_factory=list)
     balance_roi: TiendaBalanceRoiSchema = Field(default_factory=TiendaBalanceRoiSchema)
+
+
+# --- Novedades y Anuncios de Tiendas ---
+class NovedadItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    tienda_id: int
+    tienda_nombre: str
+    tienda_logo_url: Optional[str] = None
+    tienda_url_base: Optional[str] = None
+    titulo: str
+    descripcion: str
+    link_url: Optional[str] = None
+    imagen_url: Optional[str] = None
+    categoria_tipo: Optional[str] = None
+    fecha_inicio: Optional[datetime] = None
+    fecha_fin: Optional[datetime] = None
+    activo: bool = True
+    creado_por_rol: str = "STORE_ADMIN"
+    fecha_creacion: datetime
+    fecha_actualizacion: datetime
+
+
+class PaginatedNovedadesResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total: int
+    page: int
+    limit: int
+    total_paginas: int
+    has_more: bool
+    items: List[NovedadItemResponse] = Field(default_factory=list)
+
+
+class AdminNovedadesListResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    puede_publicar: bool = True
+    total: int = 0
+    items: List[NovedadItemResponse] = Field(default_factory=list)
+
+
+class NovedadCreateRequest(BaseModel):
+    titulo: str = Field(..., min_length=3, max_length=200)
+    descripcion: str = Field(..., min_length=5, max_length=3000)
+    link_url: Optional[str] = Field(None, max_length=500)
+    imagen_url: Optional[str] = Field(None, max_length=500)
+    categoria_tipo: Optional[str] = Field(None, max_length=50)
+    fecha_inicio: Optional[datetime] = None
+    fecha_fin: Optional[datetime] = None
+    activo: bool = True
+    tienda_id: Optional[int] = None
+
+
+class NovedadUpdateRequest(BaseModel):
+    titulo: Optional[str] = Field(None, min_length=3, max_length=200)
+    descripcion: Optional[str] = Field(None, min_length=5, max_length=3000)
+    link_url: Optional[str] = Field(None, max_length=500)
+    imagen_url: Optional[str] = Field(None, max_length=500)
+    categoria_tipo: Optional[str] = Field(None, max_length=50)
+    fecha_inicio: Optional[datetime] = None
+    fecha_fin: Optional[datetime] = None
+    activo: Optional[bool] = None
+
+
+# --- Feedback y Sugerencias Superadmin ---
+class FeedbackItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    categoria: str
+    mensaje: str
+    contacto_opcional: Optional[str] = None
+    ip_hash: str
+    fecha_creacion: datetime
+
+
+class PaginatedFeedbackResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total: int
+    page: int
+    limit: int
+    total_paginas: int
+    conteo_por_categoria: Dict[str, int] = Field(default_factory=dict)
+    items: List[FeedbackItemResponse] = Field(default_factory=list)

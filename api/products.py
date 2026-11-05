@@ -356,7 +356,12 @@ def get_product_detail(
                 if candidate:
                     rol = payload.get("rol")
                     tienda_id = payload.get("tienda_id")
-                    if rol in ("SUPER_ADMIN", "ADMIN") or tienda_id == candidate.tienda_id:
+                    candidate_tienda_id = getattr(candidate, "tienda_id", candidate[0] if candidate else None)
+                    if rol in ("SUPER_ADMIN", "ADMIN", "PLATFORM_SUPERADMIN") or (
+                        tienda_id is not None
+                        and candidate_tienda_id is not None
+                        and str(tienda_id) == str(candidate_tienda_id)
+                    ):
                         is_preview_authorized = True
         except Exception:
             is_preview_authorized = False
@@ -369,14 +374,12 @@ def get_product_detail(
             selectinload(Producto.variantes).selectinload(Variante.historial_precios),
             selectinload(Producto.notas_cata).joinedload(ProductoNotaCata.nota),
         )
-        .filter(
-            Producto.id == product_id,
-            Tienda.activo.is_(True),
-        )
+        .filter(Producto.id == product_id)
     )
 
     if not is_preview_authorized:
         query = query.filter(
+            Tienda.activo.is_(True),
             Producto.activo.is_(True),
             Producto.oculto_catalogo.is_(False),
         )

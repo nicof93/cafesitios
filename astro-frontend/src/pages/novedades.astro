@@ -1,0 +1,344 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { FeatureFlags } from '../core/infrastructure/config/FeatureFlags';
+import { HttpClient } from '../core/infrastructure/api/HttpClient';
+
+if (!FeatureFlags.isStorePostsEnabled()) {
+  return Astro.rewrite('/404');
+}
+
+const url = new URL(Astro.request.url);
+const currentTipo = url.searchParams.get('tipo') || '';
+const searchQuery = url.searchParams.get('q') || '';
+const currentPage = parseInt(url.searchParams.get('page') || '1', 10);
+
+const http = new HttpClient();
+let items: any[] = [];
+let totalItems = 0;
+let totalPages = 1;
+let hasMore = false;
+
+try {
+  const params: Record<string, any> = {
+    page: currentPage,
+    limit: 9,
+  };
+  if (currentTipo) params.tipo = currentTipo;
+  if (searchQuery) params.search = searchQuery;
+
+  const res = await http.get<any>('/api/v1/novedades', { params, timeoutMs: 5000 });
+  if (res && Array.isArray(res.items)) {
+    items = res.items;
+    totalItems = res.total || 0;
+    totalPages = res.pages || 1;
+    hasMore = res.has_more || false;
+  }
+} catch (err) {
+  console.warn('[novedades.astro] Error cargando novedades desde backend:', err);
+}
+
+// Categorías canónicas de filtros
+const CATEGORIAS = [
+  { id: '', label: '✨ Todas' },
+  { id: 'promocion', label: '🏷️ Promociones y Ofertas' },
+  { id: 'feria', label: '🎪 Ferias de Café' },
+  { id: 'evento', label: '📅 Talleres y Catas' },
+  { id: 'nuevo_lanzamiento', label: '🚀 Lanzamientos' },
+  { id: 'blog', label: '📝 Blog y Editorial' },
+  { id: 'educativo', label: '🎓 Guías y Educación' },
+  { id: 'informativo', label: '📰 Noticias e Info' },
+  { id: 'sin_categoria', label: '📢 Otros Anuncios' },
+];
+
+function formatDate(isoStr?: string | null): string {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch {
+    return isoStr;
+  }
+}
+
+function getCategoriaBadge(tipo?: string | null): { label: string; bg: string; text: string } {
+  switch (tipo) {
+    case 'promocion':
+      return { label: '🏷️ Promoción', bg: 'bg-amber-50 border-amber-200/80', text: 'text-amber-800' };
+    case 'feria':
+      return { label: '🎪 Feria', bg: 'bg-purple-50 border-purple-200/80', text: 'text-purple-800' };
+    case 'evento':
+      return { label: '📅 Evento / Cata', bg: 'bg-blue-50 border-blue-200/80', text: 'text-blue-800' };
+    case 'nuevo_lanzamiento':
+      return { label: '🚀 Lanzamiento', bg: 'bg-emerald-50 border-emerald-200/80', text: 'text-emerald-800' };
+    case 'blog':
+      return { label: '📝 Blog', bg: 'bg-stone-100 border-stone-300', text: 'text-stone-800' };
+    case 'educativo':
+      return { label: '🎓 Educativo', bg: 'bg-teal-50 border-teal-200/80', text: 'text-teal-800' };
+    case 'informativo':
+      return { label: '📰 Informativo', bg: 'bg-sky-50 border-sky-200/80', text: 'text-sky-800' };
+    default:
+      return { label: '📢 Anuncio', bg: 'bg-stone-100 border-stone-200', text: 'text-stone-700' };
+  }
+}
+
+const jsonLdPosts = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "Novedades y Anuncios de Tostadurías | Cafesitios",
+  "description": "Descubre las últimas promociones, ferias cafeteras, eventos de cata y lanzamientos directos de las tostadurías de café de especialidad en Chile.",
+  "url": "https://cafesitios.cl/novedades",
+  "mainEntity": {
+    "@type": "ItemList",
+    "numberOfItems": totalItems,
+    "itemListElement": items.map((item, idx) => ({
+      "@type": "ListItem",
+      "position": idx + 1,
+      "item": {
+        "@type": "SocialMediaPosting",
+        "headline": item.titulo,
+        "articleBody": item.descripcion,
+        "datePublished": item.fecha_creacion,
+        "author": {
+          "@type": "Organization",
+          "name": item.tienda_nombre
+        },
+        "url": item.link_url || "https://cafesitios.cl/novedades"
+      }
+    }))
+  }
+};
+---
+
+<BaseLayout
+  title="Novedades y Promociones de Café | Cafesitios - Eventos y Ofertas en Chile"
+  description="Entérate de promociones exclusivas, ventas especiales, ferias cafeteras y eventos anunciados por tostadurías de especialidad chilenas."
+  canonicalUrl="https://cafesitios.cl/novedades"
+  jsonLd={jsonLdPosts}
+>
+  <div class="space-y-8 pb-20">
+    
+    <!-- HERO HEADER -->
+    <header class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-stone-900 via-stone-850 to-emerald-950 text-white p-8 sm:p-12 shadow-md">
+      <div class="relative z-10 max-w-3xl space-y-3">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-900/60 border border-emerald-400/30 px-3 py-1 text-xs font-bold text-emerald-300">
+          📢 Tablón de la Comunidad Cafetera
+        </span>
+        <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
+          Novedades, Ferias y Promociones
+        </h1>
+        <p class="text-stone-300 text-sm sm:text-base leading-relaxed font-normal max-w-2xl">
+          Anuncios oficiales publicados directamente por las tostadurías de especialidad de Chile: descuentos especiales, ferias, talleres de cata y llegadas de nuevos orígenes.
+        </p>
+      </div>
+
+      <!-- BARRA DE BÚSQUEDA Y FILTRO RÁPIDO -->
+      <div class="mt-8 relative z-10 max-w-xl">
+        <form method="GET" action="/novedades" class="relative">
+          {currentTipo && <input type="hidden" name="tipo" value={currentTipo} />}
+          <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-stone-400 text-base" aria-hidden="true">
+            🔍
+          </span>
+          <input
+            type="search"
+            name="q"
+            value={searchQuery}
+            placeholder="Buscar por tostaduría, café, feria, descuento..."
+            class="w-full rounded-2xl border border-white/20 bg-white/10 pl-11 pr-24 py-3.5 text-sm text-white placeholder-stone-400 backdrop-blur-md transition focus:border-emerald-400 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-emerald-400/30"
+          />
+          <button
+            type="submit"
+            class="absolute right-2 top-2 bottom-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 text-xs font-bold text-white transition focus:outline-none focus:ring-2 focus:ring-emerald-400"
+          >
+            Buscar
+          </button>
+        </form>
+      </div>
+    </header>
+
+    <!-- FILTROS POR CATEGORÍA / TIPO -->
+    <nav class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-stone-200" aria-label="Filtro por tipo de novedad">
+      {CATEGORIAS.map((cat) => {
+        const isActive = (cat.id === '' && !currentTipo) || currentTipo === cat.id;
+        const href = cat.id 
+          ? `/novedades?tipo=${cat.id}${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ''}`
+          : `/novedades${searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ''}`;
+        return (
+          <a
+            href={href}
+            class={`whitespace-nowrap px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition border ${
+              isActive
+                ? 'bg-stone-900 text-white border-stone-900 shadow-sm'
+                : 'bg-white text-stone-600 border-stone-200/80 hover:bg-stone-50 hover:text-stone-900'
+            }`}
+          >
+            {cat.label}
+          </a>
+        );
+      })}
+    </nav>
+
+    <!-- LISTADO DE NOVEDADES (GRID) -->
+    <main id="novedades-container">
+      {items.length === 0 ? (
+        <div class="rounded-2xl border border-stone-200/70 bg-white p-12 text-center max-w-lg mx-auto shadow-sm my-8">
+          <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100 text-3xl mb-4" aria-hidden="true">
+            ☕
+          </div>
+          <h2 class="text-lg font-bold text-stone-900 mb-2">No se encontraron publicaciones</h2>
+          <p class="text-sm text-stone-500 mb-6">
+            {searchQuery || currentTipo
+              ? 'No hay novedades que coincidan con los filtros seleccionados.'
+              : 'Pronto las tostadurías publicarán sus promociones y fechas de ferias aquí.'}
+          </p>
+          {(searchQuery || currentTipo) && (
+            <a
+              href="/novedades"
+              class="inline-flex items-center gap-1.5 rounded-xl bg-stone-900 px-4 py-2 text-xs font-semibold text-white hover:bg-stone-800 transition"
+            >
+              Ver todas las novedades
+            </a>
+          )}
+        </div>
+      ) : (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="novedades-grid">
+          {items.map((post) => {
+            const badge = getCategoriaBadge(post.categoria_tipo);
+            const tieneFechas = post.fecha_inicio || post.fecha_fin;
+            return (
+              <article class="flex flex-col rounded-2xl border border-stone-200/70 bg-white overflow-hidden shadow-sm hover:shadow-md transition group">
+                
+                {/* IMAGEN DE LA NOVEDAD (Opcional) */}
+                {post.imagen_url && (
+                  <div class="relative w-full aspect-[16/9] bg-stone-100 overflow-hidden">
+                    <img
+                      src={post.imagen_url}
+                      alt={post.titulo}
+                      loading="lazy"
+                      width="600"
+                      height="338"
+                      class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      onerror="this.parentElement.style.display='none'"
+                    />
+                  </div>
+                )}
+
+                <div class="flex flex-col flex-1 p-5 sm:p-6 justify-between space-y-4">
+                  <div class="space-y-3">
+                    
+                    {/* CABECERA: TIPO Y TOSTADURÍA */}
+                    <div class="flex items-center justify-between gap-2">
+                      <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.bg} ${badge.text}`}>
+                        {badge.label}
+                      </span>
+                      <time datetime={post.fecha_creacion} class="text-[11px] font-medium text-stone-400">
+                        {formatDate(post.fecha_creacion)}
+                      </time>
+                    </div>
+
+                    {/* TOSTADURÍA QUE PUBLICA */}
+                    <div class="flex items-center gap-2 pt-1">
+                      {post.tienda_logo ? (
+                        <img
+                          src={post.tienda_logo}
+                          alt={post.tienda_nombre}
+                          width="24"
+                          height="24"
+                          loading="lazy"
+                          class="w-6 h-6 rounded-full object-cover border border-stone-200 shrink-0"
+                          onerror="this.style.display='none'"
+                        />
+                      ) : (
+                        <div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px] font-bold shrink-0">
+                          {post.tienda_nombre ? post.tienda_nombre[0].toUpperCase() : 'T'}
+                        </div>
+                      )}
+                      <span class="text-xs font-bold text-stone-700 truncate">
+                        {post.tienda_nombre}
+                      </span>
+                    </div>
+
+                    {/* TÍTULO */}
+                    <h2 class="text-base sm:text-lg font-bold text-stone-900 group-hover:text-emerald-900 transition leading-snug">
+                      {post.titulo}
+                    </h2>
+
+                    {/* DESCRIPCIÓN */}
+                    <p class="text-xs sm:text-sm text-stone-600 leading-relaxed line-clamp-4">
+                      {post.descripcion}
+                    </p>
+
+                    {/* VIGENCIA / FECHAS */}
+                    {tieneFechas && (
+                      <div class="inline-flex items-center gap-1.5 rounded-lg bg-stone-50 border border-stone-200/60 px-2.5 py-1 text-[11px] font-medium text-stone-600">
+                        <span>🗓️</span>
+                        <span>
+                          {post.fecha_inicio ? formatDate(post.fecha_inicio) : 'Inicio'} 
+                          {post.fecha_fin ? ` — ${formatDate(post.fecha_fin)}` : ' en adelante'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* PIE CON LINK DIRECTO */}
+                  {post.link_url && (
+                    <div class="pt-3 border-t border-stone-100 flex items-center justify-end">
+                      <a
+                        href={post.link_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-900 transition focus:outline-none focus-visible:underline"
+                        title={`Ir a ${post.tienda_nombre}`}
+                      >
+                        <span>Más información / Ver oferta</span>
+                        <span aria-hidden="true">↗</span>
+                      </a>
+                    </div>
+                  )}
+
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      {/* PAGINACIÓN CONSERVADORA O CARGAR MÁS */}
+      {totalPages > 1 && (
+        <div class="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-stone-200/70 pt-6">
+          <p class="text-xs font-medium text-stone-500">
+            Página <span class="font-bold text-stone-900">{currentPage}</span> de <span class="font-bold text-stone-900">{totalPages}</span> ({totalItems} publicaciones)
+          </p>
+          <div class="flex items-center gap-2">
+            {currentPage > 1 ? (
+              <a
+                href={`/novedades?page=${currentPage - 1}${currentTipo ? `&tipo=${currentTipo}` : ''}${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ''}`}
+                class="rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition shadow-sm"
+              >
+                ← Anterior
+              </a>
+            ) : (
+              <span class="rounded-xl border border-stone-100 bg-stone-50 px-4 py-2 text-xs font-bold text-stone-300 cursor-not-allowed">
+                ← Anterior
+              </span>
+            )}
+
+            {hasMore ? (
+              <a
+                href={`/novedades?page=${currentPage + 1}${currentTipo ? `&tipo=${currentTipo}` : ''}${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ''}`}
+                class="rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition shadow-sm"
+              >
+                Siguiente →
+              </a>
+            ) : (
+              <span class="rounded-xl border border-stone-100 bg-stone-50 px-4 py-2 text-xs font-bold text-stone-300 cursor-not-allowed">
+                Siguiente →
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </main>
+
+  </div>
+</BaseLayout>
+

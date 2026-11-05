@@ -68,7 +68,7 @@ def _base64url_decode(data: str) -> bytes:
 
 def create_store_admin_token(
     usuario_id: str,
-    tienda_id: int,
+    tienda_id: Optional[int] = None,
     rol: str = "STORE_ADMIN",
     expires_in_seconds: int = 86400,
     target_env: Optional[str] = None,
@@ -78,7 +78,7 @@ def create_store_admin_token(
     payload = {
         "sub": str(usuario_id),
         "usuario_id": str(usuario_id),
-        "tienda_id": int(tienda_id),
+        "tienda_id": int(tienda_id) if tienda_id is not None else None,
         "rol": str(rol),
         "iat": now,
         "exp": now + expires_in_seconds,

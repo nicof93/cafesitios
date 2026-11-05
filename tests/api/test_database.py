@@ -297,8 +297,9 @@ class TestDatabaseManager(unittest.TestCase):
                     ).scalar_one()
 
                 self.assertEqual(store_name, 'Tienda existente')
-                self.assertEqual(revision, '0026_store_plans_and_billing')
+                self.assertEqual(revision, '0028_novedad_categoria_nullable')
                 table_names = set(inspect(db.engine).get_table_names())
+                self.assertIn('novedades_tienda', table_names)
                 self.assertIn('planes_tienda', table_names)
                 self.assertIn('pagos_tienda', table_names)
                 view_names = set(inspect(db.engine).get_view_names())

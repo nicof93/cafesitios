@@ -10,6 +10,7 @@ from starlette.staticfiles import StaticFiles
 
 from api.admin_tienda import router as admin_tienda_router
 from api.feedback import router as feedback_router, sugerencias_router
+from api.novedades import router as novedades_router, news_router, posts_router
 from api.orders import pedidos_router, router as orders_router
 from api.products import ofertas_router, productos_router, router as products_router
 from api.recipes import router as recipes_router
@@ -184,6 +185,9 @@ def create_public_app() -> FastAPI:
     app.include_router(admin_tienda_router)
     app.include_router(pedidos_router)
     app.include_router(orders_router)
+    app.include_router(novedades_router)
+    app.include_router(news_router)
+    app.include_router(posts_router)
 
     # Subida de imágenes de productos para encargados de tienda
     os.makedirs(os.path.join("static", "uploads", "productos"), exist_ok=True)

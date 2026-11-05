@@ -1,0 +1,568 @@
+---
+import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
+import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
+---
+
+<StoreAdminLayout title="Novedades & Anuncios | Panel de Tostaduría" activeNav="novedades">
+  <div class="space-y-6">
+    
+    <!-- ENCABEZADO Y ACCIÓN PRINCIPAL -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-stone-200/70 shadow-xs">
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">📢 Novedades, Ferias & Anuncios</h1>
+          <span class="rounded-full bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 font-bold">Sitio Público</span>
+        </div>
+        <p class="text-xs text-stone-500 mt-1 max-w-2xl">
+          Anuncia descuentos, ferias cafeteras, eventos de cata o lanzamientos de nuevos cafés. Tus publicaciones aparecerán directamente en la sección pública de novedades.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a
+          href="/novedades"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-50 transition shadow-2xs"
+          title="Ver cómo se ven las novedades en el sitio público"
+        >
+          <span>👁️</span>
+          <span>Ver Tablón Público</span>
+        </a>
+
+        <button
+          type="button"
+          id="btn-open-new-drawer"
+          class="inline-flex items-center justify-center gap-2 rounded-xl bg-stone-900 hover:bg-emerald-800 px-5 py-2.5 text-xs font-bold text-white transition shadow-sm"
+        >
+          <span>➕</span>
+          <span>Nueva Publicación</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- BANNER DE AVISO DE PLAN (Si no tiene habilitado publicar nuevas) -->
+    <div id="plan-restriction-banner" class="hidden rounded-2xl border border-amber-300 bg-amber-50/90 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-start sm:items-center gap-3">
+        <span class="text-2xl shrink-0" aria-hidden="true">💡</span>
+        <div>
+          <h4 class="text-xs font-bold text-amber-900">Tu plan actual no incluye la creación de nuevas publicaciones</h4>
+          <p class="text-[11px] text-amber-700 mt-0.5">
+            Tus publicaciones anteriores siguen visibles y puedes editarlas o pausarlas en cualquier momento. Para crear nuevos anuncios y promociones, mejora tu plan en Facturación.
+          </p>
+        </div>
+      </div>
+      <a
+        href="/admin-tienda/suscripcion"
+        class="inline-flex items-center gap-1.5 rounded-xl bg-amber-800 hover:bg-amber-900 px-4 py-2 text-xs font-bold text-white transition shrink-0"
+      >
+        <span>⭐ Mejorar Plan</span>
+      </a>
+    </div>
+
+    <!-- LISTADO DE PUBLICACIONES DE LA TOSTADURÍA -->
+    <div class="rounded-2xl border border-stone-200/70 bg-white shadow-xs overflow-hidden">
+      <div class="p-4 sm:p-5 border-b border-stone-200/70 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <h2 class="text-sm font-bold text-stone-900">Tus Anuncios & Promociones</h2>
+          <span class="rounded-full bg-stone-100 text-stone-600 px-2.5 py-0.5 text-[11px] font-semibold" id="posts-count">
+            0 publicaciones
+          </span>
+        </div>
+      </div>
+
+      <!-- ESTADO DE CARGA -->
+      <div id="posts-loading" class="py-14 text-center text-stone-400 text-xs">
+        <span class="animate-spin text-lg inline-block mr-2" aria-hidden="true">⏳</span>
+        Cargando publicaciones de la tostaduría...
+      </div>
+
+      <!-- ESTADO VACÍO -->
+      <div id="posts-empty" class="hidden py-14 text-center text-stone-400 text-xs space-y-3">
+        <div class="text-4xl" aria-hidden="true">📢</div>
+        <p class="font-bold text-stone-700 text-sm">Aún no has publicado novedades o promociones.</p>
+        <p class="text-stone-500 text-xs max-w-sm mx-auto">
+          Comparte con la comunidad cafetera ofertas especiales, ferias en las que participarás o lanzamientos de nuevos lotes.
+        </p>
+        <div class="pt-2">
+          <button
+            type="button"
+            id="btn-empty-create"
+            class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-2 text-xs font-bold text-white transition shadow-sm"
+          >
+            <span>➕ Crear primer anuncio</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- GRILLA DE TARJETAS DE ANUNCIOS -->
+      <div id="posts-grid" class="hidden p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Render dinámico vía JS -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PANEL LATERAL DESLIZABLE (SLIDE-OVER DRAWER) -->
+  <SlideOverDrawer
+    id="drawer-novedad"
+    title="Nueva Publicación"
+    subtitle="Completa los detalles del anuncio o promoción para el tablón público"
+    icon="📢"
+    maxWidth="max-w-lg lg:max-w-xl"
+  >
+    <form id="form-novedad" class="space-y-4">
+      <input type="hidden" id="novedad-id" name="id" value="" />
+
+      <!-- TÍTULO -->
+      <div>
+        <label for="novedad-titulo" class="block text-xs font-bold text-stone-800 mb-1">
+          Título del Anuncio o Promoción <span class="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          id="novedad-titulo"
+          name="titulo"
+          required
+          maxlength="200"
+          placeholder="Ej: 2x1 en Café Geisha o Stand en Feria Cafetera"
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+        />
+      </div>
+
+      <!-- TIPO / CATEGORÍA -->
+      <div>
+        <label for="novedad-categoria" class="block text-xs font-bold text-stone-800 mb-1">
+          Tipo de Publicación <span class="text-red-500">*</span>
+        </label>
+        <select
+          id="novedad-categoria"
+          name="categoria_tipo"
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 bg-white transition"
+        >
+          <option value="">📢 Sin categoría / Anuncio General</option>
+          <option value="promocion">🏷️ Promoción / Descuento</option>
+          <option value="feria">🎪 Feria Cafetera</option>
+          <option value="evento">📅 Taller, Cata o Evento</option>
+          <option value="nuevo_lanzamiento">🚀 Nuevo Café / Lanzamiento</option>
+          <option value="blog">📝 Blog / Nota Editorial</option>
+          <option value="educativo">🎓 Guía / Educativo</option>
+          <option value="informativo">📰 Informativo / Noticia</option>
+        </select>
+      </div>
+
+      <!-- DESCRIPCIÓN -->
+      <div>
+        <label for="novedad-descripcion" class="block text-xs font-bold text-stone-800 mb-1">
+          Descripción del Anuncio <span class="text-red-500">*</span>
+        </label>
+        <textarea
+          id="novedad-descripcion"
+          name="descripcion"
+          rows="4"
+          required
+          placeholder="Explica de qué trata la promoción, código de descuento, lugar de la feria o detalles del evento..."
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition resize-y"
+        ></textarea>
+      </div>
+
+      <!-- ENLACE EXTERNO (Opcional) -->
+      <div>
+        <label for="novedad-link" class="block text-xs font-bold text-stone-800 mb-1">
+          Enlace a tu Tienda / Oferta (Opcional)
+        </label>
+        <input
+          type="url"
+          id="novedad-link"
+          name="link_url"
+          placeholder="https://tutienda.cl/coleccion/ofertas"
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+        />
+        <p class="text-[10px] text-stone-400 mt-0.5">El botón de la publicación llevará directo a este enlace.</p>
+      </div>
+
+      <!-- URL DE IMAGEN (Opcional) -->
+      <div>
+        <label for="novedad-imagen" class="block text-xs font-bold text-stone-800 mb-1">
+          URL de Imagen / Banner (Opcional)
+        </label>
+        <input
+          type="url"
+          id="novedad-imagen"
+          name="imagen_url"
+          placeholder="https://tutienda.cl/cdn/banner-feria.jpg"
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+        />
+      </div>
+
+      <!-- VIGENCIA / FECHAS (Opcional) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+        <div>
+          <label for="novedad-inicio" class="block text-[11px] font-bold text-stone-700 mb-1">
+            Fecha de Inicio (Opcional)
+          </label>
+          <input
+            type="datetime-local"
+            id="novedad-inicio"
+            name="fecha_inicio"
+            class="w-full rounded-xl border border-stone-200 px-3 py-1.5 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+          />
+        </div>
+        <div>
+          <label for="novedad-fin" class="block text-[11px] font-bold text-stone-700 mb-1">
+            Fecha de Fin / Vencimiento (Opcional)
+          </label>
+          <input
+            type="datetime-local"
+            id="novedad-fin"
+            name="fecha_fin"
+            class="w-full rounded-xl border border-stone-200 px-3 py-1.5 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+          />
+        </div>
+      </div>
+
+      <!-- VISIBILIDAD / ESTADO ACTIVO -->
+      <div class="pt-2">
+        <label class="inline-flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            id="novedad-activo"
+            name="activo"
+            checked
+            class="rounded border-stone-300 text-emerald-700 focus:ring-emerald-600 h-4 w-4"
+          />
+          <span class="text-xs font-bold text-stone-800">Publicación Visible en el Tablón Público</span>
+        </label>
+        <p class="text-[10px] text-stone-400 pl-6">Si desmarcas esta opción, la publicación quedará pausada sin borrarse.</p>
+      </div>
+
+      <div id="drawer-error" class="hidden rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-700 font-semibold"></div>
+    </form>
+
+    <div slot="footer" class="flex items-center justify-end gap-2.5 w-full">
+      <button
+        type="button"
+        id="btn-cancel-drawer"
+        class="rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-100 transition shadow-2xs"
+      >
+        Cancelar
+      </button>
+      <button
+        type="button"
+        id="btn-save-novedad"
+        class="inline-flex items-center gap-2 rounded-xl bg-stone-900 hover:bg-emerald-800 px-5 py-2 text-xs font-bold text-white transition shadow-sm"
+      >
+        <span id="save-spinner" class="hidden animate-spin">⏳</span>
+        <span id="save-text">Guardar Publicación</span>
+      </button>
+    </div>
+  </SlideOverDrawer>
+
+</StoreAdminLayout>
+
+<script is:inline>
+  (function initNovedadesAdmin() {
+    const apiBase = document.body.dataset.apiBase || 'http://localhost:8000';
+    const token = localStorage.getItem('store_admin_token');
+
+    let allPosts = [];
+    let puedePublicar = true;
+
+    // Elementos DOM
+    const postsLoading = document.getElementById('posts-loading');
+    const postsEmpty = document.getElementById('posts-empty');
+    const postsGrid = document.getElementById('posts-grid');
+    const postsCount = document.getElementById('posts-count');
+    const planBanner = document.getElementById('plan-restriction-banner');
+    const btnOpenNew = document.getElementById('btn-open-new-drawer');
+    const btnEmptyCreate = document.getElementById('btn-empty-create');
+
+    // Drawer DOM
+    const drawer = document.getElementById('drawer-novedad');
+    const drawerBackdrop = document.getElementById('drawer-novedad-backdrop');
+    const drawerTitle = document.getElementById('drawer-novedad-title');
+    const drawerCloseBtn = document.getElementById('drawer-novedad-close-btn');
+    const btnCancel = document.getElementById('btn-cancel-drawer');
+    const btnSave = document.getElementById('btn-save-novedad');
+    const saveSpinner = document.getElementById('save-spinner');
+    const saveText = document.getElementById('save-text');
+    const drawerError = document.getElementById('drawer-error');
+
+    // Form inputs
+    const form = document.getElementById('form-novedad');
+    const inputId = document.getElementById('novedad-id');
+    const inputTitulo = document.getElementById('novedad-titulo');
+    const inputCategoria = document.getElementById('novedad-categoria');
+    const inputDescripcion = document.getElementById('novedad-descripcion');
+    const inputLink = document.getElementById('novedad-link');
+    const inputImagen = document.getElementById('novedad-imagen');
+    const inputInicio = document.getElementById('novedad-inicio');
+    const inputFin = document.getElementById('novedad-fin');
+    const inputActivo = document.getElementById('novedad-activo');
+
+    function openDrawer(isEdit = false, post = null) {
+      drawerError.classList.add('hidden');
+      drawerError.textContent = '';
+      
+      if (isEdit && post) {
+        drawerTitle.textContent = 'Editar Publicación';
+        inputId.value = post.id;
+        inputTitulo.value = post.titulo || '';
+        inputCategoria.value = post.categoria_tipo || 'promocion';
+        inputDescripcion.value = post.descripcion || '';
+        inputLink.value = post.link_url || '';
+        inputImagen.value = post.imagen_url || '';
+        inputInicio.value = post.fecha_inicio ? post.fecha_inicio.slice(0, 16) : '';
+        inputFin.value = post.fecha_fin ? post.fecha_fin.slice(0, 16) : '';
+        inputActivo.checked = Boolean(post.activo);
+      } else {
+        if (!puedePublicar) {
+          alert('Tu plan actual no incluye la creación de nuevas publicaciones. Por favor actualiza tu suscripción.');
+          return;
+        }
+        drawerTitle.textContent = 'Nueva Publicación';
+        form.reset();
+        inputId.value = '';
+        inputActivo.checked = true;
+      }
+
+      drawer.classList.remove('invisible', 'translate-x-full');
+      drawerBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function closeDrawer() {
+      drawer.classList.add('translate-x-full');
+      drawerBackdrop.classList.add('opacity-0', 'pointer-events-none');
+      setTimeout(() => drawer.classList.add('invisible'), 300);
+    }
+
+    btnOpenNew?.addEventListener('click', () => openDrawer(false));
+    btnEmptyCreate?.addEventListener('click', () => openDrawer(false));
+    drawerCloseBtn?.addEventListener('click', closeDrawer);
+    btnCancel?.addEventListener('click', closeDrawer);
+    drawerBackdrop?.addEventListener('click', closeDrawer);
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDrawer();
+    });
+
+    async function fetchNovedades() {
+      try {
+        postsLoading.classList.remove('hidden');
+        postsEmpty.classList.add('hidden');
+        postsGrid.classList.add('hidden');
+
+        const res = await fetch(`${apiBase}/api/v1/admin/tienda/novedades`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!res.ok) {
+          throw new Error('Error al cargar publicaciones');
+        }
+
+        const data = await res.json();
+        allPosts = data.items || [];
+        puedePublicar = Boolean(data.puede_publicar);
+
+        postsCount.textContent = `${data.total || 0} publicaciones`;
+
+        if (!puedePublicar) {
+          planBanner.classList.remove('hidden');
+          btnOpenNew.classList.add('opacity-50');
+        } else {
+          planBanner.classList.add('hidden');
+          btnOpenNew.classList.remove('opacity-50');
+        }
+
+        postsLoading.classList.add('hidden');
+
+        if (allPosts.length === 0) {
+          postsEmpty.classList.remove('hidden');
+        } else {
+          renderGrid(allPosts);
+          postsGrid.classList.remove('hidden');
+        }
+      } catch (err) {
+        console.error(err);
+        postsLoading.textContent = 'Ocurrió un error al cargar las publicaciones. Por favor recarga la página.';
+      }
+    }
+
+    function getBadgeInfo(tipo) {
+      switch (tipo) {
+        case 'promocion': return { label: '🏷️ Promoción', bg: 'bg-amber-50 text-amber-800 border-amber-200' };
+        case 'feria': return { label: '🎪 Feria', bg: 'bg-purple-50 text-purple-800 border-purple-200' };
+        case 'evento': return { label: '📅 Evento / Cata', bg: 'bg-blue-50 text-blue-800 border-blue-200' };
+        case 'nuevo_lanzamiento': return { label: '🚀 Lanzamiento', bg: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
+        case 'blog': return { label: '📝 Blog', bg: 'bg-stone-100 text-stone-800 border-stone-300' };
+        case 'educativo': return { label: '🎓 Educativo', bg: 'bg-teal-50 text-teal-800 border-teal-200' };
+        case 'informativo': return { label: '📰 Informativo', bg: 'bg-sky-50 text-sky-800 border-sky-200' };
+        default: return { label: '📢 Anuncio', bg: 'bg-stone-100 text-stone-700 border-stone-200' };
+      }
+    }
+
+    function renderGrid(posts) {
+      postsGrid.innerHTML = '';
+      posts.forEach(post => {
+        const badge = getBadgeInfo(post.categoria_tipo);
+        const card = document.createElement('div');
+        card.className = 'flex flex-col justify-between rounded-2xl border border-stone-200/80 bg-white p-5 shadow-2xs hover:shadow-sm transition';
+
+        const dateStr = post.fecha_creacion ? new Date(post.fecha_creacion).toLocaleDateString('es-CL') : '';
+
+        card.innerHTML = `
+          <div class="space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge.bg}">
+                ${badge.label}
+              </span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${post.activo ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-400'}">
+                ${post.activo ? '● Visible' : '○ Pausada'}
+              </span>
+            </div>
+
+            ${post.imagen_url ? `
+              <div class="w-full aspect-[16/9] rounded-xl bg-stone-100 overflow-hidden">
+                <img src="${post.imagen_url}" alt="${post.titulo}" class="w-full h-full object-cover" onerror="this.parentElement.style.display='none'"/>
+              </div>
+            ` : ''}
+
+            <div>
+              <h3 class="text-sm font-bold text-stone-900 line-clamp-1">${post.titulo}</h3>
+              <p class="text-[11px] text-stone-500 line-clamp-3 mt-1 leading-relaxed">${post.descripcion}</p>
+            </div>
+
+            ${(post.fecha_inicio || post.fecha_fin) ? `
+              <div class="text-[10px] text-stone-400 bg-stone-50 rounded-lg p-1.5 flex items-center gap-1">
+                <span>🗓️ Vigencia:</span>
+                <span>${post.fecha_inicio ? post.fecha_inicio.slice(0, 10) : ''} al ${post.fecha_fin ? post.fecha_fin.slice(0, 10) : 'indefinido'}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="pt-4 border-t border-stone-100 mt-4 flex items-center justify-between">
+            <span class="text-[10px] text-stone-400 font-medium">Publicado: ${dateStr}</span>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                data-action="edit"
+                data-id="${post.id}"
+                class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold transition"
+              >
+                ✏️ Editar
+              </button>
+              <button
+                type="button"
+                data-action="delete"
+                data-id="${post.id}"
+                class="px-2 py-1 rounded-lg hover:bg-red-50 text-stone-400 hover:text-red-700 text-xs font-bold transition"
+                title="Eliminar publicación"
+              >
+                🗑️
+              </button>
+            </div>
+          </div>
+        `;
+
+        // Eventos
+        card.querySelector('[data-action="edit"]').addEventListener('click', () => {
+          openDrawer(true, post);
+        });
+
+        card.querySelector('[data-action="delete"]').addEventListener('click', async () => {
+          if (!confirm(`¿Estás seguro de eliminar permanentemente la publicación "${post.titulo}"?`)) {
+            return;
+          }
+          try {
+            const delRes = await fetch(`${apiBase}/api/v1/admin/tienda/novedades/${post.id}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (delRes.ok) {
+              fetchNovedades();
+            } else {
+              alert('Error al eliminar la publicación.');
+            }
+          } catch (e) {
+            console.error(e);
+            alert('Error de conexión al eliminar.');
+          }
+        });
+
+        postsGrid.appendChild(card);
+      });
+    }
+
+    btnSave?.addEventListener('click', async () => {
+      const id = inputId.value;
+      const titulo = inputTitulo.value.trim();
+      const descripcion = inputDescripcion.value.trim();
+      const categoria_tipo = inputCategoria.value;
+      const link_url = inputLink.value.trim() || null;
+      const imagen_url = inputImagen.value.trim() || null;
+      const fecha_inicio = inputInicio.value ? new Date(inputInicio.value).toISOString() : null;
+      const fecha_fin = inputFin.value ? new Date(inputFin.value).toISOString() : null;
+      const activo = inputActivo.checked;
+
+      if (!titulo || !descripcion) {
+        drawerError.textContent = 'Por favor completa el título y la descripción.';
+        drawerError.classList.remove('hidden');
+        return;
+      }
+
+      const body = {
+        titulo,
+        descripcion,
+        categoria_tipo,
+        link_url,
+        imagen_url,
+        fecha_inicio,
+        fecha_fin,
+        activo
+      };
+
+      try {
+        btnSave.disabled = true;
+        saveSpinner.classList.remove('hidden');
+        saveText.textContent = 'Guardando...';
+        drawerError.classList.add('hidden');
+
+        const isEdit = Boolean(id);
+        const urlEndpoint = isEdit 
+          ? `${apiBase}/api/v1/admin/tienda/novedades/${id}`
+          : `${apiBase}/api/v1/admin/tienda/novedades`;
+        const method = isEdit ? 'PUT' : 'POST';
+
+        const res = await fetch(urlEndpoint, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || 'Error al guardar la publicación.');
+        }
+
+        closeDrawer();
+        fetchNovedades();
+      } catch (err) {
+        drawerError.textContent = err.message || 'Error al guardar la publicación.';
+        drawerError.classList.remove('hidden');
+      } finally {
+        btnSave.disabled = false;
+        saveSpinner.classList.add('hidden');
+        saveText.textContent = 'Guardar Publicación';
+      }
+    });
+
+    if (token) {
+      fetchNovedades();
+    }
+  })();
+</script>
+
