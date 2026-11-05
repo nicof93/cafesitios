@@ -387,7 +387,7 @@ import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
       function openBranchDrawer() {
         if (!drawerBranch) return;
         if (formBranch) formBranch.reset();
-        drawerBranch.classList.remove('translate-x-full');
+        drawerBranch.classList.remove('invisible'); requestAnimationFrame(() => { drawerBranch.classList.remove('translate-x-full'); });
         if (drawerBranchBackdrop) {
           drawerBranchBackdrop.classList.remove('opacity-0', 'pointer-events-none');
           drawerBranchBackdrop.classList.add('opacity-100', 'pointer-events-auto');
@@ -396,7 +396,7 @@ import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
 
       function closeBranchDrawer() {
         if (!drawerBranch) return;
-        drawerBranch.classList.add('translate-x-full');
+        drawerBranch.classList.add('translate-x-full', 'invisible');
         if (drawerBranchBackdrop) {
           drawerBranchBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
           drawerBranchBackdrop.classList.add('opacity-0', 'pointer-events-none');

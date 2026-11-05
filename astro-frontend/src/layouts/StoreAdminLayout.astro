@@ -463,7 +463,7 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
     <Fragment slot="footer">
       <button
         type="button"
-        id="btn-cancel-change-password"
+        id="btn-close-change-password"
         class="rounded-xl border border-stone-300 bg-white px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-100 transition"
       >
         Cancelar
@@ -804,7 +804,7 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
       const btnOpenPwdHeader = document.getElementById('btn-open-change-password');
       const btnOpenPwdSidebar = document.getElementById('sidebar-btn-change-password');
       const btnClosePwd = document.getElementById('drawer-change-password-close-btn');
-      const btnCancelPwd = document.getElementById('btn-cancel-change-password');
+      const btnCancelPwd = document.getElementById('btn-close-change-password') || document.getElementById('btn-cancel-change-password');
       const formPwd = document.getElementById('form-change-password');
       const feedbackPwd = document.getElementById('pwd-feedback');
       const submitBtnPwd = document.getElementById('btn-submit-change-password');
@@ -822,7 +822,7 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
         if (!pwdDrawer) return;
         if (formPwd) formPwd.reset();
         if (feedbackPwd) feedbackPwd.classList.add('hidden');
-        pwdDrawer.classList.remove('translate-x-full');
+        pwdDrawer.classList.remove('invisible'); requestAnimationFrame(() => { pwdDrawer.classList.remove('translate-x-full'); });
         if (pwdBackdrop) {
           pwdBackdrop.classList.remove('opacity-0', 'pointer-events-none');
           pwdBackdrop.classList.add('opacity-100', 'pointer-events-auto');
@@ -831,7 +831,7 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
 
       function closeChangePasswordDrawer() {
         if (!pwdDrawer) return;
-        pwdDrawer.classList.add('translate-x-full');
+        pwdDrawer.classList.add('translate-x-full', 'invisible');
         if (pwdBackdrop) {
           pwdBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
           pwdBackdrop.classList.add('opacity-0', 'pointer-events-none');

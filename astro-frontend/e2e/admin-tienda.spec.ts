@@ -133,7 +133,7 @@ test.describe('Portal de Administración de Tiendas', () => {
 
     // Abrir modal de cambio de contraseña
     await btnOpenPwd.click();
-    const modalPwd = page.locator('#modal-change-password');
+    const modalPwd = page.locator('#drawer-change-password, #modal-change-password');
     await expect(modalPwd).toBeVisible();
 
     const inputPwdActual = page.locator('#input-pwd-actual');
