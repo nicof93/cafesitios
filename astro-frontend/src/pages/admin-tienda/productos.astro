@@ -59,9 +59,9 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
     </div>
 
     <!-- TABLA DE PRODUCTOS -->
-    <div class="overflow-x-auto rounded-2xl border border-stone-200 bg-white shadow-xs">
+    <div class="overflow-x-auto max-h-[580px] overflow-y-auto rounded-2xl border border-stone-200 bg-white shadow-xs">
       <table class="w-full text-left text-xs text-stone-700">
-        <thead class="bg-stone-50/80 border-b border-stone-200 text-[11px] uppercase tracking-wider font-bold text-stone-500">
+        <thead class="sticky top-0 bg-stone-50 border-b border-stone-200 text-[11px] uppercase tracking-wider font-bold text-stone-500 z-10">
           <tr>
             <th class="px-4 py-3">Café</th>
             <th class="px-4 py-3">Origen / Finca</th>
@@ -92,7 +92,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-product-title"
-      class="fixed inset-y-0 right-0 z-50 w-full max-w-xl bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full border-l border-stone-200"
+      class="fixed inset-y-0 right-0 z-50 w-full max-w-xl bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full invisible border-l border-stone-200"
     >
       <div class="flex items-center justify-between px-6 py-4 border-b border-stone-200 bg-[#FAF8F2]/90 backdrop-blur-md shrink-0">
         <h3 class="text-base font-black text-stone-900 flex items-center gap-2" id="modal-product-title">
@@ -224,7 +224,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-notes-title"
-      class="fixed inset-y-0 right-0 z-50 w-full max-w-xl bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full border-l border-stone-200"
+      class="fixed inset-y-0 right-0 z-50 w-full max-w-xl bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full invisible border-l border-stone-200"
     >
       <div class="flex items-center justify-between px-6 py-4 border-b border-stone-200 bg-[#FAF8F2]/90 backdrop-blur-md shrink-0">
         <div>
@@ -424,7 +424,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           productBackdrop.classList.add('opacity-100', 'pointer-events-auto');
         }
         if (modal) {
-          modal.classList.remove('translate-x-full');
+          modal.classList.remove('invisible'); requestAnimationFrame(() => { modal.classList.remove('translate-x-full'); });
           modal.classList.add('translate-x-0');
         }
         document.body.classList.add('overflow-hidden');
@@ -437,7 +437,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         }
         if (modal) {
           modal.classList.remove('translate-x-0');
-          modal.classList.add('translate-x-full');
+          modal.classList.add('translate-x-full', 'invisible');
         }
         document.body.classList.remove('overflow-hidden');
         selectedImageBase64 = null;
@@ -454,7 +454,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
           productBackdrop.classList.add('opacity-100', 'pointer-events-auto');
         }
         if (modalNotes) {
-          modalNotes.classList.remove('translate-x-full');
+          modalNotes.classList.remove('invisible'); requestAnimationFrame(() => { modalNotes.classList.remove('translate-x-full'); });
           modalNotes.classList.add('translate-x-0');
         }
         document.body.classList.add('overflow-hidden');
@@ -468,7 +468,7 @@ import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
         }
         if (modalNotes) {
           modalNotes.classList.remove('translate-x-0');
-          modalNotes.classList.add('translate-x-full');
+          modalNotes.classList.add('translate-x-full', 'invisible');
         }
         document.body.classList.remove('overflow-hidden');
         currentProductForNotes = null;
