@@ -10,6 +10,7 @@ DEFAULT_FEATURES: Dict[str, bool] = {
     "benchmark_precios": False,
     "fotos_hd_extra": False,
     "destacado_catalogo": False,
+    "publicaciones_novedades": False,
 }
 
 VALOR_ESTIMADO_CLIC_CLP: int = 350

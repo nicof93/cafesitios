@@ -8,7 +8,7 @@ import os
 import time
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select, desc, text, or_
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, selectinload, joinedload
 
 from api.dependencies import get_db_session
 from core.security_store_admin import (
@@ -30,6 +30,7 @@ from db.database import (
     HistorialPrecio,
     InteraccionClic,
     NotaCata,
+    NovedadTienda,
     PagoTienda,
     PedidoWhatsApp,
     PlanTienda,
@@ -46,7 +47,16 @@ from db.database import (
 )
 from scrapper_application import sincronizar_tienda
 from api.admin import CatalogTestRequest, CatalogTestResponse, test_store_catalog
-from api.schemas import TiendaPortalSuscripcionResponse, PlanTiendaSchema, PagoTiendaSchema, TiendaBalanceRoiSchema
+from api.schemas import (
+    AdminNovedadesListResponse,
+    NovedadCreateRequest,
+    NovedadItemResponse,
+    NovedadUpdateRequest,
+    PagoTiendaSchema,
+    PlanTiendaSchema,
+    TiendaBalanceRoiSchema,
+    TiendaPortalSuscripcionResponse,
+)
 from core.billing_utils import calcular_balance_roi, calcular_funcionalidades_efectivas, calcular_proxima_fecha_pago
 
 
@@ -2849,3 +2859,234 @@ def get_store_subscription_portal(
         historial_pagos=pagos_items,
         balance_roi=TiendaBalanceRoiSchema(**balance),
     )
+
+
+# --- GESTIÓN DE NOVEDADES, ANUNCIOS Y PROMOCIONES DE TOSTADURÍA ---
+
+def _novedad_to_dto(n: NovedadTienda) -> NovedadItemResponse:
+    return NovedadItemResponse(
+        id=n.id,
+        tienda_id=n.tienda_id,
+        tienda_nombre=n.tienda.nombre if n.tienda else "Tostaduría",
+        tienda_logo_url=getattr(n.tienda, "logo_url", None) if n.tienda else None,
+        tienda_url_base=n.tienda.url_base if n.tienda else None,
+        titulo=n.titulo,
+        descripcion=n.descripcion,
+        link_url=n.link_url,
+        imagen_url=n.imagen_url,
+        categoria_tipo=n.categoria_tipo,
+        fecha_inicio=n.fecha_inicio,
+        fecha_fin=n.fecha_fin,
+        activo=bool(n.activo),
+        creado_por_rol=n.creado_por_rol or "STORE_ADMIN",
+        fecha_creacion=n.fecha_creacion,
+        fecha_actualizacion=n.fecha_actualizacion,
+    )
+
+
+@router.get(
+    "/novedades",
+    response_model=AdminNovedadesListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Listar novedades y promociones de la tostaduría activa",
+    description="Retorna los anuncios publicados y el indicador de si el plan actual permite publicar nuevas."
+)
+def list_store_novedades(
+    request: Request,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session)
+) -> AdminNovedadesListResponse:
+    # 1. Obtener tienda y plan para chequear capacidad
+    tienda = db_session.execute(
+        select(Tienda).options(joinedload(Tienda.plan)).where(Tienda.id == ctx.tienda_id)
+    ).scalars().first()
+
+    plan_feats = tienda.plan.funcionalidades if (tienda and tienda.plan) else None
+    override_feats = tienda.funcionalidades_override if tienda else None
+    funcionalidades = calcular_funcionalidades_efectivas(plan_feats, override_feats)
+
+    puede_publicar = bool(funcionalidades.get("publicaciones_novedades", False))
+
+    # 2. Cargar novedades de la tienda (las ya hechas NUNCA se ocultan)
+    stmt = (
+        select(NovedadTienda)
+        .options(joinedload(NovedadTienda.tienda))
+        .where(NovedadTienda.tienda_id == ctx.tienda_id)
+        .order_by(NovedadTienda.fecha_creacion.desc())
+    )
+    db_items = db_session.execute(stmt).scalars().all()
+
+    return AdminNovedadesListResponse(
+        puede_publicar=puede_publicar,
+        total=len(db_items),
+        items=[_novedad_to_dto(n) for n in db_items]
+    )
+
+
+@router.post(
+    "/novedades",
+    response_model=NovedadItemResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear nueva novedad o promoción de tostaduría",
+    description="Publica un anuncio en el sitio público. Requiere plan habilitado con 'publicaciones_novedades'."
+)
+def create_store_novedad(
+    payload: NovedadCreateRequest,
+    request: Request,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session)
+) -> NovedadItemResponse:
+    tienda = db_session.execute(
+        select(Tienda).options(joinedload(Tienda.plan)).where(Tienda.id == ctx.tienda_id)
+    ).scalars().first()
+
+    if not tienda:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tienda no encontrada.")
+
+    plan_feats = tienda.plan.funcionalidades if tienda.plan else None
+    override_feats = tienda.funcionalidades_override
+    funcionalidades = calcular_funcionalidades_efectivas(plan_feats, override_feats)
+
+    # Validación de permiso según plan
+    if not funcionalidades.get("publicaciones_novedades", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu plan actual no incluye la creación de nuevas publicaciones y anuncios comerciales. Puedes actualizar tu plan en la sección Suscripción para habilitarla."
+        )
+
+    nueva = NovedadTienda(
+        tienda_id=ctx.tienda_id,
+        titulo=payload.titulo.strip(),
+        descripcion=payload.descripcion.strip(),
+        link_url=payload.link_url.strip() if payload.link_url else None,
+        imagen_url=payload.imagen_url.strip() if payload.imagen_url else None,
+        categoria_tipo=payload.categoria_tipo.strip().lower() if payload.categoria_tipo and payload.categoria_tipo.strip() else None,
+        fecha_inicio=payload.fecha_inicio,
+        fecha_fin=payload.fecha_fin,
+        activo=payload.activo,
+        creado_por_rol="STORE_ADMIN",
+    )
+    db_session.add(nueva)
+    db_session.commit()
+    db_session.refresh(nueva)
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="CREAR_NOVEDAD",
+        entidad="novedades_tienda",
+        entidad_id=nueva.id,
+        valores_nuevos={"titulo": nueva.titulo, "categoria": nueva.categoria_tipo},
+        ip_origen=get_client_ip(request),
+    )
+
+    return _novedad_to_dto(nueva)
+
+
+@router.put(
+    "/novedades/{novedad_id}",
+    response_model=NovedadItemResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Editar novedad o promoción de tostaduría",
+    description="Permite modificar una publicación ya creada (permitido incluso si el plan fue degradado posteriormente)."
+)
+def update_store_novedad(
+    novedad_id: int,
+    payload: NovedadUpdateRequest,
+    request: Request,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session)
+) -> NovedadItemResponse:
+    item = db_session.execute(
+        select(NovedadTienda)
+        .options(joinedload(NovedadTienda.tienda))
+        .where(
+            NovedadTienda.id == novedad_id,
+            NovedadTienda.tienda_id == ctx.tienda_id
+        )
+    ).scalars().first()
+
+    if not item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="La publicación no existe o no pertenece a tu tostaduría."
+        )
+
+    valores_previos = {"titulo": item.titulo, "activo": item.activo}
+
+    if payload.titulo is not None:
+        item.titulo = payload.titulo.strip()
+    if payload.descripcion is not None:
+        item.descripcion = payload.descripcion.strip()
+    if payload.link_url is not None:
+        item.link_url = payload.link_url.strip() if payload.link_url else None
+    if payload.imagen_url is not None:
+        item.imagen_url = payload.imagen_url.strip() if payload.imagen_url else None
+    if "categoria_tipo" in payload.model_fields_set:
+        item.categoria_tipo = payload.categoria_tipo.strip().lower() if payload.categoria_tipo and payload.categoria_tipo.strip() else None
+    if "fecha_inicio" in payload.model_fields_set:
+        item.fecha_inicio = payload.fecha_inicio
+    if "fecha_fin" in payload.model_fields_set:
+        item.fecha_fin = payload.fecha_fin
+    if payload.activo is not None:
+        item.activo = payload.activo
+
+    db_session.commit()
+    db_session.refresh(item)
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="ACTUALIZAR_NOVEDAD",
+        entidad="novedades_tienda",
+        entidad_id=item.id,
+        valores_previos=valores_previos,
+        valores_nuevos={"titulo": item.titulo, "activo": item.activo},
+        ip_origen=get_client_ip(request),
+    )
+
+    return _novedad_to_dto(item)
+
+
+@router.delete(
+    "/novedades/{novedad_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Eliminar novedad o promoción de tostaduría",
+    description="Elimina definitivamente la publicación de la base de datos."
+)
+def delete_store_novedad(
+    novedad_id: int,
+    request: Request,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session)
+) -> Dict[str, Any]:
+    item = db_session.execute(
+        select(NovedadTienda).where(
+            NovedadTienda.id == novedad_id,
+            NovedadTienda.tienda_id == ctx.tienda_id
+        )
+    ).scalars().first()
+
+    if not item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="La publicación no existe o no pertenece a tu tostaduría."
+        )
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="ELIMINAR_NOVEDAD",
+        entidad="novedades_tienda",
+        entidad_id=item.id,
+        valores_previos={"titulo": item.titulo},
+        ip_origen=get_client_ip(request),
+    )
+
+    db_session.delete(item)
+    db_session.commit()
+
+    return {"ok": True, "mensaje": "Publicación eliminada correctamente."}

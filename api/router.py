@@ -30,6 +30,7 @@ from api.sync import (
     sincronizaciones_router,
     sincronizaciones_v1_router,
 )
+from api.novedades import news_router, posts_router, router as novedades_router
 from api.orders import pedidos_router, router as orders_router
 from api.telemetry import router as telemetry_router, telemetria_router
 from infrastructure.postgres_repository import PostgresCoffeeRepository
@@ -57,6 +58,9 @@ __all__ = [
     "telemetria_router",
     "orders_router",
     "pedidos_router",
+    "novedades_router",
+    "news_router",
+    "posts_router",
     "get_product_detail",
     "get_cheapest_coffee_products",
     "get_stores_summary",

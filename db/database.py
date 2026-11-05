@@ -94,6 +94,7 @@ class Tienda(Base):
     sucursales = relationship("SucursalTienda", back_populates="tienda", cascade="all, delete-orphan")
     catalogos = relationship("TiendaCatalogo", back_populates="tienda", cascade="all, delete-orphan")
     pedidos_whatsapp = relationship("PedidoWhatsApp", back_populates="tienda", cascade="all, delete-orphan")
+    novedades = relationship("NovedadTienda", back_populates="tienda", cascade="all, delete-orphan")
 
 
 class TiendaCatalogo(Base):
@@ -317,6 +318,30 @@ class SugerenciaFeedback(Base):
     contacto_opcional = Column(String(150), nullable=True)
     ip_hash = Column(String(64), nullable=False)
     fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
+
+
+class NovedadTienda(Base):
+    __tablename__ = 'novedades_tienda'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tienda_id = Column(Integer, ForeignKey('tiendas.id', ondelete='CASCADE'), nullable=False, index=True)
+    titulo = Column(String(200), nullable=False)
+    descripcion = Column(Text, nullable=False)
+    link_url = Column(String(500), nullable=True)
+    imagen_url = Column(String(500), nullable=True)
+    categoria_tipo = Column(String(50), nullable=True, default=None)
+    fecha_inicio = Column(DateTime, nullable=True)
+    fecha_fin = Column(DateTime, nullable=True)
+    activo = Column(Boolean, nullable=False, default=True, server_default='true')
+    creado_por_rol = Column(String(50), nullable=False, default='STORE_ADMIN', server_default='STORE_ADMIN')
+    fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
+    fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
+
+    tienda = relationship("Tienda", back_populates="novedades")
+
+    __table_args__ = (
+        Index('idx_novedades_tienda_fecha', 'tienda_id', 'fecha_creacion'),
+        Index('idx_novedades_activo_fecha', 'activo', 'fecha_creacion'),
+    )
 
 class InteraccionClic(Base):
     __tablename__ = 'interacciones_clics'
