@@ -1,0 +1,803 @@
+---
+import AdminLteLayout from '../layouts/AdminLteLayout.astro';
+---
+
+<AdminLteLayout title="Novedades y Anuncios | Plataforma Admin" activeNav="novedades">
+  <div class="space-y-6">
+    
+    <!-- ENCABEZADO PRINCIPAL -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-stone-200 shadow-xs">
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">📢 Tablón Global de Novedades y Anuncios</h1>
+          <span class="rounded-full bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 font-bold">Multi-Tienda</span>
+        </div>
+        <p class="text-xs text-stone-500 mt-1 max-w-2xl">
+          Supervisa, crea, edita, pausa u oculta promociones, ferias, artículos de blog o guías educativas publicadas por las tostadurías o el equipo de la plataforma.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <button
+          type="button"
+          id="btn-refresh-novedades"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-xs font-bold text-stone-700 hover:bg-stone-50 transition shadow-2xs"
+          title="Recargar listado"
+        >
+          <span>🔄</span>
+          <span>Actualizar</span>
+        </button>
+
+        <button
+          type="button"
+          id="btn-nueva-novedad"
+          class="inline-flex items-center gap-2 rounded-xl bg-stone-900 hover:bg-emerald-800 px-5 py-2 text-xs font-bold text-white transition shadow-sm"
+        >
+          <span>➕</span>
+          <span>Nueva Publicación</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TARJETAS KPIS -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-xs">
+        <span class="text-[11px] font-bold text-stone-400 uppercase tracking-wider block mb-1">Total Publicaciones</span>
+        <div class="flex items-baseline gap-2">
+          <span class="text-2xl sm:text-3xl font-black text-stone-900" id="kpi-total">0</span>
+          <span class="text-xs font-semibold text-stone-500">globales</span>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-xs">
+        <span class="text-[11px] font-bold text-stone-400 uppercase tracking-wider block mb-1">Visibles en Sitio</span>
+        <div class="flex items-baseline gap-2">
+          <span class="text-2xl sm:text-3xl font-black text-emerald-700" id="kpi-visibles">0</span>
+          <span class="text-xs font-semibold text-stone-500">activas</span>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-xs">
+        <span class="text-[11px] font-bold text-stone-400 uppercase tracking-wider block mb-1">Pausadas u Ocultas</span>
+        <div class="flex items-baseline gap-2">
+          <span class="text-2xl sm:text-3xl font-black text-amber-600" id="kpi-pausadas">0</span>
+          <span class="text-xs font-semibold text-stone-500">borradores/off</span>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-xs">
+        <span class="text-[11px] font-bold text-stone-400 uppercase tracking-wider block mb-1">Tiendas con Anuncios</span>
+        <div class="flex items-baseline gap-2">
+          <span class="text-2xl sm:text-3xl font-black text-stone-800" id="kpi-tiendas">0</span>
+          <span class="text-xs font-semibold text-stone-500">tostadurías</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTROS Y BÚSQUEDA -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-stone-200 shadow-xs">
+      <div class="relative max-w-sm w-full">
+        <input
+          type="search"
+          id="search-novedad"
+          placeholder="Buscar por título, contenido o tostaduría..."
+          class="w-full rounded-xl border border-stone-200 bg-stone-50/50 py-2 pl-9 pr-3 text-xs placeholder:text-stone-400 focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-600 transition"
+        />
+        <span class="absolute left-3 top-2.5 text-stone-400 text-xs" aria-hidden="true">🔍</span>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5 text-xs text-stone-500 font-medium">
+        <!-- Filtro por Tienda -->
+        <select id="filter-tienda" class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-emerald-600">
+          <option value="">Todas las tostadurías</option>
+        </select>
+
+        <!-- Filtro por Categoría -->
+        <select id="filter-tipo" class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-emerald-600">
+          <option value="">Todas las categorías</option>
+          <option value="sin_categoria">📢 Sin categoría / Anuncio</option>
+          <option value="promocion">🏷️ Promoción</option>
+          <option value="feria">🎪 Feria</option>
+          <option value="evento">📅 Evento / Cata</option>
+          <option value="nuevo_lanzamiento">🚀 Lanzamiento</option>
+          <option value="blog">📝 Blog</option>
+          <option value="educativo">🎓 Educativo</option>
+          <option value="informativo">📰 Informativo</option>
+        </select>
+
+        <!-- Filtro por Estado -->
+        <select id="filter-estado" class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-emerald-600">
+          <option value="">Todos los estados</option>
+          <option value="activo">● Visibles en sitio</option>
+          <option value="pausado">○ Pausadas / Ocultas</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- TABLA DE PUBLICACIONES -->
+    <div class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xs">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-stone-200 bg-stone-50/80 text-[11px] font-bold text-stone-600 uppercase tracking-wider">
+              <th class="py-3 px-4 w-48">Tostaduría</th>
+              <th class="py-3 px-4">Título y Contenido</th>
+              <th class="py-3 px-4 w-36">Categoría</th>
+              <th class="py-3 px-4 w-32">Vigencia / Fecha</th>
+              <th class="py-3 px-4 w-28 text-center">Visibilidad</th>
+              <th class="py-3 px-4 w-28 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-novedades" class="divide-y divide-stone-100 text-stone-700">
+            <tr>
+              <td colspan="6" class="py-12 text-center text-stone-400">
+                <span class="inline-block animate-spin mr-2">⏳</span> Cargando publicaciones...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- PAGINACIÓN -->
+      <div class="p-4 border-t border-stone-200/80 bg-stone-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <span class="text-stone-500 font-medium" id="pagination-info">
+          Página 1 de 1
+        </span>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            id="btn-prev-page"
+            disabled
+            class="rounded-xl border border-stone-200 bg-white px-3.5 py-1.5 text-xs font-bold text-stone-700 hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-2xs"
+          >
+            ← Anterior
+          </button>
+          <button
+            type="button"
+            id="btn-next-page"
+            disabled
+            class="rounded-xl border border-stone-200 bg-white px-3.5 py-1.5 text-xs font-bold text-stone-700 hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-2xs"
+          >
+            Siguiente →
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SLIDE-OVER DRAWER: CREAR O EDITAR NOVEDAD (SUPERADMIN) -->
+  <div
+    id="drawer-backdrop"
+    class="fixed inset-0 z-40 bg-stone-950/40 backdrop-blur-xs transition-opacity duration-300 opacity-0 pointer-events-none"
+    aria-hidden="true"
+  ></div>
+
+  <aside
+    id="drawer-admin-novedad"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="drawer-title"
+    class="fixed inset-y-0 right-0 z-50 w-full max-w-lg lg:max-w-xl bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full invisible border-l border-stone-200"
+  >
+    <!-- Cabecera fija -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-stone-200 bg-[#FCFBF7]/90 backdrop-blur-md shrink-0">
+      <div class="flex items-center gap-2.5">
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-stone-100 text-stone-800 text-lg border border-stone-200">
+          📢
+        </span>
+        <div>
+          <h3 id="drawer-title" class="text-sm sm:text-base font-black text-stone-900 tracking-tight m-0">
+            Nueva Publicación
+          </h3>
+          <p id="drawer-subtitle" class="text-[11px] text-stone-500 m-0 mt-0.5">
+            Publica en el tablón público en nombre de una tostaduría
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        id="btn-close-drawer"
+        class="h-8 w-8 inline-flex items-center justify-center rounded-xl text-stone-400 hover:text-stone-800 hover:bg-stone-100 transition text-base font-bold"
+        title="Cerrar panel (Esc)"
+      >
+        ✕
+      </button>
+    </div>
+
+    <!-- Cuerpo con scroll -->
+    <form id="form-admin-novedad" class="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+      <input type="hidden" id="input-novedad-id" value="" />
+
+      <!-- TOSTADURÍA -->
+      <div>
+        <label for="select-tienda-id" class="block text-xs font-bold text-stone-800 mb-1">
+          Tostaduría Asociada <span class="text-red-500">*</span>
+        </label>
+        <select
+          id="select-tienda-id"
+          required
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 bg-white transition"
+        >
+          <option value="">Selecciona una tostaduría...</option>
+        </select>
+      </div>
+
+      <!-- TÍTULO -->
+      <div>
+        <label for="input-titulo" class="block text-xs font-bold text-stone-800 mb-1">
+          Título de la Publicación <span class="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          id="input-titulo"
+          required
+          maxlength="200"
+          placeholder="Ej: Feria del Café 2026 o Descuento 20% en Cafés Lavados"
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+        />
+      </div>
+
+      <!-- CATEGORÍA / TIPO -->
+      <div>
+        <label for="select-categoria" class="block text-xs font-bold text-stone-800 mb-1">
+          Categoría o Enfoque (Opcional)
+        </label>
+        <select
+          id="select-categoria"
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 bg-white transition"
+        >
+          <option value="">📢 Sin categoría (Anuncio General)</option>
+          <option value="promocion">🏷️ Promoción / Descuento</option>
+          <option value="feria">🎪 Feria Cafetera</option>
+          <option value="evento">📅 Taller, Cata o Evento</option>
+          <option value="nuevo_lanzamiento">🚀 Nuevo Café / Lanzamiento</option>
+          <option value="blog">📝 Blog / Nota Editorial</option>
+          <option value="educativo">🎓 Guía / Educativo</option>
+          <option value="informativo">📰 Informativo / Noticia</option>
+        </select>
+        <p class="text-[10px] text-stone-400 mt-0.5">
+          Puede dejarse sin categoría o asignarse a blog, educativo o promoción.
+        </p>
+      </div>
+
+      <!-- DESCRIPCIÓN -->
+      <div>
+        <label for="textarea-descripcion" class="block text-xs font-bold text-stone-800 mb-1">
+          Contenido / Descripción <span class="text-red-500">*</span>
+        </label>
+        <textarea
+          id="textarea-descripcion"
+          rows="5"
+          required
+          placeholder="Escribe el texto de la publicación, detalles de la feria, consejos de extracción o condiciones de la oferta..."
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition resize-y"
+        ></textarea>
+      </div>
+
+      <!-- ENLACE EXTERNO -->
+      <div>
+        <label for="input-link" class="block text-xs font-bold text-stone-800 mb-1">
+          Enlace Externo / Web (Opcional)
+        </label>
+        <input
+          type="url"
+          id="input-link"
+          placeholder="https://tostaduria.cl/post/feria"
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+        />
+      </div>
+
+      <!-- URL DE IMAGEN -->
+      <div>
+        <label for="input-imagen" class="block text-xs font-bold text-stone-800 mb-1">
+          URL de Imagen / Banner (Opcional)
+        </label>
+        <input
+          type="url"
+          id="input-imagen"
+          placeholder="https://tostaduria.cl/cdn/feria.jpg"
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+        />
+      </div>
+
+      <!-- FECHAS DE VIGENCIA -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+        <div>
+          <label for="input-fecha-inicio" class="block text-[11px] font-bold text-stone-700 mb-1">
+            Fecha de Inicio (Opcional)
+          </label>
+          <input
+            type="datetime-local"
+            id="input-fecha-inicio"
+            class="w-full rounded-xl border border-stone-200 px-3 py-1.5 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+          />
+        </div>
+        <div>
+          <label for="input-fecha-fin" class="block text-[11px] font-bold text-stone-700 mb-1">
+            Fecha de Fin / Vencimiento (Opcional)
+          </label>
+          <input
+            type="datetime-local"
+            id="input-fecha-fin"
+            class="w-full rounded-xl border border-stone-200 px-3 py-1.5 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+          />
+        </div>
+      </div>
+
+      <!-- VISIBILIDAD / ESTADO -->
+      <div class="pt-2">
+        <label class="inline-flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            id="input-activo"
+            checked
+            class="rounded border-stone-300 text-emerald-700 focus:ring-emerald-600 h-4 w-4"
+          />
+          <span class="text-xs font-bold text-stone-800">Publicación Visible en el Sitio Público</span>
+        </label>
+        <p class="text-[10px] text-stone-400 pl-6">
+          Desmarca para pausar u ocultar la publicación sin eliminarla de la base de datos.
+        </p>
+      </div>
+
+      <div id="drawer-error-msg" class="hidden rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-700 font-semibold"></div>
+    </form>
+
+    <!-- Pie fijo de acciones -->
+    <div class="px-6 py-3.5 border-t border-stone-200 bg-stone-50/90 backdrop-blur-xs flex items-center justify-end gap-2.5 shrink-0">
+      <button
+        type="button"
+        id="btn-cancel-drawer"
+        class="rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-100 transition shadow-2xs"
+      >
+        Cancelar
+      </button>
+      <button
+        type="button"
+        id="btn-guardar-admin-novedad"
+        class="inline-flex items-center gap-2 rounded-xl bg-stone-900 hover:bg-emerald-800 px-5 py-2 text-xs font-bold text-white transition shadow-sm"
+      >
+        <span id="save-spinner" class="hidden animate-spin">⏳</span>
+        <span id="save-text">Guardar Publicación</span>
+      </button>
+    </div>
+  </aside>
+
+</AdminLteLayout>
+
+<script is:inline>
+  (function initPlataformaNovedades() {
+    let currentPage = 1;
+    let totalPages = 1;
+    let allTiendas = [];
+    let currentSearch = '';
+    let currentTiendaId = '';
+    let currentTipo = '';
+    let currentEstado = '';
+
+    // DOM Elements
+    const tbody = document.getElementById('tbody-novedades');
+    const searchInput = document.getElementById('search-novedad');
+    const filterTienda = document.getElementById('filter-tienda');
+    const filterTipo = document.getElementById('filter-tipo');
+    const filterEstado = document.getElementById('filter-estado');
+    const btnRefresh = document.getElementById('btn-refresh-novedades');
+    const btnNueva = document.getElementById('btn-nueva-novedad');
+    const btnPrev = document.getElementById('btn-prev-page');
+    const btnNext = document.getElementById('btn-next-page');
+    const paginationInfo = document.getElementById('pagination-info');
+
+    // KPIs
+    const kpiTotal = document.getElementById('kpi-total');
+    const kpiVisibles = document.getElementById('kpi-visibles');
+    const kpiPausadas = document.getElementById('kpi-pausadas');
+    const kpiTiendas = document.getElementById('kpi-tiendas');
+
+    // Drawer Elements
+    const drawer = document.getElementById('drawer-admin-novedad');
+    const drawerBackdrop = document.getElementById('drawer-backdrop');
+    const drawerTitle = document.getElementById('drawer-title');
+    const drawerSubtitle = document.getElementById('drawer-subtitle');
+    const btnCloseDrawer = document.getElementById('btn-close-drawer');
+    const btnCancelDrawer = document.getElementById('btn-cancel-drawer');
+    const btnSave = document.getElementById('btn-guardar-admin-novedad');
+    const saveSpinner = document.getElementById('save-spinner');
+    const saveText = document.getElementById('save-text');
+    const drawerError = document.getElementById('drawer-error-msg');
+
+    // Form inputs
+    const form = document.getElementById('form-admin-novedad');
+    const inputId = document.getElementById('input-novedad-id');
+    const selectTienda = document.getElementById('select-tienda-id');
+    const inputTitulo = document.getElementById('input-titulo');
+    const selectCategoria = document.getElementById('select-categoria');
+    const textareaDescripcion = document.getElementById('textarea-descripcion');
+    const inputLink = document.getElementById('input-link');
+    const inputImagen = document.getElementById('input-imagen');
+    const inputFechaInicio = document.getElementById('input-fecha-inicio');
+    const inputFechaFin = document.getElementById('input-fecha-fin');
+    const inputActivo = document.getElementById('input-activo');
+
+    function openDrawer(isEdit = false, post = null) {
+      drawerError.classList.add('hidden');
+      drawerError.textContent = '';
+
+      if (isEdit && post) {
+        drawerTitle.textContent = 'Editar Publicación';
+        drawerSubtitle.textContent = `Modificando publicación #${post.id} de ${post.tienda_nombre}`;
+        inputId.value = post.id;
+        selectTienda.value = post.tienda_id;
+        selectTienda.disabled = true; // No reasignar de tostaduría en edición
+        inputTitulo.value = post.titulo || '';
+        selectCategoria.value = post.categoria_tipo || '';
+        textareaDescripcion.value = post.descripcion || '';
+        inputLink.value = post.link_url || '';
+        inputImagen.value = post.imagen_url || '';
+        inputFechaInicio.value = post.fecha_inicio ? post.fecha_inicio.slice(0, 16) : '';
+        inputFechaFin.value = post.fecha_fin ? post.fecha_fin.slice(0, 16) : '';
+        inputActivo.checked = Boolean(post.activo);
+      } else {
+        drawerTitle.textContent = 'Nueva Publicación';
+        drawerSubtitle.textContent = 'Publica en el tablón en nombre de cualquier tostaduría';
+        form.reset();
+        inputId.value = '';
+        selectTienda.disabled = false;
+        selectCategoria.value = '';
+        inputActivo.checked = true;
+      }
+
+      drawer.classList.remove('invisible', 'translate-x-full');
+      drawerBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function closeDrawer() {
+      drawer.classList.add('translate-x-full');
+      drawerBackdrop.classList.add('opacity-0', 'pointer-events-none');
+      setTimeout(() => drawer.classList.add('invisible'), 300);
+    }
+
+    btnNueva?.addEventListener('click', () => openDrawer(false));
+    btnCloseDrawer?.addEventListener('click', closeDrawer);
+    btnCancelDrawer?.addEventListener('click', closeDrawer);
+    drawerBackdrop?.addEventListener('click', closeDrawer);
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDrawer();
+    });
+
+    function getBadgeHtml(tipo) {
+      switch (tipo) {
+        case 'promocion':
+          return '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">🏷️ Promoción</span>';
+        case 'feria':
+          return '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200">🎪 Feria</span>';
+        case 'evento':
+          return '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">📅 Evento / Cata</span>';
+        case 'nuevo_lanzamiento':
+          return '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">🚀 Lanzamiento</span>';
+        case 'blog':
+          return '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-stone-100 text-stone-800 border border-stone-300">📝 Blog</span>';
+        case 'educativo':
+          return '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-200">🎓 Educativo</span>';
+        case 'informativo':
+          return '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-200">📰 Informativo</span>';
+        default:
+          return '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-stone-50 text-stone-600 border border-stone-200">📢 Sin categoría</span>';
+      }
+    }
+
+    function formatDate(isoStr) {
+      if (!isoStr) return '';
+      try {
+        const d = new Date(isoStr);
+        return d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      } catch {
+        return isoStr;
+      }
+    }
+
+    async function cargarTiendas() {
+      try {
+        const res = await window.plataformaState.fetchWithEnv('/api/v1/administracion/tiendas');
+        if (res.ok) {
+          const data = await res.json();
+          allTiendas = Array.isArray(data) ? data : (data.tiendas || []);
+          
+          // Poblar selects de tiendas
+          filterTienda.innerHTML = '<option value="">Todas las tostadurías</option>' + 
+            allTiendas.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+
+          selectTienda.innerHTML = '<option value="">Selecciona una tostaduría...</option>' + 
+            allTiendas.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+        }
+      } catch (err) {
+        console.warn('Error cargando tiendas:', err);
+      }
+    }
+
+    async function cargarNovedades(page = 1) {
+      currentPage = page;
+      tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-stone-400"><span class="inline-block animate-spin mr-2">⏳</span> Cargando publicaciones...</td></tr>`;
+
+      try {
+        const params = new URLSearchParams({
+          page: String(currentPage),
+          limit: '15'
+        });
+        if (currentSearch) params.set('search', currentSearch);
+        if (currentTiendaId) params.set('tienda_id', currentTiendaId);
+        if (currentTipo) params.set('tipo', currentTipo);
+        if (currentEstado === 'activo') params.set('activo', 'true');
+        else if (currentEstado === 'pausado') params.set('activo', 'false');
+
+        const res = await window.plataformaState.fetchWithEnv(`/api/v1/administracion/novedades?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error('Error al cargar publicaciones de novedades');
+        }
+
+        const data = await res.json();
+        const items = data.items || [];
+        totalPages = data.total_paginas || 1;
+
+        // Actualizar KPIs
+        kpiTotal.textContent = data.total || 0;
+        const visibles = items.filter(x => x.activo).length;
+        kpiVisibles.textContent = visibles;
+        kpiPausadas.textContent = items.length - visibles;
+        const tiendasSet = new Set(items.map(x => x.tienda_id));
+        kpiTiendas.textContent = tiendasSet.size;
+
+        paginationInfo.textContent = `Página ${data.page || 1} de ${totalPages} (${data.total || 0} publicaciones)`;
+        btnPrev.disabled = currentPage <= 1;
+        btnNext.disabled = currentPage >= totalPages;
+
+        if (items.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-stone-400">No se encontraron publicaciones con los filtros seleccionados.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = items.map(post => {
+          const tieneVigencia = post.fecha_inicio || post.fecha_fin;
+          const vigenciaText = tieneVigencia
+            ? `${post.fecha_inicio ? formatDate(post.fecha_inicio) : ''} - ${post.fecha_fin ? formatDate(post.fecha_fin) : 'adelante'}`
+            : formatDate(post.fecha_creacion);
+
+          return `
+            <tr class="hover:bg-stone-50/70 transition">
+              <td class="py-3 px-4 font-bold text-stone-900 whitespace-nowrap">
+                <div class="flex items-center gap-2">
+                  ${post.tienda_logo_url ? `
+                    <img src="${post.tienda_logo_url}" alt="${post.tienda_nombre}" class="w-6 h-6 rounded-full object-cover border border-stone-200" onerror="this.style.display='none'"/>
+                  ` : `
+                    <div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px] font-bold">
+                      ${post.tienda_nombre ? post.tienda_nombre[0].toUpperCase() : 'T'}
+                    </div>
+                  `}
+                  <span class="truncate max-w-[140px]" title="${post.tienda_nombre}">${post.tienda_nombre}</span>
+                </div>
+              </td>
+              <td class="py-3 px-4">
+                <div class="space-y-1">
+                  <div class="font-bold text-stone-900 line-clamp-1 flex items-center gap-1.5">
+                    <span>${post.titulo}</span>
+                    ${post.link_url ? `<a href="${post.link_url}" target="_blank" rel="noopener noreferrer" class="text-emerald-700 hover:text-emerald-900 text-xs" title="Abrir enlace externo">↗</a>` : ''}
+                  </div>
+                  <p class="text-stone-500 line-clamp-2 text-[11px] leading-relaxed">${post.descripcion}</p>
+                </div>
+              </td>
+              <td class="py-3 px-4 whitespace-nowrap">
+                ${getBadgeHtml(post.categoria_tipo)}
+              </td>
+              <td class="py-3 px-4 text-stone-500 font-mono text-[11px] whitespace-nowrap">
+                ${vigenciaText}
+              </td>
+              <td class="py-3 px-4 text-center whitespace-nowrap">
+                <button
+                  type="button"
+                  data-toggle-active="${post.id}"
+                  data-current-active="${post.activo}"
+                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition ${post.activo ? 'bg-emerald-50 text-emerald-700 hover:bg-amber-50 hover:text-amber-800 border border-emerald-200' : 'bg-stone-100 text-stone-500 hover:bg-emerald-50 hover:text-emerald-700 border border-stone-300'}"
+                  title="${post.activo ? 'Clic para pausar / ocultar en el catálogo' : 'Clic para activar y mostrar en el catálogo'}"
+                >
+                  <span>${post.activo ? '● Visible' : '○ Pausada'}</span>
+                </button>
+              </td>
+              <td class="py-3 px-4 text-right whitespace-nowrap">
+                <div class="flex items-center justify-end gap-1.5">
+                  <button
+                    type="button"
+                    data-edit-post="${post.id}"
+                    class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold transition"
+                  >
+                    ✏️ Editar
+                  </button>
+                  <button
+                    type="button"
+                    data-delete-post="${post.id}"
+                    class="px-2 py-1 rounded-lg hover:bg-red-50 text-stone-400 hover:text-red-700 text-xs font-bold transition"
+                    title="Eliminar publicación"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        // Listeners: Toggle Activo / Pausar
+        tbody.querySelectorAll('[data-toggle-active]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-toggle-active');
+            const current = btn.getAttribute('data-current-active') === 'true';
+            const nuevoEstado = !current;
+
+            btn.disabled = true;
+            btn.textContent = '...';
+
+            try {
+              const putRes = await window.plataformaState.fetchWithEnv(`/api/v1/administracion/novedades/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ activo: nuevoEstado })
+              });
+
+              if (putRes.ok) {
+                cargarNovedades(currentPage);
+              } else {
+                alert('No se pudo cambiar el estado de la publicación.');
+                cargarNovedades(currentPage);
+              }
+            } catch (err) {
+              alert('Error de conexión al pausar/activar.');
+              cargarNovedades(currentPage);
+            }
+          });
+        });
+
+        // Listeners: Editar
+        tbody.querySelectorAll('[data-edit-post]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = parseInt(btn.getAttribute('data-edit-post'), 10);
+            const post = items.find(x => x.id === id);
+            if (post) openDrawer(true, post);
+          });
+        });
+
+        // Listeners: Eliminar
+        tbody.querySelectorAll('[data-delete-post]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-delete-post');
+            if (!confirm(`¿Eliminar definitivamente la publicación #${id}?`)) return;
+
+            try {
+              const delRes = await window.plataformaState.fetchWithEnv(`/api/v1/administracion/novedades/${id}`, {
+                method: 'DELETE'
+              });
+              if (delRes.ok) {
+                cargarNovedades(currentPage);
+              } else {
+                alert('No se pudo eliminar la publicación.');
+              }
+            } catch (err) {
+              alert(`Error al eliminar: ${err.message}`);
+            }
+          });
+        });
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-red-500">Error al cargar publicaciones: ${err.message}</td></tr>`;
+      }
+    }
+
+    btnSave?.addEventListener('click', async () => {
+      const id = inputId.value;
+      const tiendaIdVal = selectTienda.value;
+      const titulo = inputTitulo.value.trim();
+      const descripcion = textareaDescripcion.value.trim();
+      const categoria_tipo = selectCategoria.value || null;
+      const link_url = inputLink.value.trim() || null;
+      const imagen_url = inputImagen.value.trim() || null;
+      const fecha_inicio = inputFechaInicio.value ? new Date(inputFechaInicio.value).toISOString() : null;
+      const fecha_fin = inputFechaFin.value ? new Date(inputFechaFin.value).toISOString() : null;
+      const activo = inputActivo.checked;
+
+      if (!id && !tiendaIdVal) {
+        drawerError.textContent = 'Por favor selecciona la tostaduría asociada.';
+        drawerError.classList.remove('hidden');
+        return;
+      }
+
+      if (!titulo || !descripcion) {
+        drawerError.textContent = 'Por favor completa el título y la descripción.';
+        drawerError.classList.remove('hidden');
+        return;
+      }
+
+      const body = {
+        titulo,
+        descripcion,
+        categoria_tipo,
+        link_url,
+        imagen_url,
+        fecha_inicio,
+        fecha_fin,
+        activo
+      };
+
+      if (!id) {
+        body.tienda_id = parseInt(tiendaIdVal, 10);
+      }
+
+      try {
+        btnSave.disabled = true;
+        saveSpinner.classList.remove('hidden');
+        saveText.textContent = 'Guardando...';
+        drawerError.classList.add('hidden');
+
+        const isEdit = Boolean(id);
+        const urlEndpoint = isEdit 
+          ? `/api/v1/administracion/novedades/${id}`
+          : `/api/v1/administracion/novedades`;
+        const method = isEdit ? 'PUT' : 'POST';
+
+        const res = await window.plataformaState.fetchWithEnv(urlEndpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || 'Error al guardar la publicación.');
+        }
+
+        closeDrawer();
+        cargarNovedades(currentPage);
+      } catch (err) {
+        drawerError.textContent = err.message || 'Error al guardar.';
+        drawerError.classList.remove('hidden');
+      } finally {
+        btnSave.disabled = false;
+        saveSpinner.classList.add('hidden');
+        saveText.textContent = 'Guardar Publicación';
+      }
+    });
+
+    let searchTimeout;
+    searchInput?.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        currentSearch = searchInput.value.trim();
+        cargarNovedades(1);
+      }, 300);
+    });
+
+    filterTienda?.addEventListener('change', () => {
+      currentTiendaId = filterTienda.value;
+      cargarNovedades(1);
+    });
+
+    filterTipo?.addEventListener('change', () => {
+      currentTipo = filterTipo.value;
+      cargarNovedades(1);
+    });
+
+    filterEstado?.addEventListener('change', () => {
+      currentEstado = filterEstado.value;
+      cargarNovedades(1);
+    });
+
+    btnRefresh?.addEventListener('click', () => cargarNovedades(currentPage));
+    btnPrev?.addEventListener('click', () => {
+      if (currentPage > 1) cargarNovedades(currentPage - 1);
+    });
+    btnNext?.addEventListener('click', () => {
+      if (currentPage < totalPages) cargarNovedades(currentPage + 1);
+    });
+
+    cargarTiendas();
+    cargarNovedades(1);
+  })();
+</script>
+

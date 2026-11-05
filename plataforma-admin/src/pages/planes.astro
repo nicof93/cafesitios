@@ -251,6 +251,10 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           <span class="text-stone-700 font-medium">⭐ Posicionamiento Destacado en Catálogo</span>
           <input type="checkbox" id="feat-destacado" class="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500" />
         </label>
+        <label class="flex items-center justify-between text-xs cursor-pointer">
+          <span class="text-stone-700 font-medium">📢 Novedades y Anuncios Públicos</span>
+          <input type="checkbox" id="feat-novedades" class="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500" />
+        </label>
       </div>
     </form>
 
@@ -757,7 +761,8 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           radar_demanda: "📊 Radar Demanda",
           benchmark_precios: "📈 Benchmark Precios",
           fotos_hd_extra: "🖼️ Fotos HD Extra",
-          destacado_catalogo: "⭐ Destacado en Catálogo"
+          destacado_catalogo: "⭐ Destacado en Catálogo",
+          publicaciones_novedades: "📢 Novedades y Anuncios"
         };
 
         grid.innerHTML = planesData.map(p => {
@@ -855,6 +860,7 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           document.getElementById('feat-benchmark').checked = Boolean(feats.benchmark_precios);
           document.getElementById('feat-fotos').checked = Boolean(feats.fotos_hd_extra);
           document.getElementById('feat-destacado').checked = Boolean(feats.destacado_catalogo);
+          document.getElementById('feat-novedades').checked = Boolean(feats.publicaciones_novedades);
         } else {
           titleEl.innerHTML = `<span>➕</span><span>Crear Nuevo Plan</span>`;
           idInput.value = '';
@@ -871,6 +877,7 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           document.getElementById('feat-benchmark').checked = false;
           document.getElementById('feat-fotos').checked = true;
           document.getElementById('feat-destacado').checked = false;
+          document.getElementById('feat-novedades').checked = true;
         }
 
         modalPlan.showModal();
@@ -895,6 +902,7 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
             benchmark_precios: document.getElementById('feat-benchmark').checked,
             fotos_hd_extra: document.getElementById('feat-fotos').checked,
             destacado_catalogo: document.getElementById('feat-destacado').checked,
+            publicaciones_novedades: document.getElementById('feat-novedades').checked,
           },
           activo: true,
         };
@@ -987,7 +995,8 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           radar_demanda: "📊 Radar de Demanda de Búsquedas",
           benchmark_precios: "📈 Benchmark de Precios de Mercado",
           fotos_hd_extra: "🖼️ Fotos HD y Galería Extra",
-          destacado_catalogo: "⭐ Posicionamiento Destacado en Catálogo"
+          destacado_catalogo: "⭐ Posicionamiento Destacado en Catálogo",
+          publicaciones_novedades: "📢 Novedades y Anuncios Públicos"
         };
 
         const efectivas = tienda.funcionalidades_efectivas || {};
