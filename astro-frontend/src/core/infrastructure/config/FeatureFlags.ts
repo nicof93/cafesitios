@@ -80,6 +80,15 @@ export class FeatureFlags {
     return this.parseFlag(val, true);
   }
 
+  /**
+   * Feature Flag: Novedades y Anuncios de Tostadurías (/novedades)
+   * Controlado por PUBLIC_ENABLE_STORE_POSTS o ENABLE_STORE_POSTS
+   */
+  static isStorePostsEnabled(): boolean {
+    const val = import.meta.env.PUBLIC_ENABLE_STORE_POSTS ?? import.meta.env.ENABLE_STORE_POSTS;
+    return this.parseFlag(val, true);
+  }
+
   static getAll(): Record<string, boolean> {
     return {
       guides: this.isGuidesEnabled(),
@@ -89,6 +98,7 @@ export class FeatureFlags {
       whatsAppOrders: this.isWhatsAppOrdersEnabled(),
       glossary: this.isGlossaryEnabled(),
       chatbotSommelier: this.isChatbotSommelierEnabled(),
+      storePosts: this.isStorePostsEnabled(),
     };
   }
 }

@@ -124,6 +124,15 @@ export const GET: APIRoute = async () => {
     });
   }
 
+  if (FeatureFlags.isStorePostsEnabled()) {
+    staticPages.push({
+      loc: `${siteUrl}/novedades`,
+      lastmod: today,
+      changefreq: 'daily',
+      priority: '0.8'
+    });
+  }
+
   // 4. Construcción del XML conforme a los estándares de Google Search Console
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"

@@ -91,6 +91,13 @@ export class Environment {
     return str === 'true' || str === '1' || str === 'yes' || str === 'on';
   }
 
+  static isStorePostsEnabled(): boolean {
+    const val = import.meta.env.PUBLIC_ENABLE_STORE_POSTS ?? import.meta.env.ENABLE_STORE_POSTS;
+    if (val === undefined || val === null || val === '') return true;
+    const str = String(val).trim().toLowerCase();
+    return str === 'true' || str === '1' || str === 'yes' || str === 'on';
+  }
+
   static getGtmId(): string {
     return import.meta.env.PUBLIC_GTM_ID || '';
   }

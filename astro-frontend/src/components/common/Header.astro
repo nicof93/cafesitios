@@ -14,6 +14,7 @@ const showMyRecipes = Environment.isMyRecipesEnabled();
 const showFlavorQuiz = Environment.isFlavorQuizEnabled();
 const showWhatsAppOrders = Environment.isWhatsAppOrdersEnabled();
 const showGlossary = Environment.isGlossaryEnabled();
+const showStorePosts = Environment.isStorePostsEnabled();
 ---
 
 <header class="sticky top-0 z-30 border-b border-stone-200/70 bg-[#FCFBF7]/90 backdrop-blur-md transition-all">
@@ -95,6 +96,17 @@ const showGlossary = Environment.isGlossaryEnabled();
         >
           <span aria-hidden="true">☕</span>
           <span class="hidden sm:inline">Guías</span>
+        </a>
+      )}
+
+      {showStorePosts && (
+        <a 
+          href="/novedades" 
+          class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 hover:text-emerald-800 hover:bg-stone-200/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+          title="Novedades y Anuncios de Tostadurías"
+        >
+          <span aria-hidden="true">📢</span>
+          <span class="hidden sm:inline">Novedades</span>
         </a>
       )}
 
