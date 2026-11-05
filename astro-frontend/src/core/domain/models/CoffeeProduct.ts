@@ -61,6 +61,7 @@ export interface CoffeeProductProps {
   tienda_telefono_whatsapp?: string;
   recetas?: ProductRecipe[];
   oculto_catalogo?: boolean;
+  activo?: boolean;
   envio_gratis_monto?: number;
   retiro_en_tienda?: boolean;
   dias_tueste?: string;
@@ -97,6 +98,7 @@ export class CoffeeProduct {
   readonly fecha_actualizacion?: string;
   readonly recetas: ProductRecipe[];
   readonly oculto_catalogo: boolean;
+  readonly activo: boolean;
   readonly envio_gratis_monto?: number;
   readonly retiro_en_tienda?: boolean;
   readonly dias_tueste?: string;
@@ -115,6 +117,7 @@ export class CoffeeProduct {
     this.categoria = props.categoria || 'cafe';
     this.recetas = props.recetas || [];
     this.oculto_catalogo = Boolean(props.oculto_catalogo);
+    this.activo = props.activo !== undefined ? Boolean(props.activo) : true;
     this.envio_gratis_monto = props.envio_gratis_monto;
     this.retiro_en_tienda = props.retiro_en_tienda;
     this.dias_tueste = props.dias_tueste;
