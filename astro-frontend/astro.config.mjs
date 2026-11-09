@@ -13,7 +13,15 @@ export default defineConfig({
       applyBaseStyles: false
     }),
     react()
-  ]
+  ],
+  vite: {
+    resolve: {
+      dedupe: ['react', 'react-dom']
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom']
+    }
+  }
 });
 
 
