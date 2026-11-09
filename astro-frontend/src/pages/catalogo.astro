@@ -4,6 +4,7 @@ import ProductCard from '../components/catalog/ProductCard.astro';
 import FiltersAside from '../components/catalog/FiltersAside.astro';
 import RecentlyViewed from '../components/catalog/RecentlyViewed.astro';
 import FavoritesAlertsBanner from '../components/catalog/FavoritesAlertsBanner.astro';
+import NewStoreBanner from '../components/catalog/NewStoreBanner.astro';
 import { GetCatalogUseCase } from '../core/application/GetCatalog';
 import { FeatureFlags } from '../core/infrastructure/config/FeatureFlags';
 import { GetStoresUseCase } from '../core/application/GetStores';
@@ -270,6 +271,9 @@ const jsonLdCatalog = {
           </div>
         )}
       </div>
+
+      <!-- BANNER DE NUEVA TOSTADURÍA INCORPORADA -->
+      <NewStoreBanner />
 
       <!-- NOVEDADES DE FAVORITOS Y ALERTAS DE VARIACIÓN DE PRECIO -->
       <FavoritesAlertsBanner />

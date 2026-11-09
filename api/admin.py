@@ -52,11 +52,13 @@ from db.database import (
     SucursalTienda,
     Tienda,
     TiendaCatalogo,
+    TiendaComentario,
     UsuarioTienda,
     Variante,
 )
 from core.billing_utils import calcular_funcionalidades_efectivas, calcular_proxima_fecha_pago
 from core.error_classifier import clasificar_error_sincronizacion
+from core.store_news_helper import sincronizar_novedad_nueva_tienda
 from domain.search_normalizer import (
     classify_product_category,
     detect_non_coffee_suspicion,
@@ -139,6 +141,10 @@ class StoreCreateUpdateRequest(BaseModel):
     latitud: Optional[float] = None
     longitud: Optional[float] = None
     activo: bool = True
+    es_prospecto: bool = False
+    contacto_nombre: Optional[str] = Field(None, max_length=150)
+    contacto_telefono: Optional[str] = Field(None, max_length=50)
+    contacto_email: Optional[str] = Field(None, max_length=150)
     email_administrador: Optional[str] = Field(
         None, max_length=150, description="Email del usuario administrador asignado a la tostaduría"
     )
@@ -147,6 +153,29 @@ class StoreCreateUpdateRequest(BaseModel):
     )
     limite_almacenamiento_mb: Optional[int] = Field(250, ge=10, le=10000, description="Cuota máxima de almacenamiento de imágenes en MB")
     sucursales: List[BranchInput] = Field(default_factory=list)
+
+
+class StoreCommentInput(BaseModel):
+    comentario: str = Field(..., min_length=2, max_length=5000)
+    tipo_contacto: str = Field("nota", description="llamada, whatsapp, reunion, email, nota")
+    autor: Optional[str] = Field("Administrador", max_length=100)
+
+
+class StoreCommentItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    tienda_id: int
+    autor: str
+    tipo_contacto: str
+    comentario: str
+    fecha_creacion: datetime
+
+
+class StoreCommentsListResponse(BaseModel):
+    tienda_id: int
+    tienda_nombre: str
+    total: int
+    comentarios: List[StoreCommentItem]
 
 
 class AdminStoreItem(BaseModel):
@@ -163,6 +192,11 @@ class AdminStoreItem(BaseModel):
     latitud: Optional[float] = None
     longitud: Optional[float] = None
     activo: bool = True
+    es_prospecto: bool = False
+    contacto_nombre: Optional[str] = None
+    contacto_telefono: Optional[str] = None
+    contacto_email: Optional[str] = None
+    total_comentarios: int = 0
     email_administrador: Optional[str] = None
     tiene_password_configurada: bool = False
     debe_cambiar_password: bool = True
@@ -204,6 +238,7 @@ class SingleStoreSyncResponse(BaseModel):
     productos_nuevos: int
     productos_actualizados: int
     productos_eliminados: int = 0
+    productos_sospechosos: int = 0
     duracion_segundos: float
     error: Optional[str] = None
     codigo_error: Optional[str] = None
@@ -311,6 +346,7 @@ class ModerationProductItem(BaseModel):
     precio_por_kilo: float = 0.0
     oculto_catalogo: bool = False
     es_sospechoso: bool = False
+    es_cafe_confirmado: bool = False
     motivo_sospecha: Optional[str] = None
     categoria_detectada: str = "cafe"
 
@@ -327,6 +363,7 @@ class ModerationListResponse(BaseModel):
     total_sospechosos: int
     total_ocultos: int
     total_visibles_cafe: int
+    total_confirmados_cafe: int = 0
     conteo_por_tienda: List[StoreModerationCountItem]
     items: List[ModerationProductItem]
 
@@ -344,6 +381,25 @@ class VisibilityUpdateResponse(BaseModel):
     status: str
     updated_count: int
     oculto_catalogo: bool
+    conteo_por_tienda: List[StoreModerationCountItem]
+
+
+class ConfirmCoffeeRequest(BaseModel):
+    confirmado: bool = True
+
+
+class BulkConfirmCoffeeRequest(BaseModel):
+    product_ids: List[int]
+    confirmado: bool = True
+
+
+class ConfirmCoffeeResponse(BaseModel):
+    status: str = "ok"
+    product_id: Optional[int] = None
+    updated_count: int = 1
+    es_cafe_confirmado: bool = True
+    categoria: str = "cafe"
+    oculto_catalogo: bool = False
     conteo_por_tienda: List[StoreModerationCountItem] = Field(default_factory=list)
 
 
@@ -418,14 +474,21 @@ def _compute_store_moderation_counts(db_session: Session) -> List[StoreModeratio
         ocultos = 0
         sospechosos = 0
         for p in prods:
-            reason = detect_non_coffee_suspicion(p.nombre, p.descripcion)
-            is_non_coffee = classify_product_category(p.nombre) == "no_cafe" or reason is not None
+            confirmado = bool(getattr(p, "es_cafe_confirmado", False))
+            if confirmado:
+                is_non_coffee = False
+                cat = "cafe"
+            else:
+                reason = detect_non_coffee_suspicion(p.nombre, p.descripcion)
+                cat = classify_product_category(p.nombre)
+                is_non_coffee = (cat == "no_cafe" or reason is not None)
+
             if bool(getattr(p, "oculto_catalogo", False)):
                 ocultos += 1
             else:
                 if is_non_coffee:
                     sospechosos += 1
-                if classify_product_category(p.nombre) == "cafe":
+                if cat == "cafe":
                     visibles += 1
         counts.append(
             StoreModerationCountItem(
@@ -437,6 +500,26 @@ def _compute_store_moderation_counts(db_session: Session) -> List[StoreModeratio
             )
         )
     return counts
+
+
+def _count_store_suspected_products(store_id: int, db_session: Session) -> int:
+    """Calcula la cantidad de productos sospechosos no-café para una tienda tras la sincronización."""
+    prods = db_session.scalars(
+        select(Producto).where(
+            Producto.tienda_id == store_id,
+            Producto.activo.is_(True),
+            Producto.oculto_catalogo.is_(False),
+        )
+    ).all()
+    count = 0
+    for p in prods:
+        if getattr(p, "es_cafe_confirmado", False):
+            continue
+        reason = detect_non_coffee_suspicion(p.nombre, p.descripcion)
+        cat = classify_product_category(p.nombre)
+        if reason is not None or cat == "no_cafe":
+            count += 1
+    return count
 
 
 def _sync_store_admin_user(
@@ -650,6 +733,16 @@ def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminSto
         c.tienda_id: c for c in _compute_store_moderation_counts(db_session)
     }
 
+    # Mapa de conteo de comentarios de bitácora por tienda
+    try:
+        comment_counts_rows = db_session.execute(
+            select(TiendaComentario.tienda_id, func.count(TiendaComentario.id))
+            .group_by(TiendaComentario.tienda_id)
+        ).all()
+        comments_count_map = {row[0]: int(row[1]) for row in comment_counts_rows}
+    except Exception:
+        comments_count_map = {}
+
     # Mapa de administradores de tiendas vinculados
     try:
         user_stores = db_session.scalars(select(UsuarioTienda)).all()
@@ -729,6 +822,11 @@ def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminSto
                 latitud=s.latitud,
                 longitud=s.longitud,
                 activo=bool(s.activo),
+                es_prospecto=bool(getattr(s, "es_prospecto", False)),
+                contacto_nombre=getattr(s, "contacto_nombre", None),
+                contacto_telefono=getattr(s, "contacto_telefono", None),
+                contacto_email=getattr(s, "contacto_email", None),
+                total_comentarios=comments_count_map.get(s.id, 0),
                 email_administrador=adm_user.usuario_id if adm_user else None,
                 tiene_password_configurada=bool(adm_user and adm_user.password_hash),
                 debe_cambiar_password=bool(adm_user.debe_cambiar_password) if adm_user else True,
@@ -747,8 +845,8 @@ def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminSto
             )
         )
 
-    total_pendientes = sum(1 for it in items if it.es_pendiente_sincronizacion and it.activo)
-    total_sincronizadas = sum(1 for it in items if not it.es_pendiente_sincronizacion and it.activo)
+    total_pendientes = sum(1 for it in items if it.es_pendiente_sincronizacion and it.activo and not it.es_prospecto)
+    total_sincronizadas = sum(1 for it in items if not it.es_pendiente_sincronizacion and it.activo and not it.es_prospecto)
 
     return AdminStoresListResponse(
         total_tiendas=len(items),
@@ -801,14 +899,18 @@ def create_or_update_store(
             )
         )
     elif not catalogos_input and not payload.url_catalogo:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Debe proporcionar al menos una URL de catálogo.",
-        )
+        if not payload.es_prospecto and payload.activo:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Debe proporcionar al menos una URL de catálogo.",
+            )
 
-    first_url = _normalize_url(catalogos_input[0].url_catalogo)
-    parsed = urlparse(first_url)
-    url_raiz = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else first_url
+    if catalogos_input:
+        first_url = _normalize_url(catalogos_input[0].url_catalogo)
+        parsed = urlparse(first_url)
+        url_raiz = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else first_url
+    else:
+        url_raiz = _normalize_url(payload.url_catalogo) if payload.url_catalogo else ""
 
     plataforma_norm = _normalize_platform(payload.plataforma)
     if plataforma_norm == "auto":
@@ -822,7 +924,11 @@ def create_or_update_store(
         query_existing.where(func.lower(Tienda.nombre) == nombre_limpio.lower())
     ).first()
 
+    is_activo = False if payload.es_prospecto else payload.activo
+
+    is_new_store = False
     if existing is None:
+        is_new_store = True
         store = Tienda(
             nombre=nombre_limpio,
             url_base=url_raiz,
@@ -831,7 +937,11 @@ def create_or_update_store(
             comuna=payload.comuna.strip() if payload.comuna else None,
             latitud=payload.latitud,
             longitud=payload.longitud,
-            activo=payload.activo,
+            activo=is_activo,
+            es_prospecto=payload.es_prospecto,
+            contacto_nombre=payload.contacto_nombre.strip() if payload.contacto_nombre else None,
+            contacto_telefono=payload.contacto_telefono.strip() if payload.contacto_telefono else None,
+            contacto_email=payload.contacto_email.strip() if payload.contacto_email else None,
         )
         db_session.add(store)
         db_session.flush()
@@ -844,7 +954,11 @@ def create_or_update_store(
         store.comuna = payload.comuna.strip() if payload.comuna else None
         store.latitud = payload.latitud
         store.longitud = payload.longitud
-        store.activo = payload.activo
+        store.activo = is_activo
+        store.es_prospecto = payload.es_prospecto
+        store.contacto_nombre = payload.contacto_nombre.strip() if payload.contacto_nombre else None
+        store.contacto_telefono = payload.contacto_telefono.strip() if payload.contacto_telefono else None
+        store.contacto_email = payload.contacto_email.strip() if payload.contacto_email else None
         for old_b in list(store.sucursales):
             db_session.delete(old_b)
         db_session.flush()
@@ -885,6 +999,13 @@ def create_or_update_store(
 
     db_session.commit()
     db_session.refresh(store)
+
+    if not payload.es_prospecto and catalogos_input:
+        try:
+            sincronizar_novedad_nueva_tienda(store.id, db_session)
+            db_session.commit()
+        except Exception as exc:
+            logging.warning(f"No se pudo sincronizar la novedad de bienvenida para la tienda {store.id}: {exc}")
 
     try:
         adm_user = db_session.scalars(select(UsuarioTienda).where(UsuarioTienda.tienda_id == store.id)).first()
@@ -928,6 +1049,11 @@ def create_or_update_store(
         latitud=store.latitud,
         longitud=store.longitud,
         activo=bool(store.activo),
+        es_prospecto=bool(getattr(store, "es_prospecto", False)),
+        contacto_nombre=getattr(store, "contacto_nombre", None),
+        contacto_telefono=getattr(store, "contacto_telefono", None),
+        contacto_email=getattr(store, "contacto_email", None),
+        total_comentarios=len(getattr(store, "comentarios", []) or []),
         email_administrador=admin_email,
         tiene_password_configurada=bool(adm_user and adm_user.password_hash),
         debe_cambiar_password=bool(adm_user.debe_cambiar_password) if adm_user else True,
@@ -992,14 +1118,18 @@ def update_store_by_id(
             )
         )
     elif not catalogos_input and not payload.url_catalogo:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Debe proporcionar al menos una URL de catálogo.",
-        )
+        if not payload.es_prospecto and payload.activo:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Debe proporcionar al menos una URL de catálogo.",
+            )
 
-    first_url = _normalize_url(catalogos_input[0].url_catalogo)
-    parsed = urlparse(first_url)
-    url_raiz = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else first_url
+    if catalogos_input:
+        first_url = _normalize_url(catalogos_input[0].url_catalogo)
+        parsed = urlparse(first_url)
+        url_raiz = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else first_url
+    else:
+        url_raiz = _normalize_url(payload.url_catalogo) if payload.url_catalogo else ""
 
     plataforma_norm = _normalize_platform(payload.plataforma)
     if plataforma_norm == "auto":
@@ -1012,7 +1142,11 @@ def update_store_by_id(
     store.comuna = payload.comuna.strip() if payload.comuna else None
     store.latitud = payload.latitud
     store.longitud = payload.longitud
-    store.activo = payload.activo
+    store.activo = False if payload.es_prospecto else payload.activo
+    store.es_prospecto = payload.es_prospecto
+    store.contacto_nombre = payload.contacto_nombre.strip() if payload.contacto_nombre else None
+    store.contacto_telefono = payload.contacto_telefono.strip() if payload.contacto_telefono else None
+    store.contacto_email = payload.contacto_email.strip() if payload.contacto_email else None
     if payload.limite_almacenamiento_mb is not None:
         store.limite_almacenamiento_mb = payload.limite_almacenamiento_mb
 
@@ -1058,6 +1192,13 @@ def update_store_by_id(
     db_session.commit()
     db_session.refresh(store)
 
+    if not payload.es_prospecto and catalogos_input:
+        try:
+            sincronizar_novedad_nueva_tienda(store.id, db_session)
+            db_session.commit()
+        except Exception as exc:
+            logging.warning(f"No se pudo sincronizar la novedad de bienvenida para la tienda {store.id}: {exc}")
+
     try:
         adm_user = db_session.scalars(select(UsuarioTienda).where(UsuarioTienda.tienda_id == store.id)).first()
     except Exception:
@@ -1087,6 +1228,11 @@ def update_store_by_id(
         latitud=store.latitud,
         longitud=store.longitud,
         activo=bool(store.activo),
+        es_prospecto=bool(getattr(store, "es_prospecto", False)),
+        contacto_nombre=getattr(store, "contacto_nombre", None),
+        contacto_telefono=getattr(store, "contacto_telefono", None),
+        contacto_email=getattr(store, "contacto_email", None),
+        total_comentarios=len(getattr(store, "comentarios", []) or []),
         email_administrador=admin_email,
         tiene_password_configurada=bool(adm_user and adm_user.password_hash),
         debe_cambiar_password=bool(adm_user.debe_cambiar_password) if adm_user else True,
@@ -1190,6 +1336,145 @@ def delete_store_by_id(
         tienda_nombre=store_name,
         exito=True,
     )
+
+
+
+
+@administracion_router.get(
+    "/tiendas/{store_id}/comentarios",
+    response_model=StoreCommentsListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Listar historial de notas y comentarios de seguimiento comercial de una tienda",
+)
+@administracion_router.get("/stores/{store_id}/comments", response_model=StoreCommentsListResponse, include_in_schema=False)
+@router.get(
+    "/tiendas/{store_id}/comentarios",
+    response_model=StoreCommentsListResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+@router.get(
+    "/stores/{store_id}/comments",
+    response_model=StoreCommentsListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Listar historial de notas y comentarios de seguimiento comercial de una tienda",
+)
+def list_store_comments(
+    store_id: int,
+    db_session: Session = Depends(get_db_session),
+) -> StoreCommentsListResponse:
+    store = db_session.get(Tienda, store_id)
+    if store is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tienda no encontrada.",
+        )
+
+    comments = (
+        db_session.scalars(
+            select(TiendaComentario)
+            .where(TiendaComentario.tienda_id == store_id)
+            .order_by(TiendaComentario.fecha_creacion.desc())
+        )
+        .all()
+    )
+
+    items = [
+        StoreCommentItem(
+            id=c.id,
+            tienda_id=c.tienda_id,
+            autor=c.autor,
+            tipo_contacto=c.tipo_contacto,
+            comentario=c.comentario,
+            fecha_creacion=c.fecha_creacion,
+        )
+        for c in comments
+    ]
+
+    return StoreCommentsListResponse(
+        tienda_id=store.id,
+        tienda_nombre=store.nombre,
+        total=len(items),
+        comentarios=items,
+    )
+
+
+@administracion_router.post(
+    "/tiendas/{store_id}/comentarios",
+    response_model=StoreCommentItem,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar una nota o comentario de seguimiento comercial en la bitácora de la tienda",
+)
+@administracion_router.post("/stores/{store_id}/comments", response_model=StoreCommentItem, include_in_schema=False)
+@router.post(
+    "/tiendas/{store_id}/comentarios",
+    response_model=StoreCommentItem,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
+@router.post(
+    "/stores/{store_id}/comments",
+    response_model=StoreCommentItem,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar una nota o comentario de seguimiento comercial en la bitácora de la tienda",
+)
+def add_store_comment(
+    store_id: int,
+    payload: StoreCommentInput,
+    db_session: Session = Depends(get_db_session),
+) -> StoreCommentItem:
+    store = db_session.get(Tienda, store_id)
+    if store is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tienda no encontrada.",
+        )
+
+    nuevo_comentario = TiendaComentario(
+        tienda_id=store.id,
+        autor=(payload.autor or "Administrador").strip(),
+        tipo_contacto=(payload.tipo_contacto or "nota").strip().lower(),
+        comentario=payload.comentario.strip(),
+    )
+    db_session.add(nuevo_comentario)
+    db_session.commit()
+    db_session.refresh(nuevo_comentario)
+
+    return StoreCommentItem.model_validate(nuevo_comentario)
+
+
+@administracion_router.delete(
+    "/tiendas/{store_id}/comentarios/{comment_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Eliminar una nota o comentario de la bitácora",
+)
+@administracion_router.delete("/stores/{store_id}/comments/{comment_id}", status_code=status.HTTP_200_OK, include_in_schema=False)
+@router.delete(
+    "/tiendas/{store_id}/comentarios/{comment_id}",
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+@router.delete(
+    "/stores/{store_id}/comments/{comment_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Eliminar una nota o comentario de la bitácora",
+)
+def delete_store_comment(
+    store_id: int,
+    comment_id: int,
+    db_session: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    comment = db_session.get(TiendaComentario, comment_id)
+    if comment is None or comment.tienda_id != store_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Comentario no encontrado para esta tienda.",
+        )
+
+    db_session.delete(comment)
+    db_session.commit()
+
+    return {"status": "ok", "deleted_id": comment_id}
 
 
 @administracion_router.post(
@@ -1413,6 +1698,7 @@ def sync_single_store(
     db_manager = _resolve_db_manager(request, db_session)
     res = sincronizar_tienda(tienda_dict, db=db_manager)
     diag = clasificar_error_sincronizacion(res.get("error")) if not res["exito"] else None
+    suspected_count = _count_store_suspected_products(store.id, db_session) if res["exito"] else 0
     mensaje = (
         f"Sincronización exitosa: {res['total_productos']} productos sincronizados "
         f"({res['productos_nuevos']} nuevos, {res['productos_actualizados']} actualizados) en {res['duracion_segundos']}s."
@@ -1430,6 +1716,7 @@ def sync_single_store(
         productos_nuevos=res["productos_nuevos"],
         productos_actualizados=res["productos_actualizados"],
         productos_eliminados=res.get("productos_eliminados", 0),
+        productos_sospechosos=suspected_count,
         duracion_segundos=res["duracion_segundos"],
         error=res["error"],
         codigo_error=diag["codigo"] if diag else None,
@@ -1833,9 +2120,9 @@ def import_stores_and_branches(
     summary="Listar productos para moderación administrativa (sospechosos no-café, ocultos o todos)",
 )
 def list_moderation_products(
-    mode: Literal["suspected", "hidden", "visible", "all"] = Query(
+    mode: Literal["suspected", "hidden", "visible", "confirmed", "all"] = Query(
         "suspected",
-        description="Filtro: 'suspected' (posibles no-café), 'hidden' (ocultos), 'visible' (visibles), 'all' (todos)",
+        description="Filtro: 'suspected' (posibles no-café), 'hidden' (ocultos), 'visible' (visibles), 'confirmed' (confirmados como café), 'all' (todos)",
     ),
     store_name: Optional[str] = Query(None, description="Filtrar por tienda"),
     q: Optional[str] = Query(None, description="Buscar por nombre de producto"),
@@ -1857,6 +2144,7 @@ def list_moderation_products(
     total_sospechosos = 0
     total_ocultos = 0
     total_visibles_cafe = 0
+    total_confirmados_cafe = 0
     filtered_items: List[ModerationProductItem] = []
 
     q_lower = q.strip().lower() if q and q.strip() else None
@@ -1869,9 +2157,18 @@ def list_moderation_products(
             continue
 
         oculto = bool(getattr(prod, "oculto_catalogo", False))
-        reason = detect_non_coffee_suspicion(prod.nombre, prod.descripcion)
-        cat = classify_product_category(prod.nombre)
-        es_sospechoso = reason is not None or cat == "no_cafe"
+        confirmado = bool(getattr(prod, "es_cafe_confirmado", False))
+        if confirmado:
+            es_sospechoso = False
+            reason = None
+            cat = "cafe"
+        else:
+            reason = detect_non_coffee_suspicion(prod.nombre, prod.descripcion)
+            cat = classify_product_category(prod.nombre)
+            es_sospechoso = (reason is not None or cat == "no_cafe")
+
+        if confirmado:
+            total_confirmados_cafe += 1
 
         if oculto:
             total_ocultos += 1
@@ -1882,6 +2179,8 @@ def list_moderation_products(
                 total_visibles_cafe += 1
 
         if mode == "suspected" and not (es_sospechoso and not oculto):
+            continue
+        if mode == "confirmed" and not confirmado:
             continue
         if mode == "hidden" and not oculto:
             continue
@@ -1909,8 +2208,9 @@ def list_moderation_products(
                 precio_por_kilo=precio_kg,
                 oculto_catalogo=oculto,
                 es_sospechoso=es_sospechoso,
-                motivo_sospecha=reason or ("Detectado como accesorio / no-café" if cat == "no_cafe" else None),
-                categoria_detectada="no_cafe" if es_sospechoso else "cafe",
+                es_cafe_confirmado=confirmado,
+                motivo_sospecha=None if confirmado else (reason or ("Detectado como accesorio / no-café" if cat == "no_cafe" else None)),
+                categoria_detectada="cafe" if confirmado else ("no_cafe" if es_sospechoso else "cafe"),
             )
         )
 
@@ -1926,6 +2226,7 @@ def list_moderation_products(
         total_sospechosos=total_sospechosos,
         total_ocultos=total_ocultos,
         total_visibles_cafe=total_visibles_cafe,
+        total_confirmados_cafe=total_confirmados_cafe,
         conteo_por_tienda=_compute_store_moderation_counts(db_session),
         items=filtered_items[:limit],
     )
@@ -2015,6 +2316,109 @@ def bulk_update_product_visibility(
         status="ok",
         updated_count=len(products),
         oculto_catalogo=bool(payload.oculto_catalogo),
+        conteo_por_tienda=_compute_store_moderation_counts(db_session),
+    )
+
+
+@administracion_router.patch(
+    "/productos/{product_id}/confirmar-cafe",
+    response_model=ConfirmCoffeeResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Confirmar manualmente un producto sospechoso como café de especialidad",
+)
+@administracion_router.patch("/products/{product_id}/confirm-coffee", response_model=ConfirmCoffeeResponse, include_in_schema=False)
+@router.patch(
+    "/productos/{product_id}/confirmar-cafe",
+    response_model=ConfirmCoffeeResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+@router.patch(
+    "/products/{product_id}/confirm-coffee",
+    response_model=ConfirmCoffeeResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Confirmar manualmente un producto sospechoso como café de especialidad",
+)
+def confirm_coffee_product(
+    product_id: int,
+    payload: ConfirmCoffeeRequest = ConfirmCoffeeRequest(),
+    db_session: Session = Depends(get_db_session),
+) -> ConfirmCoffeeResponse:
+    product = db_session.get(Producto, product_id)
+    if product is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Producto no encontrado.",
+        )
+
+    product.es_cafe_confirmado = bool(payload.confirmado)
+    if payload.confirmado:
+        product.categoria = "cafe"
+        product.oculto_catalogo = False
+    else:
+        product.categoria = classify_product_category(product.nombre)
+
+    db_session.commit()
+
+    return ConfirmCoffeeResponse(
+        status="ok",
+        product_id=product.id,
+        updated_count=1,
+        es_cafe_confirmado=bool(product.es_cafe_confirmado),
+        categoria=str(product.categoria),
+        oculto_catalogo=bool(product.oculto_catalogo),
+        conteo_por_tienda=_compute_store_moderation_counts(db_session),
+    )
+
+
+@administracion_router.post(
+    "/productos/confirmar-cafe-lote",
+    response_model=ConfirmCoffeeResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Confirmar o revertir múltiples productos como café en lote",
+)
+@administracion_router.post("/products/bulk-confirm-coffee", response_model=ConfirmCoffeeResponse, include_in_schema=False)
+@router.post(
+    "/productos/confirmar-cafe-lote",
+    response_model=ConfirmCoffeeResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+@router.post(
+    "/products/bulk-confirm-coffee",
+    response_model=ConfirmCoffeeResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Confirmar o revertir múltiples productos como café en lote",
+)
+def bulk_confirm_coffee_products(
+    payload: BulkConfirmCoffeeRequest,
+    db_session: Session = Depends(get_db_session),
+) -> ConfirmCoffeeResponse:
+    if not payload.product_ids:
+        return ConfirmCoffeeResponse(
+            status="ok",
+            updated_count=0,
+            es_cafe_confirmado=payload.confirmado,
+            conteo_por_tienda=_compute_store_moderation_counts(db_session),
+        )
+
+    products = db_session.scalars(
+        select(Producto).where(Producto.id.in_(payload.product_ids))
+    ).all()
+    for p in products:
+        p.es_cafe_confirmado = bool(payload.confirmado)
+        if payload.confirmado:
+            p.categoria = "cafe"
+            p.oculto_catalogo = False
+        else:
+            p.categoria = classify_product_category(p.nombre)
+
+    db_session.commit()
+
+    return ConfirmCoffeeResponse(
+        status="ok",
+        updated_count=len(products),
+        es_cafe_confirmado=bool(payload.confirmado),
         conteo_por_tienda=_compute_store_moderation_counts(db_session),
     )
 

@@ -26,6 +26,7 @@ from scrapper.coffee_metadata import (
 import logging
 from core.extractor import CoffeeAttributesExtractor
 from core.error_classifier import clasificar_error_sincronizacion
+from core.store_news_helper import sincronizar_novedad_nueva_tienda
 from scrapper.driver_factory import DriverFactory
 from scrapper.shopify_driver import ShopifyDriver
 from scrapper.woocommerce_driver import WooCommerceDriver
@@ -255,6 +256,14 @@ def sincronizar_tienda(
             'productos_eliminados': conteos['eliminados'],
             'productos_actualizados': conteos['actualizados'],
         })
+
+        try:
+            with db.SessionLocal() as news_session:
+                sincronizar_novedad_nueva_tienda(tienda_id, news_session)
+                news_session.commit()
+        except Exception as e_news:
+            logging.warning(f"No se pudo sincronizar novedad de bienvenida para tienda {tienda_id}: {e_news}")
+
         duracion = round(time.monotonic() - inicio, 2)
         return {
             "tienda_id": tienda_id,

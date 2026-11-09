@@ -1,12 +1,16 @@
+from datetime import datetime, timezone
 import math
+from urllib.parse import quote_plus
 from typing import Any, Dict, List, Literal, Optional
-from fastapi import APIRouter, Depends, Header, Query, status
+from fastapi import APIRouter, Depends, Header, Query, Response, status
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import distinct, func, not_, or_, literal, String
+from sqlalchemy import distinct, func, not_, or_, literal, select, DateTime, String
 from sqlalchemy.orm import Session
 
 from api.dependencies import get_db_session
-from db.database import Producto, SucursalTienda, Tienda, Variante, engine_has_tienda_column
+from api.schemas import LatestStoreIncorporationResponse
+from core.store_news_helper import contar_cafes_activos_tienda
+from db.database import NovedadTienda, Producto, SucursalTienda, Tienda, Variante, _utcnow, engine_has_tienda_column
 from domain.search_normalizer import NON_COFFEE_KEYWORDS_SQL
 
 router = APIRouter(prefix="/api/v1/stores", tags=["Tiendas"])
@@ -86,6 +90,7 @@ class StoreSummaryItem(BaseModel):
     longitud: Optional[float] = None
     distancia_km: Optional[float] = None
     logo_url: Optional[str] = None
+    fecha_creacion: Optional[datetime] = None
     sucursales: List[StoreBranchPublicItem] = []
 
 
@@ -128,7 +133,7 @@ class StoresSummaryResponse(BaseModel):
 def get_stores_summary(
     page: int = Query(1, ge=1, description="Número de página (empezando en 1)"),
     page_size: int = Query(10, ge=1, le=100, description="Cantidad de tiendas por página"),
-    sort_by: Literal["product_count_desc", "name_asc", "distance_asc"] = Query(
+    sort_by: Literal["product_count_desc", "name_asc", "distance_asc", "created_desc"] = Query(
         "product_count_desc",
         description="Orden de resultados: 'product_count_desc', 'name_asc', o 'distance_asc'"
     ),
@@ -170,7 +175,12 @@ def get_stores_summary(
     has_whatsapp = engine_has_tienda_column(bind, "telefono_whatsapp")
     whatsapp_col = Tienda.telefono_whatsapp.label("telefono_whatsapp") if has_whatsapp else literal(None, type_=String).label("telefono_whatsapp")
 
+    has_fecha = engine_has_tienda_column(bind, "fecha_creacion")
+    fecha_col = Tienda.fecha_creacion.label("fecha_creacion") if has_fecha else literal(None, type_=DateTime).label("fecha_creacion")
+
     group_cols = [Tienda.id, Tienda.nombre, Tienda.url_base, Tienda.comuna, Tienda.latitud, Tienda.longitud]
+    if has_fecha:
+        group_cols.append(Tienda.fecha_creacion)
     if has_logo:
         group_cols.append(Tienda.logo_url)
     if has_whatsapp:
@@ -186,6 +196,7 @@ def get_stores_summary(
             Tienda.longitud.label("longitud"),
             whatsapp_col,
             logo_col,
+            fecha_col,
             func.count(distinct(Producto.id)).label("cantidad_productos")
         )
         .join(Producto, Producto.tienda_id == Tienda.id)
@@ -205,6 +216,8 @@ def get_stores_summary(
 
     if sort_by == "name_asc":
         query = query.order_by(Tienda.nombre.asc())
+    elif sort_by == "created_desc" and has_fecha:
+        query = query.order_by(Tienda.fecha_creacion.desc(), Tienda.nombre.asc())
     elif sort_by == "product_count_desc":
         query = query.order_by(func.count(distinct(Producto.id)).desc(), Tienda.nombre.asc())
 
@@ -251,6 +264,7 @@ def get_stores_summary(
             "sitio_oficial": official_site,
             "cantidad_productos": row.cantidad_productos,
             "logo_url": getattr(row, "logo_url", None),
+            "fecha_creacion": getattr(row, "fecha_creacion", None),
             "sucursales": sucursales_por_nombre.get(row.nombre, []),
         }
         if row.comuna:
@@ -281,3 +295,78 @@ def get_stores_summary(
         "ubicacion_referencia": ref_name,
     }
 
+
+
+@tiendas_router.get(
+    "/ultima-incorporada",
+    response_model=Optional[LatestStoreIncorporationResponse],
+    summary="Obtener la tostaduría más recientemente incorporada a Cafésitios",
+    description="Devuelve la última tienda activa con productos disponibles en el catálogo, su conteo de cafés y novedad asociada.",
+)
+@router.get(
+    "/latest",
+    response_model=Optional[LatestStoreIncorporationResponse],
+    include_in_schema=False,
+)
+def get_latest_store_incorporation(
+    response: Response,
+    db_session: Session = Depends(get_db_session),
+) -> Optional[LatestStoreIncorporationResponse]:
+    response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=300"
+
+    tiendas_recientes = db_session.execute(
+        select(Tienda)
+        .where(Tienda.activo.is_(True))
+        .order_by(Tienda.fecha_creacion.desc(), Tienda.id.desc())
+        .limit(10)
+    ).scalars().all()
+
+    if not tiendas_recientes:
+        return None
+
+    selected_store: Optional[Tienda] = None
+    cant_productos = 0
+    for store in tiendas_recientes:
+        total_cafes = contar_cafes_activos_tienda(store.id, db_session)
+        if total_cafes > 0:
+            selected_store = store
+            cant_productos = total_cafes
+            break
+
+    if selected_store is None:
+        selected_store = tiendas_recientes[0]
+        cant_productos = contar_cafes_activos_tienda(selected_store.id, db_session)
+
+    ahora = _utcnow()
+    fecha_crea = selected_store.fecha_creacion or ahora
+    if fecha_crea.tzinfo is not None and ahora.tzinfo is None:
+        ahora = ahora.replace(tzinfo=timezone.utc)
+    elif fecha_crea.tzinfo is None and ahora.tzinfo is not None:
+        fecha_crea = fecha_crea.replace(tzinfo=timezone.utc)
+
+    dias_desde_incorporacion = max(0, (ahora - fecha_crea).days)
+    es_reciente = dias_desde_incorporacion <= 30
+
+    novedad = db_session.execute(
+        select(NovedadTienda).where(
+            NovedadTienda.tienda_id == selected_store.id,
+            NovedadTienda.categoria_tipo == "nueva_tienda",
+            NovedadTienda.activo.is_(True),
+        )
+    ).scalar_one_or_none()
+
+    catalogo_url = f"/catalogo?tienda={quote_plus(selected_store.nombre.strip())}"
+
+    return LatestStoreIncorporationResponse(
+        id=selected_store.id,
+        nombre=selected_store.nombre,
+        logo_url=selected_store.logo_url,
+        cantidad_productos=cant_productos,
+        fecha_creacion=selected_store.fecha_creacion,
+        dias_desde_incorporacion=dias_desde_incorporacion,
+        es_reciente=es_reciente,
+        catalogo_url=catalogo_url,
+        novedad_id=novedad.id if novedad else None,
+        titulo_novedad=novedad.titulo if novedad else f"¡Bienvenida {selected_store.nombre} a Cafésitios! 🎉",
+        descripcion_novedad=novedad.descripcion if novedad else None,
+    )

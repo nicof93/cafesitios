@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import FavoritesAlertsBanner from '../components/catalog/FavoritesAlertsBanner.astro';
+import NewStoreBanner from '../components/catalog/NewStoreBanner.astro';
 import { GetCatalogUseCase } from '../core/application/GetCatalog';
 import { GetStoresUseCase } from '../core/application/GetStores';
 import { HttpClient } from '../core/infrastructure/api/HttpClient';
@@ -311,6 +312,7 @@ const jsonLdHome = {
     </section>
 
     <!-- Alertas de Variación de Precio de Favoritos Guardados -->
+    <NewStoreBanner />
     <FavoritesAlertsBanner />
 
     <!-- ===================================================================== -->

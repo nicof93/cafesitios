@@ -66,11 +66,16 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
     </div>
 
     <!-- KPIS Y RESUMEN DE MODERACIÓN -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-2xl border border-rose-200 bg-rose-50/50 p-5 shadow-xs">
         <p class="text-xs font-bold uppercase tracking-wider text-rose-800">Sospechosos No-Café</p>
         <p id="kpi-suspected" class="mt-2 text-3xl font-extrabold text-rose-900">0</p>
         <p class="mt-1 text-[11px] text-rose-700">Poleras, imanes, relojes, tazas y accesorios detectados.</p>
+      </div>
+      <div class="rounded-2xl border border-sky-200 bg-sky-50/50 p-5 shadow-xs">
+        <p class="text-xs font-bold uppercase tracking-wider text-sky-800">Confirmados como Café</p>
+        <p id="kpi-confirmed" class="mt-2 text-3xl font-extrabold text-sky-900">0</p>
+        <p class="mt-1 text-[11px] text-sky-700">Sospechas descartadas manualmente por el administrador.</p>
       </div>
       <div class="rounded-2xl border border-amber-200 bg-amber-50/50 p-5 shadow-xs">
         <p class="text-xs font-bold uppercase tracking-wider text-amber-800">Ocultos del Catálogo</p>
@@ -89,15 +94,18 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
       <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         
         <div class="flex flex-wrap items-center gap-3">
-          <div class="flex rounded-xl bg-stone-100 p-1 text-xs font-semibold">
+          <div class="flex flex-wrap rounded-xl bg-stone-100 p-1 text-xs font-semibold gap-1">
             <button type="button" class="mod-filter-btn active rounded-lg bg-stone-900 px-3 py-1.5 text-white" data-mode="suspected">
-              Sospechosos No-Café
+              🛡️ Sospechosos
+            </button>
+            <button type="button" class="mod-filter-btn rounded-lg px-3 py-1.5 text-stone-700 hover:text-stone-900" data-mode="confirmed">
+              ☕ Confirmados
             </button>
             <button type="button" class="mod-filter-btn rounded-lg px-3 py-1.5 text-stone-700 hover:text-stone-900" data-mode="hidden">
-              Ocultos
+              🚫 Ocultos
             </button>
             <button type="button" class="mod-filter-btn rounded-lg px-3 py-1.5 text-stone-700 hover:text-stone-900" data-mode="visible">
-              Visibles
+              👁️ Visibles
             </button>
             <button type="button" class="mod-filter-btn rounded-lg px-3 py-1.5 text-stone-700 hover:text-stone-900" data-mode="all">
               Todos
@@ -119,8 +127,28 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           />
         </div>
 
-        <div class="text-xs text-stone-500" id="mod-items-count">
-          Cargando productos...
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            id="btn-bulk-confirm-coffee"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition shadow-2xs"
+            title="Confirmar todos los productos sospechosos del listado actual como café"
+          >
+            <span>☕</span>
+            <span>Confirmar Filtrados como Café</span>
+          </button>
+          <button
+            type="button"
+            id="btn-bulk-hide-suspected"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-900 hover:bg-rose-100 transition shadow-2xs"
+            title="Ocultar masivamente los sospechosos de este listado"
+          >
+            <span>🚫</span>
+            <span>Ocultar Sospechosos</span>
+          </button>
+          <span class="text-xs text-stone-500 pl-2" id="mod-items-count">
+            Cargando productos...
+          </span>
         </div>
       </div>
 
@@ -253,9 +281,11 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
 
           // Actualizar KPIs
           const kpiSuspected = document.getElementById('kpi-suspected');
+          const kpiConfirmed = document.getElementById('kpi-confirmed');
           const kpiHidden = document.getElementById('kpi-hidden');
           const kpiVisible = document.getElementById('kpi-visible');
           if (kpiSuspected) kpiSuspected.textContent = data.total_sospechosos || 0;
+          if (kpiConfirmed) kpiConfirmed.textContent = data.total_confirmados_cafe || 0;
           if (kpiHidden) kpiHidden.textContent = data.total_ocultos || 0;
           if (kpiVisible) kpiVisible.textContent = data.total_visibles_cafe || 0;
           if (countEl) countEl.textContent = `Mostrando ${cachedModerationItems.length} productos`;
@@ -265,7 +295,9 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
             return;
           }
 
-          tbody.innerHTML = cachedModerationItems.map((item) => `
+          tbody.innerHTML = cachedModerationItems.map((item) => {
+            const isConfirmed = Boolean(item.es_cafe_confirmado);
+            return `
             <tr class="hover:bg-stone-50/60 transition ${item.oculto_catalogo ? 'bg-stone-50/80 opacity-70' : ''}">
               <td class="px-4 py-3">
                 <div class="flex items-center gap-3">
@@ -286,9 +318,11 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
                 <span class="block text-[10px] text-stone-400">$${(item.precio_por_kilo || 0).toLocaleString('es-CL')}/kg</span>
               </td>
               <td class="px-4 py-3">
-                ${item.es_sospechoso 
-                  ? `<span class="rounded-md bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-800">${item.motivo_sospecha || 'Posible no-café'}</span>`
-                  : '<span class="text-[11px] text-stone-400">Sin sospecha</span>'}
+                ${isConfirmed
+                  ? `<span class="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800" title="Confirmado manualmente por el administrador">✓ Café Confirmado</span>`
+                  : (item.es_sospechoso 
+                      ? `<span class="rounded-md bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-800">${item.motivo_sospecha || 'Posible no-café'}</span>`
+                      : '<span class="text-[11px] text-stone-400">Sin sospecha</span>')}
               </td>
               <td class="px-4 py-3 text-center">
                 ${item.oculto_catalogo
@@ -296,17 +330,70 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
                   : '<span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-900">Visible</span>'}
               </td>
               <td class="px-4 py-3 text-center">
-                <button
-                  type="button"
-                  class="btn-toggle-visibility rounded-lg px-3 py-1.5 text-xs font-bold transition ${item.oculto_catalogo ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-rose-100 text-rose-800 hover:bg-rose-200'}"
-                  data-id="${item.id}"
-                  data-current="${item.oculto_catalogo}"
-                >
-                  ${item.oculto_catalogo ? '👁️ Restaurar' : '🚫 Ocultar'}
-                </button>
+                <div class="inline-flex items-center justify-center gap-1.5">
+                  <button
+                    type="button"
+                    class="btn-toggle-confirm rounded-lg px-2.5 py-1 text-xs font-bold transition ${isConfirmed ? 'bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-2xs'}"
+                    data-id="${item.id}"
+                    data-confirmed="${isConfirmed}"
+                    title="${isConfirmed ? 'Deshacer confirmación y restaurar sospecha' : 'Confirmar que es café de especialidad legítimo'}"
+                  >
+                    ${isConfirmed ? '↩ Deshacer' : '☕ Es Café'}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-toggle-visibility rounded-lg px-2 py-1 text-xs font-bold transition ${item.oculto_catalogo ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-rose-100 text-rose-800 hover:bg-rose-200'}"
+                    data-id="${item.id}"
+                    data-current="${item.oculto_catalogo}"
+                    title="${item.oculto_catalogo ? 'Restaurar visibilidad en catálogo público' : 'Ocultar producto del catálogo público'}"
+                  >
+                    ${item.oculto_catalogo ? '👁️' : '🚫'}
+                  </button>
+                </div>
               </td>
             </tr>
-          `).join('');
+          `;
+          }).join('');
+
+          // Enlazar botones de confirmación como café
+          document.querySelectorAll('.btn-toggle-confirm').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+              const id = btn.getAttribute('data-id');
+              const isConfirmed = btn.getAttribute('data-confirmed') === 'true';
+              btn.disabled = true;
+              const originalHtml = btn.innerHTML;
+              btn.innerHTML = '<span class="inline-block animate-spin text-[10px]">⏳</span>';
+
+              try {
+                const patchRes = await fetchWithEnv(`${API_BASE}/api/v1/admin/products/${id}/confirm-coffee`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ confirmado: !isConfirmed }),
+                });
+                if (!patchRes.ok) {
+                  const errData = await patchRes.json().catch(() => ({}));
+                  throw new Error(errData.detail || `Error HTTP ${patchRes.status} al confirmar producto`);
+                }
+                if (window.plataformaNotify) {
+                  window.plataformaNotify(
+                    !isConfirmed
+                      ? 'Producto confirmado como café de especialidad legítimo.'
+                      : 'Confirmación deshecha. El producto vuelve a su clasificación original.',
+                    'success'
+                  );
+                }
+                loadModerationProducts();
+              } catch (err) {
+                if (window.plataformaNotify) {
+                  window.plataformaNotify(`Error: ${err.message}`, 'error');
+                } else {
+                  console.error('Error al confirmar café:', err);
+                }
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+              }
+            });
+          });
 
           // Enlazar botones toggle
           document.querySelectorAll('.btn-toggle-visibility').forEach((btn) => {
@@ -383,6 +470,54 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
         loadModerationProducts();
       });
 
+      // Confirmar masivamente los sospechosos filtrados como café
+      document.getElementById('btn-bulk-confirm-coffee')?.addEventListener('click', async () => {
+        const unconfirmedIds = cachedModerationItems
+          .filter((i) => !i.es_cafe_confirmado && (i.es_sospechoso || currentModMode === 'suspected'))
+          .map((i) => i.id);
+
+        if (!unconfirmedIds.length) {
+          if (window.plataformaNotify) {
+            window.plataformaNotify('No hay productos sospechosos pendientes de confirmar en esta vista.', 'warning');
+          }
+          return;
+        }
+
+        const ejecutarConfirmacionMasiva = async () => {
+          try {
+            const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/products/bulk-confirm-coffee`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ product_ids: unconfirmedIds, confirmado: true }),
+            });
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(errData.detail || `Error HTTP ${res.status} al confirmar en lote`);
+            }
+            if (window.plataformaNotify) {
+              window.plataformaNotify(`${unconfirmedIds.length} productos confirmados como café de especialidad con éxito.`, 'success');
+            }
+            loadModerationProducts();
+          } catch (err) {
+            if (window.plataformaNotify) {
+              window.plataformaNotify(`Error: ${err.message}`, 'error');
+            } else {
+              console.error('Error en bulk confirm coffee:', err);
+            }
+          }
+        };
+
+        if (window.plataformaState && typeof window.plataformaState.confirmAction === 'function') {
+          window.plataformaState.confirmAction({
+            title: 'Confirmar Cafés en Lote',
+            message: `¿Deseas confirmar ${unconfirmedIds.length} productos como café de especialidad legítimo? Dejarán de aparecer como sospechosos.`,
+            onProceed: ejecutarConfirmacionMasiva
+          });
+        } else {
+          await ejecutarConfirmacionMasiva();
+        }
+      });
+
       // Ocultar masivamente los sospechosos visibles
       document.getElementById('btn-bulk-hide-suspected')?.addEventListener('click', async () => {
         const suspectedVisibleIds = cachedModerationItems
@@ -439,6 +574,16 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
       window.addEventListener('plataforma:env-changed', () => {
         loadStoresFilter();
         loadModerationProducts();
+      });
+
+      // Sincronizar estado visual de pestañas según currentModMode inicial
+      document.querySelectorAll('.mod-filter-btn').forEach((b) => {
+        const mode = b.getAttribute('data-mode');
+        if (mode === currentModMode) {
+          b.className = 'mod-filter-btn active rounded-lg bg-stone-900 px-3 py-1.5 text-white';
+        } else {
+          b.className = 'mod-filter-btn rounded-lg px-3 py-1.5 text-stone-700 hover:text-stone-900';
+        }
       });
 
       // Inicialización

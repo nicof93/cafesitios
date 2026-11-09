@@ -1,0 +1,161 @@
+---
+import { HttpClient } from '../../core/infrastructure/api/HttpClient';
+import { FeatureFlags } from '../../core/infrastructure/config/FeatureFlags';
+
+interface LatestStoreResponse {
+  id: number;
+  nombre: string;
+  logo_url?: string | null;
+  cantidad_productos: number;
+  fecha_creacion?: string | null;
+  dias_desde_incorporacion: number;
+  es_reciente: boolean;
+  catalogo_url: string;
+  novedad_id?: number | null;
+  titulo_novedad?: string | null;
+  descripcion_novedad?: string | null;
+}
+
+const isEnabled = FeatureFlags.isNewStoreBannerEnabled();
+let latestStore: LatestStoreResponse | null = null;
+
+if (isEnabled) {
+  try {
+    const http = new HttpClient();
+    latestStore = await http.get<LatestStoreResponse>('/api/v1/tiendas/ultima-incorporada', {
+      timeoutMs: 3000
+    });
+  } catch (err) {
+    // Si la API falla o no hay datos, degradar limpiamente
+    latestStore = null;
+  }
+}
+
+const showBanner = Boolean(
+  isEnabled &&
+  latestStore &&
+  latestStore.es_reciente &&
+  latestStore.cantidad_productos > 0
+);
+---
+
+{showBanner && latestStore && (
+  <aside
+    id={`new-store-banner-${latestStore.id}`}
+    data-store-id={latestStore.id}
+    class="new-store-banner relative mb-6 overflow-hidden rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/80 via-stone-50 to-amber-50/50 p-4 sm:p-5 shadow-xs transition-all duration-300"
+    role="region"
+    aria-label="Anuncio de nueva tostaduría incorporada"
+  >
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <!-- Contenido Principal -->
+      <div class="flex items-start sm:items-center gap-3.5 pr-8 sm:pr-0">
+        <!-- Logo o Avatar -->
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white border border-amber-200/60 shadow-2xs overflow-hidden">
+          {latestStore.logo_url ? (
+            <img
+              src={latestStore.logo_url}
+              alt={`Logo de ${latestStore.nombre}`}
+              width="48"
+              height="48"
+              loading="lazy"
+              class="h-full w-full object-contain p-1"
+            />
+          ) : (
+            <span class="text-xl">☕</span>
+          )}
+        </div>
+
+        <div class="space-y-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300/70 px-2.5 py-0.5 text-[11px] font-extrabold text-amber-900 uppercase tracking-wide">
+              <span>🎉</span>
+              <span>Nueva Tostaduría</span>
+            </span>
+            <span class="text-[11px] font-medium text-stone-600">
+              {latestStore.dias_desde_incorporacion === 0
+                ? '¡Incorporada hoy!'
+                : latestStore.dias_desde_incorporacion === 1
+                ? 'Incorporada ayer'
+                : `Incorporada hace ${latestStore.dias_desde_incorporacion} días`}
+            </span>
+          </div>
+
+          <h3 class="text-sm sm:text-base font-extrabold text-stone-900 tracking-tight">
+            ¡Damos la bienvenida a <span class="text-amber-950 font-black">{latestStore.nombre}</span>!
+          </h3>
+
+          <p class="text-xs text-stone-700 leading-relaxed max-w-2xl">
+            {latestStore.descripcion_novedad || (
+              `Se ha sumado a Cafésitios con ${latestStore.cantidad_productos} ${
+                latestStore.cantidad_productos === 1 ? 'café de especialidad disponible' : 'cafés de especialidad disponibles'
+              } para comparar precios y notas de cata.`
+            )}
+          </p>
+        </div>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="flex items-center gap-2.5 pt-1 sm:pt-0 shrink-0">
+        <a
+          href={latestStore.catalogo_url}
+          class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs px-4 py-2.5 shadow-xs transition active:scale-[0.98]"
+          title={`Ver los ${latestStore.cantidad_productos} cafés de ${latestStore.nombre}`}
+        >
+          <span>Explorar sus cafés ({latestStore.cantidad_productos})</span>
+          <span aria-hidden="true">→</span>
+        </a>
+
+        <a
+          href="/novedades?tipo=nueva_tienda"
+          class="hidden md:inline-flex items-center justify-center rounded-xl bg-white hover:bg-stone-100 border border-stone-200 text-stone-700 hover:text-stone-900 font-semibold text-xs px-3 py-2.5 transition"
+        >
+          Ver anuncio
+        </a>
+
+        <!-- Botón Descartar Banner -->
+        <button
+          type="button"
+          class="btn-dismiss-new-store absolute sm:static top-3 right-3 flex h-8 w-8 items-center justify-center rounded-lg text-stone-600 hover:text-stone-800 hover:bg-amber-100/60 transition"
+          aria-label="Cerrar anuncio de nueva tostaduría"
+          title="Ocultar este anuncio"
+        >
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+)}
+
+<script>
+  function initNewStoreBanners() {
+    const banners = document.querySelectorAll<HTMLElement>('.new-store-banner');
+    banners.forEach((banner) => {
+      const storeId = banner.dataset.storeId;
+      if (!storeId) return;
+
+      const storageKey = `cafesitios_dismissed_store_${storeId}`;
+      if (localStorage.getItem(storageKey) === 'true') {
+        banner.remove();
+        return;
+      }
+
+      const dismissBtn = banner.querySelector('.btn-dismiss-new-store');
+      dismissBtn?.addEventListener('click', () => {
+        localStorage.setItem(storageKey, 'true');
+        banner.style.opacity = '0';
+        banner.style.transform = 'translateY(-8px)';
+        setTimeout(() => banner.remove(), 250);
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initNewStoreBanners);
+  } else {
+    initNewStoreBanners();
+  }
+  document.addEventListener('astro:page-load', initNewStoreBanners);
+</script>

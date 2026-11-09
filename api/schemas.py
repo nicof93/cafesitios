@@ -718,3 +718,20 @@ class PaginatedFeedbackResponse(BaseModel):
     total_paginas: int
     conteo_por_categoria: Dict[str, int] = Field(default_factory=dict)
     items: List[FeedbackItemResponse] = Field(default_factory=list)
+
+
+# --- Nueva Incorporación de Tienda (Banner y Novedades) ---
+class LatestStoreIncorporationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    nombre: str
+    logo_url: Optional[str] = None
+    cantidad_productos: int = 0
+    fecha_creacion: Optional[datetime] = None
+    dias_desde_incorporacion: int = 0
+    es_reciente: bool = True
+    catalogo_url: str
+    novedad_id: Optional[int] = None
+    titulo_novedad: Optional[str] = None
+    descripcion_novedad: Optional[str] = None
+
