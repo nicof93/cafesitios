@@ -46,6 +46,7 @@ from db.database import (
     Variante,
 )
 from scrapper_application import sincronizar_tienda
+from core.store_news_helper import sincronizar_novedad_nueva_tienda
 from api.admin import CatalogTestRequest, CatalogTestResponse, test_store_catalog
 from api.schemas import (
     AdminNovedadesListResponse,
@@ -1007,6 +1008,12 @@ def create_store_product(
         },
         ip_origen=ctx.ip_origen,
     )
+
+    try:
+        sincronizar_novedad_nueva_tienda(ctx.tienda_id, db_session)
+        db_session.commit()
+    except Exception as exc:
+        logging.warning(f"No se pudo sincronizar novedad tras agregar producto: {exc}")
 
     variantes_dto = [
         StoreProductVariantOutput(

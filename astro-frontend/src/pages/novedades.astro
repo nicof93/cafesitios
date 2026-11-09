@@ -40,6 +40,7 @@ try {
 // Categorías canónicas de filtros
 const CATEGORIAS = [
   { id: '', label: '✨ Todas' },
+  { id: 'nueva_tienda', label: '🎉 Nuevas Tiendas' },
   { id: 'promocion', label: '🏷️ Promociones y Ofertas' },
   { id: 'feria', label: '🎪 Ferias de Café' },
   { id: 'evento', label: '📅 Talleres y Catas' },
@@ -62,6 +63,8 @@ function formatDate(isoStr?: string | null): string {
 
 function getCategoriaBadge(tipo?: string | null): { label: string; bg: string; text: string } {
   switch (tipo) {
+    case 'nueva_tienda':
+      return { label: '🎉 Nueva Tostaduría', bg: 'bg-amber-100 border-amber-300', text: 'text-amber-900' };
     case 'promocion':
       return { label: '🏷️ Promoción', bg: 'bg-amber-50 border-amber-200/80', text: 'text-amber-800' };
     case 'feria':

@@ -89,6 +89,15 @@ export class FeatureFlags {
     return this.parseFlag(val, true);
   }
 
+  /**
+   * Feature Flag: Banner de Nueva Tostaduría Incorporada en Catálogo
+   * Controlado por PUBLIC_ENABLE_NEW_STORE_BANNER o ENABLE_NEW_STORE_BANNER
+   */
+  static isNewStoreBannerEnabled(): boolean {
+    const val = import.meta.env.PUBLIC_ENABLE_NEW_STORE_BANNER ?? import.meta.env.ENABLE_NEW_STORE_BANNER;
+    return this.parseFlag(val, true);
+  }
+
   static getAll(): Record<string, boolean> {
     return {
       guides: this.isGuidesEnabled(),
@@ -99,6 +108,7 @@ export class FeatureFlags {
       glossary: this.isGlossaryEnabled(),
       chatbotSommelier: this.isChatbotSommelierEnabled(),
       storePosts: this.isStorePostsEnabled(),
+      newStoreBanner: this.isNewStoreBannerEnabled(),
     };
   }
 }

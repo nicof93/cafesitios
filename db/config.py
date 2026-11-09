@@ -84,5 +84,12 @@ class Settings:
             return raw_flag.strip().lower() in ("true", "1", "yes", "on")
         return True
 
+    @property
+    def is_new_store_banner_enabled(self) -> bool:
+        raw_flag = os.getenv("ENABLE_NEW_STORE_BANNER")
+        if raw_flag is not None and raw_flag.strip() != "":
+            return raw_flag.strip().lower() in ("true", "1", "yes", "on")
+        return True
+
 settings = Settings()
 
