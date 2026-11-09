@@ -1,0 +1,1278 @@
+---
+import AdminLteLayout from '../../layouts/AdminLteLayout.astro';
+
+const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://localhost:8001";
+---
+
+<AdminLteLayout 
+  title="Detalle de Tienda | Plataforma Admin"
+  activeNav="tiendas"
+  breadcrumb={[
+    { label: "Inicio", url: "/plataforma/" },
+    { label: "Tiendas y Sucursales", url: "/plataforma/tiendas" },
+    { label: "Ficha de Tienda" }
+  ]}
+>
+  <div class="space-y-6" data-api-base={apiBaseUrl}>
+    
+    <!-- BARRA SUPERIOR DE RETORNO Y ACCIONES -->
+    <div class="flex items-center justify-between border-b border-stone-200/80 pb-4">
+      <div class="flex items-center gap-3">
+        <a 
+          href="/plataforma/tiendas"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-bold text-stone-700 shadow-2xs hover:bg-stone-50 hover:border-stone-300 transition"
+        >
+          <span>←</span>
+          <span>Volver a Tiendas</span>
+        </a>
+        <span class="text-xs text-stone-400">|</span>
+        <span id="badge-detail-env" class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-stone-100 text-stone-600 border border-stone-200">
+          🌐 Localhost
+        </span>
+        <span id="header-store-badge-status" class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold bg-stone-100 text-stone-600">
+          Cargando...
+        </span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          id="btn-refresh-store-detail"
+          class="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-stone-700 shadow-2xs hover:bg-stone-50 transition"
+          title="Recargar información"
+        >
+          <span>🔄</span>
+          <span class="hidden sm:inline">Actualizar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ESTADO: CARGANDO (SKELETON) -->
+    <div id="store-detail-loading" class="space-y-6 animate-pulse">
+      <div class="h-32 rounded-2xl bg-stone-200/60 border border-stone-200"></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="h-24 rounded-2xl bg-stone-200/60 border border-stone-200"></div>
+        <div class="h-24 rounded-2xl bg-stone-200/60 border border-stone-200"></div>
+        <div class="h-24 rounded-2xl bg-stone-200/60 border border-stone-200"></div>
+        <div class="h-24 rounded-2xl bg-stone-200/60 border border-stone-200"></div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="h-96 rounded-2xl bg-stone-200/60 border border-stone-200"></div>
+        <div class="h-96 rounded-2xl bg-stone-200/60 border border-stone-200"></div>
+      </div>
+    </div>
+
+    <!-- ESTADO: ERROR (404 O FALLO DE RED) -->
+    <div id="store-detail-error" class="hidden rounded-2xl border border-rose-200 bg-rose-50/70 p-8 text-center space-y-4">
+      <div class="text-4xl">⚠️</div>
+      <h2 id="error-title" class="text-base font-bold text-rose-900">No se pudo cargar la tostaduría</h2>
+      <p id="error-desc" class="text-xs text-rose-700 max-w-md mx-auto">
+        El identificador especificado no corresponde a ninguna tienda registrada o el servidor backend no responde.
+      </p>
+      <div class="pt-2">
+        <a 
+          href="/plataforma/tiendas"
+          class="inline-flex items-center gap-2 rounded-xl bg-rose-900 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-800 transition"
+        >
+          <span>← Volver al Listado</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL DEL DETALLE -->
+    <div id="store-detail-content" class="hidden space-y-6">
+
+      <!-- HERO DE TIENDA -->
+      <div class="relative overflow-hidden rounded-2xl border border-stone-200/90 bg-white p-6 shadow-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          
+          <!-- Logo e Identidad -->
+          <div class="flex items-start sm:items-center gap-4">
+            <div id="detail-store-logo-wrapper" class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#F4F3ED] border border-stone-200 shadow-2xs overflow-hidden text-2xl font-black text-stone-700">
+              ☕
+            </div>
+
+            <div class="space-y-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <h1 id="detail-store-name" class="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">
+                  Tostaduría
+                </h1>
+                <span id="detail-store-id-badge" class="rounded-md bg-stone-100 text-stone-600 px-2 py-0.5 text-xs font-mono font-bold border border-stone-200">
+                  #0
+                </span>
+                <span id="detail-store-prospect-badge" class="hidden rounded-md bg-purple-100 text-purple-900 border border-purple-200 px-2 py-0.5 text-xs font-bold">
+                  🎯 Prospecto Comercial
+                </span>
+                <span id="detail-store-active-badge" class="rounded-md px-2 py-0.5 text-xs font-bold">
+                  Activa
+                </span>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2 text-xs text-stone-500">
+                <span id="detail-store-platform" class="font-medium text-stone-700">Plataforma: -</span>
+                <span>&bull;</span>
+                <span id="detail-store-comuna" class="text-stone-600">📍 -</span>
+                <span>&bull;</span>
+                <span id="detail-store-plan" class="font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Plan: Estándar</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Acciones Rápidas del Hero -->
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              id="btn-sync-detail-store"
+              class="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-900 shadow-xs hover:bg-emerald-100 transition active:scale-95"
+            >
+              <span>🔄</span>
+              <span>Sincronizar Catálogo</span>
+            </button>
+
+            <button
+              type="button"
+              id="btn-impersonate-detail-store"
+              class="inline-flex items-center gap-1.5 rounded-xl border border-purple-300 bg-purple-50 px-3.5 py-2 text-xs font-bold text-purple-900 shadow-xs hover:bg-purple-100 transition active:scale-95"
+              title="Acceder y auditar el portal administrativo de la tostaduría"
+            >
+              <span>🔑</span>
+              <span>Acceder al Panel</span>
+            </button>
+
+            <a
+              id="link-store-showcase"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition active:scale-95"
+              title="Ver la vitrina digital exclusiva de la tienda"
+            >
+              <span>⭐</span>
+              <span>Vitrina Pública</span>
+            </a>
+
+            <a
+              id="link-public-catalog"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-xs font-bold text-stone-700 shadow-xs hover:bg-stone-50 transition"
+              title="Ver cafés de esta tienda en el comparador público"
+            >
+              <span>🛒</span>
+              <span>Ver en Catálogo</span>
+            </a>
+
+            <a
+              id="link-official-site"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-bold text-stone-700 shadow-xs hover:bg-stone-50 transition"
+              title="Visitar sitio web oficial"
+            >
+              <span>🌐</span>
+              <span>Web Oficial</span>
+            </a>
+          </div>
+
+        </div>
+
+        <!-- Ficha de Contacto Comercial y Datos Clave -->
+        <div class="mt-6 pt-5 border-t border-stone-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+          <div class="rounded-xl bg-stone-50/80 p-3 border border-stone-200/60">
+            <span class="text-stone-400 font-medium block">Contacto Comercial</span>
+            <span id="detail-contact-name" class="font-bold text-stone-900 block mt-0.5">-</span>
+            <div class="flex items-center gap-2 mt-1">
+              <span id="detail-contact-phone" class="text-stone-600">-</span>
+              <span id="detail-whatsapp-btn" class="hidden"></span>
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-stone-50/80 p-3 border border-stone-200/60">
+            <span class="text-stone-400 font-medium block">Email de Contacto</span>
+            <span id="detail-contact-email" class="font-semibold text-stone-800 block mt-0.5 truncate">-</span>
+            <span id="detail-admin-user" class="text-[11px] text-stone-500 block mt-1 truncate">Admin: -</span>
+          </div>
+
+          <div class="rounded-xl bg-stone-50/80 p-3 border border-stone-200/60">
+            <span class="text-stone-400 font-medium block">Dirección Principal</span>
+            <span id="detail-store-address" class="font-semibold text-stone-800 block mt-0.5">-</span>
+            <span id="detail-roast-info" class="text-[11px] text-amber-900 block mt-1">Tueste: -</span>
+          </div>
+
+          <div class="rounded-xl bg-stone-50/80 p-3 border border-stone-200/60">
+            <span class="text-stone-400 font-medium block">Almacenamiento y Fotos</span>
+            <span id="detail-storage-text" class="font-bold text-stone-900 block mt-0.5">0 MB / 250 MB</span>
+            <div class="w-full bg-stone-200 rounded-full h-1.5 mt-1.5 overflow-hidden">
+              <div id="detail-storage-bar" class="bg-emerald-600 h-1.5 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARDS DE METRICAS (KPIS) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Total Cafés -->
+        <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-2xs">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-stone-500">Cafés en Catálogo</span>
+            <span class="text-lg">☕</span>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span id="kpi-total-cafes" class="text-2xl font-black text-stone-900">0</span>
+            <span id="kpi-cafes-breakdown" class="text-xs text-stone-500">(0 visibles, 0 ocultos)</span>
+          </div>
+          <div id="kpi-suspicious-alert" class="mt-1 text-[11px] font-bold text-amber-700 hidden">
+            ⚠️ 0 productos sospechosos
+          </div>
+        </div>
+
+        <!-- Sucursales Físicas -->
+        <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-2xs">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-stone-500">Sucursales Físicas</span>
+            <span class="text-lg">📍</span>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span id="kpi-total-branches" class="text-2xl font-black text-stone-900">0</span>
+            <span class="text-xs text-stone-500">locales activos</span>
+          </div>
+          <div class="mt-1 text-[11px] text-stone-400">
+            Geolocalizadas en comparador
+          </div>
+        </div>
+
+        <!-- Bitácora Comercial -->
+        <div class="rounded-2xl border border-purple-200 bg-purple-50/40 p-4 shadow-2xs">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-purple-900">Bitácora de Notas</span>
+            <span class="text-lg">💬</span>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span id="kpi-total-comments" class="text-2xl font-black text-purple-900">0</span>
+            <span class="text-xs text-purple-700">entradas registradas</span>
+          </div>
+          <div class="mt-1 text-[11px] text-purple-800 font-medium">
+            Seguimiento de llamadas y acuerdos
+          </div>
+        </div>
+
+        <!-- Estado de Sincronización -->
+        <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-2xs">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-stone-500">Última Sincronización</span>
+            <span class="text-lg">⚡</span>
+          </div>
+          <div class="mt-2">
+            <span id="kpi-sync-status-badge" class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold bg-stone-100 text-stone-700">
+              Nunca
+            </span>
+          </div>
+          <div id="kpi-sync-time" class="mt-1 text-[11px] text-stone-500">
+            Sin registro previo
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SECCION A DOS COLUMNAS: BITACORA Y SUCURSALES -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
+        <!-- COLUMNA IZQUIERDA: BITÁCORA COMERCIAL COMPLETA -->
+        <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-6">
+          <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+            <div>
+              <h2 class="text-base font-black text-stone-900 flex items-center gap-2">
+                <span>💬</span>
+                <span>Bitácora de Seguimiento Comercial</span>
+              </h2>
+              <p class="text-xs text-stone-500 mt-0.5">
+                Historial confidencial de llamadas, reuniones y acuerdos comerciales.
+              </p>
+            </div>
+            <span id="comments-counter-badge" class="rounded-full bg-purple-100 text-purple-900 font-bold px-2.5 py-0.5 text-xs border border-purple-200">
+              0 notas
+            </span>
+          </div>
+
+          <!-- FORMULARIO PARA REGISTRAR NUEVA NOTA INLINE -->
+          <form id="form-add-comment-detail" class="rounded-xl border border-purple-200/80 bg-purple-50/40 p-4 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-xs font-bold text-purple-950 flex items-center gap-1">
+                <span>➕</span>
+                <span>Nueva Entrada en Bitácora</span>
+              </span>
+              <div class="flex items-center gap-2 text-xs">
+                <label for="detail-comment-type" class="text-stone-500 text-[11px] font-semibold">Tipo:</label>
+                <select
+                  id="detail-comment-type"
+                  class="rounded-lg border border-purple-200 bg-white px-2 py-1 text-xs font-medium text-stone-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="nota">📝 Nota Interna</option>
+                  <option value="llamada">📞 Llamada Telefónica</option>
+                  <option value="whatsapp">💬 WhatsApp</option>
+                  <option value="reunion">🤝 Reunión / Visita</option>
+                  <option value="email">✉️ Correo Electrónico</option>
+                </select>
+              </div>
+            </div>
+
+            <textarea
+              id="detail-comment-text"
+              rows="3"
+              required
+              minlength="2"
+              placeholder="Escribe el resumen de la conversación, acuerdos, objeciones o próximos pasos..."
+              class="w-full rounded-xl border border-stone-200 bg-white p-3 text-xs text-stone-800 placeholder-stone-400 shadow-2xs focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+            ></textarea>
+
+            <div class="flex items-center justify-between pt-1">
+              <input
+                type="text"
+                id="detail-comment-author"
+                value="Administrador"
+                maxlength="50"
+                placeholder="Autor de la nota"
+                class="rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-[11px] text-stone-600 shadow-2xs focus:outline-none"
+              />
+              <button
+                type="submit"
+                id="btn-submit-comment-detail"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-purple-900 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-800 transition active:scale-95 disabled:opacity-50"
+              >
+                <span>💾</span>
+                <span>Guardar Nota</span>
+              </button>
+            </div>
+          </form>
+
+          <!-- TIMELINE DE COMENTARIOS -->
+          <div id="comments-timeline-container" class="space-y-3 max-h-[550px] overflow-y-auto pr-1">
+            <!-- Renderizado dinámico -->
+          </div>
+
+        </div>
+
+        <!-- COLUMNA DERECHA: SUCURSALES Y FUENTES DE INGESTA -->
+        <div class="space-y-6">
+
+          <!-- PERFIL COMERCIAL, SERVICIOS Y MENÚ PDF -->
+          <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+            <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+              <div>
+                <h2 class="text-base font-black text-stone-900 flex items-center gap-2">
+                  <span>☕</span>
+                  <span>Perfil, Servicios y Menú PDF</span>
+                </h2>
+                <p class="text-xs text-stone-500 mt-0.5">
+                  Atributos de atención presencial, vitrina digital y carta de comida.
+                </p>
+              </div>
+              <span id="detail-profile-slug-badge" class="rounded-md bg-amber-50 text-amber-900 font-mono text-[11px] font-bold px-2 py-0.5 border border-amber-200">
+                slug: -
+              </span>
+            </div>
+
+            <!-- Servicios Presenciales -->
+            <div>
+              <span class="text-xs font-bold text-stone-700 block mb-2">Servicios en Cafetería</span>
+              <div id="detail-services-container" class="flex flex-wrap gap-1.5">
+                <span class="text-xs text-stone-400 italic">Cargando servicios...</span>
+              </div>
+            </div>
+
+            <!-- Carta de Comida en PDF -->
+            <div class="pt-3 border-t border-stone-100">
+              <span class="text-xs font-bold text-stone-700 block mb-1.5">Carta de Comida y Bebidas (PDF)</span>
+              <div id="detail-menu-pdf-panel" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-stone-200 bg-stone-50 text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">📄</span>
+                  <div>
+                    <span id="detail-menu-pdf-name" class="font-bold text-stone-800 block">Sin carta subida</span>
+                    <span id="detail-menu-pdf-size" class="text-[11px] text-stone-500 block">Formato PDF hasta 10 MB</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <a
+                    id="link-admin-view-menu-pdf"
+                    href="#"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="hidden inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-white px-2.5 py-1 text-xs font-bold text-emerald-800 shadow-2xs hover:bg-emerald-50 transition"
+                  >
+                    Ver PDF ↗
+                  </a>
+                  <button
+                    type="button"
+                    id="btn-admin-delete-menu-pdf"
+                    class="hidden inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
+                  >
+                    Eliminar
+                  </button>
+                  <label class="inline-flex items-center gap-1 rounded-lg bg-stone-900 px-2.5 py-1 text-xs font-bold text-white hover:bg-stone-800 transition cursor-pointer shadow-2xs">
+                    <span>Subir PDF</span>
+                    <input type="file" id="admin-input-menu-pdf" accept=".pdf,application/pdf" class="hidden" />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUCURSALES FÍSICAS -->
+          <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+            <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+              <div>
+                <h2 class="text-base font-black text-stone-900 flex items-center gap-2">
+                  <span>📍</span>
+                  <span>Sucursales Físicas y Cafeterías</span>
+                </h2>
+                <p class="text-xs text-stone-500 mt-0.5">
+                  Locales presenciales para retiro o consumo en el comparador.
+                </p>
+              </div>
+              <span id="branches-counter-badge" class="rounded-full bg-stone-100 text-stone-700 font-bold px-2.5 py-0.5 text-xs border border-stone-200">
+                0 sucursales
+              </span>
+            </div>
+
+            <!-- LISTADO DE SUCURSALES -->
+            <div id="branches-list-container" class="space-y-3">
+              <!-- Renderizado dinámico -->
+            </div>
+          </div>
+
+          <!-- CATALOGOS Y FUENTES ETL -->
+          <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs space-y-4">
+            <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+              <div>
+                <h2 class="text-base font-black text-stone-900 flex items-center gap-2">
+                  <span>🌐</span>
+                  <span>Catálogos y Driver ETL</span>
+                </h2>
+                <p class="text-xs text-stone-500 mt-0.5">
+                  URLs de sincronización de productos e inventario.
+                </p>
+              </div>
+              <button
+                type="button"
+                id="btn-test-catalogs-detail"
+                class="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900 shadow-2xs hover:bg-amber-100 transition"
+              >
+                <span>🧪</span>
+                <span>Probar Driver</span>
+              </button>
+            </div>
+
+            <!-- LISTADO DE CATALOGOS -->
+            <div id="catalogs-list-container" class="space-y-2 text-xs">
+              <!-- Renderizado dinámico -->
+            </div>
+
+            <!-- PANEL DE DIAGNÓSTICO DE ERROR DE SINCRONIZACIÓN (SI APLICA) -->
+            <div id="sync-error-diagnostic-panel" class="hidden rounded-xl border border-rose-200 bg-rose-50/70 p-4 space-y-2 text-xs text-rose-900">
+              <div class="flex items-center gap-2 font-bold text-rose-950">
+                <span>⚠️</span>
+                <span>Diagnóstico del Último Fallo de Sincronización</span>
+              </div>
+              <div id="sync-error-code-badge" class="inline-block rounded bg-rose-200/80 px-2 py-0.5 font-mono text-[11px] font-bold">
+                ERROR_CODE
+              </div>
+              <p id="sync-error-details" class="text-rose-800 text-[11px] break-words font-mono bg-white/70 p-2.5 rounded-lg border border-rose-200/60">
+                -
+              </p>
+            </div>
+          </div>
+
+          <!-- ENLACES DE ACCIÓN RÁPIDA -->
+          <div class="rounded-2xl border border-stone-200 bg-stone-50/60 p-5 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="space-y-0.5">
+              <span class="font-bold text-stone-900 block">¿Deseas auditar los productos de esta tienda?</span>
+              <span class="text-stone-500 block">Filtra cafés sospechosos o clasifica accesorios.</span>
+            </div>
+            <a
+              id="link-go-to-moderation"
+              href="/plataforma/moderacion"
+              class="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-900 shadow-2xs hover:bg-amber-100 transition"
+            >
+              <span>🛡️</span>
+              <span>Ir a Moderación de esta Tienda</span>
+            </a>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+</AdminLteLayout>
+
+<script is:inline>
+  (function initStoreDetailPage() {
+    const rootEl = document.querySelector('[data-api-base]');
+    const API_BASE = rootEl ? rootEl.getAttribute('data-api-base') : 'http://localhost:8001';
+
+    function getTargetEnv() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const envParam = urlParams.get('env');
+      if (envParam) {
+        localStorage.setItem('plataforma_active_env', envParam);
+        return envParam;
+      }
+      return localStorage.getItem('plataforma_active_env') || 'local';
+    }
+
+    const fetchWithEnv = (url, opts = {}) => {
+      if (window.plataformaState && typeof window.plataformaState.fetchWithEnv === 'function') {
+        return window.plataformaState.fetchWithEnv(url, opts);
+      }
+      const headers = new Headers(opts.headers || {});
+      headers.set('X-Target-Environment', getTargetEnv());
+      return fetch(url, { ...opts, headers });
+    };
+
+    // Elementos DOM
+    const loadingState = document.getElementById('store-detail-loading');
+    const errorState = document.getElementById('store-detail-error');
+    const contentState = document.getElementById('store-detail-content');
+    const errorTitle = document.getElementById('error-title');
+    const errorDesc = document.getElementById('error-desc');
+    const headerStatusBadge = document.getElementById('header-store-badge-status');
+
+    let currentStore = null;
+
+    function getStoreIdFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('id');
+    }
+
+    async function loadStoreDetail() {
+      const storeId = getStoreIdFromUrl();
+      if (!storeId) {
+        showError("Falta el identificador de la tienda", "No se proporcionó el parámetro ?id= en la URL. Regresa al listado de tiendas y selecciona una.");
+        return;
+      }
+
+      showLoading();
+
+      try {
+        const activeEnv = getTargetEnv();
+        const envBadge = document.getElementById('badge-detail-env');
+        if (envBadge) {
+          const envName = activeEnv === 'supabase' ? 'Supabase' : (activeEnv === 'local' ? 'Localhost' : activeEnv);
+          envBadge.textContent = `🌐 ${envName}`;
+          envBadge.className = activeEnv === 'supabase' 
+            ? 'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300'
+            : 'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-stone-100 text-stone-600 border border-stone-200';
+        }
+
+        const resp = await fetchWithEnv(`${API_BASE}/api/v1/administracion/tiendas/${encodeURIComponent(storeId)}`);
+        if (resp.status === 404) {
+          showError("Tienda no encontrada", `La tostaduría con ID #${storeId} no existe en el ambiente activo (${activeEnv.toUpperCase()}). Verifica si fue registrada en otro ambiente.`);
+          return;
+        }
+        if (!resp.ok) {
+          throw new Error(`Error ${resp.status}: ${resp.statusText}`);
+        }
+
+        const data = await resp.json();
+        currentStore = data;
+        renderStoreDetail(data);
+        showContent();
+      } catch (err) {
+        console.error("Error al cargar detalle de tienda:", err);
+        showError("Error de Conexión", `No fue posible comunicarse con la API de administración (${err.message}). Verifica que el backend esté en ejecución.`);
+      }
+    }
+
+    function showLoading() {
+      if (loadingState) loadingState.classList.remove('hidden');
+      if (errorState) errorState.classList.add('hidden');
+      if (contentState) contentState.classList.add('hidden');
+    }
+
+    function showError(title, desc) {
+      if (loadingState) loadingState.classList.add('hidden');
+      if (errorState) errorState.classList.remove('hidden');
+      if (contentState) contentState.classList.add('hidden');
+      if (errorTitle) errorTitle.textContent = title;
+      if (errorDesc) errorDesc.textContent = desc;
+      if (headerStatusBadge) {
+        headerStatusBadge.textContent = "Error";
+        headerStatusBadge.className = "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold bg-rose-100 text-rose-800";
+      }
+    }
+
+    function showContent() {
+      if (loadingState) loadingState.classList.add('hidden');
+      if (errorState) errorState.classList.add('hidden');
+      if (contentState) contentState.classList.remove('hidden');
+    }
+
+    function formatDateTime(isoString) {
+      if (!isoString) return 'Sin fecha';
+      try {
+        const d = new Date(isoString);
+        return d.toLocaleString('es-CL', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch {
+        return isoString;
+      }
+    }
+
+    function getContactTypeBadge(type) {
+      switch (type) {
+        case 'llamada':
+          return { label: '📞 Llamada', bg: 'bg-blue-50 text-blue-800 border-blue-200' };
+        case 'whatsapp':
+          return { label: '💬 WhatsApp', bg: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
+        case 'reunion':
+          return { label: '🤝 Reunión', bg: 'bg-amber-50 text-amber-900 border-amber-200' };
+        case 'email':
+          return { label: '✉️ Correo', bg: 'bg-indigo-50 text-indigo-800 border-indigo-200' };
+        default:
+          return { label: '📝 Nota', bg: 'bg-purple-50 text-purple-900 border-purple-200' };
+      }
+    }
+
+    function renderStoreDetail(store) {
+      // 1. Cabecera y Badges
+      const nameEl = document.getElementById('detail-store-name');
+      const idBadge = document.getElementById('detail-store-id-badge');
+      const prospectBadge = document.getElementById('detail-store-prospect-badge');
+      const activeBadge = document.getElementById('detail-store-active-badge');
+      const platformEl = document.getElementById('detail-store-platform');
+      const comunaEl = document.getElementById('detail-store-comuna');
+      const planEl = document.getElementById('detail-store-plan');
+      const logoWrapper = document.getElementById('detail-store-logo-wrapper');
+
+      if (nameEl) nameEl.textContent = store.nombre;
+      if (idBadge) idBadge.textContent = `#${store.id}`;
+      
+      if (headerStatusBadge) {
+        if (store.es_prospecto) {
+          headerStatusBadge.textContent = "🎯 Prospecto Comercial";
+          headerStatusBadge.className = "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold bg-purple-100 text-purple-900 border border-purple-200";
+        } else if (store.activo) {
+          headerStatusBadge.textContent = "✅ Tienda Activa";
+          headerStatusBadge.className = "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-200";
+        } else {
+          headerStatusBadge.textContent = "Inactiva";
+          headerStatusBadge.className = "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold bg-stone-200 text-stone-700";
+        }
+      }
+
+      if (prospectBadge) {
+        prospectBadge.classList.toggle('hidden', !store.es_prospecto);
+      }
+
+      if (activeBadge) {
+        if (store.activo) {
+          activeBadge.textContent = "Activa";
+          activeBadge.className = "rounded-md px-2 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-200";
+        } else {
+          activeBadge.textContent = "Inactiva";
+          activeBadge.className = "rounded-md px-2 py-0.5 text-xs font-bold bg-stone-100 text-stone-600 border border-stone-200";
+        }
+      }
+
+      if (platformEl) platformEl.textContent = `Plataforma: ${store.plataforma || 'manual'}`;
+      if (comunaEl) comunaEl.textContent = `📍 ${store.comuna || 'Sin comuna'}`;
+      if (planEl) planEl.textContent = `Plan: ${store.plan_nombre || 'Básico'}`;
+
+      if (logoWrapper) {
+        if (store.logo_url) {
+          logoWrapper.innerHTML = `<img src="${store.logo_url}" alt="${store.nombre}" class="h-full w-full object-contain p-1" onerror="this.onerror=null; this.parentElement.textContent='☕';" />`;
+        } else {
+          logoWrapper.textContent = store.nombre ? store.nombre.charAt(0).toUpperCase() : '☕';
+        }
+      }
+
+      // 2. Contacto Comercial y Ficha General
+      const contactNameEl = document.getElementById('detail-contact-name');
+      const contactPhoneEl = document.getElementById('detail-contact-phone');
+      const contactEmailEl = document.getElementById('detail-contact-email');
+      const adminUserEl = document.getElementById('detail-admin-user');
+      const storeAddressEl = document.getElementById('detail-store-address');
+      const roastInfoEl = document.getElementById('detail-roast-info');
+      const storageTextEl = document.getElementById('detail-storage-text');
+      const storageBarEl = document.getElementById('detail-storage-bar');
+      const whatsappBtnEl = document.getElementById('detail-whatsapp-btn');
+
+      if (contactNameEl) contactNameEl.textContent = store.contacto_nombre || 'Sin contacto registrado';
+      if (contactPhoneEl) {
+        if (store.contacto_telefono || store.telefono_whatsapp) {
+          const rawTel = store.contacto_telefono || store.telefono_whatsapp;
+          contactPhoneEl.innerHTML = `<a href="tel:${rawTel}" class="text-stone-700 hover:text-emerald-700 font-semibold underline underline-offset-2">${rawTel}</a>`;
+        } else {
+          contactPhoneEl.textContent = 'Sin teléfono';
+        }
+      }
+
+      if (whatsappBtnEl) {
+        const rawWsp = store.telefono_whatsapp || store.contacto_telefono;
+        if (rawWsp) {
+          const cleanWsp = rawWsp.replace(/[^\d]/g, '');
+          whatsappBtnEl.innerHTML = `<a href="https://wa.me/${cleanWsp}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 rounded bg-emerald-100 text-emerald-900 px-1.5 py-0.5 text-[10px] font-bold hover:bg-emerald-200">💬 Chat</a>`;
+          whatsappBtnEl.classList.remove('hidden');
+        } else {
+          whatsappBtnEl.classList.add('hidden');
+        }
+      }
+
+      if (contactEmailEl) {
+        if (store.contacto_email) {
+          contactEmailEl.innerHTML = `<a href="mailto:${store.contacto_email}" class="hover:text-emerald-700 underline underline-offset-2">${store.contacto_email}</a>`;
+        } else {
+          contactEmailEl.textContent = 'Sin email';
+        }
+      }
+
+      if (adminUserEl) {
+        adminUserEl.textContent = store.email_administrador ? `Admin: ${store.email_administrador}` : 'Admin: Sin asignar';
+      }
+
+      if (storeAddressEl) {
+        storeAddressEl.textContent = store.direccion ? `${store.direccion} (${store.comuna || ''})` : (store.comuna || 'Sin dirección física');
+      }
+
+      if (roastInfoEl) {
+        roastInfoEl.textContent = store.dias_tueste ? `Tueste: ${store.dias_tueste}` : 'Tueste: No especificado';
+      }
+
+      if (storageTextEl && storageBarEl) {
+        const used = store.espacio_usado_mb || 0;
+        const limit = store.limite_almacenamiento_mb || 250;
+        const pct = store.porcentaje_almacenamiento || 0;
+        storageTextEl.textContent = `${used} MB / ${limit} MB (${pct}%)`;
+        storageBarEl.style.width = `${Math.min(100, pct)}%`;
+        storageBarEl.className = pct > 90 ? 'bg-rose-600 h-1.5 rounded-full' : (pct > 75 ? 'bg-amber-500 h-1.5 rounded-full' : 'bg-emerald-600 h-1.5 rounded-full');
+      }
+
+      // 3. Enlaces externos y Vitrina Digital
+      const showcaseLink = document.getElementById('link-store-showcase');
+      if (showcaseLink) {
+        showcaseLink.href = `http://localhost:4321/tienda/${store.slug || store.id}`;
+      }
+
+      const slugBadge = document.getElementById('detail-profile-slug-badge');
+      if (slugBadge) {
+        slugBadge.textContent = store.slug ? `slug: ${store.slug}` : 'sin slug';
+      }
+
+      const servicesContainer = document.getElementById('detail-services-container');
+      if (servicesContainer) {
+        const servicesLabels = {
+          cafeteria_especialidad: "☕ Cafetería",
+          filtrados: "⚗️ Filtrados",
+          pasteleria: "🥐 Pastelería",
+          wifi: "📶 WiFi",
+          pet_friendly: "🐾 Pet Friendly",
+          terraza: "☀️ Terraza",
+          grano_molido: "🛍️ Grano & Molido",
+          tueste_propio: "🔥 Tueste Local",
+          talleres_catas: "🎓 Talleres",
+          estacionamiento: "🚗 Estacionamiento",
+          accesible: "♿ Accesible"
+        };
+        const list = store.servicios || [];
+        if (!list.length) {
+          servicesContainer.innerHTML = '<span class="text-xs text-stone-400 italic">No tiene servicios registrados</span>';
+        } else {
+          servicesContainer.innerHTML = list.map(s => `
+            <span class="inline-flex items-center gap-1 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 px-2 py-0.5 text-xs font-semibold">
+              ${servicesLabels[s] || s}
+            </span>
+          `).join('');
+        }
+      }
+
+      const menuNameEl = document.getElementById('detail-menu-pdf-name');
+      const menuSizeEl = document.getElementById('detail-menu-pdf-size');
+      const viewPdfLink = document.getElementById('link-admin-view-menu-pdf');
+      const deletePdfBtn = document.getElementById('btn-admin-delete-menu-pdf');
+
+      if (store.carta_comida_url) {
+        if (menuNameEl) menuNameEl.textContent = 'Carta vigente cargada';
+        const kb = Math.round((store.carta_comida_tamano_bytes || 0) / 1024);
+        if (menuSizeEl) menuSizeEl.textContent = kb > 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
+        if (viewPdfLink) {
+          viewPdfLink.href = `http://localhost:8000${store.carta_comida_url}`;
+          viewPdfLink.classList.remove('hidden');
+        }
+        if (deletePdfBtn) deletePdfBtn.classList.remove('hidden');
+      } else {
+        if (menuNameEl) menuNameEl.textContent = 'Sin carta subida';
+        if (menuSizeEl) menuSizeEl.textContent = 'Formato PDF hasta 10 MB';
+        if (viewPdfLink) viewPdfLink.classList.add('hidden');
+        if (deletePdfBtn) deletePdfBtn.classList.add('hidden');
+      }
+
+      const publicCatLink = document.getElementById('link-public-catalog');
+      if (publicCatLink) {
+        publicCatLink.href = `http://localhost:4321/catalogo?tienda=${encodeURIComponent(store.nombre)}`;
+      }
+
+      const officialSiteLink = document.getElementById('link-official-site');
+      if (officialSiteLink) {
+        if (store.sitio_oficial || store.url_base) {
+          officialSiteLink.href = store.sitio_oficial || store.url_base;
+          officialSiteLink.classList.remove('hidden');
+        } else {
+          officialSiteLink.classList.add('hidden');
+        }
+      }
+
+      const modLink = document.getElementById('link-go-to-moderation');
+      if (modLink) {
+        modLink.href = `/plataforma/moderacion?tienda=${encodeURIComponent(store.nombre)}`;
+      }
+
+      // 4. KPIs
+      const kpiTotalCafes = document.getElementById('kpi-total-cafes');
+      const kpiBreakdown = document.getElementById('kpi-cafes-breakdown');
+      const kpiSuspicious = document.getElementById('kpi-suspicious-alert');
+      const kpiTotalBranches = document.getElementById('kpi-total-branches');
+      const kpiTotalComments = document.getElementById('kpi-total-comments');
+      const kpiSyncBadge = document.getElementById('kpi-sync-status-badge');
+      const kpiSyncTime = document.getElementById('kpi-sync-time');
+
+      const totalCafes = (store.cantidad_productos_visibles || 0) + (store.cantidad_productos_ocultos || 0);
+      if (kpiTotalCafes) kpiTotalCafes.textContent = totalCafes;
+      if (kpiBreakdown) kpiBreakdown.textContent = `(${store.cantidad_productos_visibles || 0} visibles, ${store.cantidad_productos_ocultos || 0} ocultos)`;
+
+      if (kpiSuspicious) {
+        if ((store.cantidad_productos_sospechosos || 0) > 0) {
+          kpiSuspicious.textContent = `⚠️ ${store.cantidad_productos_sospechosos} cafés sospechosos`;
+          kpiSuspicious.classList.remove('hidden');
+        } else {
+          kpiSuspicious.classList.add('hidden');
+        }
+      }
+
+      const branchesCount = (store.sucursales || []).length;
+      if (kpiTotalBranches) kpiTotalBranches.textContent = branchesCount;
+
+      const commentsCount = (store.comentarios || []).length;
+      if (kpiTotalComments) kpiTotalComments.textContent = commentsCount;
+
+      if (kpiSyncBadge && kpiSyncTime) {
+        if (store.estado_sincronizacion === 'exitoso') {
+          kpiSyncBadge.textContent = '✅ Exitoso';
+          kpiSyncBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-200';
+        } else if (store.estado_sincronizacion === 'fallido') {
+          kpiSyncBadge.textContent = '❌ Fallido';
+          kpiSyncBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold bg-rose-100 text-rose-900 border border-rose-200';
+        } else {
+          kpiSyncBadge.textContent = '⏳ Pendiente';
+          kpiSyncBadge.className = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200';
+        }
+        kpiSyncTime.textContent = store.ultima_sincronizacion ? formatDateTime(store.ultima_sincronizacion) : 'Sin fecha registrada';
+      }
+
+      // 5. Renderizar Bitácora (Comentarios)
+      renderCommentsTimeline(store.comentarios || []);
+
+      // 6. Renderizar Sucursales
+      renderBranchesList(store.sucursales || []);
+
+      // 7. Renderizar Catálogos
+      renderCatalogsList(store.catalogos || [], store.ultimo_error_sincronizacion, store.codigo_error_sincronizacion, store.categoria_error_sincronizacion);
+    }
+
+    function renderCommentsTimeline(comments) {
+      const container = document.getElementById('comments-timeline-container');
+      const counterBadge = document.getElementById('comments-counter-badge');
+      if (counterBadge) counterBadge.textContent = `${comments.length} nota${comments.length === 1 ? '' : 's'}`;
+
+      if (!container) return;
+
+      if (comments.length === 0) {
+        container.innerHTML = `
+          <div class="rounded-xl border border-stone-200/60 bg-stone-50/50 p-6 text-center text-stone-400 space-y-1">
+            <span class="text-2xl block">💬</span>
+            <span class="text-xs font-semibold text-stone-600 block">Sin registros en la bitácora</span>
+            <span class="text-[11px] block">Agrega la primera nota de contacto o acuerdo arriba.</span>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = comments.map(c => {
+        const badge = getContactTypeBadge(c.tipo_contacto);
+        return `
+          <div class="rounded-xl border border-stone-200/90 bg-white p-3.5 shadow-2xs hover:border-purple-200 transition space-y-2" data-comment-id="${c.id}">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="rounded-md border px-2 py-0.5 text-[10px] font-bold ${badge.bg}">
+                  ${badge.label}
+                </span>
+                <span class="text-xs font-bold text-stone-900">${c.autor || 'Admin'}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] text-stone-400 font-mono" title="${c.fecha_creacion}">${formatDateTime(c.fecha_creacion)}</span>
+                <button
+                  type="button"
+                  class="btn-delete-comment-detail text-stone-400 hover:text-rose-600 transition text-xs p-1 rounded hover:bg-rose-50"
+                  data-comment-id="${c.id}"
+                  title="Eliminar nota"
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+            <p class="text-xs text-stone-700 whitespace-pre-wrap leading-relaxed">${c.comentario}</p>
+          </div>
+        `;
+      }).join('');
+
+      // Event listeners para eliminar comentarios
+      container.querySelectorAll('.btn-delete-comment-detail').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const commentId = btn.getAttribute('data-comment-id');
+          if (!confirm('¿Estás seguro de que deseas eliminar esta nota de la bitácora?')) return;
+
+          try {
+            const resp = await fetchWithEnv(`${API_BASE}/api/v1/administracion/tiendas/${currentStore.id}/comentarios/${commentId}`, {
+              method: 'DELETE'
+            });
+            if (resp.ok) {
+              // Recargar detalle
+              loadStoreDetail();
+            } else {
+              alert('No se pudo eliminar la nota. Intenta nuevamente.');
+            }
+          } catch (err) {
+            console.error('Error al borrar comentario:', err);
+            alert('Error de conexión al eliminar nota.');
+          }
+        });
+      });
+    }
+
+    function renderBranchesList(branches) {
+      const container = document.getElementById('branches-list-container');
+      const counterBadge = document.getElementById('branches-counter-badge');
+      if (counterBadge) counterBadge.textContent = `${branches.length} sucursal${branches.length === 1 ? '' : 'es'}`;
+
+      if (!container) return;
+
+      if (branches.length === 0) {
+        container.innerHTML = `
+          <div class="rounded-xl border border-stone-200/60 bg-stone-50/50 p-6 text-center text-stone-400 space-y-1">
+            <span class="text-2xl block">📍</span>
+            <span class="text-xs font-semibold text-stone-600 block">Sin sucursales físicas registradas</span>
+            <span class="text-[11px] block">Esta tostaduría opera exclusivamente en línea o no ha informado locales.</span>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = branches.map(b => {
+        const queryMaps = b.direccion 
+          ? encodeURIComponent(`${b.nombre}, ${b.direccion}, ${b.comuna || ''}, Chile`) 
+          : (b.latitud && b.longitud ? `${b.latitud},${b.longitud}` : encodeURIComponent(`${b.nombre}, ${b.comuna || ''}, Chile`));
+        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${queryMaps}`;
+
+        return `
+          <div class="rounded-xl border border-stone-200 bg-stone-50/60 p-4 shadow-2xs space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                <span>☕</span>
+                <span>${b.nombre}</span>
+              </span>
+              <span class="rounded bg-emerald-100 text-emerald-900 px-1.5 py-0.2 text-[10px] font-bold">
+                ${b.activo ? 'Activa' : 'Inactiva'}
+              </span>
+            </div>
+
+            <div class="text-xs text-stone-600 space-y-0.5">
+              ${b.direccion ? `<div>🏠 ${b.direccion}</div>` : ''}
+              ${b.comuna ? `<div>🏙️ Comuna: <span class="font-semibold text-stone-800">${b.comuna}</span></div>` : ''}
+              ${b.latitud && b.longitud ? `<div class="text-[10px] text-stone-400 font-mono">🌐 (${b.latitud}, ${b.longitud})</div>` : ''}
+            </div>
+
+            <div class="pt-1">
+              <a
+                href="${mapsUrl}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-900 bg-white border border-emerald-200 rounded-lg px-2.5 py-1 shadow-2xs hover:bg-emerald-50 transition"
+              >
+                <span>🗺️</span>
+                <span>Abrir en Google Maps</span>
+              </a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderCatalogsList(catalogs, errorMsg, errorCode, errorCategory) {
+      const container = document.getElementById('catalogs-list-container');
+      const diagPanel = document.getElementById('sync-error-diagnostic-panel');
+      const diagCode = document.getElementById('sync-error-code-badge');
+      const diagDetails = document.getElementById('sync-error-details');
+
+      if (container) {
+        if (catalogs.length === 0) {
+          container.innerHTML = `
+            <div class="text-stone-400 text-xs italic">
+              Sin catálogos configurados (modalidad manual o prospecto).
+            </div>
+          `;
+        } else {
+          container.innerHTML = catalogs.map((c, idx) => `
+            <div class="flex items-center justify-between gap-2 p-2 rounded-lg bg-stone-50 border border-stone-200/70 font-mono text-[11px]">
+              <div class="truncate max-w-[320px]">
+                <span class="font-bold text-stone-800 block">${c.etiqueta || `Catálogo #${idx + 1}`}</span>
+                <a href="${c.url_catalogo}" target="_blank" rel="noopener noreferrer" class="text-emerald-700 hover:underline truncate block">
+                  ${c.url_catalogo}
+                </a>
+              </div>
+              <span class="rounded px-1.5 py-0.2 text-[10px] font-bold shrink-0 ${c.activa ? 'bg-emerald-100 text-emerald-900' : 'bg-stone-200 text-stone-600'}">
+                ${c.activa ? 'Activo' : 'Pausado'}
+              </span>
+            </div>
+          `).join('');
+        }
+      }
+
+      if (diagPanel && diagCode && diagDetails) {
+        if (errorMsg || errorCode) {
+          diagCode.textContent = errorCode || errorCategory || 'ERROR_DESCONOCIDO';
+          diagDetails.textContent = errorMsg || 'Error no especificado al intentar sincronizar el catálogo.';
+          diagPanel.classList.remove('hidden');
+        } else {
+          diagPanel.classList.add('hidden');
+        }
+      }
+    }
+
+    // Manejo de envío de nuevo comentario
+    const addCommentForm = document.getElementById('form-add-comment-detail');
+    if (addCommentForm) {
+      addCommentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentStore) return;
+
+        const commentText = document.getElementById('detail-comment-text');
+        const commentType = document.getElementById('detail-comment-type');
+        const commentAuthor = document.getElementById('detail-comment-author');
+        const submitBtn = document.getElementById('btn-submit-comment-detail');
+
+        const textVal = commentText ? commentText.value.trim() : '';
+        if (!textVal) return;
+
+        if (submitBtn) submitBtn.disabled = true;
+
+        try {
+          const resp = await fetchWithEnv(`${API_BASE}/api/v1/administracion/tiendas/${currentStore.id}/comentarios`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              comentario: textVal,
+              tipo_contacto: commentType ? commentType.value : 'nota',
+              autor: commentAuthor && commentAuthor.value.trim() ? commentAuthor.value.trim() : 'Administrador'
+            })
+          });
+
+          if (!resp.ok) {
+            throw new Error(`Error ${resp.status}`);
+          }
+
+          if (commentText) commentText.value = '';
+          loadStoreDetail();
+        } catch (err) {
+          console.error("Error al registrar comentario:", err);
+          alert("No se pudo guardar la nota en la bitácora.");
+        } finally {
+          if (submitBtn) submitBtn.disabled = false;
+        }
+      });
+    }
+
+    // Botón refrescar
+    const refreshBtn = document.getElementById('btn-refresh-store-detail');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => loadStoreDetail());
+    }
+
+    // Botón Sincronizar Tienda en Vivo
+    const syncBtn = document.getElementById('btn-sync-detail-store');
+    if (syncBtn) {
+      syncBtn.addEventListener('click', async () => {
+        if (!currentStore) return;
+        if (!confirm(`¿Iniciar sincronización en vivo del catálogo de ${currentStore.nombre}?`)) return;
+
+        syncBtn.disabled = true;
+        syncBtn.innerHTML = `<span>⏳</span><span>Sincronizando...</span>`;
+
+        try {
+          const resp = await fetchWithEnv(`${API_BASE}/api/v1/administracion/tiendas/${currentStore.id}/sincronizar`, {
+            method: 'POST'
+          });
+          const result = await resp.json();
+          if (result.exito) {
+            alert(`✅ Sincronización exitosa:\n+${result.productos_nuevos || 0} nuevos\n${result.productos_actualizados || 0} actualizados\n${result.duracion_segundos || 0}s`);
+          } else {
+            alert(`⚠️ Sincronización con advertencias o error:\n${result.error || 'Fallo general'}`);
+          }
+          loadStoreDetail();
+        } catch (err) {
+          console.error("Error al sincronizar tienda:", err);
+          alert("Error de conexión al sincronizar.");
+        } finally {
+          syncBtn.disabled = false;
+          syncBtn.innerHTML = `<span>🔄</span><span>Sincronizar Catálogo</span>`;
+        }
+      });
+    }
+
+    // Botón Impersonar Tienda
+    const impBtn = document.getElementById('btn-impersonate-detail-store');
+    if (impBtn) {
+      impBtn.addEventListener('click', async () => {
+        if (!currentStore) return;
+        impBtn.disabled = true;
+
+        try {
+          const resp = await fetchWithEnv(`${API_BASE}/api/v1/administracion/tiendas/${currentStore.id}/impersonar`, {
+            method: 'POST'
+          });
+          if (!resp.ok) throw new Error('Error al generar token');
+          const data = await resp.json();
+          if (data.token) {
+            const redirectUrl = `http://localhost:4321/admin-tienda?token=${encodeURIComponent(data.token)}`;
+            window.open(redirectUrl, '_blank');
+          }
+        } catch (err) {
+          console.error("Error al impersonar:", err);
+          alert("No se pudo iniciar sesión como la tostaduría.");
+        } finally {
+          impBtn.disabled = false;
+        }
+      });
+    }
+
+    // Probar Driver en Vivo
+    const testCatBtn = document.getElementById('btn-test-catalogs-detail');
+    if (testCatBtn) {
+      testCatBtn.addEventListener('click', async () => {
+        if (!currentStore) return;
+        const catalogs = currentStore.catalogos || [];
+        const testUrl = catalogs.length > 0 ? catalogs[0].url_catalogo : currentStore.url_base;
+
+        if (!testUrl) {
+          alert('Esta tienda no tiene una URL de catálogo configurada para probar.');
+          return;
+        }
+
+        testCatBtn.disabled = true;
+        testCatBtn.innerHTML = `<span>⏳</span><span>Probando...</span>`;
+
+        try {
+          const resp = await fetchWithEnv(`${API_BASE}/api/v1/administracion/test-catalog`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url_catalogo: testUrl,
+              plataforma_forzada: currentStore.plataforma || null
+            })
+          });
+          const res = await resp.json();
+          if (res.exito) {
+            alert(`✅ Driver exitoso (${res.driver_usado}):\nSe encontraron ${res.productos_muestra_conteo || 0} productos de muestra.`);
+          } else {
+            alert(`❌ Driver falló (${res.driver_usado}):\n${res.error || 'No se pudo leer el catálogo.'}`);
+          }
+        } catch (err) {
+          console.error("Error al probar driver:", err);
+          alert("Error de conexión al probar el driver.");
+        } finally {
+          testCatBtn.disabled = false;
+          testCatBtn.innerHTML = `<span>🧪</span><span>Probar Driver</span>`;
+        }
+      });
+    }
+
+    // Subir o reemplazar carta PDF desde superadmin
+    const adminMenuPdfInput = document.getElementById('admin-input-menu-pdf');
+    if (adminMenuPdfInput) {
+      adminMenuPdfInput.addEventListener('change', async (e) => {
+        if (!currentStore) return;
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+          alert('Solo se admiten documentos en formato PDF (.pdf).');
+          adminMenuPdfInput.value = '';
+          return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          alert('La carta no puede exceder los 10 MB.');
+          adminMenuPdfInput.value = '';
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const base64 = reader.result;
+          try {
+            const resp = await fetchWithEnv(`${API_BASE}/api/v1/administracion/tiendas/${currentStore.id}/carta-comida`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ pdf_base64: base64, nombre_archivo: file.name })
+            });
+            const res = await resp.json();
+            if (!resp.ok) throw new Error(res.detail || 'Fallo al subir carta.');
+            alert('✅ Carta de comida en PDF actualizada correctamente.');
+            adminMenuPdfInput.value = '';
+            loadStoreDetail();
+          } catch (err) {
+            console.error('Error al subir PDF:', err);
+            alert(`Error: ${err.message}`);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Eliminar carta PDF desde superadmin
+    const adminDeletePdfBtn = document.getElementById('btn-admin-delete-menu-pdf');
+    if (adminDeletePdfBtn) {
+      adminDeletePdfBtn.addEventListener('click', async () => {
+        if (!currentStore) return;
+        if (!confirm(`¿Eliminar la carta de comida en PDF de ${currentStore.nombre}?`)) return;
+
+        try {
+          const resp = await fetchWithEnv(`${API_BASE}/api/v1/administracion/tiendas/${currentStore.id}/carta-comida`, {
+            method: 'DELETE'
+          });
+          if (!resp.ok) throw new Error('Fallo al eliminar carta.');
+          alert('Carta eliminada exitosamente.');
+          loadStoreDetail();
+        } catch (err) {
+          console.error('Error al eliminar PDF:', err);
+          alert(`Error: ${err.message}`);
+        }
+      });
+    }
+
+    // Escuchar cambio de ambiente global
+    window.addEventListener('plataforma:env-changed', () => {
+      loadStoreDetail();
+    });
+
+    // Carga inicial al cargar la página
+    loadStoreDetail();
+  })();
+</script>
