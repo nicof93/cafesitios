@@ -10,6 +10,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select, desc, text, or_
 from sqlalchemy.orm import Session, selectinload, joinedload
 
+from core.slug_helper import is_valid_slug, slugify
+
 from api.dependencies import get_db_session
 from core.security_store_admin import (
     StoreAdminContext,
@@ -62,6 +64,7 @@ from core.billing_utils import calcular_balance_roi, calcular_funcionalidades_ef
 
 
 router = APIRouter(prefix="/api/v1/admin/tienda", tags=["Admin Tienda Multi-Inquilino"])
+admin_tienda_router = APIRouter(prefix="/api/v1/admin-tienda", tags=["Admin Tienda Multi-Inquilino"])
 
 
 # --- DTOs Pydantic v2 ---
@@ -106,6 +109,12 @@ class StoreProfileUpdateRequest(BaseModel):
     retiro_en_tienda: Optional[bool] = None
     dias_tueste: Optional[str] = Field(None, max_length=100)
     fecha_ultimo_tueste: Optional[str] = None
+    slug: Optional[str] = Field(None, max_length=100)
+    descripcion: Optional[str] = Field(None, max_length=2000)
+    servicios: Optional[List[str]] = None
+    instagram_url: Optional[str] = Field(None, max_length=255)
+    url_oficial: Optional[str] = Field(None, max_length=255)
+    url_base: Optional[str] = Field(None, max_length=255)
 
 
 class StoreBranchItem(BaseModel):
@@ -189,6 +198,12 @@ class StoreAdminProfileResponse(BaseModel):
     retiro_en_tienda: bool = False
     dias_tueste: Optional[str] = None
     fecha_ultimo_tueste: Optional[str] = None
+    slug: Optional[str] = None
+    descripcion: Optional[str] = None
+    servicios: List[str] = []
+    carta_comida_url: Optional[str] = None
+    carta_comida_tamano_bytes: Optional[int] = 0
+    instagram_url: Optional[str] = None
 
 
 class StoreInconsistencyItem(BaseModel):
@@ -322,6 +337,12 @@ class StoreProductImageUploadResponse(BaseModel):
     limite_mb: int
     porcentaje_usado: float
 
+
+class StoreMenuPdfUploadRequest(BaseModel):
+    pdf_base64: str = Field(..., description="Documento PDF en base64 con o sin prefijo data:application/pdf;base64,...")
+    nombre_archivo: Optional[str] = Field("carta_comida.pdf", max_length=150)
+
+
 class StoreProductsListResponse(BaseModel):
     total: int
     page: int
@@ -410,6 +431,16 @@ def get_tienda_storage_info(tienda_id: int, limite_mb: Optional[int] = None) -> 
     if os.path.isdir(upload_dir):
         for entry in os.scandir(upload_dir):
             if entry.is_file() and entry.name.startswith(prefix):
+                try:
+                    total_bytes += entry.stat().st_size
+                    total_archivos += 1
+                except OSError:
+                    pass
+
+    store_dir = os.path.join("static", "uploads", "tiendas", str(tienda_id))
+    if os.path.isdir(store_dir):
+        for entry in os.scandir(store_dir):
+            if entry.is_file():
                 try:
                     total_bytes += entry.stat().st_size
                     total_archivos += 1
@@ -754,6 +785,11 @@ def get_store_storage_quota(
     return get_tienda_storage_info(ctx.tienda_id, limite_mb)
 
 
+@admin_tienda_router.get(
+    "/perfil",
+    response_model=StoreAdminProfileResponse,
+    include_in_schema=False,
+)
 @router.get(
     "/perfil",
     response_model=StoreAdminProfileResponse,
@@ -763,7 +799,7 @@ def get_store_profile(
     ctx: StoreAdminContext = Depends(get_current_store_admin),
     db_session: Session = Depends(get_db_session),
 ) -> StoreAdminProfileResponse:
-    t = ctx.tienda
+    t = db_session.get(Tienda, ctx.tienda_id) or ctx.tienda
     total_prods = db_session.scalar(
         select(func.count(Producto.id)).where(Producto.tienda_id == t.id)
     ) or 0
@@ -797,6 +833,12 @@ def get_store_profile(
         retiro_en_tienda=bool(getattr(t, "retiro_en_tienda", False)),
         dias_tueste=getattr(t, "dias_tueste", None),
         fecha_ultimo_tueste=getattr(t, "fecha_ultimo_tueste", None).isoformat() if getattr(t, "fecha_ultimo_tueste", None) else None,
+        slug=getattr(t, "slug", None),
+        descripcion=getattr(t, "descripcion", None),
+        servicios=getattr(t, "servicios", None) or [],
+        carta_comida_url=getattr(t, "carta_comida_url", None),
+        carta_comida_tamano_bytes=getattr(t, "carta_comida_tamano_bytes", 0) or 0,
+        instagram_url=getattr(t, "instagram_url", None),
         scraping_activo=bool(t.activo),
         limite_almacenamiento_mb=get_tienda_storage_info(t.id, getattr(t, "limite_almacenamiento_mb", 250))["limite_mb"],
         almacenamiento_usado_mb=get_tienda_storage_info(t.id, getattr(t, "limite_almacenamiento_mb", 250))["mb_usados"],
@@ -1839,6 +1881,11 @@ def get_store_whatsapp_metrics(
 
 # --- FASE 2: GESTIÓN DE CATÁLOGOS, PROBADOR Y SUCURSALES ---
 
+@admin_tienda_router.put(
+    "/perfil",
+    response_model=StoreAdminProfileResponse,
+    include_in_schema=False,
+)
 @router.put(
     "/perfil",
     response_model=StoreAdminProfileResponse,
@@ -1849,7 +1896,7 @@ def update_store_profile(
     ctx: StoreAdminContext = Depends(get_current_store_admin),
     db_session: Session = Depends(get_db_session),
 ) -> StoreAdminProfileResponse:
-    t = ctx.tienda
+    t = db_session.get(Tienda, ctx.tienda_id) or ctx.tienda
     previos = {
         "direccion": t.direccion,
         "comuna": t.comuna,
@@ -1857,6 +1904,11 @@ def update_store_profile(
         "longitud": float(t.longitud) if t.longitud else None,
         "logo_url": t.logo_url,
         "telefono_whatsapp": t.telefono_whatsapp,
+        "slug": t.slug,
+        "descripcion": t.descripcion,
+        "servicios": t.servicios,
+        "instagram_url": t.instagram_url,
+        "url_base": t.url_base,
     }
 
     if payload.direccion is not None:
@@ -1877,6 +1929,34 @@ def update_store_profile(
         t.retiro_en_tienda = bool(payload.retiro_en_tienda)
     if payload.dias_tueste is not None:
         t.dias_tueste = payload.dias_tueste.strip() or None
+    if payload.descripcion is not None:
+        t.descripcion = payload.descripcion.strip() or None
+    if payload.instagram_url is not None:
+        t.instagram_url = payload.instagram_url.strip() or None
+    url_target = payload.url_oficial or payload.url_base
+    if url_target is not None:
+        clean_url = url_target.strip()
+        if clean_url:
+            t.url_base = clean_url
+    if payload.servicios is not None:
+        t.servicios = [str(s).strip().lower() for s in payload.servicios if str(s).strip()]
+    if payload.slug is not None:
+        raw_slug = payload.slug.strip().lower()
+        if raw_slug:
+            if not is_valid_slug(raw_slug):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="El link personalizado debe contener solo letras minúsculas, números y guiones.",
+                )
+            existing = db_session.scalar(
+                select(Tienda.id).where(Tienda.slug == raw_slug, Tienda.id != t.id)
+            )
+            if existing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"El link personalizado '{raw_slug}' ya está en uso por otra tienda.",
+                )
+            t.slug = raw_slug
     if payload.fecha_ultimo_tueste is not None:
         if payload.fecha_ultimo_tueste.strip():
             from datetime import date
@@ -1895,6 +1975,11 @@ def update_store_profile(
         "longitud": float(t.longitud) if t.longitud else None,
         "logo_url": t.logo_url,
         "telefono_whatsapp": t.telefono_whatsapp,
+        "slug": t.slug,
+        "descripcion": t.descripcion,
+        "servicios": t.servicios,
+        "instagram_url": t.instagram_url,
+        "url_base": t.url_base,
     }
 
     log_store_action(
@@ -1910,6 +1995,132 @@ def update_store_profile(
     )
 
     return get_store_profile(ctx=ctx, db_session=db_session)
+
+
+@admin_tienda_router.post("/tienda/carta-comida", include_in_schema=False)
+@admin_tienda_router.post("/carta-comida", include_in_schema=False)
+@router.post("/carta-comida", include_in_schema=False)
+@router.post(
+    "/tienda/carta-comida",
+    summary="Subir o actualizar la carta de comida en formato PDF",
+)
+def upload_store_menu_pdf(
+    payload: StoreMenuPdfUploadRequest,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+):
+    t = ctx.tienda
+    b64_str = payload.pdf_base64.strip()
+    if "," in b64_str and b64_str.startswith("data:"):
+        b64_str = b64_str.split(",", 1)[1]
+
+    try:
+        content = base64.b64decode(b64_str)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La cadena Base64 provista es inválida o está corrupta.",
+        )
+
+    if not content.startswith(b"%PDF-"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Solo se admiten documentos válidos en formato PDF.",
+        )
+
+    file_size = len(content)
+    max_bytes = 10 * 1024 * 1024
+    if file_size > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El archivo excede el tamaño máximo permitido de 10 MB.",
+        )
+
+    storage_info = get_tienda_storage_info(t.id, getattr(t, "limite_almacenamiento_mb", 250))
+    current_used = storage_info["bytes_usados"]
+    old_menu_size = t.carta_comida_tamano_bytes or 0
+    new_used = current_used - old_menu_size + file_size
+    limit_bytes = storage_info["limite_mb"] * 1024 * 1024
+
+    if new_used > limit_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"La subida excede el almacenamiento asignado de {storage_info['limite_mb']} MB. Libera espacio eliminando fotos o archivos antes de continuar.",
+        )
+
+    store_dir = os.path.join("static", "uploads", "tiendas", str(t.id))
+    os.makedirs(store_dir, exist_ok=True)
+    target_path = os.path.join(store_dir, "carta_comida.pdf")
+
+    with open(target_path, "wb") as f:
+        f.write(content)
+
+    t.carta_comida_url = f"/static/uploads/tiendas/{t.id}/carta_comida.pdf"
+    t.carta_comida_tamano_bytes = file_size
+    t.fecha_actualizacion = datetime.now(timezone.utc).replace(tzinfo=None)
+    db_session.commit()
+    db_session.refresh(t)
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=t.id,
+        usuario_id=ctx.usuario_id,
+        accion="SUBIR_CARTA_COMIDA",
+        entidad="tiendas",
+        entidad_id=t.id,
+        valores_previos={"tamano_previo": old_menu_size},
+        valores_nuevos={"carta_comida_url": t.carta_comida_url, "tamano_bytes": file_size},
+        ip_origen=ctx.ip_origen,
+    )
+
+    return {
+        "ok": True,
+        "mensaje": "Carta de comida en PDF subida exitosamente.",
+        "carta_comida_url": t.carta_comida_url,
+        "carta_comida_tamano_bytes": t.carta_comida_tamano_bytes,
+    }
+
+
+@admin_tienda_router.delete("/tienda/carta-comida", include_in_schema=False)
+@admin_tienda_router.delete("/carta-comida", include_in_schema=False)
+@router.delete("/carta-comida", include_in_schema=False)
+@router.delete(
+    "/tienda/carta-comida",
+    summary="Eliminar la carta de comida en PDF",
+)
+def delete_store_menu_pdf(
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session),
+):
+    t = ctx.tienda
+    store_dir = os.path.join("static", "uploads", "tiendas", str(t.id))
+    target_path = os.path.join(store_dir, "carta_comida.pdf")
+    if os.path.isfile(target_path):
+        try:
+            os.remove(target_path)
+        except OSError:
+            pass
+
+    old_url = t.carta_comida_url
+    old_size = t.carta_comida_tamano_bytes or 0
+    t.carta_comida_url = None
+    t.carta_comida_tamano_bytes = 0
+    t.fecha_actualizacion = datetime.now(timezone.utc).replace(tzinfo=None)
+    db_session.commit()
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=t.id,
+        usuario_id=ctx.usuario_id,
+        accion="ELIMINAR_CARTA_COMIDA",
+        entidad="tiendas",
+        entidad_id=t.id,
+        valores_previos={"carta_comida_url": old_url, "tamano_bytes": old_size},
+        valores_nuevos={"carta_comida_url": None, "tamano_bytes": 0},
+        ip_origen=ctx.ip_origen,
+    )
+
+    return {"ok": True, "mensaje": "Carta de comida eliminada correctamente."}
 
 
 @router.get(
