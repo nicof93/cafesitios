@@ -421,6 +421,27 @@
       content.innerHTML = html;
 
       AnalyticsTracker.trackCompareViewed(productos.length, ids);
+
+      // Evento GA4/GTM: Comparativa multitienda de grano/tostador
+      if (productos.length >= 2) {
+        const p1 = productos[0];
+        const p2 = productos[1];
+        if (p1 && p2 && p1.tienda !== p2.tienda) {
+          const v1 = p1.getBestVariant(true) || p1.getBestVariant(false);
+          const v2 = p2.getBestVariant(true) || p2.getBestVariant(false);
+          const p1Clp = v1?.precio_clp || 0;
+          const p2Clp = v2?.precio_clp || 0;
+          const p1Kilo = v1?.precio_por_kilo || 0;
+          const p2Kilo = v2?.precio_por_kilo || 0;
+          AnalyticsTracker.trackCompararConTienda(
+            p1.id,
+            p1.tienda,
+            p2.tienda,
+            Math.abs(p1Clp - p2Clp),
+            Math.abs(Math.round(p1Kilo - p2Kilo))
+          );
+        }
+      }
     } catch (err) {
       content.innerHTML = '<p class="text-xs text-rose-500 text-center py-8">Error al cargar la comparativa side-by-side.</p>';
     }

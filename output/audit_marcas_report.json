@@ -1,0 +1,1923 @@
+{
+  "fecha_auditoria": "2026-11-09T22:55:20.108291+00:00",
+  "resumen_ejecutivo": {
+    "total_marcas_registradas": 34,
+    "total_marcas_activas": 34,
+    "total_productos_global": 731,
+    "total_productos_activos": 274,
+    "total_variantes_evaluadas": 1774,
+    "tiendas_con_ubicacion_geografica": 15,
+    "tiendas_sin_ubicacion_geografica": 19,
+    "tiendas_con_reputacion_fisica_google": 0,
+    "anomalias_detectadas": {
+      "inconsistencias_dominio_raiz": 0,
+      "dominios_duplicados_en_tiendas": 3,
+      "ofertas_con_precio_cero": 17,
+      "ofertas_con_gramaje_invalido": 0,
+      "ofertas_con_precio_kilo_anomalo": 26
+    }
+  },
+  "marcas": [
+    {
+      "id": 28,
+      "nombre": "504 Cofee Roasters",
+      "slug": "504-cofee-roasters",
+      "url_base": "https://www.504coffee.cl",
+      "sitio_oficial": "https://www.504coffee.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 33,
+      "cantidad_productos_activos": 30,
+      "cantidad_productos_inactivos": 3,
+      "precio_kilo_promedio_clp": 110510.98,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 5,
+          "url_catalogo": "https://www.504coffee.cl/collections/cafe-en-grano/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 5,
+      "alertas": [
+        {
+          "tipo": "PRECIO_KILO_ANOMALO",
+          "producto_id": 2632,
+          "producto_nombre": "AeroPress XL",
+          "variante_id": 10395,
+          "precio_clp": 82000,
+          "formato_gramos": 250,
+          "precio_por_kilo": 328000.0,
+          "url_detalle": "https://www.504coffee.cl/products/aeropress-xl"
+        },
+        {
+          "tipo": "PRECIO_KILO_ANOMALO",
+          "producto_id": 2633,
+          "producto_nombre": "Bebida de Avena Oatly (Display)",
+          "variante_id": 10398,
+          "precio_clp": 93600,
+          "formato_gramos": 250,
+          "precio_por_kilo": 374400.0,
+          "url_detalle": "https://www.504coffee.cl/products/leche-oatly"
+        },
+        {
+          "tipo": "PRECIO_KILO_ANOMALO",
+          "producto_id": 2633,
+          "producto_nombre": "Bebida de Avena Oatly (Display)",
+          "variante_id": 10399,
+          "precio_clp": 234000,
+          "formato_gramos": 250,
+          "precio_por_kilo": 936000.0,
+          "url_detalle": "https://www.504coffee.cl/products/leche-oatly"
+        },
+        {
+          "tipo": "PRECIO_KILO_ANOMALO",
+          "producto_id": 2633,
+          "producto_nombre": "Bebida de Avena Oatly (Display)",
+          "variante_id": 10400,
+          "precio_clp": 468000,
+          "formato_gramos": 250,
+          "precio_por_kilo": 1872000.0,
+          "url_detalle": "https://www.504coffee.cl/products/leche-oatly"
+        },
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 2651,
+          "producto_nombre": "Happy Box",
+          "variante_id": 10430,
+          "precio_clp": 0,
+          "url_detalle": "https://www.504coffee.cl/products/happy-box"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "nombre": "Andariego",
+      "slug": "andariego",
+      "url_base": "https://andariegocoffee.cl",
+      "sitio_oficial": "https://andariegocoffee.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 30,
+      "cantidad_productos_activos": 0,
+      "cantidad_productos_inactivos": 30,
+      "precio_kilo_promedio_clp": 0.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 25,
+          "url_catalogo": "https://andariegocoffee.cl/collections/frontpage",
+          "activa": true,
+          "etiqueta": null
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 9,
+      "nombre": "Apricot",
+      "slug": "apricot",
+      "url_base": "https://apricatcoffee.com",
+      "sitio_oficial": "https://apricatcoffee.com",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 15,
+      "cantidad_productos_activos": 0,
+      "cantidad_productos_inactivos": 15,
+      "precio_kilo_promedio_clp": 0.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 1,
+          "url_catalogo": "https://apricatcoffee.com/collections/all/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 7,
+      "nombre": "Artisan Roast Chile (Blends)",
+      "slug": "artisan-roast-chile-blends",
+      "url_base": "https://shop.artisanroast.cl",
+      "sitio_oficial": "https://shop.artisanroast.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 1,
+      "cantidad_productos_activos": 0,
+      "cantidad_productos_inactivos": 1,
+      "precio_kilo_promedio_clp": 0.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 6,
+          "url_catalogo": "https://shop.artisanroast.cl/collections/blends/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 6,
+      "nombre": "Artisan Roast Chile (Orígenes)",
+      "slug": "artisan-roast-chile-origenes",
+      "url_base": "https://shop.artisanroast.cl",
+      "sitio_oficial": "https://shop.artisanroast.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 31,
+      "cantidad_productos_activos": 26,
+      "cantidad_productos_inactivos": 5,
+      "precio_kilo_promedio_clp": 57141.8,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 7,
+          "url_catalogo": "https://shop.artisanroast.cl/collections/origenes/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 1,
+      "alertas": [
+        {
+          "tipo": "PRECIO_KILO_ANOMALO",
+          "producto_id": 2486,
+          "producto_nombre": "Máquina café Saeco Phedra Evo",
+          "variante_id": 10084,
+          "precio_clp": 1800000,
+          "formato_gramos": 250,
+          "precio_por_kilo": 7200000.0,
+          "url_detalle": "https://shop.artisanroast.cl/products/maquina-cafe-saeco-phedra-evo"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "nombre": "Blackdrop",
+      "slug": "blackdrop",
+      "url_base": "https://blackdrop.cl",
+      "sitio_oficial": "https://blackdrop.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 58,
+      "cantidad_productos_activos": 8,
+      "cantidad_productos_inactivos": 50,
+      "precio_kilo_promedio_clp": 73105.14,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 8,
+          "url_catalogo": "https://blackdrop.cl/collections/cafe/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 1,
+      "alertas": [
+        {
+          "tipo": "PRECIO_KILO_ANOMALO",
+          "producto_id": 2504,
+          "producto_nombre": "BOLSA DE COMPRA M 2026-2",
+          "variante_id": 10127,
+          "precio_clp": 1,
+          "formato_gramos": 250,
+          "precio_por_kilo": 4.0,
+          "url_detalle": "https://blackdrop.cl/products/bolsa-de-compra-m-2026-2"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "nombre": "Cafeterra (Single Origin)",
+      "slug": "cafeterra-single-origin",
+      "url_base": "https://cafeterra.cl",
+      "sitio_oficial": "https://cafeterra.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 7,
+      "cantidad_productos_activos": 7,
+      "cantidad_productos_inactivos": 0,
+      "precio_kilo_promedio_clp": 39387.86,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 9,
+          "url_catalogo": "https://cafeterra.cl/collections/cafe-especialidad-single-origin/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 14,
+      "nombre": "Cafeterra Edición Limitada",
+      "slug": "cafeterra-edicion-limitada",
+      "url_base": "https://cafeterra.cl",
+      "sitio_oficial": "https://cafeterra.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 32,
+      "cantidad_productos_activos": 9,
+      "cantidad_productos_inactivos": 23,
+      "precio_kilo_promedio_clp": 190350.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 10,
+          "url_catalogo": "https://cafeterra.cl/collections/cafe-especialidad-edicion-limitada/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 7,
+      "alertas": [
+        {
+          "tipo": "PRECIO_KILO_ANOMALO",
+          "producto_id": 1012,
+          "producto_nombre": "Café Colombia · Caja Edición Limitada · Sidra Natural Anaeróbico · Finca El Vergel",
+          "variante_id": 8153,
+          "precio_clp": 22900,
+          "formato_gramos": 80,
+          "precio_por_kilo": 286250.0,
+          "url_detalle": "https://cafeterra.cl/products/cafe-colombia-caja-edicion-limitada-sidra-natural-anaerobico-finca-el-vergel"
+        },
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 2526,
+          "producto_nombre": "SIKA FLEX PLUS 2",
+          "variante_id": 10149,
+          "precio_clp": 0,
+          "url_detalle": "https://cafeterra.cl/products/sika-flex-plus-2"
+        },
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 2527,
+          "producto_nombre": "SIKA FLEX PLUS",
+          "variante_id": 10150,
+          "precio_clp": 0,
+          "url_detalle": "https://cafeterra.cl/products/sika-flex-plus"
+        },
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 2528,
+          "producto_nombre": "TORNILLO SAI",
+          "variante_id": 10151,
+          "precio_clp": 0,
+          "url_detalle": "https://cafeterra.cl/products/tornillo-sai"
+        },
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 2529,
+          "producto_nombre": "One Touch PRUEBA",
+          "variante_id": 10152,
+          "precio_clp": 0,
+          "url_detalle": "https://cafeterra.cl/products/one-touch-prueba"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "nombre": "Café Altura",
+      "slug": "cafe-altura",
+      "url_base": "https://cafealtura.cl",
+      "sitio_oficial": "https://cafealtura.cl",
+      "plataforma": "woocommerce",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 11,
+      "cantidad_productos_activos": 0,
+      "cantidad_productos_inactivos": 11,
+      "precio_kilo_promedio_clp": 0.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 11,
+          "url_catalogo": "https://cafealtura.cl/wp-json/wc/store/v1/products?category=cafe-en-grano",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 37,
+      "nombre": "Café Cabra",
+      "slug": "cafe-cabra",
+      "url_base": "https://tienda.cafecabra.cl",
+      "sitio_oficial": "https://tienda.cafecabra.cl",
+      "plataforma": "sumup",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 10,
+      "cantidad_productos_activos": 9,
+      "cantidad_productos_inactivos": 1,
+      "precio_kilo_promedio_clp": 85203.23,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 34,
+          "url_catalogo": "https://tienda.cafecabra.cl/productos?category=21026d6d-56dc-41a9-ba19-6996da877e9f",
+          "activa": true,
+          "etiqueta": null
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 15,
+      "nombre": "Café Cascanueces (Arábica)",
+      "slug": "cafe-cascanueces-arabica",
+      "url_base": "https://cafecascanueces.cl",
+      "sitio_oficial": "https://cafecascanueces.cl",
+      "plataforma": "woocommerce",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 9,
+      "cantidad_productos_activos": 9,
+      "cantidad_productos_inactivos": 0,
+      "precio_kilo_promedio_clp": 45590.33,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 12,
+          "url_catalogo": "https://cafecascanueces.cl/categoria-producto/linea-arabica-especialidad",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 19,
+      "nombre": "Café Cascanueces (Classic Blend)",
+      "slug": "cafe-cascanueces-classic-blend",
+      "url_base": "https://cafecascanueces.cl",
+      "sitio_oficial": "https://cafecascanueces.cl",
+      "plataforma": "woocommerce",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 4,
+      "cantidad_productos_activos": 4,
+      "cantidad_productos_inactivos": 0,
+      "precio_kilo_promedio_clp": 38410.33,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 13,
+          "url_catalogo": "https://cafecascanueces.cl/categoria-producto/linea-classic-blend/",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 20,
+      "nombre": "Café Cascanueces (Línea Dark)",
+      "slug": "cafe-cascanueces-linea-dark",
+      "url_base": "https://cafecascanueces.cl",
+      "sitio_oficial": "https://cafecascanueces.cl",
+      "plataforma": "woocommerce",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 2,
+      "cantidad_productos_activos": 2,
+      "cantidad_productos_inactivos": 0,
+      "precio_kilo_promedio_clp": 40420.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 14,
+          "url_catalogo": "https://cafecascanueces.cl/categoria-producto/linea-dark/",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 29,
+      "nombre": "Café Cultura",
+      "slug": "cafe-cultura",
+      "url_base": "https://cafecultura.cl",
+      "sitio_oficial": "https://cafecultura.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 41,
+      "cantidad_productos_activos": 0,
+      "cantidad_productos_inactivos": 41,
+      "precio_kilo_promedio_clp": 0.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 24,
+          "url_catalogo": "https://cafecultura.cl/collections/cafe-especialidad",
+          "activa": true,
+          "etiqueta": "Cafe de especialidad"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 21,
+      "nombre": "Café Lama",
+      "slug": "cafe-lama",
+      "url_base": "https://cafelama.cl",
+      "sitio_oficial": "https://cafelama.cl",
+      "plataforma": "woocommerce",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 20,
+      "cantidad_productos_activos": 7,
+      "cantidad_productos_inactivos": 13,
+      "precio_kilo_promedio_clp": 51944.67,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 15,
+          "url_catalogo": "https://cafelama.cl/cafe-tostado-lama/",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 5,
+      "alertas": [
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 1164,
+          "producto_nombre": "Etiopía Limu",
+          "variante_id": 8197,
+          "precio_clp": 0,
+          "url_detalle": "https://cafelama.cl/cafe-tostado-lama/cafe-tostado-lama/etiopia-limu/"
+        },
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 1166,
+          "producto_nombre": "Colombia Caldas",
+          "variante_id": 8199,
+          "precio_clp": 0,
+          "url_detalle": "https://cafelama.cl/cafe-tostado-lama/cafe-tostado-lama/colombia-caldas/"
+        },
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 1177,
+          "producto_nombre": "Brasil Furnas",
+          "variante_id": 8210,
+          "precio_clp": 0,
+          "url_detalle": "https://cafelama.cl/cafe-tostado-lama/cafe-tostado-lama/cafe-fresco-lama-brasil-furnas/"
+        },
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 1180,
+          "producto_nombre": "Colombia Huila Descafeinado",
+          "variante_id": 8216,
+          "precio_clp": 0,
+          "url_detalle": "https://cafelama.cl/cafe-tostado-lama/cafe-tostado-lama/colombia-huila-descafeinado/"
+        },
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 1165,
+          "producto_nombre": "Honduras El Jardin",
+          "variante_id": 8198,
+          "precio_clp": 0,
+          "url_detalle": "https://cafelama.cl/cafe-tostado-lama/cafe-tostado-lama/honduras-el-jardin/"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "nombre": "Café Triciclo",
+      "slug": "cafe-triciclo",
+      "url_base": "https://www.cafetriciclo.cl",
+      "sitio_oficial": "https://www.cafetriciclo.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 13,
+      "cantidad_productos_activos": 0,
+      "cantidad_productos_inactivos": 13,
+      "precio_kilo_promedio_clp": 0.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 2,
+          "url_catalogo": "https://www.cafetriciclo.cl/collections/all/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 1,
+      "sucursales": [
+        {
+          "id": 1,
+          "nombre": "Santo Domingo",
+          "direccion": "Santo Domingo 598, 8320068 Santiago, Región Metropolitana",
+          "comuna": "Santiago",
+          "lat": null,
+          "lon": null,
+          "activo": true
+        }
+      ],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 3,
+      "nombre": "Coffee Culture Coffee Roasters",
+      "slug": "coffee-culture-coffee-roasters",
+      "url_base": "https://www.coffeeculture.cl",
+      "sitio_oficial": "https://www.coffeeculture.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 18,
+      "cantidad_productos_activos": 11,
+      "cantidad_productos_inactivos": 7,
+      "precio_kilo_promedio_clp": 41273.15,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 3,
+          "url_catalogo": "https://www.coffeeculture.cl/collections/all/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 36,
+      "nombre": "Colibri Coffee Roasters",
+      "slug": "colibri-coffee-roasters",
+      "url_base": "https://www.colibricoffee.cl",
+      "sitio_oficial": "https://www.colibricoffee.cl",
+      "plataforma": "odoo",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 7,
+      "cantidad_productos_activos": 7,
+      "cantidad_productos_inactivos": 0,
+      "precio_kilo_promedio_clp": 59251.43,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 33,
+          "url_catalogo": "https://www.colibricoffee.cl/shop/category/cafe-9",
+          "activa": true,
+          "etiqueta": null
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 8,
+      "nombre": "Dosis - Ultravioleta",
+      "slug": "dosis-ultravioleta",
+      "url_base": "https://dosisbebidatiempo.cl",
+      "sitio_oficial": "https://dosisbebidatiempo.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 5,
+      "cantidad_productos_activos": 0,
+      "cantidad_productos_inactivos": 5,
+      "precio_kilo_promedio_clp": 0.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 16,
+          "url_catalogo": "https://dosisbebidatiempo.cl/collections/ultravioleta/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 5,
+      "nombre": "Holaste",
+      "slug": "holaste",
+      "url_base": "https://holaste.cl",
+      "sitio_oficial": "https://holaste.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 11,
+      "cantidad_productos_activos": 0,
+      "cantidad_productos_inactivos": 11,
+      "precio_kilo_promedio_clp": 0.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 18,
+          "url_catalogo": "https://holaste.cl/collections/cafecito/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 32,
+      "nombre": "Kawas",
+      "slug": "kawas",
+      "url_base": "https://kawas.cl",
+      "sitio_oficial": "https://kawas.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 41,
+      "cantidad_productos_activos": 13,
+      "cantidad_productos_inactivos": 28,
+      "precio_kilo_promedio_clp": 46365.28,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 29,
+          "url_catalogo": "https://kawas.cl/collections/cafe-de-origen",
+          "activa": true,
+          "etiqueta": null
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 2,
+      "alertas": [
+        {
+          "tipo": "PRECIO_KILO_ANOMALO",
+          "producto_id": 2555,
+          "producto_nombre": "Producto de prueba",
+          "variante_id": 10181,
+          "precio_clp": 100,
+          "formato_gramos": 250,
+          "precio_por_kilo": 400.0,
+          "url_detalle": "https://kawas.cl/products/producto-de-prueba"
+        },
+        {
+          "tipo": "PRECIO_KILO_ANOMALO",
+          "producto_id": 2368,
+          "producto_nombre": "Fiorenzato All Ground",
+          "variante_id": 9412,
+          "precio_clp": 969000,
+          "formato_gramos": 250,
+          "precio_por_kilo": 3876000.0,
+          "url_detalle": "https://kawas.cl/products/molino-fiorenzato-all-ground-classic-color-negro-mate"
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "nombre": "Lamb`s Coffess",
+      "slug": "lambs-coffess",
+      "url_base": "https://lambscoffee.cl",
+      "sitio_oficial": "https://lambscoffee.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 26,
+      "cantidad_productos_activos": 0,
+      "cantidad_productos_inactivos": 26,
+      "precio_kilo_promedio_clp": 0.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 20,
+          "url_catalogo": "https://lambscoffee.cl/collections/all/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 31,
+      "nombre": "Mandrake",
+      "slug": "mandrake",
+      "url_base": "https://cafemandrake.cl",
+      "sitio_oficial": "https://cafemandrake.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 44,
+      "cantidad_productos_activos": 31,
+      "cantidad_productos_inactivos": 13,
+      "precio_kilo_promedio_clp": 57620.3,
+      "catalogos_adicionales_count": 3,
+      "catalogos_adicionales": [
+        {
+          "id": 26,
+          "url_catalogo": "https://cafemandrake.cl/collections/cafe-250g",
+          "activa": true,
+          "etiqueta": "Café de 250gr"
+        },
+        {
+          "id": 27,
+          "url_catalogo": "https://cafemandrake.cl/collections/cafe-de-kg",
+          "activa": true,
+          "etiqueta": "Café de kilo"
+        },
+        {
+          "id": 28,
+          "url_catalogo": "https://cafemandrake.cl/collections/linea-insignia-premium",
+          "activa": true,
+          "etiqueta": "Linea Insignia Premium"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 27,
+      "nombre": "Microdosis",
+      "slug": "microdosis",
+      "url_base": "https://microdosiscoffee.cl",
+      "sitio_oficial": "https://microdosiscoffee.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 11,
+      "cantidad_productos_activos": 0,
+      "cantidad_productos_inactivos": 11,
+      "precio_kilo_promedio_clp": 0.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 21,
+          "url_catalogo": "https://microdosiscoffee.cl/collections/all/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 24,
+      "nombre": "Nero Roasters",
+      "slug": "nero-roasters",
+      "url_base": "https://neroroaster.cl",
+      "sitio_oficial": "https://neroroaster.cl",
+      "plataforma": "woocommerce",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 42,
+      "cantidad_productos_activos": 34,
+      "cantidad_productos_inactivos": 8,
+      "precio_kilo_promedio_clp": 47299.28,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 22,
+          "url_catalogo": "https://neroroaster.cl/wp-json/wc/store/v1/products",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 7,
+      "alertas": [
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 1830,
+          "producto_nombre": "RUBY PRO 1G CONEXIÓN A RED HÍDRICA",
+          "variante_id": 8403,
+          "precio_clp": 0,
+          "url_detalle": "https://neroroaster.cl/producto/ruby-pro-1g-conexion-a-red-hidrica/"
+        },
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 1826,
+          "producto_nombre": "LA DEA 1 GRUPO",
+          "variante_id": 8399,
+          "precio_clp": 0,
+          "url_detalle": "https://neroroaster.cl/producto/la-dea-1-grupo/"
+        },
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 1828,
+          "producto_nombre": "VETRO 2 GRUPOS",
+          "variante_id": 8401,
+          "precio_clp": 0,
+          "url_detalle": "https://neroroaster.cl/producto/vetro-2-grupos/"
+        },
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 1827,
+          "producto_nombre": "LA PRECISA 2 GRUPOS",
+          "variante_id": 8400,
+          "precio_clp": 0,
+          "url_detalle": "https://neroroaster.cl/producto/la-precisa-2-grupos/"
+        },
+        {
+          "tipo": "PRECIO_CERO",
+          "producto_id": 1824,
+          "producto_nombre": "QUAMAR M80 TOUCH PLUS",
+          "variante_id": 8397,
+          "precio_clp": 0,
+          "url_detalle": "https://neroroaster.cl/producto/molino-anfim-luna-on-demand-copia-copia/"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "nombre": "Pickers Coffee Roasters",
+      "slug": "pickers-coffee-roasters",
+      "url_base": "https://www.pickers.coffee",
+      "sitio_oficial": "https://www.pickers.coffee",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 65,
+      "cantidad_productos_activos": 16,
+      "cantidad_productos_inactivos": 49,
+      "precio_kilo_promedio_clp": 69670.3,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 30,
+          "url_catalogo": "https://www.pickers.coffee/collections/formato-individual",
+          "activa": true,
+          "etiqueta": null
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 15,
+      "alertas": [
+        {
+          "tipo": "PRECIO_KILO_ANOMALO",
+          "producto_id": 2578,
+          "producto_nombre": "IKAPE Canasta de Diámetro Variable V4 - Convex 58mm",
+          "variante_id": 10219,
+          "precio_clp": 48990,
+          "formato_gramos": 20,
+          "precio_por_kilo": 2449500.0,
+          "url_detalle": "https://www.pickers.coffee/products/ikape-canasta-de-diametro-variable-v4-convex-58mm"
+        },
+        {
+          "tipo": "PRECIO_KILO_ANOMALO",
+          "producto_id": 2578,
+          "producto_nombre": "IKAPE Canasta de Diámetro Variable V4 - Convex 58mm",
+          "variante_id": 10220,
+          "precio_clp": 48990,
+          "formato_gramos": 24,
+          "precio_por_kilo": 2041250.0,
+          "url_detalle": "https://www.pickers.coffee/products/ikape-canasta-de-diametro-variable-v4-convex-58mm"
+        },
+        {
+          "tipo": "PRECIO_KILO_ANOMALO",
+          "producto_id": 2578,
+          "producto_nombre": "IKAPE Canasta de Diámetro Variable V4 - Convex 58mm",
+          "variante_id": 10221,
+          "precio_clp": 66990,
+          "formato_gramos": 20,
+          "precio_por_kilo": 3349500.0,
+          "url_detalle": "https://www.pickers.coffee/products/ikape-canasta-de-diametro-variable-v4-convex-58mm"
+        },
+        {
+          "tipo": "PRECIO_KILO_ANOMALO",
+          "producto_id": 2578,
+          "producto_nombre": "IKAPE Canasta de Diámetro Variable V4 - Convex 58mm",
+          "variante_id": 10222,
+          "precio_clp": 66990,
+          "formato_gramos": 24,
+          "precio_por_kilo": 2791250.0,
+          "url_detalle": "https://www.pickers.coffee/products/ikape-canasta-de-diametro-variable-v4-convex-58mm"
+        },
+        {
+          "tipo": "PRECIO_KILO_ANOMALO",
+          "producto_id": 2579,
+          "producto_nombre": "IKAPE Canasta Espresso Clockwork V2 - Alta Extracción 58mm",
+          "variante_id": 10223,
+          "precio_clp": 36990,
+          "formato_gramos": 18,
+          "precio_por_kilo": 2055000.0,
+          "url_detalle": "https://www.pickers.coffee/products/ikape-canasta-espresso-clockwork-v2-alta-extraccion-58mm"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "nombre": "Puelo Café",
+      "slug": "puelo-cafe",
+      "url_base": "https://puelocafe.cl",
+      "sitio_oficial": "https://puelocafe.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 33,
+      "cantidad_productos_activos": 3,
+      "cantidad_productos_inactivos": 30,
+      "precio_kilo_promedio_clp": 62293.33,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 23,
+          "url_catalogo": "https://puelocafe.cl/collections/all/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 34,
+      "nombre": "Renacuajo Coffee Roasters",
+      "slug": "renacuajo-coffee-roasters",
+      "url_base": "https://renacuajocoffeeroaster.cl",
+      "sitio_oficial": "https://renacuajocoffeeroaster.cl",
+      "plataforma": "prestashop",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 17,
+      "cantidad_productos_activos": 12,
+      "cantidad_productos_inactivos": 5,
+      "precio_kilo_promedio_clp": 58200.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 31,
+          "url_catalogo": "https://renacuajocoffeeroaster.cl/7-granos",
+          "activa": true,
+          "etiqueta": null
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 25,
+      "nombre": "Ristro Café",
+      "slug": "ristro-cafe",
+      "url_base": "https://ristrocafe.cl",
+      "sitio_oficial": "https://ristrocafe.cl",
+      "plataforma": "woocommerce",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 24,
+      "cantidad_productos_activos": 20,
+      "cantidad_productos_inactivos": 4,
+      "precio_kilo_promedio_clp": 57683.96,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 17,
+          "url_catalogo": "https://ristrocafe.cl/?post_type=product",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 85,
+      "nombre": "Sin Filtro Coffee Roaster",
+      "slug": "sin-filtro-coffee-roaster",
+      "url_base": "https://cafesinfiltro.cl",
+      "sitio_oficial": "https://cafesinfiltro.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 24,
+      "cantidad_productos_activos": 8,
+      "cantidad_productos_inactivos": 16,
+      "precio_kilo_promedio_clp": 51441.67,
+      "catalogos_adicionales_count": 0,
+      "catalogos_adicionales": [],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 1,
+      "nombre": "Singular Coffee Roasters",
+      "slug": "singular-coffee-roasters",
+      "url_base": "https://singularcoffee.cl",
+      "sitio_oficial": "https://singularcoffee.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 21,
+      "cantidad_productos_activos": 0,
+      "cantidad_productos_inactivos": 21,
+      "precio_kilo_promedio_clp": 0.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 4,
+          "url_catalogo": "https://singularcoffee.cl/collections/all/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 39,
+      "nombre": "Tostador Local",
+      "slug": "tostador-local",
+      "url_base": "https://tostadorlocal.cl",
+      "sitio_oficial": "https://tostadorlocal.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 3,
+      "cantidad_productos_activos": 0,
+      "cantidad_productos_inactivos": 3,
+      "precio_kilo_promedio_clp": 0.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 36,
+          "url_catalogo": "https://tostadorlocal.cl/collections/cafe/products.json",
+          "activa": true,
+          "etiqueta": "Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 35,
+      "nombre": "Tres Cordilleras",
+      "slug": "tres-cordilleras",
+      "url_base": "https://trescordilleras.cl",
+      "sitio_oficial": "https://trescordilleras.cl",
+      "plataforma": "jumpseller",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 9,
+      "cantidad_productos_activos": 8,
+      "cantidad_productos_inactivos": 1,
+      "precio_kilo_promedio_clp": 62000.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 32,
+          "url_catalogo": "https://trescordilleras.cl/cafe",
+          "activa": true,
+          "etiqueta": null
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": false,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    },
+    {
+      "id": 10,
+      "nombre": "WR4 / WRoasters",
+      "slug": "wr4-wroasters",
+      "url_base": "https://www.wearefour.cl",
+      "sitio_oficial": "https://www.wearefour.cl",
+      "plataforma": "shopify",
+      "activo": true,
+      "es_prospecto": false,
+      "cantidad_productos_total": 13,
+      "cantidad_productos_activos": 0,
+      "cantidad_productos_inactivos": 13,
+      "precio_kilo_promedio_clp": 0.0,
+      "catalogos_adicionales_count": 1,
+      "catalogos_adicionales": [
+        {
+          "id": 19,
+          "url_catalogo": "https://www.wearefour.cl/collections/tuestes/products.json",
+          "activa": true,
+          "etiqueta": "Catálogo Principal"
+        }
+      ],
+      "sucursales_count": 0,
+      "sucursales": [],
+      "tiene_geolocalizacion": true,
+      "reputacion_fisica": {
+        "google_place_id": null,
+        "rating": null,
+        "total_resenas": null,
+        "disponible": false
+      },
+      "total_alertas": 0,
+      "alertas": []
+    }
+  ],
+  "alertas_scraping": [
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2632,
+      "producto_nombre": "AeroPress XL",
+      "variante_id": 10395,
+      "precio_clp": 82000,
+      "formato_gramos": 250,
+      "precio_por_kilo": 328000.0,
+      "url_detalle": "https://www.504coffee.cl/products/aeropress-xl"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2633,
+      "producto_nombre": "Bebida de Avena Oatly (Display)",
+      "variante_id": 10398,
+      "precio_clp": 93600,
+      "formato_gramos": 250,
+      "precio_por_kilo": 374400.0,
+      "url_detalle": "https://www.504coffee.cl/products/leche-oatly"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2633,
+      "producto_nombre": "Bebida de Avena Oatly (Display)",
+      "variante_id": 10399,
+      "precio_clp": 234000,
+      "formato_gramos": 250,
+      "precio_por_kilo": 936000.0,
+      "url_detalle": "https://www.504coffee.cl/products/leche-oatly"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2633,
+      "producto_nombre": "Bebida de Avena Oatly (Display)",
+      "variante_id": 10400,
+      "precio_clp": 468000,
+      "formato_gramos": 250,
+      "precio_por_kilo": 1872000.0,
+      "url_detalle": "https://www.504coffee.cl/products/leche-oatly"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 2651,
+      "producto_nombre": "Happy Box",
+      "variante_id": 10430,
+      "precio_clp": 0,
+      "url_detalle": "https://www.504coffee.cl/products/happy-box"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2486,
+      "producto_nombre": "Máquina café Saeco Phedra Evo",
+      "variante_id": 10084,
+      "precio_clp": 1800000,
+      "formato_gramos": 250,
+      "precio_por_kilo": 7200000.0,
+      "url_detalle": "https://shop.artisanroast.cl/products/maquina-cafe-saeco-phedra-evo"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2504,
+      "producto_nombre": "BOLSA DE COMPRA M 2026-2",
+      "variante_id": 10127,
+      "precio_clp": 1,
+      "formato_gramos": 250,
+      "precio_por_kilo": 4.0,
+      "url_detalle": "https://blackdrop.cl/products/bolsa-de-compra-m-2026-2"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 1012,
+      "producto_nombre": "Café Colombia · Caja Edición Limitada · Sidra Natural Anaeróbico · Finca El Vergel",
+      "variante_id": 8153,
+      "precio_clp": 22900,
+      "formato_gramos": 80,
+      "precio_por_kilo": 286250.0,
+      "url_detalle": "https://cafeterra.cl/products/cafe-colombia-caja-edicion-limitada-sidra-natural-anaerobico-finca-el-vergel"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 2526,
+      "producto_nombre": "SIKA FLEX PLUS 2",
+      "variante_id": 10149,
+      "precio_clp": 0,
+      "url_detalle": "https://cafeterra.cl/products/sika-flex-plus-2"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 2527,
+      "producto_nombre": "SIKA FLEX PLUS",
+      "variante_id": 10150,
+      "precio_clp": 0,
+      "url_detalle": "https://cafeterra.cl/products/sika-flex-plus"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 2528,
+      "producto_nombre": "TORNILLO SAI",
+      "variante_id": 10151,
+      "precio_clp": 0,
+      "url_detalle": "https://cafeterra.cl/products/tornillo-sai"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 2529,
+      "producto_nombre": "One Touch PRUEBA",
+      "variante_id": 10152,
+      "precio_clp": 0,
+      "url_detalle": "https://cafeterra.cl/products/one-touch-prueba"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2530,
+      "producto_nombre": "Café Ecuador · Caja Edición Limitada · Ecurobusta Robbie Fermentación Anaeróbica · Hacienda Legrand",
+      "variante_id": 10153,
+      "precio_clp": 20990,
+      "formato_gramos": 80,
+      "precio_por_kilo": 262375.0,
+      "url_detalle": "https://cafeterra.cl/products/ecuador-edicion-limitada-hacienda-legrand-ecurobusta-robbie-fermentacion-anaerobica"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2541,
+      "producto_nombre": "Aeropress XL",
+      "variante_id": 10166,
+      "precio_clp": 82990,
+      "formato_gramos": 250,
+      "precio_por_kilo": 331960.0,
+      "url_detalle": "https://cafeterra.cl/products/aeropress-xl"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 1164,
+      "producto_nombre": "Etiopía Limu",
+      "variante_id": 8197,
+      "precio_clp": 0,
+      "url_detalle": "https://cafelama.cl/cafe-tostado-lama/cafe-tostado-lama/etiopia-limu/"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 1166,
+      "producto_nombre": "Colombia Caldas",
+      "variante_id": 8199,
+      "precio_clp": 0,
+      "url_detalle": "https://cafelama.cl/cafe-tostado-lama/cafe-tostado-lama/colombia-caldas/"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 1177,
+      "producto_nombre": "Brasil Furnas",
+      "variante_id": 8210,
+      "precio_clp": 0,
+      "url_detalle": "https://cafelama.cl/cafe-tostado-lama/cafe-tostado-lama/cafe-fresco-lama-brasil-furnas/"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 1180,
+      "producto_nombre": "Colombia Huila Descafeinado",
+      "variante_id": 8216,
+      "precio_clp": 0,
+      "url_detalle": "https://cafelama.cl/cafe-tostado-lama/cafe-tostado-lama/colombia-huila-descafeinado/"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 1165,
+      "producto_nombre": "Honduras El Jardin",
+      "variante_id": 8198,
+      "precio_clp": 0,
+      "url_detalle": "https://cafelama.cl/cafe-tostado-lama/cafe-tostado-lama/honduras-el-jardin/"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2555,
+      "producto_nombre": "Producto de prueba",
+      "variante_id": 10181,
+      "precio_clp": 100,
+      "formato_gramos": 250,
+      "precio_por_kilo": 400.0,
+      "url_detalle": "https://kawas.cl/products/producto-de-prueba"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2368,
+      "producto_nombre": "Fiorenzato All Ground",
+      "variante_id": 9412,
+      "precio_clp": 969000,
+      "formato_gramos": 250,
+      "precio_por_kilo": 3876000.0,
+      "url_detalle": "https://kawas.cl/products/molino-fiorenzato-all-ground-classic-color-negro-mate"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 1830,
+      "producto_nombre": "RUBY PRO 1G CONEXIÓN A RED HÍDRICA",
+      "variante_id": 8403,
+      "precio_clp": 0,
+      "url_detalle": "https://neroroaster.cl/producto/ruby-pro-1g-conexion-a-red-hidrica/"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 1826,
+      "producto_nombre": "LA DEA 1 GRUPO",
+      "variante_id": 8399,
+      "precio_clp": 0,
+      "url_detalle": "https://neroroaster.cl/producto/la-dea-1-grupo/"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 1828,
+      "producto_nombre": "VETRO 2 GRUPOS",
+      "variante_id": 8401,
+      "precio_clp": 0,
+      "url_detalle": "https://neroroaster.cl/producto/vetro-2-grupos/"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 1827,
+      "producto_nombre": "LA PRECISA 2 GRUPOS",
+      "variante_id": 8400,
+      "precio_clp": 0,
+      "url_detalle": "https://neroroaster.cl/producto/la-precisa-2-grupos/"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 1824,
+      "producto_nombre": "QUAMAR M80 TOUCH PLUS",
+      "variante_id": 8397,
+      "precio_clp": 0,
+      "url_detalle": "https://neroroaster.cl/producto/molino-anfim-luna-on-demand-copia-copia/"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 1829,
+      "producto_nombre": "Maquina Fiamma Caravel 2 CV TC Restyle Volumétrica",
+      "variante_id": 8402,
+      "precio_clp": 0,
+      "url_detalle": "https://neroroaster.cl/producto/fiamma-volumetrica/"
+    },
+    {
+      "tipo": "PRECIO_CERO",
+      "producto_id": 1831,
+      "producto_nombre": "RUBY PRO 1G CON TANQUE DE AGUA",
+      "variante_id": 8404,
+      "precio_clp": 0,
+      "url_detalle": "https://neroroaster.cl/producto/ruby-pro-1g-con-tanque-de-agua/"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2578,
+      "producto_nombre": "IKAPE Canasta de Diámetro Variable V4 - Convex 58mm",
+      "variante_id": 10219,
+      "precio_clp": 48990,
+      "formato_gramos": 20,
+      "precio_por_kilo": 2449500.0,
+      "url_detalle": "https://www.pickers.coffee/products/ikape-canasta-de-diametro-variable-v4-convex-58mm"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2578,
+      "producto_nombre": "IKAPE Canasta de Diámetro Variable V4 - Convex 58mm",
+      "variante_id": 10220,
+      "precio_clp": 48990,
+      "formato_gramos": 24,
+      "precio_por_kilo": 2041250.0,
+      "url_detalle": "https://www.pickers.coffee/products/ikape-canasta-de-diametro-variable-v4-convex-58mm"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2578,
+      "producto_nombre": "IKAPE Canasta de Diámetro Variable V4 - Convex 58mm",
+      "variante_id": 10221,
+      "precio_clp": 66990,
+      "formato_gramos": 20,
+      "precio_por_kilo": 3349500.0,
+      "url_detalle": "https://www.pickers.coffee/products/ikape-canasta-de-diametro-variable-v4-convex-58mm"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2578,
+      "producto_nombre": "IKAPE Canasta de Diámetro Variable V4 - Convex 58mm",
+      "variante_id": 10222,
+      "precio_clp": 66990,
+      "formato_gramos": 24,
+      "precio_por_kilo": 2791250.0,
+      "url_detalle": "https://www.pickers.coffee/products/ikape-canasta-de-diametro-variable-v4-convex-58mm"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2579,
+      "producto_nombre": "IKAPE Canasta Espresso Clockwork V2 - Alta Extracción 58mm",
+      "variante_id": 10223,
+      "precio_clp": 36990,
+      "formato_gramos": 18,
+      "precio_por_kilo": 2055000.0,
+      "url_detalle": "https://www.pickers.coffee/products/ikape-canasta-espresso-clockwork-v2-alta-extraccion-58mm"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2579,
+      "producto_nombre": "IKAPE Canasta Espresso Clockwork V2 - Alta Extracción 58mm",
+      "variante_id": 10224,
+      "precio_clp": 36990,
+      "formato_gramos": 20,
+      "precio_por_kilo": 1849500.0,
+      "url_detalle": "https://www.pickers.coffee/products/ikape-canasta-espresso-clockwork-v2-alta-extraccion-58mm"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2580,
+      "producto_nombre": "IKAPE Canasta Espresso Beehive V3 - Alta Extracción 58mm",
+      "variante_id": 10225,
+      "precio_clp": 33490,
+      "formato_gramos": 18,
+      "precio_por_kilo": 1860555.56,
+      "url_detalle": "https://www.pickers.coffee/products/ikape-canasta-espresso-beehive-v3-alta-extraccion-58mm"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2580,
+      "producto_nombre": "IKAPE Canasta Espresso Beehive V3 - Alta Extracción 58mm",
+      "variante_id": 10226,
+      "precio_clp": 33490,
+      "formato_gramos": 20,
+      "precio_por_kilo": 1674500.0,
+      "url_detalle": "https://www.pickers.coffee/products/ikape-canasta-espresso-beehive-v3-alta-extraccion-58mm"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2581,
+      "producto_nombre": "IKAPE WDT One-Press V4 58mm",
+      "variante_id": 10227,
+      "precio_clp": 99990,
+      "formato_gramos": 250,
+      "precio_por_kilo": 399960.0,
+      "url_detalle": "https://www.pickers.coffee/products/ikape-wdt-one-press-v4-un-solo-toque-springback-58mm"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2582,
+      "producto_nombre": "IKAPE WDT Springback V3 58mm",
+      "variante_id": 10228,
+      "precio_clp": 79990,
+      "formato_gramos": 250,
+      "precio_por_kilo": 319960.0,
+      "url_detalle": "https://www.pickers.coffee/products/ikape-wdt-springback-v3-retroceso-automatico-58mm"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2564,
+      "producto_nombre": "Bundle Picopresso Full",
+      "variante_id": 10200,
+      "precio_clp": 282660,
+      "formato_gramos": 250,
+      "precio_por_kilo": 1130640.0,
+      "url_detalle": "https://www.pickers.coffee/products/bundle-picopresso-full"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2568,
+      "producto_nombre": "Bundle Fresh Beans",
+      "variante_id": 10204,
+      "precio_clp": 308990,
+      "formato_gramos": 250,
+      "precio_por_kilo": 1235960.0,
+      "url_detalle": "https://www.pickers.coffee/products/bundle-fresh-beans"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2568,
+      "producto_nombre": "Bundle Fresh Beans",
+      "variante_id": 10205,
+      "precio_clp": 302990,
+      "formato_gramos": 250,
+      "precio_por_kilo": 1211960.0,
+      "url_detalle": "https://www.pickers.coffee/products/bundle-fresh-beans"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2569,
+      "producto_nombre": "Bundle Brew Esencial",
+      "variante_id": 10206,
+      "precio_clp": 300000,
+      "formato_gramos": 250,
+      "precio_por_kilo": 1200000.0,
+      "url_detalle": "https://www.pickers.coffee/products/bundle-brew-esencial"
+    },
+    {
+      "tipo": "PRECIO_KILO_ANOMALO",
+      "producto_id": 2570,
+      "producto_nombre": "Bundle Espresso Series 1 + Opus 2",
+      "variante_id": 10207,
+      "precio_clp": 2050000,
+      "formato_gramos": 250,
+      "precio_por_kilo": 8200000.0,
+      "url_detalle": "https://www.pickers.coffee/products/bundle-espresso-series1-opus2"
+    }
+  ],
+  "inconsistencias_dominios": [],
+  "multi_fuentes_duplicados": [
+    {
+      "dominio": "shop.artisanroast.cl",
+      "tiendas_afectadas": [
+        {
+          "id": 7,
+          "nombre": "Artisan Roast Chile (Blends)",
+          "url_base": "https://shop.artisanroast.cl",
+          "activo": true
+        },
+        {
+          "id": 6,
+          "nombre": "Artisan Roast Chile (Orígenes)",
+          "url_base": "https://shop.artisanroast.cl",
+          "activo": true
+        }
+      ],
+      "observacion": "Múltiples registros en tabla 'tiendas' comparten el mismo dominio raíz. Deben consolidarse vía 'tienda_catalogos'."
+    },
+    {
+      "dominio": "cafeterra.cl",
+      "tiendas_afectadas": [
+        {
+          "id": 13,
+          "nombre": "Cafeterra (Single Origin)",
+          "url_base": "https://cafeterra.cl",
+          "activo": true
+        },
+        {
+          "id": 14,
+          "nombre": "Cafeterra Edición Limitada",
+          "url_base": "https://cafeterra.cl",
+          "activo": true
+        }
+      ],
+      "observacion": "Múltiples registros en tabla 'tiendas' comparten el mismo dominio raíz. Deben consolidarse vía 'tienda_catalogos'."
+    },
+    {
+      "dominio": "cafecascanueces.cl",
+      "tiendas_afectadas": [
+        {
+          "id": 15,
+          "nombre": "Café Cascanueces (Arábica)",
+          "url_base": "https://cafecascanueces.cl",
+          "activo": true
+        },
+        {
+          "id": 19,
+          "nombre": "Café Cascanueces (Classic Blend)",
+          "url_base": "https://cafecascanueces.cl",
+          "activo": true
+        },
+        {
+          "id": 20,
+          "nombre": "Café Cascanueces (Línea Dark)",
+          "url_base": "https://cafecascanueces.cl",
+          "activo": true
+        }
+      ],
+      "observacion": "Múltiples registros en tabla 'tiendas' comparten el mismo dominio raíz. Deben consolidarse vía 'tienda_catalogos'."
+    }
+  ],
+  "metadatos_reputacion_fisica": {}
+}

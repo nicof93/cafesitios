@@ -1,0 +1,424 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import BrandCard from '../../components/BrandCard.astro';
+import { GetStoresUseCase } from '../../core/application/GetStores';
+
+const url = new URL(Astro.request.url);
+const sortBy = (url.searchParams.get('sort_by') as 'product_count_desc' | 'name_asc') || 'name_asc';
+const lat = url.searchParams.get('lat') ? Number(url.searchParams.get('lat')) : undefined;
+const lon = url.searchParams.get('lon') ? Number(url.searchParams.get('lon')) : undefined;
+
+const storesUseCase = new GetStoresUseCase();
+let stores: any[] = [];
+
+try {
+  stores = await storesUseCase.execute({
+    pageSize: 100,
+    sortBy: sortBy === 'name_asc' ? 'name_asc' : 'product_count_desc',
+    lat,
+    lon
+  });
+
+  if (sortBy === 'name_asc') {
+    stores.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }));
+  } else if (sortBy === 'product_count_desc') {
+    stores.sort((a, b) => (b.cantidad_productos || 0) - (a.cantidad_productos || 0));
+  }
+} catch (error) {
+  console.error('Error cargando marcas en SSR:', error);
+}
+
+// Marcado Schema.org / JSON-LD: Directorio de Marcas (ItemList con Brands)
+const schemaItemList = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Directorio de Tostadurías y Marcas de Café en Chile",
+  "description": "Directorio oficial de tostadurías de café de especialidad registradas en Cafesitios.",
+  "numberOfItems": stores.length,
+  "itemListElement": stores.map((s, index) => ({
+    "@type": "ListItem",
+    "position": index + 1,
+    "item": {
+      "@type": "Brand",
+      "name": s.nombre,
+      "url": s.sitio_oficial || s.url_web || `https://cafesitios.cl/tiendas/${s.slug || s.id}`,
+      "description": `Tostaduría de café de especialidad con ${s.cantidad_productos} cafés registrados.`
+    }
+  }))
+};
+---
+
+<BaseLayout 
+  title="Directorio de Marcas y Tostadurías de Café en Chile | Cafesitios"
+  description="Explora las marcas de café de especialidad en Chile. Directorio de tostadurías con cafés disponibles, sedes físicas, precios de referencia y acceso a sus tiendas oficiales."
+  canonicalUrl="https://cafesitios.cl/tiendas"
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(schemaItemList)} />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script is:inline src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+      .leaflet-popup-content-wrapper {
+        border-radius: 1rem;
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        padding: 0.25rem;
+      }
+      .leaflet-popup-content {
+        margin: 0.75rem 1rem;
+        line-height: 1.4;
+      }
+    </style>
+  </Fragment>
+
+  <!-- CONTENEDOR ANCHO MÁXIMO 1200PX SOBRE FONDO NEUTRO CÁLIDO BG-[#FCFBF7] -->
+  <div class="max-w-[1200px] mx-auto space-y-8 bg-[#FCFBF7] py-2 px-1 rounded-3xl">
+    
+    <!-- BREADCRUMB SEMÁNTICO (WCAG 2.1 AA) -->
+    <nav aria-label="Navegación de migas de pan" class="flex items-center gap-2 text-xs text-stone-500">
+      <a href="/" class="hover:text-emerald-800 transition">Inicio</a>
+      <span class="text-stone-300" aria-hidden="true">/</span>
+      <a href="/catalogo" class="hover:text-emerald-800 transition">Catálogo</a>
+      <span class="text-stone-300" aria-hidden="true">/</span>
+      <span class="font-semibold text-stone-800" aria-current="page">Directorio de Marcas</span>
+    </nav>
+
+    <!-- HEADER DE SECCIÓN Y PRESENTACIÓN CLEAN E-COMMERCE -->
+    <header class="bg-white p-6 sm:p-8 rounded-3xl border border-stone-200/80 shadow-2xs space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="space-y-1.5 max-w-2xl">
+          <div class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-[11px] font-bold px-3 py-1 rounded-full border border-emerald-200/60">
+            <span>✨</span>
+            <span>Ecosistema de Tostadurías Chilenas</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-stone-900">
+            Directorio de Marcas y Tostadores
+          </h1>
+          <p class="text-xs sm:text-sm text-stone-600 leading-relaxed">
+            Conoce a los tostadores de café de especialidad integrados en Cafesitios (<strong class="text-stone-800 font-semibold">{stores.length} marcas</strong>). Compara su oferta, ubica sus sucursales físicas o visita sus tiendas en línea oficiales.
+          </p>
+        </div>
+
+        <!-- CONTROLES GPS Y MAPA -->
+        <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button 
+            id="btn-detect-gps"
+            type="button" 
+            class="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition shadow-2xs"
+          >
+            <span>📍</span> Centrar en mi ubicación
+          </button>
+          <button 
+            id="btn-toggle-map"
+            type="button" 
+            class="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-50 transition shadow-2xs"
+          >
+            <span>🗺️</span> <span id="toggle-map-text">Ver Mapa</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAPA INTERACTIVO (LEAFLET.JS) - OCULTO POR DEFECTO PARA CLEAN E-COMMERCE -->
+    <section id="map-section" class="hidden bg-white p-4 rounded-3xl border border-stone-200/80 shadow-2xs space-y-3" aria-label="Mapa interactivo de tostadurías">
+      <div class="flex items-center justify-between px-2 pt-1 text-xs text-stone-500">
+        <span class="font-semibold flex items-center gap-1.5 text-stone-800">
+          <span>📍</span> Mapa de Sedes Físicas y Cafeterías
+        </span>
+        <span class="text-[11px] text-stone-400">
+          Haz clic en cualquier pin para ver cafés disponibles
+        </span>
+      </div>
+      <div 
+        id="stores-map" 
+        class="h-80 sm:h-96 w-full rounded-2xl z-10 border border-stone-100"
+        data-stores={JSON.stringify(stores)}
+      ></div>
+    </section>
+
+    <!-- BARRA DE FILTRO Y ORDENAMIENTO DE MARCAS -->
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-stone-200/80 shadow-2xs">
+      <!-- BUSCADOR REACTIVO -->
+      <div class="relative w-full sm:w-80">
+        <label for="store-search-filter" class="sr-only">Buscar marca por nombre o comuna</label>
+        <input 
+          type="text" 
+          id="store-search-filter" 
+          placeholder="Buscar tostaduría o comuna..." 
+          class="w-full bg-stone-50 border border-stone-200 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm text-stone-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 transition"
+        />
+        <span class="absolute left-3 top-3 text-stone-400 text-xs pointer-events-none" aria-hidden="true">🔍</span>
+      </div>
+
+      <!-- SELECTOR DE ORDENAMIENTO (ALFABÉTICO VS MAYOR CANTIDAD) -->
+      <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+        <div class="flex items-center gap-2">
+          <label for="brand-sort-select" class="text-xs font-semibold text-stone-600 shrink-0">
+            Ordenar:
+          </label>
+          <select 
+            id="brand-sort-select"
+            class="bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs font-semibold text-stone-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 transition"
+          >
+            <option value="name_asc" selected={sortBy === 'name_asc'}>Alfabético (A - Z)</option>
+            <option value="product_count_desc" selected={sortBy === 'product_count_desc'}>Mayor cantidad de cafés</option>
+          </select>
+        </div>
+
+        <span class="text-xs text-stone-500 shrink-0">
+          <strong id="store-count-display" class="text-stone-800 font-bold">{stores.length}</strong> marcas
+        </span>
+      </div>
+    </div>
+
+    <!-- GRILLA DE MARCAS (CLEAN E-COMMERCE CON BRANDCARD) -->
+    <main>
+      <div 
+        id="brands-cards-grid" 
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+        aria-live="polite"
+      >
+        {stores.map(store => (
+          <BrandCard brand={store} />
+        ))}
+      </div>
+
+      <!-- MENSAJE SIN RESULTADOS -->
+      <div id="no-brands-msg" class="hidden text-center py-16 bg-white rounded-3xl border border-stone-200/80 p-8 space-y-3">
+        <span class="text-3xl" aria-hidden="true">🔍</span>
+        <h2 class="text-base font-bold text-stone-800">No encontramos tostadurías con ese criterio</h2>
+        <p class="text-xs text-stone-500">Prueba ajustando los términos de búsqueda o limpiando el filtro.</p>
+        <button 
+          id="btn-reset-filter"
+          type="button" 
+          class="inline-flex items-center gap-1.5 px-4 py-2 bg-stone-900 text-white rounded-xl text-xs font-semibold hover:bg-emerald-800 transition"
+        >
+          Ver todas las marcas
+        </button>
+      </div>
+    </main>
+
+  </div>
+</BaseLayout>
+
+<script>
+  import { AnalyticsTracker } from '../../core/infrastructure/analytics/AnalyticsTracker';
+
+  declare const L: any;
+
+  const brandsGrid = document.getElementById('brands-cards-grid');
+  const brandCards = document.querySelectorAll('.brand-card');
+  const searchInput = document.getElementById('store-search-filter') as HTMLInputElement | null;
+  const sortSelect = document.getElementById('brand-sort-select') as HTMLSelectElement | null;
+  const countDisplay = document.getElementById('store-count-display');
+  const noBrandsMsg = document.getElementById('no-brands-msg');
+  const resetBtn = document.getElementById('btn-reset-filter');
+  const toggleMapBtn = document.getElementById('btn-toggle-map');
+  const mapSection = document.getElementById('map-section');
+  const toggleMapText = document.getElementById('toggle-map-text');
+  const mapElement = document.getElementById('stores-map');
+
+  // 1. DISPARAR TELEMETRÍA GA4 DATALAYER v2: view_item_list
+  const marcasList: Array<{ id: number | string; nombre: string }> = [];
+  brandCards.forEach(c => {
+    const id = c.getAttribute('data-brand-id') || '';
+    const name = c.getAttribute('data-brand-name') || '';
+    if (name) marcasList.push({ id, nombre: name });
+  });
+
+  if (marcasList.length > 0) {
+    AnalyticsTracker.trackViewItemListMarcas(marcasList.slice(0, 30));
+  }
+
+  // 2. DISPARAR TELEMETRÍA GA4 DATALAYER v2: seleccionar_marca
+  document.addEventListener('click', (e) => {
+    const selectTrigger = (e.target as HTMLElement).closest('[data-brand-select]') as HTMLElement | null;
+    if (selectTrigger) {
+      const name = selectTrigger.getAttribute('data-brand-name') || '';
+      const count = Number(selectTrigger.getAttribute('data-brand-count')) || 0;
+      if (name) {
+        AnalyticsTracker.trackSeleccionarMarca(name, count, 'tarjeta_directorio');
+      }
+    }
+  });
+
+  // 3. BUSCADOR REACTIVO EN VIVO
+  function filterAndSortBrands() {
+    const q = (searchInput?.value || '').trim().toLowerCase();
+    const sortVal = sortSelect?.value || 'name_asc';
+    let visibleCount = 0;
+
+    const cardsArray = Array.from(brandCards) as HTMLElement[];
+
+    cardsArray.forEach(card => {
+      const name = card.getAttribute('data-name') || '';
+      const comuna = card.getAttribute('data-comuna') || '';
+      const matches = !q || name.includes(q) || comuna.includes(q);
+
+      if (matches) {
+        card.style.display = '';
+        visibleCount++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    // Ordenar elementos en DOM
+    if (brandsGrid) {
+      cardsArray.sort((a, b) => {
+        if (sortVal === 'name_asc') {
+          const nameA = a.getAttribute('data-name') || '';
+          const nameB = b.getAttribute('data-name') || '';
+          return nameA.localeCompare(nameB, 'es', { sensitivity: 'base' });
+        } else {
+          const countA = Number(a.getAttribute('data-count')) || 0;
+          const countB = Number(b.getAttribute('data-count')) || 0;
+          return countB - countA;
+        }
+      });
+      cardsArray.forEach(card => brandsGrid.appendChild(card));
+    }
+
+    if (countDisplay) countDisplay.textContent = String(visibleCount);
+
+    if (visibleCount === 0) {
+      noBrandsMsg?.classList.remove('hidden');
+    } else {
+      noBrandsMsg?.classList.add('hidden');
+    }
+  }
+
+  searchInput?.addEventListener('input', filterAndSortBrands);
+  sortSelect?.addEventListener('change', filterAndSortBrands);
+
+  resetBtn?.addEventListener('click', () => {
+    if (searchInput) searchInput.value = '';
+    filterAndSortBrands();
+  });
+
+  // 4. MAPA INTERACTIVO (LEAFLET.JS)
+  let map: any = null;
+  let mapInitialized = false;
+
+  function initMap() {
+    if (mapInitialized || !mapElement || typeof L === 'undefined') return;
+    mapInitialized = true;
+
+    const rawStores = mapElement.getAttribute('data-stores');
+    const storesList = rawStores ? JSON.parse(rawStores) : [];
+
+    const defaultCenter = [-33.4372, -70.6275];
+    map = L.map('stores-map').setView(defaultCenter, 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      subdomains: ['a', 'b', 'c'],
+      referrerPolicy: 'strict-origin-when-cross-origin',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    const coffeeIcon = L.divIcon({
+      className: 'custom-coffee-pin',
+      html: `
+        <div style="background: #064E3B; color: white; width: 32px; height: 32px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); border: 2px solid white; font-size: 14px;">
+          ☕
+        </div>
+      `,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+      popupAnchor: [0, -18]
+    });
+
+    storesList.forEach((store: any) => {
+      const pins: Array<{ lat: number; lon: number; label: string; address?: string }> = [];
+
+      if (store.latitud && store.longitud) {
+        pins.push({
+          lat: Number(store.latitud),
+          lon: Number(store.longitud),
+          label: store.nombre,
+          address: store.direccion || store.comuna
+        });
+      }
+
+      if (Array.isArray(store.sucursales)) {
+        store.sucursales.forEach((suc: any) => {
+          if (suc.latitud && suc.longitud) {
+            pins.push({
+              lat: Number(suc.latitud),
+              lon: Number(suc.longitud),
+              label: `${store.nombre} - ${suc.nombre}`,
+              address: suc.direccion || suc.comuna
+            });
+          }
+        });
+      }
+
+      pins.forEach(pin => {
+        const popupContent = `
+          <div style="font-family: system-ui, sans-serif; font-size: 12px; color: #1c1917; max-width: 220px;">
+            <strong style="display: block; font-size: 13px; font-weight: 800; color: #064e3b; margin-bottom: 4px;">${pin.label}</strong>
+            ${pin.address ? `<p style="margin: 0 0 6px 0; color: #78716c; font-size: 11px;">📍 ${pin.address}</p>` : ''}
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+              <a href="/catalogo?tienda=${encodeURIComponent(store.nombre)}" style="background: #064e3b; color: white; text-decoration: none; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 10px;">Ver Cafés</a>
+              <a href="/tiendas/${store.slug || store.id}" style="color: #78716c; text-decoration: none; padding: 4px 6px; font-size: 10px;">Perfil</a>
+            </div>
+          </div>
+        `;
+
+        L.marker([pin.lat, pin.lon], { icon: coffeeIcon })
+          .addTo(map)
+          .bindPopup(popupContent);
+      });
+    });
+  }
+
+  toggleMapBtn?.addEventListener('click', () => {
+    if (!mapSection) return;
+    const isHidden = mapSection.classList.contains('hidden');
+    if (isHidden) {
+      mapSection.classList.remove('hidden');
+      if (toggleMapText) toggleMapText.textContent = 'Ocultar Mapa';
+      initMap();
+      setTimeout(() => {
+        if (map) map.invalidateSize();
+      }, 200);
+    } else {
+      mapSection.classList.add('hidden');
+      if (toggleMapText) toggleMapText.textContent = 'Ver Mapa';
+    }
+  });
+
+  // GPS geolocation
+  const gpsBtn = document.getElementById('btn-detect-gps');
+  gpsBtn?.addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      alert('Tu navegador no soporta geolocalización.');
+      return;
+    }
+    gpsBtn.textContent = 'Obteniendo GPS...';
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const userLat = pos.coords.latitude;
+        const userLon = pos.coords.longitude;
+        gpsBtn.innerHTML = '<span>✓</span> GPS detectado';
+        if (mapSection?.classList.contains('hidden')) {
+          toggleMapBtn?.click();
+        }
+        if (map) {
+          map.setView([userLat, userLon], 14);
+          L.circleMarker([userLat, userLon], {
+            radius: 8,
+            fillColor: '#2563eb',
+            color: '#ffffff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.8
+          }).addTo(map).bindPopup('Tu ubicación actual').openPopup();
+        }
+      },
+      () => {
+        gpsBtn.textContent = 'GPS no disponible';
+      }
+    );
+  });
+</script>

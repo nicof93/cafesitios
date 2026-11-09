@@ -1,0 +1,8 @@
+---
+// Redirección 301 canónica hacia /tiendas/[slug] (Directorio y Perfil Canónico de Marcas)
+const { slug } = Astro.params;
+if (!slug) {
+  return Astro.redirect('/tiendas', 301);
+}
+return Astro.redirect(`/tiendas/${slug}`, 301);
+---

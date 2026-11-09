@@ -1,0 +1,8 @@
+---
+// Redirección 301 alias corto hacia /tiendas/[slug]
+const { slug } = Astro.params;
+if (!slug) {
+  return Astro.redirect('/tiendas', 301);
+}
+return Astro.redirect(`/tiendas/${slug}`, 301);
+---
