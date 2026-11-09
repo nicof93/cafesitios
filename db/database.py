@@ -80,6 +80,10 @@ class Tienda(Base):
     dias_tueste = Column(String(100), nullable=True)
     fecha_ultimo_tueste = Column(Date, nullable=True)
     limite_almacenamiento_mb = Column(Integer, nullable=False, default=250, server_default='250')
+    es_prospecto = Column(Boolean, nullable=False, default=False, server_default='false')
+    contacto_nombre = Column(String(150), nullable=True)
+    contacto_telefono = Column(String(50), nullable=True)
+    contacto_email = Column(String(150), nullable=True)
     plan_id = Column(Integer, ForeignKey('planes_tienda.id', ondelete='SET NULL'), nullable=True, index=True)
     dia_pago_mensual = Column(Integer, nullable=False, default=5, server_default='5')
     precio_acordado_clp = Column(Integer, nullable=True)
@@ -95,6 +99,23 @@ class Tienda(Base):
     catalogos = relationship("TiendaCatalogo", back_populates="tienda", cascade="all, delete-orphan")
     pedidos_whatsapp = relationship("PedidoWhatsApp", back_populates="tienda", cascade="all, delete-orphan")
     novedades = relationship("NovedadTienda", back_populates="tienda", cascade="all, delete-orphan")
+    comentarios = relationship("TiendaComentario", back_populates="tienda", cascade="all, delete-orphan", order_by="desc(TiendaComentario.fecha_creacion)")
+
+
+class TiendaComentario(Base):
+    __tablename__ = 'tienda_comentarios'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tienda_id = Column(Integer, ForeignKey('tiendas.id', ondelete='CASCADE'), nullable=False, index=True)
+    autor = Column(String(100), nullable=False, default='Administrador', server_default='Administrador')
+    tipo_contacto = Column(String(50), nullable=False, default='nota', server_default='nota')
+    comentario = Column(Text, nullable=False)
+    fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
+
+    tienda = relationship("Tienda", back_populates="comentarios")
+
+    __table_args__ = (
+        Index('idx_tienda_comentarios_tienda_fecha', 'tienda_id', 'fecha_creacion'),
+    )
 
 
 class TiendaCatalogo(Base):
@@ -175,6 +196,7 @@ class Producto(Base):
     id_externo = Column(String(255), nullable=True)
     activo = Column(Boolean, nullable=False, default=True, server_default='true')
     oculto_catalogo = Column(Boolean, nullable=False, default=False, server_default='false')
+    es_cafe_confirmado = Column(Boolean, nullable=False, default=False, server_default='false')
     categoria = Column(String(30), nullable=False, default='cafe', server_default='cafe', index=True)
     nombre = Column(String(255), nullable=False)
     url_detalle = Column(String(500), unique=True, nullable=False)
@@ -464,10 +486,10 @@ def _handle_missing_columns_in_remote_schemas(orm_execute_state):
             if isinstance(d, dict) and d.get("expr") is d.get("entity")
         ]
 
-        # 1. Tienda (logo_url, telefono_whatsapp)
+        # 1. Tienda (logo_url, telefono_whatsapp, prospectos)
         tiendas_cols = engine_get_columns(bind, 'tiendas')
         if tiendas_cols:
-            for t_col in ["logo_url", "telefono_whatsapp"]:
+            for t_col in ["logo_url", "telefono_whatsapp", "es_prospecto", "contacto_nombre", "contacto_telefono", "contacto_email"]:
                 if t_col not in tiendas_cols:
                     if Tienda in entities:
                         orm_execute_state.statement = orm_execute_state.statement.options(defer(getattr(Tienda, t_col)))
@@ -494,17 +516,31 @@ def _handle_missing_columns_in_remote_schemas(orm_execute_state):
             ]:
                 if r_col not in recetas_cols and Receta in entities:
                     orm_execute_state.statement = orm_execute_state.statement.options(defer(getattr(Receta, r_col)))
+
+        # 4. Producto (es_cafe_confirmado)
+        prod_cols = engine_get_columns(bind, 'productos')
+        if prod_cols:
+            if "es_cafe_confirmado" not in prod_cols and Producto in entities:
+                orm_execute_state.statement = orm_execute_state.statement.options(defer(getattr(Producto, "es_cafe_confirmado")))
     except Exception:
         pass
 
 
 @event.listens_for(Tienda, "load")
 def _receive_tienda_load_fallback(target, context):
-    """Asigna None si logo_url o telefono_whatsapp no fueron seleccionadas por diferimiento en esquemas no migrados."""
+    """Asigna None o defaults si logo_url, telefono_whatsapp o campos de prospecto no fueron seleccionadas por diferimiento en esquemas no migrados."""
     if "logo_url" not in target.__dict__:
         target.__dict__["logo_url"] = None
     if "telefono_whatsapp" not in target.__dict__:
         target.__dict__["telefono_whatsapp"] = None
+    if "es_prospecto" not in target.__dict__:
+        target.__dict__["es_prospecto"] = False
+    if "contacto_nombre" not in target.__dict__:
+        target.__dict__["contacto_nombre"] = None
+    if "contacto_telefono" not in target.__dict__:
+        target.__dict__["contacto_telefono"] = None
+    if "contacto_email" not in target.__dict__:
+        target.__dict__["contacto_email"] = None
 
 
 @event.listens_for(UsuarioTienda, "load")
@@ -533,6 +569,13 @@ def _receive_receta_load_fallback(target, context):
         target.__dict__["catacion_sca"] = None
     if "puntuacion_sca_total" not in target.__dict__:
         target.__dict__["puntuacion_sca_total"] = None
+
+
+@event.listens_for(Producto, "load")
+def _receive_producto_load_fallback(target, context):
+    """Asigna False por defecto si es_cafe_confirmado fue diferida en esquemas antiguos."""
+    if "es_cafe_confirmado" not in target.__dict__:
+        target.__dict__["es_cafe_confirmado"] = False
 
 
 MAX_PRECIO_POR_KILO = 99999999.99
@@ -1052,6 +1095,8 @@ class DatabaseManager:
                         productos_encontrados_ids.add(producto_existente.id)
                         cambios = {'id': producto_existente.id}
                         for campo in ('tienda_id', 'nombre', 'url_detalle', 'imagen', 'descripcion', 'activo', 'categoria'):
+                            if campo == 'categoria' and getattr(producto_existente, 'es_cafe_confirmado', False) and row[campo] == 'no_cafe':
+                                continue
                             if getattr(producto_existente, campo, None) != row[campo]:
                                 cambios[campo] = row[campo]
                         for campo in (

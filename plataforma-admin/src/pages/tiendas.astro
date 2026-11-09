@@ -34,6 +34,15 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
         </button>
         <button
           type="button"
+          id="btn-open-create-prospect"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-purple-300 bg-purple-50 px-3.5 py-2 text-xs font-bold text-purple-900 shadow-xs hover:bg-purple-100 hover:border-purple-400 transition focus:outline-none focus:ring-2 focus:ring-purple-500"
+          title="Registrar tostaduría potencial sin catálogo ni ecommerce para seguimiento comercial"
+        >
+          <span>🎯</span>
+          <span>Registrar Prospecto</span>
+        </button>
+        <button
+          type="button"
           id="btn-sync-unsynced"
           class="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 disabled:pointer-events-none"
           title="Sincronizar tiendas sin catálogo o pendientes"
@@ -104,7 +113,21 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
             title="Limpiar búsqueda"
           >✕</button>
         </div>
-        <div class="flex items-center justify-between sm:justify-end gap-3 text-xs text-stone-600">
+        <div class="flex flex-wrap items-center justify-between sm:justify-end gap-3 text-xs text-stone-600">
+          <div class="inline-flex rounded-xl bg-stone-200/80 p-0.5 text-xs font-semibold">
+            <button type="button" class="store-type-filter-btn rounded-lg bg-white px-2.5 py-1 text-stone-900 shadow-2xs font-bold" data-type="all">
+              Todas
+            </button>
+            <button type="button" class="store-type-filter-btn rounded-lg px-2.5 py-1 text-stone-600 hover:text-stone-900" data-type="ecommerce">
+              Con Ecommerce
+            </button>
+            <button type="button" class="store-type-filter-btn rounded-lg px-2.5 py-1 text-stone-600 hover:text-stone-900" data-type="prospect">
+              🎯 Prospectos
+            </button>
+            <button type="button" class="store-type-filter-btn rounded-lg px-2.5 py-1 text-stone-600 hover:text-stone-900" data-type="inactive">
+              Inactivas
+            </button>
+          </div>
           <span id="stores-search-count" class="font-semibold text-stone-700">Mostrando 0 tiendas</span>
         </div>
       </div>
@@ -139,6 +162,97 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
     class="fixed inset-0 z-40 bg-stone-950/40 backdrop-blur-xs transition-opacity duration-300 opacity-0 pointer-events-none"
     aria-hidden="true"
   ></div>
+
+  <!-- SLIDE-OVER DRAWER DE BITÁCORA Y SEGUIMIENTO COMERCIAL -->
+  <div
+    id="store-comments-backdrop"
+    class="fixed inset-0 z-40 bg-stone-900/40 backdrop-blur-xs transition-opacity duration-300 opacity-0 pointer-events-none"
+    aria-hidden="true"
+  ></div>
+
+  <aside
+    id="store-comments-drawer"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="comments-drawer-title"
+    class="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full border-l border-stone-200"
+  >
+    <!-- CABECERA DE LA BITÁCORA -->
+    <div class="flex items-center justify-between p-5 border-b border-stone-200/80 bg-[#FAF8F2]/90 backdrop-blur-md">
+      <div class="flex items-center gap-3">
+        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-100 text-purple-800 text-base font-bold shadow-2xs">
+          💬
+        </span>
+        <div>
+          <h2 id="comments-drawer-title" class="text-base font-bold text-stone-900 tracking-tight">
+            Bitácora de Seguimiento
+          </h2>
+          <p id="comments-drawer-subtitle" class="text-xs text-stone-500">
+            Registro comercial confidencial del superadministrador
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        id="btn-close-comments-drawer"
+        class="h-8 w-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/60 transition text-lg font-bold"
+        aria-label="Cerrar bitácora"
+      >
+        ✕
+      </button>
+    </div>
+
+    <!-- CUERPO DE LA BITÁCORA -->
+    <div class="flex-1 overflow-y-auto p-5 space-y-5">
+      <!-- FORMULARIO NUEVO COMENTARIO -->
+      <form id="form-new-comment" class="rounded-2xl border border-purple-200 bg-purple-50/50 p-4 space-y-3 shadow-2xs">
+        <span class="text-xs font-bold text-purple-950 block">➕ Registrar Nueva Nota o Llamada</span>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-bold text-stone-600 uppercase">Tipo de Interacción</label>
+            <select id="comment-type" class="mt-1 block w-full rounded-lg border border-stone-300 px-2.5 py-1.5 text-xs text-stone-800 bg-white focus:outline-none">
+              <option value="llamada">📞 Llamada telefónica</option>
+              <option value="whatsapp">💬 WhatsApp / Chat</option>
+              <option value="reunion">🤝 Reunión / Visita</option>
+              <option value="email">📧 Correo electrónico</option>
+              <option value="nota">📝 Nota interna</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-stone-600 uppercase">Autor</label>
+            <input type="text" id="comment-author" value="Superadmin" class="mt-1 block w-full rounded-lg border border-stone-300 px-2.5 py-1.5 text-xs text-stone-800 bg-white focus:outline-none" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-stone-600 uppercase">Detalle de la conversación o acuerdo *</label>
+          <textarea
+            id="comment-text"
+            rows="3"
+            required
+            placeholder="Ej. Conversé con el dueño, pidió llamarlo el próximo mes porque están remodelando el local..."
+            class="mt-1 block w-full rounded-lg border border-stone-300 p-2.5 text-xs text-stone-900 bg-white focus:border-purple-600 focus:outline-none"
+          ></textarea>
+        </div>
+        <div class="flex justify-end">
+          <button type="submit" id="btn-save-comment" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold shadow-2xs transition">
+            <span>💾</span>
+            <span>Guardar en Bitácora</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- HISTORIAL / TIMELINE -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between border-b border-stone-200 pb-2">
+          <span class="text-xs font-bold text-stone-800">Historial de Conversaciones</span>
+          <span id="comments-count-badge" class="text-[11px] font-semibold text-stone-500">0 notas</span>
+        </div>
+        <div id="comments-timeline-list" class="space-y-3">
+          <div class="py-8 text-center text-xs text-stone-400">Cargando notas...</div>
+        </div>
+      </div>
+    </div>
+  </aside>
 
   <aside
     id="store-slide-drawer"
@@ -185,49 +299,51 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
     </div>
 
     <!-- CUERPO SCROLLEABLE DEL FORMULARIO -->
-    <form id="form-store" class="flex-1 overflow-y-auto p-6 space-y-6">
+        <form id="form-store" class="flex-1 overflow-y-auto p-6 space-y-6">
       <input type="hidden" id="store-id" value="" />
+      <input type="hidden" id="store-is-prospect" value="false" />
 
-      <!-- Sección 1: Datos Principales -->
-      <div class="space-y-4">
-        <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">1. Datos Principales del Ecommerce</span>
+      <!-- Selector de Tipo de Tienda (Ecommerce vs Prospecto) -->
+      <div class="rounded-xl border border-stone-200 bg-stone-50 p-3">
+        <label class="block text-[11px] font-bold text-stone-700 mb-2 uppercase tracking-wider">Tipo de Registro</label>
+        <div class="grid grid-cols-2 gap-2">
+          <label id="opt-reg-ecommerce" class="flex items-center gap-2 p-2.5 rounded-lg border-2 border-emerald-500 bg-white cursor-pointer shadow-2xs transition">
+            <input type="radio" name="store-reg-mode" value="ecommerce" checked class="text-emerald-600 focus:ring-emerald-500" />
+            <div>
+              <span class="block text-xs font-bold text-stone-900">🏪 Con Ecommerce</span>
+              <span class="block text-[10px] text-stone-500">Catálogo para comparador</span>
+            </div>
+          </label>
+          <label id="opt-reg-prospect" class="flex items-center gap-2 p-2.5 rounded-lg border border-stone-200 bg-white cursor-pointer hover:border-purple-300 transition">
+            <input type="radio" name="store-reg-mode" value="prospect" class="text-purple-600 focus:ring-purple-500" />
+            <div>
+              <span class="block text-xs font-bold text-stone-900">🎯 Prospecto Comercial</span>
+              <span class="block text-[10px] text-stone-500">Inactiva, sin catálogo</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Sección 1: Catálogo y Driver de Ingesta -->
+      <div id="section-catalog-driver" class="space-y-4">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">1. Catálogo y Driver de Scraping</span>
         
         <div>
-          <label for="store-name" class="block text-xs font-bold text-stone-700">Nombre de la Tienda *</label>
-          <input
-            type="text"
-            id="store-name"
-            required
-            placeholder="Ej. Tienda Singular"
+          <label for="store-platform" class="block text-xs font-bold text-stone-700">Driver / Plataforma *</label>
+          <select
+            id="store-platform"
             class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-          />
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label for="store-platform" class="block text-xs font-bold text-stone-700">Plataforma *</label>
-            <select
-              id="store-platform"
-              class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-            >
-              <option value="woocommerce">WooCommerce</option>
-              <option value="shopify">Shopify</option>
-              <option value="jumpseller">Jumpseller</option>
-              <option value="prestashop">PrestaShop</option>
-              <option value="odoo">Odoo eCommerce</option>
-              <option value="sumup">SumUp Storefront</option>
-              <option value="auto">Detección Automática</option>
-              <option value="desconocida">Otra / Personalizada</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-stone-700">Favicon / Logo</label>
-            <div class="mt-1.5 flex items-center gap-2 p-1.5 rounded-xl border border-stone-200 bg-stone-50">
-              <img id="store-preview-favicon" src="" alt="Favicon" class="h-6 w-6 rounded-md object-contain bg-white border border-stone-200 p-0.5 hidden shrink-0" />
-              <span id="store-preview-favicon-empty" class="text-xs text-stone-400">🤖 Se resuelve automáticamente al sincronizar</span>
-            </div>
-          </div>
+          >
+            <option value="woocommerce">WooCommerce</option>
+            <option value="shopify">Shopify</option>
+            <option value="jumpseller">Jumpseller</option>
+            <option value="prestashop">PrestaShop</option>
+            <option value="odoo">Odoo eCommerce</option>
+            <option value="sumup">SumUp Storefront</option>
+            <option value="auto">Detección Automática</option>
+            <option value="desconocida">Otra / Personalizada</option>
+          </select>
+          <p class="mt-1 text-[10px] text-stone-400">Selecciona el motor de ecommerce que utiliza la tienda.</p>
         </div>
 
         <div>
@@ -248,26 +364,83 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           </div>
           <input type="hidden" id="store-url" />
         </div>
+      </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label for="store-address" class="block text-xs font-bold text-stone-700">Dirección Principal</label>
-            <input
-              type="text"
-              id="store-address"
-              placeholder="Ej. Av. Providencia 1234"
-              class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-            />
+      <!-- Sección 2: Validación y Pruebas en Vivo -->
+      <div id="section-test-driver" class="space-y-3 pt-3 border-t border-stone-200">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">2. Probar Driver en Vivo</span>
+          <span class="text-[11px] text-stone-400">Verifica la conexión antes de guardar</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            id="btn-test-catalog"
+            class="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <span>🔍</span>
+            <span>Probar Driver (1er Producto)</span>
+          </button>
+        </div>
+
+        <!-- Resultado de prueba -->
+        <div id="catalog-test-result" class="hidden"></div>
+      </div>
+
+      <!-- Sección 3: Datos de la Tienda y Acceso -->
+      <div class="space-y-4 pt-3 border-t border-stone-200">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">3. Datos de la Tienda y Acceso</span>
+        
+        <div>
+          <label for="store-name" class="block text-xs font-bold text-stone-700">Nombre de la Tienda *</label>
+          <input
+            type="text"
+            id="store-name"
+            required
+            placeholder="Ej. Tienda Singular"
+            class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+          />
+        </div>
+
+        <!-- Datos de Contacto Comercial (Especialmente para Prospectos) -->
+        <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-3 space-y-3">
+          <span class="text-[11px] font-bold text-stone-600 uppercase tracking-wider block">Contacto Comercial</span>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div>
+              <label for="store-contact-name" class="block text-[11px] font-bold text-stone-700">Persona de Contacto</label>
+              <input
+                type="text"
+                id="store-contact-name"
+                placeholder="Ej. Rodrigo Silva"
+                class="mt-1 block w-full rounded-xl border border-stone-300 px-3 py-1.5 text-xs text-stone-900 focus:border-purple-600 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label for="store-contact-phone" class="block text-[11px] font-bold text-stone-700">Teléfono / WhatsApp</label>
+              <input
+                type="text"
+                id="store-contact-phone"
+                placeholder="+56 9 1234 5678"
+                class="mt-1 block w-full rounded-xl border border-stone-300 px-3 py-1.5 text-xs text-stone-900 focus:border-purple-600 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label for="store-contact-email" class="block text-[11px] font-bold text-stone-700">Email de Contacto</label>
+              <input
+                type="email"
+                id="store-contact-email"
+                placeholder="contacto@tostaduria.cl"
+                class="mt-1 block w-full rounded-xl border border-stone-300 px-3 py-1.5 text-xs text-stone-900 focus:border-purple-600 focus:outline-none"
+              />
+            </div>
           </div>
+        </div>
 
-          <div>
-            <label for="store-comuna" class="block text-xs font-bold text-stone-700">Comuna Principal</label>
-            <input
-              type="text"
-              id="store-comuna"
-              placeholder="Ej. Providencia"
-              class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-            />
+        <div>
+          <label class="block text-xs font-bold text-stone-700">Favicon / Logo</label>
+          <div class="mt-1.5 flex items-center gap-2 p-1.5 rounded-xl border border-stone-200 bg-stone-50">
+            <img id="store-preview-favicon" src="" alt="Favicon" class="h-6 w-6 rounded-md object-contain bg-white border border-stone-200 p-0.5 hidden shrink-0" />
+            <span id="store-preview-favicon-empty" class="text-xs text-stone-400">🤖 Se resuelve automáticamente al sincronizar</span>
           </div>
         </div>
 
@@ -310,48 +483,11 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           </div>
         </div>
 
-        <div class="pt-1">
+        <div class="flex flex-wrap items-center gap-4 pt-1">
           <label class="inline-flex items-center gap-2 cursor-pointer">
             <input type="checkbox" id="store-active" checked class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
-            <span class="text-xs font-semibold text-stone-700">Tienda Activa en Scraping y Catálogo</span>
+            <span class="text-xs font-semibold text-stone-700">Tienda Activa en Scraping</span>
           </label>
-        </div>
-      </div>
-
-      <!-- Sección 2: Sucursales Físicas -->
-      <div class="space-y-3 pt-3 border-t border-stone-200">
-        <div class="flex items-center justify-between">
-          <div>
-            <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">2. Sucursales Físicas</span>
-            <p class="text-[11px] text-stone-500">Locales para cálculo de cercanía geográfica ($0 geocoding).</p>
-          </div>
-          <button
-            type="button"
-            id="btn-add-branch"
-            class="inline-flex items-center gap-1 rounded-lg bg-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-800 hover:bg-stone-300 transition"
-          >
-            <span>+</span>
-            <span>Agregar Sucursal</span>
-          </button>
-        </div>
-
-        <div id="branches-list" class="space-y-2">
-          <!-- Inyectado por JS -->
-        </div>
-      </div>
-
-      <!-- Sección 3: Prueba de Catálogo en Vivo -->
-      <div class="space-y-3 pt-3 border-t border-stone-200">
-        <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">3. Validación y Pruebas</span>
-        <div class="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            id="btn-test-catalog"
-            class="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <span>🔍</span>
-            <span>Probar Driver (1er Producto)</span>
-          </button>
           <label class="inline-flex items-center gap-2 text-xs font-semibold text-stone-700 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -362,9 +498,54 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
             <span>Sincronizar tras guardar</span>
           </label>
         </div>
+      </div>
 
-        <!-- Resultado de prueba -->
-        <div id="catalog-test-result" class="hidden"></div>
+      <!-- Sección 4: Ubicación y Sucursales Físicas -->
+      <div class="space-y-4 pt-3 border-t border-stone-200">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">4. Ubicación y Sucursales Físicas</span>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="store-address" class="block text-xs font-bold text-stone-700">Dirección Principal</label>
+            <input
+              type="text"
+              id="store-address"
+              placeholder="Ej. Av. Providencia 1234"
+              class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+
+          <div>
+            <label for="store-comuna" class="block text-xs font-bold text-stone-700">Comuna Principal</label>
+            <input
+              type="text"
+              id="store-comuna"
+              placeholder="Ej. Providencia"
+              class="mt-1.5 block w-full rounded-xl border border-stone-300 px-3.5 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
+        </div>
+
+        <div class="space-y-3 pt-2">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold text-stone-700">Sucursales Físicas Secundarias</span>
+              <p class="text-[11px] text-stone-500">Locales para cálculo de cercanía geográfica ($0 geocoding).</p>
+            </div>
+            <button
+              type="button"
+              id="btn-add-branch"
+              class="inline-flex items-center gap-1 rounded-lg bg-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-800 hover:bg-stone-300 transition"
+            >
+              <span>+</span>
+              <span>Agregar Sucursal</span>
+            </button>
+          </div>
+
+          <div id="branches-list" class="space-y-2">
+            <!-- Inyectado por JS -->
+          </div>
+        </div>
       </div>
 
       <!-- Feedback de guardado y sincronización -->
@@ -724,6 +905,14 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
 
       btnOpenCreateStore?.addEventListener('click', () => {
         resetForm();
+        setStoreRegistrationMode('ecommerce');
+        openDrawer();
+      });
+
+      document.getElementById('btn-open-create-prospect')?.addEventListener('click', () => {
+        resetForm();
+        setStoreRegistrationMode('prospect');
+        document.getElementById('form-title').textContent = 'Registrar Prospecto (Cliente Potencial)';
         openDrawer();
       });
       btnCloseStoreDrawer?.addEventListener('click', closeDrawer);
@@ -762,6 +951,20 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
       const btnSyncAll = document.getElementById('btn-sync-all');
       const modalSyncResults = document.getElementById('modal-sync-results');
 
+      let currentStoreTypeFilter = 'all';
+
+      document.querySelectorAll('.store-type-filter-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.store-type-filter-btn').forEach((b) => {
+            b.className = b === btn
+              ? 'store-type-filter-btn rounded-lg bg-white px-2.5 py-1 text-stone-900 shadow-2xs font-bold'
+              : 'store-type-filter-btn rounded-lg px-2.5 py-1 text-stone-600 hover:text-stone-900';
+          });
+          currentStoreTypeFilter = btn.getAttribute('data-type') || 'all';
+          filterAndRenderStores();
+        });
+      });
+
       function filterAndRenderStores() {
         const term = (storeSearchInput?.value || '').toLowerCase().trim();
         if (btnClearStoreSearch) {
@@ -769,6 +972,10 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
         }
 
         const filtered = cachedStores.filter((s) => {
+          if (currentStoreTypeFilter === 'ecommerce' && (!s.activo || s.es_prospecto)) return false;
+          if (currentStoreTypeFilter === 'prospect' && !s.es_prospecto) return false;
+          if (currentStoreTypeFilter === 'inactive' && (s.activo || s.es_prospecto)) return false;
+
           if (!term) return true;
           const name = (s.nombre || '').toLowerCase();
           const plat = (s.plataforma || '').toLowerCase();
@@ -816,7 +1023,8 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
                 ${store.logo_url ? `<img src="${store.logo_url}" alt="${store.nombre}" class="h-6 w-6 rounded-md object-contain bg-stone-50 border border-stone-200 p-0.5 shrink-0" onerror="this.onerror=null; this.classList.add('hidden');" />` : ''}
                 <div>
                   <div class="font-bold text-stone-900">${store.nombre}</div>
-                  ${!store.activo ? '<span class="inline-block rounded-md bg-stone-200 text-stone-600 px-1.5 py-0.2 text-[10px] font-semibold">Inactiva</span>' : ''}
+                  ${store.es_prospecto ? '<span class="inline-block rounded-md bg-purple-100 text-purple-900 border border-purple-200 px-1.5 py-0.2 text-[10px] font-bold">🎯 Prospecto</span>' : (!store.activo ? '<span class="inline-block rounded-md bg-stone-200 text-stone-600 px-1.5 py-0.2 text-[10px] font-semibold">Inactiva</span>' : '')}
+                  ${store.contacto_nombre ? `<div class="text-[10px] text-purple-900 font-semibold mt-0.5">👤 ${store.contacto_nombre} ${store.contacto_telefono ? `(${store.contacto_telefono})` : ''}</div>` : ''}
                   ${store.email_administrador
                     ? `<div class="text-[11px] text-stone-500 flex flex-wrap items-center gap-1.5 mt-0.5" title="Usuario administrador asignado">
                         <span class="font-mono text-emerald-800 font-semibold truncate max-w-[170px]">👤 ${store.email_administrador}</span>
@@ -860,7 +1068,9 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
                 <span class="text-[9px] ${store.almacenamiento_porcentaje >= 90 ? 'text-rose-600 font-black' : (store.almacenamiento_porcentaje >= 75 ? 'text-amber-600 font-bold' : 'text-stone-400')}">(${store.almacenamiento_porcentaje || 0}%)</span>
               </div>
               <div class="mt-1">
-                ${store.es_pendiente_sincronizacion
+                ${store.es_prospecto
+                  ? `<span class="inline-flex items-center gap-1 rounded-full bg-purple-100 text-purple-900 border border-purple-200 px-2 py-0.5 text-[10px] font-bold" title="Prospecto comercial sin ecommerce configurado">🎯 Cliente Potencial</span>`
+                  : (store.es_pendiente_sincronizacion
                     ? (store.estado_sincronizacion === 'fallido'
                         ? `<span class="inline-flex items-center gap-1 rounded-full ${
                             store.codigo_error_sincronizacion === 'TIENDA_PROTEGIDA_PASSWORD'
@@ -884,11 +1094,24 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
                         : `<span class="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-900 px-2 py-0.5 text-[10px] font-bold" title="Sin sincronizar aún">⏳ Pendiente</span>`
                       )
                     : `<span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-900 px-2 py-0.5 text-[10px] font-bold" title="${store.ultima_sincronizacion ? 'Sincronizado: ' + store.ultima_sincronizacion : ''}">✅ Sincronizada</span>`
-                  }
+                  )}
               </div>
             </td>
             <td class="px-4 py-3 text-center whitespace-nowrap">
               <div class="inline-flex items-center justify-center gap-1.5">
+                <button
+                  type="button"
+                  class="btn-store-comments inline-flex items-center justify-center h-8 px-2 rounded-lg border border-purple-300 bg-purple-50 text-purple-800 hover:bg-purple-100 hover:border-purple-400 transition shadow-2xs cursor-pointer active:scale-95 gap-1"
+                  data-id="${store.id}"
+                  data-name="${store.nombre}"
+                  data-is-prospect="${Boolean(store.es_prospecto)}"
+                  title="Bitácora Comercial: Ver y registrar notas de llamadas, acuerdos o seguimiento con ${store.nombre}"
+                  aria-label="Bitácora de ${store.nombre}"
+                >
+                  <span class="text-xs">💬</span>
+                  ${(store.total_comentarios || 0) > 0 ? `<span class="text-[10px] font-bold bg-purple-200 text-purple-900 rounded-full px-1.5">${store.total_comentarios}</span>` : ''}
+                </button>
+                ${!store.es_prospecto ? `
                 <button
                   type="button"
                   class="btn-sync-single-store inline-flex items-center justify-center h-8 w-8 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 hover:border-emerald-400 transition shadow-2xs cursor-pointer active:scale-95"
@@ -899,7 +1122,7 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
                   aria-label="Sincronizar catálogo de ${store.nombre}"
                 >
                   <span class="text-sm">🔄</span>
-                </button>
+                </button>` : ''}
                 <a
                   href="/plataforma/moderacion?tienda=${encodeURIComponent(store.nombre)}"
                   class="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:border-amber-400 transition shadow-2xs cursor-pointer active:scale-95"
@@ -996,6 +1219,16 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
               btn.disabled = false;
               btn.setAttribute('title', originalTitle);
             }
+          });
+        });
+
+        // Enlazar botones de bitácora y seguimiento comercial
+        document.querySelectorAll('.btn-store-comments').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name') || 'esta tostaduría';
+            const isProspect = btn.getAttribute('data-is-prospect') === 'true';
+            openCommentsDrawer(id, name, isProspect);
           });
         });
 
@@ -1132,10 +1365,15 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
         if (gotoModBtn) {
           if (detailsList && detailsList.length === 1 && (detailsList[0].nombre || detailsList[0].tienda_nombre)) {
             const sName = detailsList[0].nombre || detailsList[0].tienda_nombre;
-            gotoModBtn.href = `/plataforma/moderacion?tienda=${encodeURIComponent(sName)}`;
+            const hasSuspected = (detailsList[0].productos_sospechosos || 0) > 0;
+            gotoModBtn.href = `/plataforma/moderacion?tienda=${encodeURIComponent(sName)}${hasSuspected ? '&mode=suspected' : ''}`;
+            gotoModBtn.innerHTML = hasSuspected
+              ? `<span>🛡️ Moderar Sospechosos (${detailsList[0].productos_sospechosos})</span><span>→</span>`
+              : `<span>Ir a moderación de catálogo</span><span>→</span>`;
             gotoModBtn.classList.remove('hidden');
           } else {
             gotoModBtn.href = '/plataforma/moderacion';
+            gotoModBtn.innerHTML = `<span>Ir a moderación de catálogo</span><span>→</span>`;
             gotoModBtn.classList.remove('hidden');
           }
         }
@@ -1226,7 +1464,30 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
                 <span class="text-emerald-700">🌱 ${data.productos_nuevos || 0} nuevos</span>
                 <span class="text-sky-700">🔄 ${data.productos_actualizados || 0} actualizados</span>
                 <span class="text-stone-500">📦 ${data.productos_encontrados ?? data.total_productos ?? 0} encontrados</span>
+                ${(data.productos_sospechosos || 0) > 0 ? `<span class="text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full font-bold">🛡️ ${data.productos_sospechosos} sospechoso${data.productos_sospechosos > 1 ? 's' : ''}</span>` : ''}
               </div>
+              ${(data.productos_sospechosos || 0) > 0 ? `
+                <div class="mt-3 p-3 rounded-xl border border-amber-300 bg-amber-50/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg shrink-0">🛡️</span>
+                    <div>
+                      <p class="text-xs font-bold text-amber-900">
+                        Se detectaron ${data.productos_sospechosos} producto${data.productos_sospechosos > 1 ? 's' : ''} con sospecha "No Café"
+                      </p>
+                      <p class="text-[11px] text-amber-700">
+                        Pueden ser accesorios, tazas o cafés con nombres atípicos que requieren tu confirmación.
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href="/plataforma/moderacion?tienda=${encodeURIComponent(name)}&mode=suspected"
+                    class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shrink-0 shadow-2xs"
+                  >
+                    <span>Moderar Catálogo</span>
+                    <span>→</span>
+                  </a>
+                </div>
+              ` : ''}
             </div>
           `;
 
@@ -1380,10 +1641,65 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
         }
       }
 
+      function setStoreRegistrationMode(mode) {
+        const isProspect = mode === 'prospect';
+        const radioEcommerce = document.querySelector('input[name="store-reg-mode"][value="ecommerce"]');
+        const radioProspect = document.querySelector('input[name="store-reg-mode"][value="prospect"]');
+        const optEcommerce = document.getElementById('opt-reg-ecommerce');
+        const optProspect = document.getElementById('opt-reg-prospect');
+        const secCatalog = document.getElementById('section-catalog-driver');
+        const secTest = document.getElementById('section-test-driver');
+        const storeActive = document.getElementById('store-active');
+        const storeSyncImmediate = document.getElementById('store-sync-immediate');
+
+        if (isProspect) {
+          if (radioProspect) radioProspect.checked = true;
+          optProspect?.classList.add('border-purple-600', 'border-2');
+          optProspect?.classList.remove('border-stone-200');
+          optEcommerce?.classList.remove('border-emerald-500', 'border-2');
+          optEcommerce?.classList.add('border-stone-200');
+          secCatalog?.classList.add('hidden');
+          secTest?.classList.add('hidden');
+          if (storeActive) {
+            storeActive.checked = false;
+            storeActive.disabled = true;
+          }
+          if (storeSyncImmediate) {
+            storeSyncImmediate.checked = false;
+            storeSyncImmediate.disabled = true;
+          }
+        } else {
+          if (radioEcommerce) radioEcommerce.checked = true;
+          optEcommerce?.classList.add('border-emerald-500', 'border-2');
+          optEcommerce?.classList.remove('border-stone-200');
+          optProspect?.classList.remove('border-purple-600', 'border-2');
+          optProspect?.classList.add('border-stone-200');
+          secCatalog?.classList.remove('hidden');
+          secTest?.classList.remove('hidden');
+          if (storeActive) {
+            storeActive.disabled = false;
+          }
+          if (storeSyncImmediate) {
+            storeSyncImmediate.disabled = false;
+          }
+        }
+      }
+
+      document.querySelectorAll('input[name="store-reg-mode"]').forEach((radio) => {
+        radio.addEventListener('change', (e) => {
+          setStoreRegistrationMode(e.target.value);
+        });
+      });
+
       function populateForm(store) {
-        document.getElementById('form-title').textContent = `Editar Tienda: ${store.nombre}`;
+        const isProspect = Boolean(store.es_prospecto);
+        document.getElementById('form-title').textContent = isProspect ? `Editar Prospecto: ${store.nombre}` : `Editar Tienda: ${store.nombre}`;
         document.getElementById('store-id').value = store.id || '';
         document.getElementById('store-name').value = store.nombre || '';
+        document.getElementById('store-contact-name').value = store.contacto_nombre || '';
+        document.getElementById('store-contact-phone').value = store.contacto_telefono || '';
+        document.getElementById('store-contact-email').value = store.contacto_email || '';
+        setStoreRegistrationMode(isProspect ? 'prospect' : 'ecommerce');
         document.getElementById('store-platform').value = store.plataforma || 'woocommerce';
         document.getElementById('store-url').value = store.url_catalogo || store.url_base || '';
         document.getElementById('store-address').value = store.direccion || '';
@@ -1432,6 +1748,13 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
         document.getElementById('form-title').textContent = 'Registrar Nueva Tienda';
         document.getElementById('store-id').value = '';
         document.getElementById('store-name').value = '';
+        const cName = document.getElementById('store-contact-name');
+        const cPhone = document.getElementById('store-contact-phone');
+        const cEmail = document.getElementById('store-contact-email');
+        if (cName) cName.value = '';
+        if (cPhone) cPhone.value = '';
+        if (cEmail) cEmail.value = '';
+        setStoreRegistrationMode('ecommerce');
         document.getElementById('store-platform').value = 'woocommerce';
         document.getElementById('store-url').value = '';
         document.getElementById('store-address').value = '';
@@ -1637,12 +1960,17 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           }
         });
 
-        if (catalogos.length === 0) {
+        const isProspect = document.querySelector('input[name="store-reg-mode"]:checked')?.value === 'prospect';
+        const contactName = document.getElementById('store-contact-name')?.value?.trim();
+        const contactPhone = document.getElementById('store-contact-phone')?.value?.trim();
+        const contactEmail = document.getElementById('store-contact-email')?.value?.trim();
+
+        if (!isProspect && catalogos.length === 0) {
           setStoreFormFeedback('error', 'Falta información requerida', 'Por favor ingresa al menos una URL de catálogo.');
           return;
         }
 
-        const primaryUrl = catalogos[0].url_catalogo;
+        const primaryUrl = catalogos.length > 0 ? catalogos[0].url_catalogo : null;
 
         const branches = [];
         document.querySelectorAll('.branch-row').forEach((row) => {
@@ -1660,13 +1988,17 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
         const payload = {
           nombre: name,
           url_catalogo: primaryUrl,
-          catalogos: catalogos,
+          catalogos: isProspect ? [] : catalogos,
           plataforma: platform,
           direccion: address || null,
           comuna: comuna || null,
           email_administrador: adminEmail || null,
           limite_almacenamiento_mb: isNaN(storageLimit) ? 250 : storageLimit,
-          activo: active,
+          activo: isProspect ? false : active,
+          es_prospecto: isProspect,
+          contacto_nombre: contactName || null,
+          contacto_telefono: contactPhone || null,
+          contacto_email: contactEmail || null,
           sucursales: branches,
         };
 
@@ -1697,7 +2029,7 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           }
           const savedStore = await res.json();
 
-          if (syncImmediate && savedStore && savedStore.id) {
+          if (!isProspect && syncImmediate && savedStore && savedStore.id) {
             setStoreFormFeedback('loading', '¡Tienda guardada con éxito!', 'Iniciando sincronización inmediata del catálogo con el driver...');
             if (submitBtn) {
               submitBtn.innerHTML = '<span>🔄</span><span>Sincronizando...</span>';
@@ -1725,6 +2057,214 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           }
         }
       });
+
+
+      // --- Bitácora y Seguimiento Comercial (Superadministrador) ---
+      let activeCommentsStoreId = null;
+      let activeCommentsStoreName = '';
+      const commentsDrawer = document.getElementById('store-comments-drawer');
+      const commentsBackdrop = document.getElementById('store-comments-backdrop');
+      const btnCloseCommentsDrawer = document.getElementById('btn-close-comments-drawer');
+      const formNewComment = document.getElementById('form-new-comment');
+      const commentsTimelineList = document.getElementById('comments-timeline-list');
+      const commentsDrawerTitle = document.getElementById('comments-drawer-title');
+      const commentsDrawerSubtitle = document.getElementById('comments-drawer-subtitle');
+      const commentsCountBadge = document.getElementById('comments-count-badge');
+
+      function openCommentsDrawer(storeId, storeName, isProspect) {
+        activeCommentsStoreId = storeId;
+        activeCommentsStoreName = storeName;
+        if (commentsDrawerTitle) commentsDrawerTitle.textContent = `Bitácora: ${storeName}`;
+        if (commentsDrawerSubtitle) {
+          commentsDrawerSubtitle.textContent = isProspect
+            ? '🎯 Prospecto Comercial • Registro confidencial de llamadas y acuerdos'
+            : '🏪 Tienda • Registro confidencial de llamadas y acuerdos';
+        }
+        if (commentsBackdrop) {
+          commentsBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+          commentsBackdrop.classList.add('opacity-100');
+        }
+        if (commentsDrawer) {
+          commentsDrawer.classList.remove('translate-x-full');
+        }
+        document.body.classList.add('overflow-hidden');
+        const textEl = document.getElementById('comment-text');
+        if (textEl) textEl.value = '';
+        loadStoreComments(storeId);
+      }
+
+      function closeCommentsDrawer() {
+        if (commentsDrawer) {
+          commentsDrawer.classList.add('translate-x-full');
+        }
+        if (commentsBackdrop) {
+          commentsBackdrop.classList.remove('opacity-100');
+          commentsBackdrop.classList.add('opacity-0', 'pointer-events-none');
+        }
+        document.body.classList.remove('overflow-hidden');
+        activeCommentsStoreId = null;
+      }
+
+      btnCloseCommentsDrawer?.addEventListener('click', closeCommentsDrawer);
+      commentsBackdrop?.addEventListener('click', closeCommentsDrawer);
+
+      const contactTypeMeta = {
+        llamada: { label: 'Llamada', icon: '📞', badge: 'bg-sky-100 text-sky-800 border-sky-200' },
+        whatsapp: { label: 'WhatsApp', icon: '💬', badge: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+        reunion: { label: 'Reunión', icon: '🤝', badge: 'bg-purple-100 text-purple-800 border-purple-200' },
+        email: { label: 'Correo', icon: '📧', badge: 'bg-amber-100 text-amber-800 border-amber-200' },
+        nota: { label: 'Nota', icon: '📝', badge: 'bg-stone-100 text-stone-800 border-stone-200' },
+      };
+
+      async function loadStoreComments(storeId) {
+        if (!commentsTimelineList) return;
+        commentsTimelineList.innerHTML = '<div class="py-6 text-center text-xs text-stone-400 animate-pulse">Cargando notas de la bitácora...</div>';
+
+        try {
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/stores/${storeId}/comments`);
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `Error HTTP ${res.status}`);
+          }
+          const data = await res.json();
+          const items = data.comentarios || [];
+
+          if (commentsCountBadge) {
+            commentsCountBadge.textContent = `${items.length} ${items.length === 1 ? 'nota' : 'notas'}`;
+          }
+
+          if (items.length === 0) {
+            commentsTimelineList.innerHTML = `
+              <div class="py-10 text-center rounded-2xl border border-dashed border-stone-300 p-6">
+                <span class="text-3xl block mb-2">📝</span>
+                <p class="text-xs font-bold text-stone-700">Sin notas registradas aún</p>
+                <p class="text-[11px] text-stone-400 mt-1 max-w-xs mx-auto">
+                  Registra conversaciones con los dueños, llamadas futuras, objeciones o acuerdos comerciales aquí.
+                </p>
+              </div>
+            `;
+            return;
+          }
+
+          commentsTimelineList.innerHTML = items.map((c) => {
+            const meta = contactTypeMeta[c.tipo_contacto] || contactTypeMeta.nota;
+            const dateStr = new Date(c.fecha_creacion).toLocaleString('es-CL', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+
+            return `
+              <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-2xs space-y-2 group hover:border-purple-200 transition">
+                <div class="flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold ${meta.badge}">
+                      <span>${meta.icon}</span>
+                      <span>${meta.label}</span>
+                    </span>
+                    <span class="text-stone-400 text-[11px]">${dateStr}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-semibold text-stone-500">Por ${c.autor || 'Admin'}</span>
+                    <button
+                      type="button"
+                      class="btn-delete-comment text-stone-300 hover:text-rose-600 transition p-1 text-xs"
+                      data-id="${c.id}"
+                      title="Eliminar esta nota"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+                <p class="text-xs text-stone-800 whitespace-pre-line leading-relaxed font-medium">
+                  ${c.comentario}
+                </p>
+              </div>
+            `;
+          }).join('');
+
+          // Wire up delete buttons
+          commentsTimelineList.querySelectorAll('.btn-delete-comment').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+              const commentId = btn.getAttribute('data-id');
+              if (!confirm('¿Deseas eliminar esta nota de la bitácora?')) return;
+
+              try {
+                const delRes = await fetchWithEnv(`${API_BASE}/api/v1/admin/stores/${storeId}/comments/${commentId}`, {
+                  method: 'DELETE',
+                });
+                if (!delRes.ok) {
+                  throw new Error('No se pudo eliminar el comentario');
+                }
+                if (window.plataformaNotify) {
+                  window.plataformaNotify('Nota eliminada de la bitácora.', 'success');
+                }
+                loadStoreComments(storeId);
+                loadStores();
+              } catch (err) {
+                alert(`Error al eliminar: ${err.message}`);
+              }
+            });
+          });
+
+        } catch (err) {
+          commentsTimelineList.innerHTML = `
+            <div class="p-4 rounded-xl bg-rose-50 text-xs text-rose-800 border border-rose-200">
+              Error al cargar notas: ${err.message}
+            </div>
+          `;
+        }
+      }
+
+      formNewComment?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!activeCommentsStoreId) return;
+
+        const textEl = document.getElementById('comment-text');
+        const typeEl = document.getElementById('comment-type');
+        const authorEl = document.getElementById('comment-author');
+        const submitBtn = document.getElementById('btn-save-comment');
+
+        const commentText = textEl?.value?.trim();
+        if (!commentText) return;
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<span>⏳</span><span>Guardando...</span>';
+        }
+
+        try {
+          const res = await fetchWithEnv(`${API_BASE}/api/v1/admin/stores/${activeCommentsStoreId}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              comentario: commentText,
+              tipo_contacto: typeEl?.value || 'nota',
+              autor: authorEl?.value?.trim() || 'Superadmin',
+            }),
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `Error HTTP ${res.status}`);
+          }
+          if (textEl) textEl.value = '';
+          if (window.plataformaNotify) {
+            window.plataformaNotify('Nota registrada con éxito en la bitácora.', 'success');
+          }
+          loadStoreComments(activeCommentsStoreId);
+          loadStores();
+        } catch (err) {
+          alert(`Error al guardar nota: ${err.message}`);
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>💾</span><span>Guardar en Bitácora</span>';
+          }
+        }
+      });
+
 
       // --- Modal de Exportación ---
       let exportData = null;
