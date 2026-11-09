@@ -1,0 +1,163 @@
+---
+export interface BrandProps {
+  id: number;
+  nombre: string;
+  slug?: string;
+  sitio_oficial?: string;
+  url_web?: string;
+  logo_url?: string;
+  comuna?: string;
+  direccion?: string;
+  cantidad_productos: number;
+  plataforma?: string;
+  latitud?: number;
+  longitud?: number;
+  distancia_km?: number;
+  sucursales?: Array<{
+    id: number;
+    nombre: string;
+    direccion?: string;
+    comuna?: string;
+  }>;
+  rating?: number;
+  total_resenas?: number;
+}
+
+interface Props {
+  brand: BrandProps;
+}
+
+const { brand } = Astro.props;
+const slug = brand.slug || String(brand.id);
+const catalogUrl = `/catalogo?tienda=${encodeURIComponent(brand.nombre)}`;
+const profileUrl = `/tiendas/${slug}`;
+const officialSite = brand.sitio_oficial || brand.url_web || null;
+const totalSucursales = brand.sucursales ? brand.sucursales.length : 0;
+---
+
+<article 
+  class="brand-card group bg-white rounded-3xl border border-stone-200/90 p-5 sm:p-6 shadow-2xs hover:border-emerald-300 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+  data-name={brand.nombre.toLowerCase()}
+  data-count={brand.cantidad_productos}
+  data-comuna={(brand.comuna || '').toLowerCase()}
+  data-brand-id={brand.id}
+  data-brand-name={brand.nombre}
+>
+  <div class="space-y-4">
+    <!-- CABECERA: AVATAR / LOGO + BADGE CONTEO -->
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-12 w-12 rounded-2xl bg-stone-50 border border-stone-200/80 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+          {brand.logo_url ? (
+            <img 
+              src={brand.logo_url} 
+              alt={`Logo oficial de ${brand.nombre}`} 
+              loading="lazy"
+              class="h-full w-full object-contain"
+              onerror="this.onerror=null; this.classList.add('hidden'); if (this.nextElementSibling) this.nextElementSibling.classList.remove('hidden');"
+            />
+          ) : null}
+          <span class={`text-lg ${brand.logo_url ? 'hidden' : ''}`} aria-hidden="true">
+            ☕
+          </span>
+        </div>
+
+        <div class="min-w-0">
+          <h2 class="text-base font-bold text-stone-900 group-hover:text-emerald-800 transition truncate leading-snug">
+            <a 
+              href={profileUrl}
+              class="focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 rounded-sm"
+              data-brand-select="true"
+              data-brand-name={brand.nombre}
+              data-brand-count={brand.cantidad_productos}
+            >
+              {brand.nombre}
+            </a>
+          </h2>
+          {brand.comuna && (
+            <p class="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
+              <span aria-hidden="true">📍</span>
+              <span>{brand.comuna}</span>
+            </p>
+          )}
+        </div>
+      </div>
+
+      <!-- BADGE PRODUCTOS -->
+      <span class="inline-flex items-center bg-emerald-50 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-200/70 shrink-0">
+        {brand.cantidad_productos} {brand.cantidad_productos === 1 ? 'café' : 'cafés'}
+      </span>
+    </div>
+
+    <!-- METADATOS FÍSICOS Y DE REPUTACIÓN -->
+    <div class="space-y-1.5 pt-1 text-xs text-stone-600">
+      {totalSucursales > 0 ? (
+        <p class="flex items-center gap-1.5 text-stone-700 font-medium">
+          <span class="text-stone-400">🏬</span>
+          <span>{totalSucursales} {totalSucursales === 1 ? 'sucursal física' : 'sucursales físicas'}</span>
+        </p>
+      ) : brand.direccion ? (
+        <p class="flex items-center gap-1.5 text-stone-600 truncate">
+          <span class="text-stone-400">🏠</span>
+          <span class="truncate">{brand.direccion}</span>
+        </p>
+      ) : null}
+
+      {brand.rating && (
+        <p class="flex items-center gap-1.5 text-amber-900 font-semibold">
+          <span class="text-amber-500">★</span>
+          <span>{brand.rating.toFixed(1)}</span>
+          {brand.total_resenas && (
+            <span class="text-stone-400 font-normal">({brand.total_resenas} reseñas)</span>
+          )}
+        </p>
+      )}
+
+      {brand.distancia_km !== undefined && brand.distancia_km !== null && (
+        <p class="text-[11px] font-bold text-emerald-800">
+          ~{brand.distancia_km} km de distancia
+        </p>
+      )}
+    </div>
+  </div>
+
+  <!-- ACCIONES: CATÁLOGO EN CAFESITIOS Y ENLACE EXTERNO -->
+  <div class="pt-4 mt-5 border-t border-stone-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+    <!-- ENLACE PRINCIPAL INTERACTIVO AL CATÁLOGO PREFILTRADO -->
+    <a 
+      href={catalogUrl}
+      class="inline-flex items-center justify-center gap-1.5 bg-stone-900 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-3.5 rounded-xl transition shadow-2xs text-center"
+      data-brand-select="true"
+      data-brand-name={brand.nombre}
+      data-brand-count={brand.cantidad_productos}
+    >
+      <span>Ver Cafés</span>
+      <span aria-hidden="true">→</span>
+    </a>
+
+    <div class="flex items-center justify-between sm:justify-end gap-3 text-xs">
+      <a 
+        href={profileUrl}
+        class="font-semibold text-stone-600 hover:text-stone-900 transition"
+      >
+        Perfil ℹ️
+      </a>
+
+      <!-- ENLACE SECUNDARIO Y DISCRETO A LA WEB OFICIAL -->
+      {officialSite && (
+        <a 
+          href={officialSite}
+          target="_blank" 
+          rel="noopener noreferrer"
+          data-brand-external-link="true"
+          data-brand-name={brand.nombre}
+          class="inline-flex items-center gap-1 text-stone-400 hover:text-emerald-800 transition font-medium"
+          title={`Visitar web oficial de ${brand.nombre}`}
+        >
+          <span>Web oficial</span>
+          <span aria-hidden="true">↗</span>
+        </a>
+      )}
+    </div>
+  </div>
+</article>

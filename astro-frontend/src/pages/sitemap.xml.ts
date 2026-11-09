@@ -49,6 +49,7 @@ export const GET: APIRoute = async () => {
   const http = new HttpClient();
 
   let products: RawProduct[] = [];
+  let brands: Array<{ id: number; slug?: string; nombre: string; logo_url?: string }> = [];
   let lastSyncDate = today;
 
   try {
@@ -71,8 +72,17 @@ export const GET: APIRoute = async () => {
     if (catalogRes?.data && Array.isArray(catalogRes.data)) {
       products = catalogRes.data.filter((p: any) => !p.oculto_catalogo);
     }
+
+    // 3. Obtener marcas activas para páginas canónicas /tiendas/[slug]
+    const storesRes = await http.get<{ items: Array<{ id: number; slug?: string; nombre: string; logo_url?: string }> }>('/api/v1/tiendas', {
+      params: { page_size: 100 }
+    }).catch(() => null);
+
+    if (storesRes?.items && Array.isArray(storesRes.items)) {
+      brands = storesRes.items;
+    }
   } catch (err) {
-    console.warn('[sitemap.xml] Error consultando API de productos para el sitemap:', err);
+    console.warn('[sitemap.xml] Error consultando API para el sitemap:', err);
   }
 
   // 3. Páginas públicas estáticas canónicas (respetando Feature Flags para SEO)
@@ -148,6 +158,23 @@ ${staticPages
     <priority>${page.priority}</priority>
   </url>`
   )
+  .join('\n')}
+${brands
+  .map((b) => {
+    const brandUrl = `${siteUrl}/tiendas/${b.slug || b.id}`;
+    const imageTag = b.logo_url
+      ? `\n    <image:image>
+      <image:loc>${escapeXml(b.logo_url)}</image:loc>
+      <image:title>${escapeXml(b.nombre || 'Tostaduría de café')}</image:title>
+    </image:image>`
+      : '';
+    return `  <url>
+    <loc>${escapeXml(brandUrl)}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>${imageTag}
+  </url>`;
+  })
   .join('\n')}
 ${products
   .map((product) => {

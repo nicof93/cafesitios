@@ -1,11 +1,11 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import math
 from urllib.parse import quote_plus
 from typing import Any, Dict, List, Literal, Optional
-from fastapi import APIRouter, Depends, Header, Query, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import distinct, func, not_, or_, literal, select, DateTime, String
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from api.dependencies import get_db_session
 from api.schemas import LatestStoreIncorporationResponse
@@ -77,6 +77,7 @@ class StoreSummaryItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: Optional[int] = None
     nombre: str
+    slug: Optional[str] = None
     telefono_whatsapp: Optional[str] = None
     url_base: Optional[str] = None
     url_catalogo: Optional[str] = None
@@ -84,6 +85,9 @@ class StoreSummaryItem(BaseModel):
     sitio_oficial: Optional[str] = None
     plataforma: Optional[str] = None
     direccion: Optional[str] = None
+    descripcion: Optional[str] = None
+    servicios: List[str] = []
+    carta_comida_url: Optional[str] = None
     cantidad_productos: int
     comuna: Optional[str] = None
     latitud: Optional[float] = None
@@ -92,6 +96,76 @@ class StoreSummaryItem(BaseModel):
     logo_url: Optional[str] = None
     fecha_creacion: Optional[datetime] = None
     sucursales: List[StoreBranchPublicItem] = []
+
+
+class StorePopularCoffeeItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    nombre: str
+    marca: str
+    formato_gramos: Optional[int] = 250
+    precio_clp: Optional[int] = 0
+    precio_por_kilo: Optional[float] = 0.0
+    en_oferta: bool = False
+    imagen_url: Optional[str] = None
+    url_origen: Optional[str] = None
+    origen: Optional[str] = None
+    tipo_tueste: Optional[str] = None
+
+
+class StoreNewsItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    titulo: str
+    descripcion: str
+    link_url: Optional[str] = None
+    imagen_url: Optional[str] = None
+    categoria_tipo: Optional[str] = None
+    fecha_creacion: datetime
+
+
+class StoreCatalogProductItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    nombre: str
+    marca: str
+    formato_gramos: Optional[int] = 250
+    precio_clp: Optional[int] = 0
+    precio_por_kilo: Optional[float] = 0.0
+    en_oferta: bool = False
+    imagen_url: Optional[str] = None
+    url_origen: Optional[str] = None
+    origen: Optional[str] = None
+    tipo_tueste: Optional[str] = None
+
+
+class StorePublicDetailResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    nombre: str
+    slug: str
+    url_base: Optional[str] = None
+    sitio_oficial: Optional[str] = None
+    logo_url: Optional[str] = None
+    descripcion: Optional[str] = None
+    comuna: Optional[str] = None
+    direccion: Optional[str] = None
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
+    telefono_whatsapp: Optional[str] = None
+    instagram_url: Optional[str] = None
+    envio_gratis_monto: Optional[int] = None
+    retiro_en_tienda: bool = False
+    dias_tueste: Optional[str] = None
+    fecha_ultimo_tueste: Optional[date] = None
+    servicios: List[str] = []
+    carta_comida_url: Optional[str] = None
+    carta_comida_tamano_bytes: Optional[int] = 0
+    cantidad_productos: int = 0
+    sucursales: List[StoreBranchPublicItem] = []
+    cafes_populares: List[StorePopularCoffeeItem] = []
+    novedades: List[StoreNewsItem] = []
+    productos: List[StoreCatalogProductItem] = []
 
 
 class StoresSummaryResponse(BaseModel):
@@ -178,6 +252,9 @@ def get_stores_summary(
     has_fecha = engine_has_tienda_column(bind, "fecha_creacion")
     fecha_col = Tienda.fecha_creacion.label("fecha_creacion") if has_fecha else literal(None, type_=DateTime).label("fecha_creacion")
 
+    has_slug = engine_has_tienda_column(bind, "slug")
+    slug_col = Tienda.slug.label("slug") if has_slug else literal(None, type_=String).label("slug")
+
     group_cols = [Tienda.id, Tienda.nombre, Tienda.url_base, Tienda.comuna, Tienda.latitud, Tienda.longitud]
     if has_fecha:
         group_cols.append(Tienda.fecha_creacion)
@@ -185,6 +262,8 @@ def get_stores_summary(
         group_cols.append(Tienda.logo_url)
     if has_whatsapp:
         group_cols.append(Tienda.telefono_whatsapp)
+    if has_slug:
+        group_cols.append(Tienda.slug)
 
     query = (
         db_session.query(
@@ -197,6 +276,7 @@ def get_stores_summary(
             whatsapp_col,
             logo_col,
             fecha_col,
+            slug_col,
             func.count(distinct(Producto.id)).label("cantidad_productos")
         )
         .join(Producto, Producto.tienda_id == Tienda.id)
@@ -257,6 +337,7 @@ def get_stores_summary(
         item_dict: Dict[str, Any] = {
             "id": getattr(row, "id", None),
             "nombre": row.nombre,
+            "slug": getattr(row, "slug", None),
             "telefono_whatsapp": getattr(row, "telefono_whatsapp", None),
             "url_base": row.url_base,
             "url_catalogo": row.url_base,
@@ -369,4 +450,162 @@ def get_latest_store_incorporation(
         novedad_id=novedad.id if novedad else None,
         titulo_novedad=novedad.titulo if novedad else f"¡Bienvenida {selected_store.nombre} a Cafésitios! 🎉",
         descripcion_novedad=novedad.descripcion if novedad else None,
+    )
+
+
+@tiendas_router.get(
+    "/{slug_o_id}/detalle-publico",
+    response_model=StorePublicDetailResponse,
+    summary="Detalle público de la tostaduría, vitrina digital, servicios, menú y cafés destacados",
+)
+@tiendas_router.get("/{slug_o_id}", response_model=StorePublicDetailResponse, include_in_schema=False)
+@router.get("/{slug_o_id}/public-detail", response_model=StorePublicDetailResponse, include_in_schema=False)
+@router.get("/{slug_o_id}", response_model=StorePublicDetailResponse, include_in_schema=False)
+def get_store_public_detail(
+    slug_o_id: str,
+    response: Response,
+    db_session: Session = Depends(get_db_session),
+) -> StorePublicDetailResponse:
+    response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=300"
+
+    clean_identifier = (slug_o_id or "").strip()
+    if not clean_identifier:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tienda no encontrada.")
+
+    # 1. Buscar tienda por slug o id
+    store = None
+    if clean_identifier.isdigit():
+        store = db_session.scalar(select(Tienda).where(Tienda.id == int(clean_identifier)))
+
+    if not store:
+        store = db_session.scalar(select(Tienda).where(Tienda.slug == clean_identifier.lower()))
+
+    if not store:
+        store = db_session.scalar(select(Tienda).where(Tienda.nombre.ilike(clean_identifier)))
+
+    if not store or not store.activo:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tienda no encontrada o inactiva.")
+
+    # 2. Sucursales activas
+    sucursales_orm = db_session.scalars(
+        select(SucursalTienda)
+        .where(SucursalTienda.tienda_id == store.id, SucursalTienda.activo.is_(True))
+        .order_by(SucursalTienda.nombre.asc())
+    ).all()
+    sucursales_out = [
+        StoreBranchPublicItem(
+            id=b.id,
+            nombre=b.nombre,
+            direccion=b.direccion,
+            comuna=b.comuna,
+            region=b.region,
+            latitud=float(b.latitud) if b.latitud is not None else None,
+            longitud=float(b.longitud) if b.longitud is not None else None,
+        )
+        for b in sucursales_orm
+    ]
+
+    # 3. Novedades activas de la tienda
+    novedades_orm = db_session.scalars(
+        select(NovedadTienda)
+        .where(NovedadTienda.tienda_id == store.id, NovedadTienda.activo.is_(True))
+        .order_by(NovedadTienda.fecha_creacion.desc())
+        .limit(6)
+    ).all()
+    novedades_out = [
+        StoreNewsItem(
+            id=n.id,
+            titulo=n.titulo,
+            descripcion=n.descripcion,
+            link_url=n.link_url,
+            imagen_url=n.imagen_url,
+            categoria_tipo=n.categoria_tipo,
+            fecha_creacion=n.fecha_creacion,
+        )
+        for n in novedades_orm
+    ]
+
+    # 4. Productos de café activos de la tienda
+    non_coffee_clauses = [Producto.nombre.ilike(f"%{kw}%") for kw in NON_COFFEE_KEYWORDS_SQL]
+    productos_query = (
+        select(Producto)
+        .where(
+            Producto.tienda_id == store.id,
+            Producto.activo.is_(True),
+            Producto.oculto_catalogo.is_(False),
+            not_(or_(*non_coffee_clauses)),
+        )
+        .options(selectinload(Producto.variantes))
+    )
+    productos_orm = db_session.scalars(productos_query).all()
+
+    productos_out = []
+    for p in productos_orm:
+        vars_disp = [v for v in (p.variantes or []) if bool(v.disponible)]
+        if not vars_disp:
+            continue
+        v_main = min(vars_disp, key=lambda v: (v.precio_por_kilo or 99999999))
+        productos_out.append(
+            StoreCatalogProductItem(
+                id=p.id,
+                nombre=p.nombre,
+                marca=store.nombre,
+                formato_gramos=v_main.formato_gramos or 250,
+                precio_clp=v_main.precio_clp or 0,
+                precio_por_kilo=v_main.precio_por_kilo or 0.0,
+                en_oferta=bool(v_main.en_oferta),
+                imagen_url=getattr(p, "imagen", None),
+                url_origen=getattr(p, "url_detalle", None),
+                origen=getattr(p, "origen", None),
+                tipo_tueste=getattr(p, "tipo_tueste", None),
+            )
+        )
+
+    # 5. Cafés Populares (top 4 cafés ordenados por precio por kilo ascendente)
+    cafes_populares = sorted(productos_out, key=lambda x: (x.precio_por_kilo or 999999))[:4]
+    popular_items = [
+        StorePopularCoffeeItem(
+            id=cp.id,
+            nombre=cp.nombre,
+            marca=cp.marca,
+            formato_gramos=cp.formato_gramos,
+            precio_clp=cp.precio_clp,
+            precio_por_kilo=cp.precio_por_kilo,
+            en_oferta=cp.en_oferta,
+            imagen_url=cp.imagen_url,
+            url_origen=cp.url_origen,
+            origen=cp.origen,
+            tipo_tueste=cp.tipo_tueste,
+        )
+        for cp in cafes_populares
+    ]
+
+    official_site = extract_official_website(store.url_base)
+
+    return StorePublicDetailResponse(
+        id=store.id,
+        nombre=store.nombre,
+        slug=store.slug or f"tienda-{store.id}",
+        url_base=store.url_base,
+        sitio_oficial=official_site,
+        logo_url=getattr(store, "logo_url", None),
+        descripcion=getattr(store, "descripcion", None),
+        comuna=store.comuna,
+        direccion=getattr(store, "direccion", None),
+        latitud=float(store.latitud) if store.latitud is not None else None,
+        longitud=float(store.longitud) if store.longitud is not None else None,
+        telefono_whatsapp=getattr(store, "telefono_whatsapp", None),
+        instagram_url=getattr(store, "instagram_url", None),
+        envio_gratis_monto=getattr(store, "envio_gratis_monto", None),
+        retiro_en_tienda=bool(getattr(store, "retiro_en_tienda", False)),
+        dias_tueste=getattr(store, "dias_tueste", None),
+        fecha_ultimo_tueste=getattr(store, "fecha_ultimo_tueste", None),
+        servicios=getattr(store, "servicios", None) or [],
+        carta_comida_url=getattr(store, "carta_comida_url", None),
+        carta_comida_tamano_bytes=getattr(store, "carta_comida_tamano_bytes", 0) or 0,
+        cantidad_productos=len(productos_out),
+        sucursales=sucursales_out,
+        cafes_populares=popular_items,
+        novedades=novedades_out,
+        productos=productos_out,
     )

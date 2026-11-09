@@ -7,7 +7,44 @@ declare global {
   }
 }
 
+export interface ClicTiendaExternaPayload {
+  cafeId?: number | string;
+  cafeNombre?: string;
+  tiendaNombre: string;
+  productoPrecioCLP?: number;
+  formatoGramos?: number;
+  precioPorKilo?: number;
+  esEstimado?: boolean;
+  destinationUrl: string;
+  productSlug?: string;
+  campaign?: string;
+}
+
 export class AnalyticsTracker {
+  /**
+   * Generador automatizado de URLs con parámetros UTM para atribución a marcas.
+   * Regla de Negocio: ?utm_source=cafesitios&utm_medium=referral&utm_campaign=directorio_marcas&utm_content={producto_slug}
+   */
+  static buildOutboundUrl(
+    baseUrl: string,
+    productSlug?: string,
+    campaign: string = 'directorio_marcas'
+  ): string {
+    if (!baseUrl || !baseUrl.trim()) return '#';
+    try {
+      const url = new URL(baseUrl.trim().startsWith('http') ? baseUrl.trim() : `https://${baseUrl.trim()}`);
+      url.searchParams.set('utm_source', 'cafesitios');
+      url.searchParams.set('utm_medium', 'referral');
+      url.searchParams.set('utm_campaign', campaign);
+      url.searchParams.set('utm_content', productSlug ? productSlug.replace(/\s+/g, '-').toLowerCase() : 'visita_tienda');
+      return url.toString();
+    } catch {
+      const sep = baseUrl.includes('?') ? '&' : '?';
+      const slugVal = productSlug ? encodeURIComponent(productSlug.replace(/\s+/g, '-').toLowerCase()) : 'visita_tienda';
+      return `${baseUrl}${sep}utm_source=cafesitios&utm_medium=referral&utm_campaign=${encodeURIComponent(campaign)}&utm_content=${slugVal}`;
+    }
+  }
+
   private static sendToDataLayer(eventName: string, params: Record<string, unknown> = {}): void {
     if (typeof window === 'undefined') return;
 
@@ -65,7 +102,161 @@ export class AnalyticsTracker {
     }
   }
 
-  // --- 11 EVENTOS CANÓNICOS (SRS v2.0 Sección 7) ---
+  // --- TELEMETRÍA ENTERPRISE GA4 & GTM DATALAYER v2 (SECCIÓN 4) ---
+
+  /**
+   * Intención de Compra Saliente (Conversión Primaria - clic_tienda_externa).
+   * Emite dualidad: estándar GA4 e-commerce (items) + parámetros de negocio en español.
+   * Retorna la URL destino enriquecida con UTMs.
+   */
+  static trackClicTiendaExterna(payload: ClicTiendaExternaPayload): string {
+    const cafeNombre = payload.cafeNombre || 'Café de Especialidad';
+    const tiendaNombre = payload.tiendaNombre || 'Tostaduría Asociada';
+    const precioCLP = Number(payload.productoPrecioCLP) || 0;
+    const formatoGramos = Number(payload.formatoGramos) || 250;
+    const precioPorKilo = Number(payload.precioPorKilo) || (formatoGramos > 0 ? Math.round((precioCLP / formatoGramos) * 1000) : 0);
+    const cafeId = payload.cafeId ? String(payload.cafeId) : '0';
+
+    const urlConUTM = this.buildOutboundUrl(
+      payload.destinationUrl,
+      payload.productSlug || cafeNombre,
+      payload.campaign || 'directorio_marcas'
+    );
+
+    if (typeof window !== 'undefined') {
+      window.dataLayer = window.dataLayer || [];
+      // 1. Resetear contexto previo de comercio electrónico para evitar contaminación entre SPA/islas
+      window.dataLayer.push({ ecommerce: null });
+
+      // 2. Disparar conversión GA4 E-commerce + parámetros en español
+      window.dataLayer.push({
+        event: 'clic_tienda_externa',
+        ecommerce: {
+          currency: 'CLP',
+          value: precioCLP,
+          items: [{
+            item_id: cafeId,
+            item_name: cafeNombre,
+            item_brand: tiendaNombre,
+            item_category: 'Café de Especialidad',
+            item_variant: `${formatoGramos}g`,
+            price: precioCLP
+          }]
+        },
+        // Parámetros de negocio en español
+        tienda_destino: tiendaNombre,
+        nombre_cafe: cafeNombre,
+        formato_gramos: formatoGramos,
+        precio_clp: precioCLP,
+        precio_por_kilo: precioPorKilo,
+        es_precio_estimado: Boolean(payload.esEstimado),
+        url_salida: urlConUTM
+      });
+
+      if (typeof window.gtag === 'function') {
+        window.gtag('event', 'clic_tienda_externa', {
+          tienda_destino: tiendaNombre,
+          nombre_cafe: cafeNombre,
+          value: precioCLP,
+          currency: 'CLP'
+        });
+      }
+    }
+
+    // Persistir métrica anónima en backend
+    this.sendBeacon('clic_tienda_externa', {
+      tienda_destino: tiendaNombre,
+      nombre_cafe: cafeNombre,
+      formato_gramos: formatoGramos,
+      precio_clp: precioCLP,
+      precio_por_kilo: precioPorKilo,
+      es_precio_estimado: Boolean(payload.esEstimado),
+      url_salida: urlConUTM,
+      product_id: Number(cafeId) || undefined
+    });
+
+    return urlConUTM;
+  }
+
+  /**
+   * Visualización de Directorio de Marcas (view_item_list).
+   */
+  static trackViewItemListMarcas(
+    marcasVisibles: Array<{ id: number | string; nombre: string }>
+  ): void {
+    if (typeof window === 'undefined') return;
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ ecommerce: null });
+    window.dataLayer.push({
+      event: 'view_item_list',
+      item_list_id: 'directorio_marcas',
+      item_list_name: 'Directorio de Tostadurías',
+      ecommerce: {
+        items: marcasVisibles.map((marca, idx) => ({
+          item_id: String(marca.id),
+          item_name: marca.nombre,
+          item_brand: marca.nombre,
+          index: idx + 1
+        }))
+      }
+    });
+  }
+
+  /**
+   * Interacción con Marca en Directorio (seleccionar_marca).
+   */
+  static trackSeleccionarMarca(
+    tiendaNombre: string,
+    totalCafes: number,
+    origenClic: string = 'tarjeta_directorio'
+  ): void {
+    if (typeof window === 'undefined') return;
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: 'seleccionar_marca',
+      tienda_nombre: tiendaNombre,
+      total_cafes_activos: totalCafes,
+      origen_clic: origenClic
+    });
+
+    this.sendBeacon('seleccionar_marca', {
+      tienda_nombre: tiendaNombre,
+      total_cafes_activos: totalCafes,
+      origen_clic: origenClic
+    });
+  }
+
+  /**
+   * Comparativa Multitienda de Grano Idéntico (comparar_con_tienda).
+   */
+  static trackCompararConTienda(
+    cafeId: number | string,
+    tiendaActual: string,
+    tiendaComparada: string,
+    diffCLP: number,
+    diffPorKilo: number
+  ): void {
+    if (typeof window === 'undefined') return;
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: 'comparar_con_tienda',
+      cafe_id: Number(cafeId),
+      tienda_actual: tiendaActual,
+      tienda_comparada: tiendaComparada,
+      diferencia_precio_clp: diffCLP,
+      diferencia_precio_kilo: diffPorKilo
+    });
+
+    this.sendBeacon('comparar_con_tienda', {
+      cafe_id: Number(cafeId),
+      tienda_actual: tiendaActual,
+      tienda_comparada: tiendaComparada,
+      diferencia_precio_clp: diffCLP,
+      diferencia_precio_kilo: diffPorKilo
+    });
+  }
+
+  // --- EVENTOS CANÓNICOS HEREDADOS (Compatibilidad hacia atrás) ---
 
   static trackSearch(searchTerm: string, sortBy: string = 'kilo', resultCount?: number): void {
     this.sendToDataLayer('search', {
@@ -93,7 +284,24 @@ export class AnalyticsTracker {
     });
   }
 
-  static trackOutboundClick(storeName: string, productName: string, price: number, destinationUrl: string, productId?: number | string, storeId?: number | string): void {
+  static trackOutboundClick(
+    storeName: string,
+    productName: string,
+    price: number,
+    destinationUrl: string,
+    productId?: number | string,
+    storeId?: number | string
+  ): void {
+    // Delegar al nuevo tracker enterprise para no perder parámetros de GA4
+    this.trackClicTiendaExterna({
+      cafeId: productId,
+      cafeNombre: productName,
+      tiendaNombre: storeName,
+      productoPrecioCLP: price,
+      destinationUrl: destinationUrl,
+      productSlug: productName
+    });
+
     this.sendToDataLayer('outbound_click', {
       store_name: storeName,
       store_id: storeId,
@@ -207,4 +415,3 @@ export class AnalyticsTracker {
     });
   }
 }
-

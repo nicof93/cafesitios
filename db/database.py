@@ -84,6 +84,12 @@ class Tienda(Base):
     contacto_nombre = Column(String(150), nullable=True)
     contacto_telefono = Column(String(50), nullable=True)
     contacto_email = Column(String(150), nullable=True)
+    slug = Column(String(100), unique=True, index=True, nullable=True)
+    descripcion = Column(Text, nullable=True)
+    servicios = Column(JSON, nullable=True, default=list)
+    carta_comida_url = Column(String(500), nullable=True)
+    carta_comida_tamano_bytes = Column(Integer, nullable=True, default=0, server_default='0')
+    instagram_url = Column(String(255), nullable=True)
     plan_id = Column(Integer, ForeignKey('planes_tienda.id', ondelete='SET NULL'), nullable=True, index=True)
     dia_pago_mensual = Column(Integer, nullable=False, default=5, server_default='5')
     precio_acordado_clp = Column(Integer, nullable=True)
@@ -486,10 +492,13 @@ def _handle_missing_columns_in_remote_schemas(orm_execute_state):
             if isinstance(d, dict) and d.get("expr") is d.get("entity")
         ]
 
-        # 1. Tienda (logo_url, telefono_whatsapp, prospectos)
+        # 1. Tienda (logo_url, telefono_whatsapp, prospectos, perfil y vitrina)
         tiendas_cols = engine_get_columns(bind, 'tiendas')
         if tiendas_cols:
-            for t_col in ["logo_url", "telefono_whatsapp", "es_prospecto", "contacto_nombre", "contacto_telefono", "contacto_email"]:
+            for t_col in [
+                "logo_url", "telefono_whatsapp", "es_prospecto", "contacto_nombre", "contacto_telefono", "contacto_email",
+                "slug", "descripcion", "servicios", "carta_comida_url", "carta_comida_tamano_bytes", "instagram_url"
+            ]:
                 if t_col not in tiendas_cols:
                     if Tienda in entities:
                         orm_execute_state.statement = orm_execute_state.statement.options(defer(getattr(Tienda, t_col)))
@@ -541,6 +550,18 @@ def _receive_tienda_load_fallback(target, context):
         target.__dict__["contacto_telefono"] = None
     if "contacto_email" not in target.__dict__:
         target.__dict__["contacto_email"] = None
+    if "slug" not in target.__dict__:
+        target.__dict__["slug"] = None
+    if "descripcion" not in target.__dict__:
+        target.__dict__["descripcion"] = None
+    if "servicios" not in target.__dict__:
+        target.__dict__["servicios"] = []
+    if "carta_comida_url" not in target.__dict__:
+        target.__dict__["carta_comida_url"] = None
+    if "carta_comida_tamano_bytes" not in target.__dict__:
+        target.__dict__["carta_comida_tamano_bytes"] = 0
+    if "instagram_url" not in target.__dict__:
+        target.__dict__["instagram_url"] = None
 
 
 @event.listens_for(UsuarioTienda, "load")

@@ -1,6 +1,7 @@
 export interface StoreProps {
   id: number;
   nombre: string;
+  slug?: string;
   url_web?: string;
   plataforma?: string;
   comuna?: string;
@@ -15,6 +16,7 @@ export interface StoreProps {
 export class Store {
   readonly id: number;
   readonly nombre: string;
+  readonly slug?: string;
   readonly url_web?: string;
   readonly plataforma?: string;
   readonly comuna?: string;
@@ -28,6 +30,7 @@ export class Store {
   constructor(props: StoreProps) {
     this.id = props.id;
     this.nombre = props.nombre;
+    this.slug = props.slug;
     this.url_web = props.url_web;
     this.plataforma = props.plataforma;
     this.comuna = props.comuna;

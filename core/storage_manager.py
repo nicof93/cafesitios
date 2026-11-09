@@ -10,32 +10,49 @@ from db.database import Tienda
 def get_all_tiendas_images_storage(upload_dir: str = os.path.join("static", "uploads", "productos")) -> Dict[int, Dict[str, int]]:
     """Escanea el directorio de subidas una sola vez y agrupa bytes y archivos por tienda_id."""
     res: Dict[int, Dict[str, int]] = {}
-    if not os.path.isdir(upload_dir):
-        return res
+    if os.path.isdir(upload_dir):
+        pattern = re.compile(r"^(\d+)_")
+        try:
+            for entry in os.scandir(upload_dir):
+                if entry.is_file():
+                    match = pattern.match(entry.name)
+                    if match:
+                        try:
+                            t_id = int(match.group(1))
+                            size = entry.stat().st_size
+                            if t_id not in res:
+                                res[t_id] = {"bytes": 0, "archivos": 0}
+                            res[t_id]["bytes"] += size
+                            res[t_id]["archivos"] += 1
+                        except (ValueError, OSError):
+                            pass
+        except OSError:
+            pass
 
-    pattern = re.compile(r"^(\d+)_")
-    try:
-        for entry in os.scandir(upload_dir):
-            if entry.is_file():
-                match = pattern.match(entry.name)
-                if match:
-                    try:
-                        t_id = int(match.group(1))
-                        size = entry.stat().st_size
-                        if t_id not in res:
-                            res[t_id] = {"bytes": 0, "archivos": 0}
-                        res[t_id]["bytes"] += size
-                        res[t_id]["archivos"] += 1
-                    except (ValueError, OSError):
-                        pass
-    except OSError:
-        pass
+    # Sumar archivos específicos de tienda (ej: carta de comida en PDF)
+    tiendas_base = os.path.join("static", "uploads", "tiendas")
+    if os.path.isdir(tiendas_base):
+        try:
+            for folder in os.scandir(tiendas_base):
+                if folder.is_dir() and folder.name.isdigit():
+                    t_id = int(folder.name)
+                    if t_id not in res:
+                        res[t_id] = {"bytes": 0, "archivos": 0}
+                    for f in os.scandir(folder.path):
+                        if f.is_file():
+                            try:
+                                res[t_id]["bytes"] += f.stat().st_size
+                                res[t_id]["archivos"] += 1
+                            except OSError:
+                                pass
+        except OSError:
+            pass
 
     return res
 
 
 def get_tienda_storage_info(tienda_id: int, limite_mb: Optional[int] = None) -> Dict[str, Any]:
-    """Calcula el uso de almacenamiento en MB de las imágenes subidas por una tostaduría específica."""
+    """Calcula el uso de almacenamiento en MB de las imágenes y documentos subidos por una tostaduría específica."""
     upload_dir = os.path.join("static", "uploads", "productos")
     total_bytes = 0
     total_archivos = 0
@@ -44,6 +61,19 @@ def get_tienda_storage_info(tienda_id: int, limite_mb: Optional[int] = None) -> 
         try:
             for entry in os.scandir(upload_dir):
                 if entry.is_file() and entry.name.startswith(prefix):
+                    try:
+                        total_bytes += entry.stat().st_size
+                        total_archivos += 1
+                    except OSError:
+                        pass
+        except OSError:
+            pass
+
+    store_dir = os.path.join("static", "uploads", "tiendas", str(tienda_id))
+    if os.path.isdir(store_dir):
+        try:
+            for entry in os.scandir(store_dir):
+                if entry.is_file():
                     try:
                         total_bytes += entry.stat().st_size
                         total_archivos += 1

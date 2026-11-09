@@ -85,6 +85,12 @@ def create_plataforma_app() -> FastAPI:
     app.include_router(analitica_router)
     app.include_router(analitica_v1_router)
 
+    from starlette.staticfiles import StaticFiles
+
+    os.makedirs(os.path.join("static", "uploads", "productos"), exist_ok=True)
+    os.makedirs(os.path.join("static", "uploads", "tiendas"), exist_ok=True)
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
     @app.get("/", tags=["Healthcheck"])
     def healthcheck():
         return {"status": "ok", "service": "Cafe-sitios Plataforma Superadmin API"}

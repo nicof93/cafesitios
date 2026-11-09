@@ -141,21 +141,39 @@ const canonical = canonicalUrl || new URL(Astro.url.pathname, Astro.site || 'htt
   <script>
     import { AnalyticsTracker } from '../core/infrastructure/analytics/AnalyticsTracker';
 
-    // Manejador global de clics en "Ver en tienda" / "Ir a la tienda" para telemetría (fase de captura)
+    // Manejador global de clics en "Ver en tienda" / "Ir a la tienda" / Enlaces externos de marca (fase de captura)
     document.addEventListener('click', (e) => {
-      const target = (e.target as HTMLElement).closest('[data-track-outbound]') as HTMLElement | null;
+      const target = (e.target as HTMLElement).closest('[data-track-outbound], [data-brand-external-link]') as HTMLElement | null;
       if (!target) return;
 
-      const store = target.getAttribute('data-store') || '';
+      const store = target.getAttribute('data-store') || target.getAttribute('data-brand-name') || '';
       const storeId = target.getAttribute('data-store-id') || undefined;
-      const name = target.getAttribute('data-product-name') || '';
+      const name = target.getAttribute('data-product-name') || 'Visita a Tienda';
       const price = Number(target.getAttribute('data-price') || '0');
+      const grams = Number(target.getAttribute('data-grams') || '250');
+      const priceKilo = Number(target.getAttribute('data-price-kilo') || '0');
+      const isEstimated = target.getAttribute('data-is-estimated') === 'true';
       const url = target.getAttribute('href') || '';
 
       const rawProdId = target.getAttribute('data-product-id');
       const productId = rawProdId ? Number(rawProdId) : undefined;
-      AnalyticsTracker.trackOutboundClick(store, name, price, url, productId, storeId);
-      AnalyticsTracker.trackSelectItem(name, store, price, productId);
+
+      const campaign = target.hasAttribute('data-brand-external-link') ? 'directorio_marcas' : 'catalogo_producto';
+      const finalUrl = AnalyticsTracker.trackClicTiendaExterna({
+        cafeId: productId,
+        cafeNombre: name,
+        tiendaNombre: store,
+        productoPrecioCLP: price,
+        formatoGramos: grams,
+        precioPorKilo: priceKilo,
+        esEstimado: isEstimated,
+        destinationUrl: url,
+        campaign
+      });
+
+      if (finalUrl && finalUrl !== '#' && target.getAttribute('href') !== finalUrl) {
+        target.setAttribute('href', finalUrl);
+      }
     }, true);
   </script>
 

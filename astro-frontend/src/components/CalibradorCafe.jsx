@@ -1,7 +1,16 @@
-/*  */import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { DialInCalculator, DIAL_IN_METHODS } from '../core/domain/DialInCalculator';
 
 export default function CalibradorCafe() {
+  // 0. Estado del Café (Texto libre y vinculación a Catálogo)
+  const [cafeTexto, setCafeTexto] = useState('');
+  const [selectedProducto, setSelectedProducto] = useState(null);
+  const [sugerencias, setSugerencias] = useState([]);
+  const [isLoadingSugerencias, setIsLoadingSugerencias] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchTimeoutRef = useRef(null);
+  const dropdownRef = useRef(null);
+
   // 1. Estado del Método y Parámetros Iniciales
   const [metodoKey, setMetodoKey] = useState('v60');
   const [dosis, setDosis] = useState(15);
@@ -20,6 +29,76 @@ export default function CalibradorCafe() {
   const [guardadoToast, setGuardadoToast] = useState(null);
   const svgRef = useRef(null);
   const lastEmittedEventRef = useRef('');
+
+  // Cerrar dropdown de sugerencias al hacer clic fuera del componente
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
+  }, []);
+
+  // Manejar entrada de texto libre y búsqueda predictiva en el catálogo
+  const handleCafeInputChange = (e) => {
+    const val = e.target.value;
+    setCafeTexto(val);
+    if (selectedProducto && val !== selectedProducto.nombre) {
+      setSelectedProducto(null);
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    const query = val.trim();
+    if (query.length >= 2) {
+      setIsLoadingSugerencias(true);
+      searchTimeoutRef.current = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/v1/products?limit=6&search_query=${encodeURIComponent(query)}`);
+          if (res.ok) {
+            const json = await res.json();
+            const items = json.data || json.items || [];
+            setSugerencias(items);
+            setShowDropdown(items.length > 0);
+          }
+        } catch {
+          setSugerencias([]);
+        } finally {
+          setIsLoadingSugerencias(false);
+        }
+      }, 250);
+    } else {
+      setSugerencias([]);
+      setShowDropdown(false);
+      setIsLoadingSugerencias(false);
+    }
+  };
+
+  const handleSelectSugerencia = (item) => {
+    const nombreDisplay = item.tienda ? `${item.nombre} (${item.tienda})` : item.nombre;
+    setCafeTexto(nombreDisplay);
+    setSelectedProducto({
+      id: item.id,
+      nombre: item.nombre,
+      tienda: item.tienda,
+      tienda_id: item.tienda_id,
+      imagen: item.imagen,
+      url_detalle: item.url_detalle,
+      precio_clp: item.variante?.precio_clp,
+    });
+    setShowDropdown(false);
+  };
+
+  const handleClearCafe = () => {
+    setCafeTexto('');
+    setSelectedProducto(null);
+    setSugerencias([]);
+    setShowDropdown(false);
+  };
 
   // Sincronizar parámetros al cambiar de método
   const seleccionarMetodo = (key) => {
@@ -162,7 +241,10 @@ export default function CalibradorCafe() {
 
       const nuevaReceta = {
         id: `dialin-${Date.now()}`,
-        cafe: `Calibrado: ${metodoActual}`,
+        cafe: cafeTexto.trim() || `Calibrado: ${metodoActual}`,
+        producto_id: selectedProducto ? selectedProducto.id : undefined,
+        producto_url: selectedProducto ? (selectedProducto.url_detalle || `/producto/${selectedProducto.id}`) : undefined,
+        tienda: selectedProducto ? (selectedProducto.tienda || undefined) : undefined,
         metodo: metodoActual,
         gramos_cafe: modoAjuste === 'agua' ? dosis : resultado.dosisSugerida,
         gramos_agua: modoAjuste === 'agua' ? resultado.aguaSugerida : agua,
@@ -226,6 +308,102 @@ export default function CalibradorCafe() {
         
         {/* COLUMNA IZQUIERDA: CONFIGURACIÓN Y PLANO SENSORIAL (7 COLS) */}
         <div className="lg:col-span-7 space-y-6">
+
+          {/* 0. IDENTIFICACIÓN DEL CAFÉ (TEXTO LIBRE CON SUGERENCIAS DEL CATÁLOGO) */}
+          <div ref={dropdownRef} className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200/80 shadow-xs space-y-3 relative">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-500">
+                Café que estás calibrando (Opcional)
+              </label>
+              {selectedProducto ? (
+                <span className="self-start sm:self-auto inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  <span>✓ Vinculado a {selectedProducto.tienda || 'Catálogo'}</span>
+                  <button
+                    type="button"
+                    onClick={handleClearCafe}
+                    className="hover:text-red-700 ml-0.5 text-xs font-extrabold"
+                    title="Desvincular o limpiar café"
+                  >
+                    ✕
+                  </button>
+                </span>
+              ) : (
+                <span className="text-[11px] text-stone-400">
+                  Texto libre o autocompleta desde el catálogo
+                </span>
+              )}
+            </div>
+
+            <div className="relative">
+              <input
+                type="text"
+                value={cafeTexto}
+                onChange={handleCafeInputChange}
+                onFocus={() => { if (sugerencias.length > 0) setShowDropdown(true); }}
+                placeholder="Escribe el nombre del café (ej. Geisha, Huila) o busca una tostaduría..."
+                className="w-full rounded-2xl bg-stone-50 border border-stone-200 pl-4 pr-10 py-2.5 text-xs sm:text-sm font-semibold text-stone-900 focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 focus:outline-none transition"
+              />
+              {isLoadingSugerencias ? (
+                <span className="absolute right-3.5 top-3 text-xs text-stone-400 animate-spin">
+                  ⏳
+                </span>
+              ) : cafeTexto ? (
+                <button
+                  type="button"
+                  onClick={handleClearCafe}
+                  className="absolute right-3.5 top-2.5 text-stone-400 hover:text-stone-700 text-xs font-bold p-0.5"
+                  title="Borrar texto"
+                >
+                  ✕
+                </button>
+              ) : null}
+
+              {/* DROPDOWN FLOTANTE DE SUGERENCIAS */}
+              {showDropdown && sugerencias.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-2 z-50 max-h-64 overflow-y-auto bg-white rounded-2xl border border-stone-200 shadow-xl p-2 space-y-1 divide-y divide-stone-100">
+                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1">
+                    <span>☕</span>
+                    <span>Sugerencias del Catálogo Cafesitios</span>
+                  </div>
+                  {sugerencias.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleSelectSugerencia(item)}
+                      className="w-full text-left p-2.5 rounded-xl hover:bg-stone-50 flex items-center justify-between gap-3 transition group pt-2"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {item.imagen ? (
+                          <img
+                            src={item.imagen}
+                            alt={item.nombre}
+                            className="w-9 h-9 rounded-lg object-cover bg-stone-100 border border-stone-200 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-800 flex items-center justify-center text-sm font-bold shrink-0 border border-emerald-100">
+                            ☕
+                          </div>
+                        )}
+                        <div className="truncate">
+                          <p className="text-xs font-bold text-stone-900 truncate group-hover:text-emerald-800">
+                            {item.nombre}
+                          </p>
+                          <p className="text-[11px] text-stone-500">
+                            {item.tienda} {item.variante?.formato_gramos ? `• ${item.variante.formato_gramos}g` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      {item.variante?.precio_clp ? (
+                        <span className="text-xs font-bold text-stone-900 shrink-0 bg-stone-100 px-2 py-0.5 rounded-md">
+                          ${item.variante.precio_clp.toLocaleString('es-CL')}
+                        </span>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* 1. SELECTOR DE MÉTODO */}
           <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200/80 shadow-xs space-y-3">

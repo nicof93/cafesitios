@@ -148,6 +148,13 @@ class TestMultiEnvironmentAdmin(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertIn("total_tiendas", data)
+        self.assertIn("total_prospectos", data)
+        self.assertIn("total_clientes", data)
+        self.assertIn("total_sucursales", data)
+        self.assertIn("total_productos", data)
+        self.assertIn("total_cafes", data)
+        self.assertIn("conteo_plataformas", data)
+        self.assertIn("conteo_estados_sync", data)
 
     def test_admin_export_with_target_environment_header(self):
         """Verifica que la exportación funcione con el header de ambiente."""

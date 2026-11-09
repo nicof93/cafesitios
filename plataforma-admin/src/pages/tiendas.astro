@@ -1016,13 +1016,18 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           return;
         }
 
+        const activeEnv = localStorage.getItem('plataforma_active_env') || 'local';
+
         tbody.innerHTML = stores.map((store) => `
           <tr class="hover:bg-stone-50/60 transition border-b border-stone-100">
             <td class="px-4 py-3">
               <div class="flex items-center gap-2.5">
                 ${store.logo_url ? `<img src="${store.logo_url}" alt="${store.nombre}" class="h-6 w-6 rounded-md object-contain bg-stone-50 border border-stone-200 p-0.5 shrink-0" onerror="this.onerror=null; this.classList.add('hidden');" />` : ''}
                 <div>
-                  <div class="font-bold text-stone-900">${store.nombre}</div>
+                  <a href="/plataforma/tiendas/detalle?id=${store.id}&env=${encodeURIComponent(activeEnv)}" class="font-bold text-stone-900 hover:text-emerald-700 transition inline-flex items-center gap-1 group" title="Ver ficha 360°, bitácora y sucursales de ${store.nombre}">
+                    <span>${store.nombre}</span>
+                    <span class="text-[10px] text-stone-400 group-hover:text-emerald-600 transition">🔍</span>
+                  </a>
                   ${store.es_prospecto ? '<span class="inline-block rounded-md bg-purple-100 text-purple-900 border border-purple-200 px-1.5 py-0.2 text-[10px] font-bold">🎯 Prospecto</span>' : (!store.activo ? '<span class="inline-block rounded-md bg-stone-200 text-stone-600 px-1.5 py-0.2 text-[10px] font-semibold">Inactiva</span>' : '')}
                   ${store.contacto_nombre ? `<div class="text-[10px] text-purple-900 font-semibold mt-0.5">👤 ${store.contacto_nombre} ${store.contacto_telefono ? `(${store.contacto_telefono})` : ''}</div>` : ''}
                   ${store.email_administrador
@@ -1099,6 +1104,15 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
             </td>
             <td class="px-4 py-3 text-center whitespace-nowrap">
               <div class="inline-flex items-center justify-center gap-1.5">
+                <a
+                  href="/plataforma/tiendas/detalle?id=${store.id}&env=${encodeURIComponent(activeEnv)}"
+                  class="inline-flex items-center justify-center h-8 px-2 rounded-lg border border-sky-300 bg-sky-50 text-sky-800 hover:bg-sky-100 hover:border-sky-400 transition shadow-2xs cursor-pointer active:scale-95 gap-1"
+                  title="Ficha 360°: Ver bitácora, sucursales y métricas de ${store.nombre}"
+                  aria-label="Ver detalle de ${store.nombre}"
+                >
+                  <span class="text-xs">🔍</span>
+                  <span class="text-[10px] font-bold hidden xl:inline">Ficha</span>
+                </a>
                 <button
                   type="button"
                   class="btn-store-comments inline-flex items-center justify-center h-8 px-2 rounded-lg border border-purple-300 bg-purple-50 text-purple-800 hover:bg-purple-100 hover:border-purple-400 transition shadow-2xs cursor-pointer active:scale-95 gap-1"

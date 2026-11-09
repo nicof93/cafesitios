@@ -52,20 +52,67 @@ import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
       </button>
     </div>
 
-    <!-- 1. PERFIL DE MARCA, DESPACHO Y DÍAS DE TUESTE -->
+    <!-- 1. PERFIL DE MARCA, DESPACHO, SERVICIOS Y VITRINA DIGITAL -->
     <div id="tab-perfil" class="config-tab-pane rounded-b-2xl border border-t-0 border-stone-200 bg-white p-6 shadow-xs space-y-6">
       <div class="flex items-center justify-between border-b border-stone-100 pb-3">
         <div>
-          <h3 class="text-base font-bold text-stone-900">Perfil Comercial y Políticas de Despacho</h3>
-          <p class="text-xs text-stone-500 mt-0.5">Información pública exhibida a los compradores en el directorio de tiendas.</p>
+          <h3 class="text-base font-bold text-stone-900">Perfil Comercial, Servicios y Vitrina Digital</h3>
+          <p class="text-xs text-stone-500 mt-0.5">Administra tu presencia en Cafésitios, servicios presenciales, menú en PDF y enlace oficial para tus clientes.</p>
         </div>
         <span class="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
           Sincronizado
         </span>
       </div>
 
-      <form id="form-brand-profile" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Vitrina Digital Exclusiva (Link en Bio) -->
+      <div class="rounded-2xl border border-amber-200 bg-linear-to-br from-amber-50/70 via-stone-50 to-white p-5 shadow-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center text-base font-bold">
+              🌐
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-stone-900">Tu Vitrina Digital Exclusiva (Link en Bio)</h4>
+              <p class="text-[11px] text-stone-500">Página oficial en Cafesitios con solo tus productos, menú y sucursales. Ideal para compartir en Instagram y WhatsApp.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              id="btn-copy-vitrina"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-stone-700 bg-white hover:bg-stone-50 border border-stone-200 rounded-xl transition shadow-xs cursor-pointer"
+            >
+              <span id="copy-icon">📋</span>
+              <span id="copy-text">Copiar Link</span>
+            </button>
+            <a
+              id="link-open-vitrina"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 rounded-xl transition shadow-xs"
+            >
+              Ver mi Vitrina ↗
+            </a>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-stone-500 shrink-0">cafesitios.cl/tienda/</span>
+          <input
+            type="text"
+            id="prof-slug"
+            form="form-brand-profile"
+            placeholder="mi-tostaduria"
+            class="flex-1 rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+          />
+        </div>
+        <p class="text-[10px] text-stone-400 mt-1.5">Solo letras minúsculas, números y guiones. También disponible en su formato corto <strong>cafesitios.cl/t/&#123;slug&#125;</strong>.</p>
+      </div>
+
+      <form id="form-brand-profile" class="space-y-6">
+        <!-- Datos de Marca -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label class="block text-xs font-bold text-stone-700 mb-1">Nombre Comercial de la Tostaduría</label>
             <input
@@ -77,7 +124,7 @@ import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-stone-700 mb-1">URL de Sitio Web Oficial</label>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Sitio Web Oficial</label>
             <input
               type="url"
               id="prof-url"
@@ -85,10 +132,20 @@ import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
               class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
             />
           </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Instagram (@usuario o URL)</label>
+            <input
+              type="text"
+              id="prof-instagram"
+              placeholder="https://instagram.com/mitostaduria"
+              class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+            />
+          </div>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-stone-700 mb-1">Descripción de la Tostaduría</label>
+          <label class="block text-xs font-bold text-stone-700 mb-1">Descripción / Biografía de la Tostaduría</label>
           <textarea
             id="prof-description"
             rows="2"
@@ -97,46 +154,152 @@ import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
           ></textarea>
         </div>
 
-        <!-- Despacho y Días de Tueste -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-          <div>
-            <label class="block text-xs font-bold text-stone-700 mb-1">Envío Gratis desde (CLP)</label>
-            <input
-              type="number"
-              id="prof-envio-gratis"
-              placeholder="30000"
-              class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
-            />
+        <!-- Servicios de Cafetería & Experiencia -->
+        <div class="border-t border-stone-100 pt-5">
+          <div class="mb-3">
+            <h4 class="text-xs font-bold text-stone-900">Servicios e Instalaciones en Cafetería</h4>
+            <p class="text-[11px] text-stone-500">Selecciona los servicios que ofreces a los clientes que visitan tus locales.</p>
           </div>
 
-          <div>
-            <label class="block text-xs font-bold text-stone-700 mb-1">Días de Tueste Semanal</label>
-            <input
-              type="text"
-              id="prof-dias-tueste"
-              placeholder="Ej: Martes y Jueves"
-              class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
-            />
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-stone-700 mb-1">Última Fecha de Tueste</label>
-            <input
-              type="date"
-              id="prof-fecha-tueste"
-              class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
-            />
-          </div>
-
-          <div class="flex items-center gap-2 pt-6">
-            <input
-              type="checkbox"
-              id="prof-retiro-tienda"
-              class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-            />
-            <label for="prof-retiro-tienda" class="text-xs font-bold text-stone-800 cursor-pointer">
-              Permite Retiro en Tienda / Barra
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5" id="services-checklist">
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 cursor-pointer transition text-xs font-medium text-stone-800">
+              <input type="checkbox" name="servicios" value="cafeteria_especialidad" class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+              <span>☕ Cafetería de Especialidad</span>
             </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 cursor-pointer transition text-xs font-medium text-stone-800">
+              <input type="checkbox" name="servicios" value="filtrados" class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+              <span>⚗️ Métodos de Filtrado</span>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 cursor-pointer transition text-xs font-medium text-stone-800">
+              <input type="checkbox" name="servicios" value="pasteleria" class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+              <span>🥐 Pastelería & Comida</span>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 cursor-pointer transition text-xs font-medium text-stone-800">
+              <input type="checkbox" name="servicios" value="wifi" class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+              <span>📶 WiFi para Trabajar</span>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 cursor-pointer transition text-xs font-medium text-stone-800">
+              <input type="checkbox" name="servicios" value="pet_friendly" class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+              <span>🐾 Pet Friendly</span>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 cursor-pointer transition text-xs font-medium text-stone-800">
+              <input type="checkbox" name="servicios" value="terraza" class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+              <span>☀️ Terraza al Aire Libre</span>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 cursor-pointer transition text-xs font-medium text-stone-800">
+              <input type="checkbox" name="servicios" value="grano_molido" class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+              <span>🛍️ Grano & Molido</span>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 cursor-pointer transition text-xs font-medium text-stone-800">
+              <input type="checkbox" name="servicios" value="tueste_propio" class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+              <span>🔥 Tueste en el Local</span>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 cursor-pointer transition text-xs font-medium text-stone-800">
+              <input type="checkbox" name="servicios" value="talleres_catas" class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+              <span>🎓 Talleres & Catas</span>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 cursor-pointer transition text-xs font-medium text-stone-800">
+              <input type="checkbox" name="servicios" value="estacionamiento" class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+              <span>🚗 Estacionamiento</span>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 cursor-pointer transition text-xs font-medium text-stone-800">
+              <input type="checkbox" name="servicios" value="accesible" class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500" />
+              <span>♿ Accesible</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Carta de Comida y Menú en PDF -->
+        <div class="border-t border-stone-100 pt-5">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h4 class="text-xs font-bold text-stone-900">Carta de Comida y Menú (Documento PDF)</h4>
+              <p class="text-[11px] text-stone-500">Tus clientes podrán ver y descargar tu carta directamente desde su celular.</p>
+            </div>
+            <div id="menu-pdf-status-badge" class="hidden">
+              <span class="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center gap-1.5">
+                <span>📄</span> Carta activa (<span id="menu-pdf-size">0 KB</span>)
+              </span>
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-stone-200 bg-stone-50">
+            <div class="flex items-center gap-3">
+              <input
+                type="file"
+                id="input-menu-pdf"
+                accept=".pdf,application/pdf"
+                class="block w-full text-xs text-stone-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-stone-900 file:text-white hover:file:bg-stone-800 file:cursor-pointer"
+              />
+            </div>
+            <div class="flex items-center gap-2 shrink-0" id="menu-pdf-actions">
+              <a
+                id="link-view-menu-pdf"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-white hover:bg-emerald-50 border border-emerald-200 rounded-xl transition shadow-xs"
+              >
+                Ver Carta Actual ↗
+              </a>
+              <button
+                type="button"
+                id="btn-delete-menu-pdf"
+                class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition cursor-pointer"
+              >
+                Eliminar Carta
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Despacho y Días de Tueste -->
+        <div class="border-t border-stone-100 pt-5">
+          <div class="mb-3">
+            <h4 class="text-xs font-bold text-stone-900">Políticas de Despacho y Tueste</h4>
+            <p class="text-[11px] text-stone-500">Incentiva las compras informando tus políticas de despacho gratis y fechas de tueste fresco.</p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-stone-700 mb-1">Envío Gratis desde (CLP)</label>
+              <input
+                type="number"
+                id="prof-envio-gratis"
+                placeholder="30000"
+                class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-stone-700 mb-1">Días de Tueste Semanal</label>
+              <input
+                type="text"
+                id="prof-dias-tueste"
+                placeholder="Ej: Martes y Jueves"
+                class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-stone-700 mb-1">Última Fecha de Tueste</label>
+              <input
+                type="date"
+                id="prof-fecha-tueste"
+                class="w-full rounded-xl border border-stone-300 px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              />
+            </div>
+
+            <div class="flex items-center gap-2 pt-6">
+              <input
+                type="checkbox"
+                id="prof-retiro-tienda"
+                class="h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+              />
+              <label for="prof-retiro-tienda" class="text-xs font-bold text-stone-800 cursor-pointer">
+                Permite Retiro en Tienda / Barra
+              </label>
+            </div>
           </div>
         </div>
 
@@ -144,7 +307,7 @@ import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
           <button
             type="submit"
             id="btn-save-profile"
-            class="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-5 transition shadow-xs"
+            class="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-5 transition shadow-xs cursor-pointer"
           >
             Guardar Cambios de Perfil
           </button>
@@ -411,12 +574,112 @@ import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
       // Perfil
       const formProfile = document.getElementById('form-brand-profile');
       const profName = document.getElementById('prof-name');
+      const profSlug = document.getElementById('prof-slug');
       const profUrl = document.getElementById('prof-url');
+      const profInstagram = document.getElementById('prof-instagram');
       const profDescription = document.getElementById('prof-description');
       const profEnvioGratis = document.getElementById('prof-envio-gratis');
       const profRetiroTienda = document.getElementById('prof-retiro-tienda');
       const profDiasTueste = document.getElementById('prof-dias-tueste');
       const profFechaTueste = document.getElementById('prof-fecha-tueste');
+
+      // Vitrina y Carta PDF
+      const btnCopyVitrina = document.getElementById('btn-copy-vitrina');
+      const linkOpenVitrina = document.getElementById('link-open-vitrina');
+      const copyText = document.getElementById('copy-text');
+      const copyIcon = document.getElementById('copy-icon');
+      const servicesCheckboxes = document.querySelectorAll('input[name="servicios"]');
+      const inputMenuPdf = document.getElementById('input-menu-pdf');
+      const menuPdfStatusBadge = document.getElementById('menu-pdf-status-badge');
+      const menuPdfSize = document.getElementById('menu-pdf-size');
+      const linkViewMenuPdf = document.getElementById('link-view-menu-pdf');
+      const btnDeleteMenuPdf = document.getElementById('btn-delete-menu-pdf');
+
+      function updateVitrinaLinks(slug) {
+        const cleanSlug = (slug || '').trim().toLowerCase();
+        const origin = window.location.origin;
+        const vitrinaUrl = cleanSlug ? `${origin}/tienda/${cleanSlug}` : '#';
+        if (linkOpenVitrina) {
+          linkOpenVitrina.href = vitrinaUrl;
+          if (!cleanSlug) {
+            linkOpenVitrina.classList.add('pointer-events-none', 'opacity-50');
+          } else {
+            linkOpenVitrina.classList.remove('pointer-events-none', 'opacity-50');
+          }
+        }
+      }
+
+      profSlug?.addEventListener('input', (e) => {
+        updateVitrinaLinks(e.target.value);
+      });
+
+      btnCopyVitrina?.addEventListener('click', async () => {
+        const slug = (profSlug?.value || '').trim();
+        if (!slug) return;
+        const vitrinaUrl = `${window.location.origin}/tienda/${slug}`;
+        try {
+          await navigator.clipboard.writeText(vitrinaUrl);
+          if (copyText) copyText.textContent = '¡Copiado!';
+          if (copyIcon) copyIcon.textContent = '✅';
+          setTimeout(() => {
+            if (copyText) copyText.textContent = 'Copiar Link';
+            if (copyIcon) copyIcon.textContent = '📋';
+          }, 2000);
+        } catch (_) {}
+      });
+
+      inputMenuPdf?.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+          window.cafesitiosAlert('Archivo No Válido', 'Solo se admiten documentos en formato PDF (.pdf).', 'error');
+          inputMenuPdf.value = '';
+          return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          window.cafesitiosAlert('Archivo Muy Grande', 'La carta de comida no puede exceder los 10 MB.', 'error');
+          inputMenuPdf.value = '';
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const base64 = reader.result;
+          try {
+            const res = await fetch(`${API_BASE}/api/v1/admin/tienda/tienda/carta-comida`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ pdf_base64: base64, nombre_archivo: file.name })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Error al subir la carta de comida.');
+            window.cafesitiosAlert('Carta Subida', 'La carta de comida en PDF se guardó exitosamente.', 'success');
+            inputMenuPdf.value = '';
+            loadProfile();
+          } catch (err) {
+            window.cafesitiosAlert('Error', err.message, 'error');
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+
+      btnDeleteMenuPdf?.addEventListener('click', async () => {
+        if (!confirm('¿Estás seguro de que deseas eliminar la carta de comida en PDF?')) return;
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/tienda/tienda/carta-comida`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) throw new Error('Error al eliminar la carta de comida.');
+          window.cafesitiosAlert('Carta Eliminada', 'La carta de comida fue eliminada.', 'success');
+          loadProfile();
+        } catch (err) {
+          window.cafesitiosAlert('Error', err.message, 'error');
+        }
+      });
 
       // Catálogos y Prueba en Seco (Slide-Over Drawer)
       const catalogsContainer = document.getElementById('catalogs-list-container');
@@ -565,20 +828,57 @@ import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
           const data = await res.json();
 
           if (profName) profName.value = data.tienda_nombre || '';
+          if (profSlug) {
+            profSlug.value = data.slug || '';
+            updateVitrinaLinks(data.slug);
+          }
           if (profUrl) profUrl.value = data.tienda_url || '';
+          if (profInstagram) profInstagram.value = data.instagram_url || '';
           if (profDescription) profDescription.value = data.descripcion || '';
           if (profEnvioGratis) profEnvioGratis.value = data.envio_gratis_monto || '';
           if (profRetiroTienda) profRetiroTienda.checked = Boolean(data.retiro_en_tienda);
           if (profDiasTueste) profDiasTueste.value = data.dias_tueste || '';
           if (profFechaTueste) profFechaTueste.value = data.fecha_ultimo_tueste || '';
+
+          // Servicios
+          if (servicesCheckboxes && data.servicios) {
+            const activeSet = new Set(data.servicios || []);
+            servicesCheckboxes.forEach(cb => {
+              cb.checked = activeSet.has(cb.value);
+            });
+          }
+
+          // Carta en PDF
+          if (data.carta_comida_url) {
+            if (menuPdfStatusBadge) menuPdfStatusBadge.classList.remove('hidden');
+            const kb = Math.round((data.carta_comida_tamano_bytes || 0) / 1024);
+            if (menuPdfSize) menuPdfSize.textContent = kb > 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
+            if (linkViewMenuPdf) {
+              const fullPdfUrl = data.carta_comida_url.startsWith('http') ? data.carta_comida_url : `${API_BASE}${data.carta_comida_url}`;
+              linkViewMenuPdf.href = fullPdfUrl;
+              linkViewMenuPdf.classList.remove('hidden');
+            }
+            if (btnDeleteMenuPdf) btnDeleteMenuPdf.classList.remove('hidden');
+          } else {
+            if (menuPdfStatusBadge) menuPdfStatusBadge.classList.add('hidden');
+            if (linkViewMenuPdf) linkViewMenuPdf.classList.add('hidden');
+            if (btnDeleteMenuPdf) btnDeleteMenuPdf.classList.add('hidden');
+          }
         } catch (_) {}
       }
 
       formProfile?.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const selectedServices = Array.from(servicesCheckboxes || [])
+          .filter(cb => cb.checked)
+          .map(cb => cb.value);
+
         const payload = {
+          slug: profSlug?.value.trim().toLowerCase() || null,
           url_oficial: profUrl?.value.trim() || null,
+          instagram_url: profInstagram?.value.trim() || null,
           descripcion: profDescription?.value.trim() || null,
+          servicios: selectedServices,
           envio_gratis_monto: profEnvioGratis?.value ? parseInt(profEnvioGratis.value, 10) : null,
           retiro_en_tienda: profRetiroTienda?.checked ?? false,
           dias_tueste: profDiasTueste?.value.trim() || null,
@@ -594,8 +894,10 @@ import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
             },
             body: JSON.stringify(payload)
           });
-          if (!res.ok) throw new Error('Error al actualizar perfil de marca.');
-          window.cafesitiosAlert('Perfil Actualizado', 'Los datos comerciales se guardaron exitosamente.', 'success');
+          const resData = await res.json();
+          if (!res.ok) throw new Error(resData.detail || 'Error al actualizar perfil de marca.');
+          window.cafesitiosAlert('Perfil Actualizado', 'Los datos comerciales y servicios se guardaron exitosamente.', 'success');
+          loadProfile();
         } catch (err) {
           window.cafesitiosAlert('Error', err.message, 'error');
         }

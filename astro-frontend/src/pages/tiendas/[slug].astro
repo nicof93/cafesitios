@@ -1,0 +1,409 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { GetStoreDetailUseCase } from '../../core/application/GetStoreDetail';
+import { AnalyticsTracker } from '../../core/infrastructure/analytics/AnalyticsTracker';
+
+const { slug } = Astro.params;
+if (!slug) {
+  return Astro.redirect('/tiendas');
+}
+
+const detailUseCase = new GetStoreDetailUseCase();
+let storeDetail = null;
+
+try {
+  storeDetail = await detailUseCase.execute(slug);
+} catch (error) {
+  console.error(`Error cargando marca ${slug}:`, error);
+}
+
+if (!storeDetail) {
+  return Astro.rewrite('/404');
+}
+
+const SERVICIOS_MAP: Record<string, { label: string; icon: string }> = {
+  cafeteria_especialidad: { label: 'Cafetería de Especialidad', icon: '☕' },
+  metodos_filtrado: { label: 'Barra de Filtrados', icon: '🧪' },
+  pasteleria_comida: { label: 'Pastelería y Comida', icon: '🥐' },
+  wifi_trabajo: { label: 'WiFi para trabajar', icon: '💻' },
+  pet_friendly: { label: 'Pet Friendly', icon: '🐾' },
+  terraza: { label: 'Terraza al aire libre', icon: '🌿' },
+  venta_grano_molido: { label: 'Venta café grano y molido', icon: '🛍️' },
+  tueste_propio: { label: 'Tueste propio en local', icon: '🔥' },
+  talleres_catas: { label: 'Talleres y catas', icon: '🎓' },
+  estacionamiento: { label: 'Estacionamiento', icon: '🚗' },
+  accesible: { label: 'Accesible movilidad reducida', icon: '♿' },
+};
+
+const storeServices = (storeDetail.servicios || [])
+  .map(id => SERVICIOS_MAP[id])
+  .filter(Boolean);
+
+const formatCLP = (amount: number) => {
+  return new Intl.NumberFormat('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    maximumFractionDigits: 0
+  }).format(amount);
+};
+
+const formatKB = (bytes?: number) => {
+  if (!bytes || bytes <= 0) return '';
+  if (bytes < 1024 * 1024) {
+    return `${Math.round(bytes / 1024)} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+// CÁLCULO PROMEDIO $/KG DEL TOSTADOR
+const preciosKilo = (storeDetail.productos || [])
+  .map(p => Number(p.precio_por_kilo))
+  .filter(pk => !isNaN(pk) && pk > 5000 && pk < 250000);
+
+const promedioPrecioKilo = preciosKilo.length > 0
+  ? Math.round(preciosKilo.reduce((acc, curr) => acc + curr, 0) / preciosKilo.length)
+  : 0;
+
+const pageTitle = `${storeDetail.nombre} - Tostaduría de Especialidad y Marca | Cafesitios`;
+const metaDesc = storeDetail.descripcion
+  ? (storeDetail.descripcion.length > 150 ? storeDetail.descripcion.substring(0, 147) + '...' : storeDetail.descripcion)
+  : `Perfil oficial de ${storeDetail.nombre} en Cafesitios. Catálogo de cafés, promedio de $/kg, sucursales físicas y compra en su tienda oficial.`;
+
+const canonicalUrl = `https://cafesitios.cl/tiendas/${storeDetail.slug || storeDetail.id}`;
+const officialSiteUrl = storeDetail.sitio_oficial || storeDetail.url_base || null;
+
+// Enlace saliente enriquecido con UTM builder
+const outboundSiteWithUTM = officialSiteUrl
+  ? AnalyticsTracker.buildOutboundUrl(officialSiteUrl, storeDetail.slug, 'perfil_marca')
+  : null;
+
+// Marcado Schema.org / JSON-LD (Estándar Brand solicitado)
+const schemaBrand = {
+  "@context": "https://schema.org",
+  "@type": "Brand",
+  "name": storeDetail.nombre,
+  "url": officialSiteUrl || canonicalUrl,
+  "sameAs": storeDetail.instagram_url ? [storeDetail.instagram_url] : [],
+  "description": storeDetail.descripcion || `Tostaduría de café de especialidad ${storeDetail.nombre} en Chile.`,
+  "logo": storeDetail.logo_url || "https://cafesitios.cl/og-image.png"
+};
+---
+
+<BaseLayout
+  title={pageTitle}
+  description={metaDesc}
+  canonicalUrl={canonicalUrl}
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(schemaBrand)} />
+  </Fragment>
+
+  <div class="max-w-[1200px] mx-auto space-y-10 pb-12 bg-[#FCFBF7] py-2 px-1 rounded-3xl">
+    <!-- NAVEGACIÓN BREADCRUMB SEMÁNTICA -->
+    <nav aria-label="Ruta de navegación" class="flex items-center gap-2 text-xs text-stone-500">
+      <a href="/" class="hover:text-emerald-800 transition">Inicio</a>
+      <span class="text-stone-300" aria-hidden="true">/</span>
+      <a href="/tiendas" class="hover:text-emerald-800 transition">Directorio de Marcas</a>
+      <span class="text-stone-300" aria-hidden="true">/</span>
+      <span class="font-semibold text-stone-900" aria-current="page">{storeDetail.nombre}</span>
+    </nav>
+
+    <!-- HERO PRINCIPAL DE MARCA (CLEAN E-COMMERCE CON ALTO CONTRASTE) -->
+    <header class="bg-gradient-to-br from-stone-900 via-stone-800 to-stone-900 text-stone-100 rounded-3xl p-6 sm:p-10 border border-stone-800 shadow-xl relative overflow-hidden">
+      <div class="absolute -right-12 -bottom-12 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6 justify-between">
+        <div class="flex items-start sm:items-center gap-5">
+          {storeDetail.logo_url ? (
+            <img
+              src={storeDetail.logo_url}
+              alt={`Logo oficial de ${storeDetail.nombre}`}
+              width="96"
+              height="96"
+              class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-contain bg-white p-1.5 border-2 border-emerald-500/30 shadow-md shrink-0"
+              loading="eager"
+              fetchpriority="high"
+            />
+          ) : (
+            <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 flex items-center justify-center font-bold text-3xl shrink-0 shadow-inner">
+              {storeDetail.nombre.substring(0, 2).toUpperCase()}
+            </div>
+          )}
+
+          <div class="space-y-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Marca y Tostaduría Verificada
+              </span>
+              {storeDetail.comuna && (
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-700/60 text-stone-300">
+                  📍 {storeDetail.comuna}
+                </span>
+              )}
+            </div>
+
+            <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
+              {storeDetail.nombre}
+            </h1>
+
+            {storeDetail.descripcion && (
+              <p class="text-xs sm:text-sm text-stone-300 max-w-2xl leading-relaxed">
+                {storeDetail.descripcion}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <!-- ACCIONES EXTERNAS DIRECTAS -->
+        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {outboundSiteWithUTM && (
+            <a
+              href={outboundSiteWithUTM}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-brand-external-link="true"
+              data-brand-name={storeDetail.nombre}
+              class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm transition shadow-lg shadow-emerald-950/40 w-full sm:w-auto"
+            >
+              <span>Visitar Tienda Oficial</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+          )}
+
+          {storeDetail.instagram_url && (
+            <a
+              href={storeDetail.instagram_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-stone-800/80 hover:bg-stone-700 text-stone-200 text-xs sm:text-sm font-semibold transition border border-stone-700 w-full sm:w-auto"
+            >
+              <span>Instagram</span>
+              <span aria-hidden="true">📷</span>
+            </a>
+          )}
+        </div>
+      </div>
+
+      <!-- MÉTRICAS CLAVE Y PROMEDIO $/KG -->
+      <div class="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-6 border-t border-stone-800/80 text-center sm:text-left">
+        <div>
+          <span class="block text-2xs uppercase tracking-wider text-stone-400 font-semibold">Cafés Activos</span>
+          <span class="text-lg sm:text-2xl font-bold text-white">{storeDetail.productos.length}</span>
+        </div>
+        <div>
+          <span class="block text-2xs uppercase tracking-wider text-stone-400 font-semibold">Promedio $/kg</span>
+          <span class="text-lg sm:text-2xl font-bold text-emerald-400">
+            {promedioPrecioKilo > 0 ? formatCLP(promedioPrecioKilo) + '/kg' : 'Variable'}
+          </span>
+        </div>
+        <div>
+          <span class="block text-2xs uppercase tracking-wider text-stone-400 font-semibold">Sucursales Físicas</span>
+          <span class="text-lg sm:text-2xl font-bold text-white">
+            {storeDetail.sucursales ? storeDetail.sucursales.length : (storeDetail.direccion ? '1 sede' : '0')}
+          </span>
+        </div>
+        <div>
+          <span class="block text-2xs uppercase tracking-wider text-stone-400 font-semibold">Despacho</span>
+          <span class="text-lg sm:text-2xl font-bold text-white">
+            {storeDetail.envio_gratis_monto ? `Gratis > ${formatCLP(storeDetail.envio_gratis_monto)}` : 'Todo Chile'}
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- SERVICIOS DISPONIBLES EN LOCAL -->
+    {storeServices.length > 0 && (
+      <section aria-labelledby="heading-servicios" class="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/80 shadow-2xs space-y-4">
+        <h2 id="heading-servicios" class="text-base sm:text-lg font-bold text-stone-900 flex items-center gap-2">
+          <span>✨</span>
+          <span>Experiencia y Servicios en {storeDetail.nombre}</span>
+        </h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {storeServices.map(srv => (
+            <div class="flex items-center gap-2.5 p-3 rounded-2xl bg-stone-50 border border-stone-100 text-xs font-semibold text-stone-700">
+              <span class="text-base" aria-hidden="true">{srv.icon}</span>
+              <span>{srv.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
+
+    <!-- CARTA DE COMIDA / MENÚ PDF -->
+    {storeDetail.carta_comida_url && (
+      <section class="bg-gradient-to-r from-amber-50 to-orange-50 rounded-3xl p-6 border border-amber-200/80 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl shrink-0 shadow-sm">
+            📄
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-stone-900">Carta de Comida y Cafetería</h3>
+            <p class="text-xs text-stone-600">
+              Consulta las opciones de repostería, tostadas y métodos disponibles en sus locales físicos.
+            </p>
+          </div>
+        </div>
+        <a
+          href={storeDetail.carta_comida_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs transition shrink-0 shadow-xs"
+        >
+          <span>Descargar Menú (PDF)</span>
+          <span aria-hidden="true">↓</span>
+        </a>
+      </section>
+    )}
+
+    <!-- SUCURSALES FÍSICAS -->
+    {((storeDetail.sucursales && storeDetail.sucursales.length > 0) || storeDetail.direccion) && (
+      <section aria-labelledby="heading-sucursales" class="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/80 shadow-2xs space-y-4">
+        <h2 id="heading-sucursales" class="text-base sm:text-lg font-bold text-stone-900 flex items-center gap-2">
+          <span>📍</span>
+          <span>Sedes Físicas y Cafeterías</span>
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {storeDetail.sucursales && storeDetail.sucursales.length > 0 ? (
+            storeDetail.sucursales.map(suc => (
+              <div class="p-4 rounded-2xl bg-stone-50 border border-stone-200/80 space-y-1.5">
+                <h3 class="text-xs sm:text-sm font-bold text-stone-900">{suc.nombre}</h3>
+                {suc.direccion && <p class="text-xs text-stone-600">🏠 {suc.direccion}</p>}
+                {suc.comuna && <p class="text-2xs text-stone-500">📍 {suc.comuna}{suc.region ? `, ${suc.region}` : ''}</p>}
+              </div>
+            ))
+          ) : (
+            <div class="p-4 rounded-2xl bg-stone-50 border border-stone-200/80 space-y-1.5">
+              <h3 class="text-xs sm:text-sm font-bold text-stone-900">Sede Principal</h3>
+              {storeDetail.direccion && <p class="text-xs text-stone-600">🏠 {storeDetail.direccion}</p>}
+              {storeDetail.comuna && <p class="text-2xs text-stone-500">📍 {storeDetail.comuna}</p>}
+            </div>
+          )}
+        </div>
+      </section>
+    )}
+
+    <!-- GRILLA DE PRODUCTOS DE LA MARCA -->
+    <section aria-labelledby="heading-catalogo" class="space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 id="heading-catalogo" class="text-lg sm:text-2xl font-bold text-stone-900">
+            Catálogo Disponible de {storeDetail.nombre} ({storeDetail.productos.length})
+          </h2>
+          <p class="text-xs sm:text-sm text-stone-500">
+            Granos tostados y variedades monitoreadas en tiempo real.
+          </p>
+        </div>
+
+        <a 
+          href={`/catalogo?tienda=${encodeURIComponent(storeDetail.nombre)}`}
+          class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:underline"
+        >
+          <span>Ver con filtros avanzados en el comparador general</span>
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+
+      {storeDetail.productos.length > 0 ? (
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {storeDetail.productos.map(prod => {
+            const productOutboundUrl = prod.url_origen
+              ? AnalyticsTracker.buildOutboundUrl(prod.url_origen, prod.nombre, 'perfil_marca')
+              : '#';
+
+            return (
+              <article class="bg-white rounded-3xl p-5 border border-stone-200/80 shadow-2xs hover:shadow-md hover:border-emerald-300 transition flex flex-col justify-between group">
+                <div class="space-y-3">
+                  <div class="aspect-square bg-[#F7F6F0] rounded-2xl overflow-hidden relative flex items-center justify-center p-3">
+                    {prod.imagen_url ? (
+                      <img
+                        src={prod.imagen_url}
+                        alt={`Café ${prod.nombre} de ${storeDetail.nombre}`}
+                        width="240"
+                        height="240"
+                        class="w-full h-full object-contain group-hover:scale-105 transition duration-300"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span class="text-4xl text-stone-300" aria-hidden="true">☕</span>
+                    )}
+                    {prod.en_oferta && (
+                      <span class="absolute top-3 right-3 px-2 py-0.5 rounded-full text-2xs font-extrabold bg-red-600 text-white shadow-2xs">
+                        OFERTA
+                      </span>
+                    )}
+                    {prod.formato_gramos && (
+                      <span class="absolute bottom-3 left-3 px-2 py-0.5 rounded-full text-2xs font-bold bg-stone-900/80 text-white">
+                        {prod.formato_gramos}g
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 class="text-sm font-bold text-stone-900 group-hover:text-emerald-800 transition line-clamp-2">
+                      <a href={`/producto/${prod.id}`}>
+                        {prod.nombre}
+                      </a>
+                    </h3>
+                    <div class="flex flex-wrap items-center gap-1.5 mt-1.5 text-xs text-stone-500">
+                      {prod.origen && <span class="bg-stone-100 px-2 py-0.5 rounded-md">🌍 {prod.origen}</span>}
+                      {prod.tipo_tueste && <span class="bg-stone-100 px-2 py-0.5 rounded-md">🔥 {prod.tipo_tueste}</span>}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-5 pt-4 border-t border-stone-100 flex items-center justify-between gap-3">
+                  <div>
+                    <p class="text-sm font-extrabold text-stone-900">
+                      {prod.precio_clp ? formatCLP(prod.precio_clp) : 'Consultar'}
+                    </p>
+                    {prod.precio_por_kilo ? (
+                      <p class="text-xs font-semibold text-stone-400">
+                        {formatCLP(prod.precio_por_kilo)}/kg
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <a
+                      href={`/producto/${prod.id}`}
+                      class="px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold transition"
+                    >
+                      Ficha
+                    </a>
+                    {prod.url_origen && (
+                      <a
+                        href={productOutboundUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-track-outbound="true"
+                        data-product-id={prod.id}
+                        data-store={storeDetail.nombre}
+                        data-product-name={prod.nombre}
+                        data-price={prod.precio_clp || 0}
+                        data-grams={prod.formato_gramos || 250}
+                        data-price-kilo={prod.precio_por_kilo || 0}
+                        class="px-3.5 py-2 rounded-xl bg-stone-900 hover:bg-emerald-800 text-white text-xs font-bold transition flex items-center gap-1"
+                        title="Ir a comprar en la tienda oficial"
+                      >
+                        <span>Comprar</span>
+                        <span aria-hidden="true">↗</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <div class="text-center py-16 bg-white rounded-3xl border border-stone-200/80 p-8 space-y-2">
+          <p class="text-3xl" aria-hidden="true">📦</p>
+          <h3 class="text-base font-bold text-stone-800">Catálogo en proceso de sincronización</h3>
+          <p class="text-xs text-stone-500 max-w-md mx-auto">
+            Estamos actualizando las existencias de este tostador. Puedes visitar su web oficial o sucursales físicas.
+          </p>
+        </div>
+      )}
+    </section>
+  </div>
+</BaseLayout>
