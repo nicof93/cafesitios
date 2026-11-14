@@ -212,6 +212,17 @@ if (!FeatureFlags.isCuppingPanelEnabled()) {
 
   <!-- DRAWER: VER RESUMEN Y RESULTADOS DE CATA -->
   <SlideOverDrawer id="drawer-resumen-cata" title="Resumen del Panel Sensorial">
+    <button
+      type="button"
+      id="btn-toggle-expand-resumen"
+      slot="header-actions"
+      class="h-8 px-2.5 inline-flex items-center gap-1.5 rounded-xl text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 transition text-xs font-bold border border-stone-200/60 cursor-pointer shadow-2xs"
+      title="Ampliar / Reducir panel"
+    >
+      <span id="expand-icon" class="text-sm">🗖</span>
+      <span id="expand-text" class="hidden sm:inline">Ampliar</span>
+    </button>
+
     <div id="resumen-content" class="space-y-6">
       <!-- Loading del resumen -->
       <div id="resumen-loading" class="p-8 text-center text-stone-500 text-xs flex flex-col items-center justify-center gap-2">
@@ -238,92 +249,101 @@ if (!FeatureFlags.isCuppingPanelEnabled()) {
           </div>
         </div>
 
-        <!-- Enlace para compartir -->
-        <div class="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-200/80 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-              <span>🔗</span> Enlace Público de la Hoja de Cata
-            </span>
-            <button
-              type="button"
-              id="btn-copy-resumen-link"
-              class="text-xs font-bold text-indigo-700 hover:text-indigo-900 underline flex items-center gap-1"
-            >
-              <span>📋 Copiar Enlace</span>
-            </button>
-          </div>
-          <p id="resumen-link-url" class="text-[11px] font-mono text-indigo-800 break-all select-all bg-white p-2 rounded-lg border border-indigo-100">
-            https://cafesitios.cl/cata/...
-          </p>
-        </div>
+        <!-- Contenedor Bicolumna Dinámico en Modo Expandido -->
+        <div id="resumen-columns-container" class="space-y-6">
+          <!-- Columna 1: Enlace, Configuración de Publicación y Promedios SCA -->
+          <div class="space-y-6">
+            <!-- Enlace para compartir -->
+            <div class="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-200/80 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                  <span>🔗</span> Enlace Público de la Hoja de Cata
+                </span>
+                <button
+                  type="button"
+                  id="btn-copy-resumen-link"
+                  class="text-xs font-bold text-indigo-700 hover:text-indigo-900 underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>📋 Copiar Enlace</span>
+                </button>
+              </div>
+              <p id="resumen-link-url" class="text-[11px] font-mono text-indigo-800 break-all select-all bg-white p-2 rounded-lg border border-indigo-100">
+                https://cafesitios.cl/cata/...
+              </p>
+            </div>
 
-        <!-- Configuración de Asociación con Café y Publicación -->
-        <div class="p-4 rounded-xl bg-white border border-stone-200 space-y-3">
-          <h4 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-            <span>☕</span> Publicación en la Ficha del Producto
-          </h4>
-          <div>
-            <label for="resumen-select-prod" class="block text-[10px] font-bold text-stone-600 mb-1">
-              Café Asociado
-            </label>
-            <select
-              id="resumen-select-prod"
-              class="w-full rounded-xl border border-stone-200 px-3 py-1.5 text-xs text-stone-800"
-            >
-              <option value="0">-- Sin café asociado --</option>
-            </select>
+            <!-- Configuración de Asociación con Café y Publicación -->
+            <div class="p-4 rounded-xl bg-white border border-stone-200 space-y-3 shadow-2xs">
+              <h4 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+                <span>☕</span> Publicación en la Ficha del Producto
+              </h4>
+              <div>
+                <label for="resumen-select-prod" class="block text-[10px] font-bold text-stone-600 mb-1">
+                  Café Asociado
+                </label>
+                <select
+                  id="resumen-select-prod"
+                  class="w-full rounded-xl border border-stone-200 px-3 py-1.5 text-xs text-stone-800 focus:ring-1 focus:ring-emerald-700"
+                >
+                  <option value="0">-- Sin café asociado --</option>
+                </select>
+              </div>
+
+              <label class="inline-flex items-center gap-2 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  id="resumen-toggle-publicar"
+                  class="rounded border-stone-300 text-emerald-700 focus:ring-emerald-600 h-4 w-4"
+                />
+                <span class="text-xs font-semibold text-stone-800">Mostrar este puntaje en la vista de detalle del café</span>
+              </label>
+
+              <div class="flex justify-end pt-1">
+                <button
+                  type="button"
+                  id="btn-save-asociacion"
+                  class="rounded-xl bg-stone-900 hover:bg-emerald-800 px-3.5 py-1.5 text-xs font-bold text-white transition shadow-2xs cursor-pointer"
+                >
+                  Guardar Asociación
+                </button>
+              </div>
+            </div>
+
+            <!-- Radar / Desglose de los 10 Atributos SCA -->
+            <div class="space-y-2">
+              <h4 class="text-xs font-bold text-stone-800 uppercase tracking-wider">
+                Desglose Promedio SCA (10 Atributos)
+              </h4>
+              <div id="resumen-atributos-bars" class="space-y-1.5 bg-stone-50 p-3.5 rounded-xl border border-stone-200/70 text-xs">
+                <!-- Barras generadas por JS -->
+              </div>
+            </div>
           </div>
 
-          <label class="inline-flex items-center gap-2 cursor-pointer pt-1">
-            <input
-              type="checkbox"
-              id="resumen-toggle-publicar"
-              class="rounded border-stone-300 text-emerald-700 focus:ring-emerald-600 h-4 w-4"
-            />
-            <span class="text-xs font-semibold text-stone-800">Mostrar este puntaje en la vista de detalle del café</span>
-          </label>
+          <!-- Columna 2: Notas Sensoriales y Evaluaciones Individuales -->
+          <div class="space-y-6">
+            <!-- Notas Sensoriales Identificadas -->
+            <div class="space-y-2">
+              <h4 class="text-xs font-bold text-stone-800 uppercase tracking-wider">
+                Notas Sensoriales Identificadas por el Panel
+              </h4>
+              <div id="resumen-notas-tags" class="flex flex-wrap gap-1.5 p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/60 min-h-[48px] items-center">
+                <!-- Tags generadas por JS -->
+              </div>
+            </div>
 
-          <div class="flex justify-end pt-1">
-            <button
-              type="button"
-              id="btn-save-asociacion"
-              class="rounded-xl bg-stone-900 hover:bg-emerald-800 px-3.5 py-1.5 text-xs font-bold text-white transition shadow-2xs"
-            >
-              Guardar Asociación
-            </button>
-          </div>
-        </div>
-
-        <!-- Radar / Desglose de los 10 Atributos SCA -->
-        <div class="space-y-2">
-          <h4 class="text-xs font-bold text-stone-800 uppercase tracking-wider">
-            Desglose Promedio SCA (10 Atributos)
-          </h4>
-          <div id="resumen-atributos-bars" class="space-y-1.5 bg-stone-50 p-3.5 rounded-xl border border-stone-200/70 text-xs">
-            <!-- Barras generadas por JS -->
-          </div>
-        </div>
-
-        <!-- Notas Sensoriales Identificadas -->
-        <div class="space-y-2">
-          <h4 class="text-xs font-bold text-stone-800 uppercase tracking-wider">
-            Notas Sensoriales Identificadas por el Panel
-          </h4>
-          <div id="resumen-notas-tags" class="flex flex-wrap gap-1.5 p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/60 min-h-[48px] items-center">
-            <!-- Tags generadas por JS -->
-          </div>
-        </div>
-
-        <!-- Detalle de Evaluaciones Individuales (Inmutables) -->
-        <div class="space-y-2">
-          <div class="flex items-center justify-between">
-            <h4 class="text-xs font-bold text-stone-800 uppercase tracking-wider">
-              Hojas de Catación Entregadas
-            </h4>
-            <span class="text-[10px] font-semibold text-stone-400 italic">Respuestas inmutables</span>
-          </div>
-          <div id="resumen-respuestas-list" class="space-y-2">
-            <!-- Respuestas generadas por JS -->
+            <!-- Detalle de Evaluaciones Individuales (Inmutables y Desplegables) -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold text-stone-800 uppercase tracking-wider">
+                  Hojas de Catación Entregadas
+                </h4>
+                <span class="text-[10px] font-semibold text-stone-400 italic">Respuestas inmutables</span>
+              </div>
+              <div id="resumen-respuestas-list" class="space-y-2">
+                <!-- Respuestas generadas por JS -->
+              </div>
+            </div>
           </div>
         </div>
 
@@ -398,6 +418,39 @@ if (!FeatureFlags.isCuppingPanelEnabled()) {
     const respuestasList = document.getElementById('resumen-respuestas-list');
     const btnCerrarCata = document.getElementById('btn-cerrar-cata-manualmente');
     const btnCloseResumen = document.getElementById('btn-close-resumen');
+
+    const btnToggleExpand = document.getElementById('btn-toggle-expand-resumen');
+    const expandIcon = document.getElementById('expand-icon');
+    const expandText = document.getElementById('expand-text');
+    const columnsContainer = document.getElementById('resumen-columns-container');
+    let isResumenExpanded = false;
+
+    function applyResumenExpandedState(expanded) {
+      isResumenExpanded = expanded;
+      if (isResumenExpanded) {
+        drawerResumen.classList.remove('max-w-lg', 'lg:max-w-xl');
+        drawerResumen.classList.add('max-w-4xl', 'lg:max-w-5xl', 'xl:max-w-6xl');
+        if (columnsContainer) {
+          columnsContainer.className = 'grid grid-cols-1 lg:grid-cols-2 gap-6 space-y-0';
+        }
+        if (expandIcon) expandIcon.textContent = '🗕';
+        if (expandText) expandText.textContent = 'Reducir';
+        btnToggleExpand?.setAttribute('title', 'Reducir a vista compacta');
+      } else {
+        drawerResumen.classList.remove('max-w-4xl', 'lg:max-w-5xl', 'xl:max-w-6xl');
+        drawerResumen.classList.add('max-w-lg', 'lg:max-w-xl');
+        if (columnsContainer) {
+          columnsContainer.className = 'space-y-6';
+        }
+        if (expandIcon) expandIcon.textContent = '🗖';
+        if (expandText) expandText.textContent = 'Ampliar';
+        btnToggleExpand?.setAttribute('title', 'Ampliar panel a pantalla ancha');
+      }
+    }
+
+    btnToggleExpand?.addEventListener('click', () => {
+      applyResumenExpandedState(!isResumenExpanded);
+    });
 
     let allCatas = [];
     let storeProducts = [];
@@ -645,7 +698,10 @@ if (!FeatureFlags.isCuppingPanelEnabled()) {
       drawerResumen.classList.add('translate-x-full');
       const backdrop = document.getElementById('drawer-resumen-cata-backdrop');
       if (backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
-      setTimeout(() => drawerResumen.classList.add('invisible'), 300);
+      setTimeout(() => {
+        drawerResumen.classList.add('invisible');
+        applyResumenExpandedState(false);
+      }, 300);
     }
 
     btnCloseResumen?.addEventListener('click', closeResumenDrawer);
@@ -731,26 +787,123 @@ if (!FeatureFlags.isCuppingPanelEnabled()) {
         });
       }
 
-      // Hojas de Catación Entregadas (Inmutables)
+      // Hojas de Catación Entregadas (Inmutables con desglose ampliable)
       respuestasList.innerHTML = '';
       const resps = currentCataDetail.respuestas || [];
       if (resps.length === 0) {
-        respuestasList.innerHTML = '<div class="p-4 text-center text-xs text-stone-400 italic">Aún no hay respuestas en este panel.</div>';
+        respuestasList.innerHTML = '<div class="p-4 text-center text-xs text-stone-400 italic bg-stone-50 rounded-xl border border-stone-200/60">Aún no hay respuestas en este panel.</div>';
       } else {
-        resps.forEach(r => {
+        resps.forEach((r, idx) => {
           const card = document.createElement('div');
-          card.className = 'p-3 rounded-xl bg-stone-50 border border-stone-200/80 text-xs space-y-1.5';
+          card.className = 'p-3.5 rounded-xl bg-stone-50 border border-stone-200/80 text-xs space-y-2 transition shadow-2xs';
           const notasStr = (r.notas_identificadas || []).join(', ') || 'Sin notas específicas';
+          const fechaStr = r.fecha_creacion ? new Date(r.fecha_creacion).toLocaleDateString('es-CL', { hour: '2-digit', minute: '2-digit' }) : '';
+          const targetId = `taster-detail-${idx}`;
+
           card.innerHTML = `
             <div class="flex items-center justify-between">
-              <span class="font-bold text-stone-900">👤 ${r.nombre_catador}</span>
-              <span class="font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">${r.puntaje_total} pts</span>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-stone-900 flex items-center gap-1.5">
+                  <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                    ${r.nombre_catador.charAt(0).toUpperCase()}
+                  </span>
+                  <span>${r.nombre_catador}</span>
+                </span>
+                ${fechaStr ? `<span class="text-[10px] text-stone-400 font-medium">• ${fechaStr}</span>` : ''}
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="font-black text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md text-xs">
+                  ${r.puntaje_total.toFixed(2)} pts
+                </span>
+                <button
+                  type="button"
+                  class="btn-toggle-taster-detail text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center gap-0.5 cursor-pointer"
+                  data-target="${targetId}"
+                >
+                  <span>Desplegar</span>
+                  <span class="arrow-indicator text-xs font-mono">▾</span>
+                </button>
+              </div>
             </div>
             <div class="text-[11px] text-stone-500">
               <span class="font-semibold text-stone-700">Notas:</span> ${notasStr}
             </div>
             ${r.observaciones ? `<p class="text-[11px] text-stone-600 bg-white p-2 rounded-lg border border-stone-200/60 italic">"${r.observaciones}"</p>` : ''}
+            
+            <!-- Desglose Expandible de los 10 Atributos del Catador -->
+            <div id="${targetId}" class="hidden pt-2 border-t border-stone-200/70 space-y-2">
+              <span class="block text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                Desglose Individual SCA:
+              </span>
+              <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-[11px]">
+                <div class="bg-white p-2 rounded-lg border border-stone-200/80">
+                  <span class="block text-[9px] uppercase font-bold text-stone-400">Fragancia</span>
+                  <span class="font-bold text-stone-800">${(r.fragancia_aroma ?? 7.5).toFixed(2)}</span>
+                </div>
+                <div class="bg-white p-2 rounded-lg border border-stone-200/80">
+                  <span class="block text-[9px] uppercase font-bold text-stone-400">Sabor</span>
+                  <span class="font-bold text-stone-800">${(r.sabor ?? 7.5).toFixed(2)}</span>
+                </div>
+                <div class="bg-white p-2 rounded-lg border border-stone-200/80">
+                  <span class="block text-[9px] uppercase font-bold text-stone-400">Residual</span>
+                  <span class="font-bold text-stone-800">${(r.sabor_residual ?? 7.5).toFixed(2)}</span>
+                </div>
+                <div class="bg-white p-2 rounded-lg border border-stone-200/80">
+                  <span class="block text-[9px] uppercase font-bold text-stone-400">Acidez</span>
+                  <span class="font-bold text-stone-800">${(r.acidez ?? 7.5).toFixed(2)}</span>
+                </div>
+                <div class="bg-white p-2 rounded-lg border border-stone-200/80">
+                  <span class="block text-[9px] uppercase font-bold text-stone-400">Cuerpo</span>
+                  <span class="font-bold text-stone-800">${(r.cuerpo ?? 7.5).toFixed(2)}</span>
+                </div>
+                <div class="bg-white p-2 rounded-lg border border-stone-200/80">
+                  <span class="block text-[9px] uppercase font-bold text-stone-400">Uniformidad</span>
+                  <span class="font-bold text-stone-800">${(r.uniformidad ?? 10.0).toFixed(2)}</span>
+                </div>
+                <div class="bg-white p-2 rounded-lg border border-stone-200/80">
+                  <span class="block text-[9px] uppercase font-bold text-stone-400">Balance</span>
+                  <span class="font-bold text-stone-800">${(r.balance ?? 7.5).toFixed(2)}</span>
+                </div>
+                <div class="bg-white p-2 rounded-lg border border-stone-200/80">
+                  <span class="block text-[9px] uppercase font-bold text-stone-400">Taza Limpia</span>
+                  <span class="font-bold text-stone-800">${(r.taza_limpia ?? 10.0).toFixed(2)}</span>
+                </div>
+                <div class="bg-white p-2 rounded-lg border border-stone-200/80">
+                  <span class="block text-[9px] uppercase font-bold text-stone-400">Dulzor</span>
+                  <span class="font-bold text-stone-800">${(r.dulzor ?? 10.0).toFixed(2)}</span>
+                </div>
+                <div class="bg-white p-2 rounded-lg border border-stone-200/80">
+                  <span class="block text-[9px] uppercase font-bold text-stone-400">General</span>
+                  <span class="font-bold text-stone-800">${(r.puntaje_general ?? 7.5).toFixed(2)}</span>
+                </div>
+              </div>
+              ${r.defectos > 0 ? `
+                <div class="text-[10px] text-red-600 font-bold bg-red-50 border border-red-200 px-2 py-1 rounded-lg">
+                  ⚠️ Defectos penalizados: -${r.defectos} pts
+                </div>
+              ` : ''}
+            </div>
           `;
+
+          const btnToggle = card.querySelector('.btn-toggle-taster-detail');
+          const detailBox = card.querySelector(`#${targetId}`);
+          const arrow = card.querySelector('.arrow-indicator');
+
+          btnToggle?.addEventListener('click', () => {
+            const isHidden = detailBox?.classList.contains('hidden');
+            if (isHidden) {
+              detailBox?.classList.remove('hidden');
+              if (arrow) arrow.textContent = '▴';
+              const textSpan = btnToggle.querySelector('span:first-child');
+              if (textSpan) textSpan.textContent = 'Plegar';
+            } else {
+              detailBox?.classList.add('hidden');
+              if (arrow) arrow.textContent = '▾';
+              const textSpan = btnToggle.querySelector('span:first-child');
+              if (textSpan) textSpan.textContent = 'Desplegar';
+            }
+          });
+
           respuestasList.appendChild(card);
         });
       }
@@ -786,24 +939,50 @@ if (!FeatureFlags.isCuppingPanelEnabled()) {
           })
         });
 
-        if (!res.ok) throw new Error('Error al guardar asociación');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || 'Error al guardar asociación');
+        }
 
         btnSaveAsoc.textContent = '¡Guardado!';
         setTimeout(() => btnSaveAsoc.textContent = 'Guardar Asociación', 2000);
         await fetchCatas();
       } catch (err) {
-        alert(err.message);
+        if (typeof window.cafesitiosAlert === 'function') {
+          window.cafesitiosAlert('Error de Guardado', err.message || 'No se pudo guardar la asociación.', 'error');
+        } else {
+          alert(err.message);
+        }
       } finally {
         btnSaveAsoc.disabled = false;
       }
     });
 
-    // Cerrar Cata Manualmente
+    // Cerrar Cata Manualmente con Diálogo Estilizado de Cafesitios
     btnCerrarCata?.addEventListener('click', async () => {
       if (!currentCataDetail) return;
-      if (!confirm('¿Seguro que deseas cerrar esta sesión de cata? Ya no se recibirán más respuestas.')) return;
+
+      let confirmed = false;
+      if (typeof window.cafesitiosConfirm === 'function') {
+        confirmed = await window.cafesitiosConfirm(
+          '¿Cerrar Sesión de Cata?',
+          '¿Seguro que deseas cerrar esta sesión de cata? Ya no se recibirán más respuestas y el enlace público quedará inactivo para nuevos catadores.',
+          {
+            confirmText: 'Cerrar Sesión 🔒',
+            cancelText: 'Conservar Activa',
+            type: 'warning',
+          }
+        );
+      } else {
+        confirmed = confirm('¿Seguro que deseas cerrar esta sesión de cata? Ya no se recibirán más respuestas.');
+      }
+
+      if (!confirmed) return;
 
       const cataId = currentCataDetail.cata.id;
+      btnCerrarCata.disabled = true;
+      btnCerrarCata.textContent = 'Cerrando sesión...';
+
       try {
         const res = await fetch(`${apiBase}/api/v1/admin-tienda/catas/${cataId}`, {
           method: 'PUT',
@@ -817,9 +996,22 @@ if (!FeatureFlags.isCuppingPanelEnabled()) {
         if (res.ok) {
           closeResumenDrawer();
           await fetchCatas();
+          if (typeof window.cafesitiosAlert === 'function') {
+            window.cafesitiosAlert('Sesión Cerrada', 'La sesión de cata ha sido finalizada exitosamente.', 'success');
+          }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || 'Error al cerrar la cata.');
         }
       } catch (err) {
-        alert('Error al cerrar la cata.');
+        if (typeof window.cafesitiosAlert === 'function') {
+          window.cafesitiosAlert('Error', err.message || 'Error al cerrar la sesión de cata.', 'error');
+        } else {
+          alert(err.message || 'Error al cerrar la cata.');
+        }
+      } finally {
+        btnCerrarCata.disabled = false;
+        btnCerrarCata.textContent = 'Cerrar Sesión de Cata';
       }
     });
 
