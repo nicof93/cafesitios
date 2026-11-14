@@ -89,6 +89,16 @@ class ProductRecipeResponse(BaseModel):
     tienda_nombre: Optional[str] = None
     fecha_creacion: Optional[datetime] = None
 
+class PanelCataResumenResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    cata_id: int
+    nombre_cata: str
+    puntaje_promedio: float
+    total_evaluadores: int
+    fecha_cata: Optional[datetime] = None
+    notas_destacadas: List[str] = Field(default_factory=list)
+    promedio_atributos: Dict[str, float] = Field(default_factory=dict)
+
 class ProductDetailResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -124,6 +134,7 @@ class ProductDetailResponse(BaseModel):
     notas_sugeridas: List[ProductTastingNoteResponse] = Field(default_factory=list)
     variantes: List[ProductVariantDetailResponse]
     recetas: List[ProductRecipeResponse] = Field(default_factory=list)
+    panel_cata: Optional[PanelCataResumenResponse] = None
     oculto_catalogo: bool = False
     activo: bool = True
 
@@ -734,4 +745,103 @@ class LatestStoreIncorporationResponse(BaseModel):
     novedad_id: Optional[int] = None
     titulo_novedad: Optional[str] = None
     descripcion_novedad: Optional[str] = None
+
+
+# --- Catas y Paneles Sensoriales (SCA) ---
+class CataCreateRequest(BaseModel):
+    nombre: Optional[str] = Field(None, max_length=120)
+    descripcion: Optional[str] = Field(None, max_length=1000)
+    duracion_horas: int = Field(default=24, ge=1, le=720)
+    fecha_expiracion_custom: Optional[datetime] = None
+    producto_id: Optional[int] = None
+    valores_iniciales_75: bool = True
+    publicar_en_producto: bool = False
+
+
+class CataUpdateRequest(BaseModel):
+    nombre: Optional[str] = Field(None, max_length=120)
+    descripcion: Optional[str] = Field(None, max_length=1000)
+    estado: Optional[str] = Field(None, pattern=r"^(activa|cerrada)$")
+    producto_id: Optional[int] = None
+    publicar_en_producto: Optional[bool] = None
+
+
+class CataItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    tienda_id: int
+    producto_id: Optional[int] = None
+    producto_nombre: Optional[str] = None
+    nombre: str
+    descripcion: Optional[str] = None
+    token_publico: str
+    url_publica: str
+    fecha_expiracion: datetime
+    estado: str
+    esta_vigente: bool
+    valores_iniciales_75: bool
+    publicar_en_producto: bool
+    total_respuestas: int = 0
+    puntaje_promedio: Optional[float] = None
+    fecha_creacion: datetime
+
+
+class CataRespuestaItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    nombre_catador: str
+    fragancia_aroma: float
+    sabor: float
+    sabor_residual: float
+    acidez: float
+    cuerpo: float
+    uniformidad: float
+    balance: float
+    taza_limpia: float
+    dulzor: float
+    puntaje_general: float
+    defectos: float
+    puntaje_total: float
+    notas_identificadas: List[str] = Field(default_factory=list)
+    observaciones: Optional[str] = None
+    fecha_creacion: datetime
+
+
+class CataDetailSummaryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    cata: CataItemResponse
+    total_respuestas: int
+    puntaje_promedio: Optional[float] = None
+    promedio_atributos: Dict[str, float] = Field(default_factory=dict)
+    frecuencia_notas: List[Dict[str, Any]] = Field(default_factory=list)
+    respuestas: List[CataRespuestaItemResponse] = Field(default_factory=list)
+
+
+class CataPublicMetadataResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    nombre: str
+    descripcion: Optional[str] = None
+    tienda_nombre: str
+    producto_nombre: Optional[str] = None
+    fecha_expiracion: datetime
+    esta_vigente: bool
+    valores_iniciales_75: bool
+    total_respuestas_hasta_ahora: int = 0
+
+
+class CataRespuestaPublicaRequest(BaseModel):
+    nombre_catador: str = Field(..., min_length=2, max_length=100)
+    fragancia_aroma: float = Field(default=7.5, ge=6.0, le=10.0)
+    sabor: float = Field(default=7.5, ge=6.0, le=10.0)
+    sabor_residual: float = Field(default=7.5, ge=6.0, le=10.0)
+    acidez: float = Field(default=7.5, ge=6.0, le=10.0)
+    cuerpo: float = Field(default=7.5, ge=6.0, le=10.0)
+    uniformidad: float = Field(default=10.0, ge=6.0, le=10.0)
+    balance: float = Field(default=7.5, ge=6.0, le=10.0)
+    taza_limpia: float = Field(default=10.0, ge=6.0, le=10.0)
+    dulzor: float = Field(default=10.0, ge=6.0, le=10.0)
+    puntaje_general: float = Field(default=7.5, ge=6.0, le=10.0)
+    defectos: float = Field(default=0.0, ge=0.0, le=40.0)
+    notas_identificadas: List[str] = Field(default_factory=list, max_length=20)
+    observaciones: Optional[str] = Field(None, max_length=1000)
 

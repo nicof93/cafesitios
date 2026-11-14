@@ -105,6 +105,7 @@ class Tienda(Base):
     catalogos = relationship("TiendaCatalogo", back_populates="tienda", cascade="all, delete-orphan")
     pedidos_whatsapp = relationship("PedidoWhatsApp", back_populates="tienda", cascade="all, delete-orphan")
     novedades = relationship("NovedadTienda", back_populates="tienda", cascade="all, delete-orphan")
+    catas = relationship("Cata", back_populates="tienda", cascade="all, delete-orphan", order_by="desc(Cata.fecha_creacion)")
     comentarios = relationship("TiendaComentario", back_populates="tienda", cascade="all, delete-orphan", order_by="desc(TiendaComentario.fecha_creacion)")
 
 
@@ -224,6 +225,7 @@ class Producto(Base):
     tienda = relationship("Tienda", back_populates="productos")
     variantes = relationship("Variante", back_populates="producto", cascade="all, delete-orphan")
     notas_cata = relationship("ProductoNotaCata", back_populates="producto", cascade="all, delete-orphan")
+    catas = relationship("Cata", back_populates="producto")
 
 class ProductoNotaCata(Base):
     __tablename__ = 'producto_notas_cata'
@@ -369,6 +371,63 @@ class NovedadTienda(Base):
     __table_args__ = (
         Index('idx_novedades_tienda_fecha', 'tienda_id', 'fecha_creacion'),
         Index('idx_novedades_activo_fecha', 'activo', 'fecha_creacion'),
+    )
+
+
+class Cata(Base):
+    __tablename__ = 'catas'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    tienda_id = Column(Integer, ForeignKey('tiendas.id', ondelete='CASCADE'), nullable=False, index=True)
+    producto_id = Column(Integer, ForeignKey('productos.id', ondelete='SET NULL'), nullable=True, index=True)
+    nombre = Column(String(120), nullable=False)
+    descripcion = Column(Text, nullable=True)
+    token_publico = Column(String(64), unique=True, nullable=False, index=True)
+    fecha_expiracion = Column(DateTime, nullable=False)
+    estado = Column(String(20), nullable=False, default='activa', server_default='activa')
+    valores_iniciales_75 = Column(Boolean, nullable=False, default=True, server_default='true')
+    publicar_en_producto = Column(Boolean, nullable=False, default=False, server_default='false')
+    fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
+    fecha_actualizacion = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
+
+    tienda = relationship("Tienda", back_populates="catas")
+    producto = relationship("Producto", back_populates="catas")
+    respuestas = relationship("CataRespuesta", back_populates="cata", cascade="all, delete-orphan", order_by="desc(CataRespuesta.fecha_creacion)")
+
+    __table_args__ = (
+        Index('idx_catas_tienda_estado', 'tienda_id', 'estado'),
+        Index('idx_catas_token', 'token_publico'),
+        Index('idx_catas_producto_publicar', 'producto_id', 'publicar_en_producto'),
+    )
+
+
+class CataRespuesta(Base):
+    __tablename__ = 'cata_respuestas'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cata_id = Column(Integer, ForeignKey('catas.id', ondelete='CASCADE'), nullable=False, index=True)
+    nombre_catador = Column(String(100), nullable=False)
+
+    # 10 Atributos SCA estándar (escala 6.00 a 10.00 con incrementos de 0.25)
+    fragancia_aroma = Column(Float, nullable=False, default=7.5, server_default='7.5')
+    sabor = Column(Float, nullable=False, default=7.5, server_default='7.5')
+    sabor_residual = Column(Float, nullable=False, default=7.5, server_default='7.5')
+    acidez = Column(Float, nullable=False, default=7.5, server_default='7.5')
+    cuerpo = Column(Float, nullable=False, default=7.5, server_default='7.5')
+    uniformidad = Column(Float, nullable=False, default=10.0, server_default='10.0')
+    balance = Column(Float, nullable=False, default=7.5, server_default='7.5')
+    taza_limpia = Column(Float, nullable=False, default=10.0, server_default='10.0')
+    dulzor = Column(Float, nullable=False, default=10.0, server_default='10.0')
+    puntaje_general = Column(Float, nullable=False, default=7.5, server_default='7.5')
+    defectos = Column(Float, nullable=False, default=0.0, server_default='0.0')
+    puntaje_total = Column(Float, nullable=False)
+
+    notas_identificadas = Column(JSON, nullable=True)
+    observaciones = Column(Text, nullable=True)
+    fecha_creacion = Column(DateTime, nullable=False, default=_utcnow)
+
+    cata = relationship("Cata", back_populates="respuestas")
+
+    __table_args__ = (
+        Index('idx_cata_respuestas_cata_fecha', 'cata_id', 'fecha_creacion'),
     )
 
 class InteraccionClic(Base):

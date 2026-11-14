@@ -91,5 +91,12 @@ class Settings:
             return raw_flag.strip().lower() in ("true", "1", "yes", "on")
         return True
 
+    @property
+    def is_cupping_panel_enabled(self) -> bool:
+        raw_flag = os.getenv("ENABLE_CUPPING_PANEL")
+        if raw_flag is not None and raw_flag.strip() != "":
+            return raw_flag.strip().lower() in ("true", "1", "yes", "on")
+        return True
+
 settings = Settings()
 

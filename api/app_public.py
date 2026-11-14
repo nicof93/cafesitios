@@ -12,6 +12,7 @@ from api.admin_tienda import (
     admin_tienda_router as admin_tienda_canonical_router,
     router as admin_tienda_router,
 )
+from api.catas import catas_router, cuppings_router
 from api.feedback import router as feedback_router, sugerencias_router
 from api.novedades import router as novedades_router, news_router, posts_router
 from api.orders import pedidos_router, router as orders_router
@@ -192,6 +193,8 @@ def create_public_app() -> FastAPI:
     app.include_router(novedades_router)
     app.include_router(news_router)
     app.include_router(posts_router)
+    app.include_router(catas_router)
+    app.include_router(cuppings_router)
 
     # Subida de imágenes de productos y cartas en PDF para encargados de tienda
     os.makedirs(os.path.join("static", "uploads", "productos"), exist_ok=True)

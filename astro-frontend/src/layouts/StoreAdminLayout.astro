@@ -6,7 +6,7 @@ import '../styles/global.css';
 
 interface Props {
   title?: string;
-  activeNav?: 'dashboard' | 'ventas' | 'productos' | 'recetas' | 'novedades' | 'sincronizacion' | 'configuracion' | 'auditoria' | 'suscripcion';
+  activeNav?: 'dashboard' | 'ventas' | 'productos' | 'catas' | 'recetas' | 'novedades' | 'sincronizacion' | 'configuracion' | 'auditoria' | 'suscripcion';
 }
 
 const { title = "Panel de Tostaduría | Cafesitios Admin", activeNav = "dashboard" } = Astro.props;
@@ -16,6 +16,7 @@ const navLabels: Record<string, string> = {
   dashboard: "Dashboard de Tráfico & Métricas",
   ventas: "Ventas & Leads",
   productos: "Mis Productos & Catálogo",
+  catas: "Catas & Panel Sensorial",
   recetas: "Recetas Oficiales del Tostador",
   novedades: "Novedades & Eventos de Tostaduría",
   sincronizacion: "Fuentes & Sincronización",
@@ -159,6 +160,19 @@ const currentNavLabel = navLabels[activeNav] || "Dashboard";
               >
                 <span class="text-base shrink-0" aria-hidden="true">📦</span>
                 <span class="nav-text">Mis Productos</span>
+              </a>
+
+              <a
+                href="/admin-tienda/catas"
+                class={`nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition ${
+                  activeNav === 'catas'
+                    ? 'bg-emerald-800 text-white shadow-sm'
+                    : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                }`}
+                title="Paneles de Cata Sensorial (SCA) y Hojas de Evaluación"
+              >
+                <span class="text-base shrink-0" aria-hidden="true">📋</span>
+                <span class="nav-text">Catas & Panel SCA</span>
               </a>
 
               <a

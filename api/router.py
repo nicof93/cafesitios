@@ -30,6 +30,7 @@ from api.sync import (
     sincronizaciones_router,
     sincronizaciones_v1_router,
 )
+from api.catas import catas_router, cuppings_router
 from api.novedades import news_router, posts_router, router as novedades_router
 from api.orders import pedidos_router, router as orders_router
 from api.telemetry import router as telemetry_router, telemetria_router
@@ -61,6 +62,8 @@ __all__ = [
     "novedades_router",
     "news_router",
     "posts_router",
+    "catas_router",
+    "cuppings_router",
     "get_product_detail",
     "get_cheapest_coffee_products",
     "get_stores_summary",

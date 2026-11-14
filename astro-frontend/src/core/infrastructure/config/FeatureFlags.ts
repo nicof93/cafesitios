@@ -98,6 +98,15 @@ export class FeatureFlags {
     return this.parseFlag(val, true);
   }
 
+  /**
+   * Feature Flag: Sistema de Catas y Paneles Sensoriales
+   * Controlado por PUBLIC_ENABLE_CUPPING_PANEL o ENABLE_CUPPING_PANEL
+   */
+  static isCuppingPanelEnabled(): boolean {
+    const val = import.meta.env.PUBLIC_ENABLE_CUPPING_PANEL ?? import.meta.env.ENABLE_CUPPING_PANEL;
+    return this.parseFlag(val, true);
+  }
+
   static getAll(): Record<string, boolean> {
     return {
       guides: this.isGuidesEnabled(),
@@ -109,6 +118,7 @@ export class FeatureFlags {
       chatbotSommelier: this.isChatbotSommelierEnabled(),
       storePosts: this.isStorePostsEnabled(),
       newStoreBanner: this.isNewStoreBannerEnabled(),
+      cuppingPanel: this.isCuppingPanelEnabled(),
     };
   }
 }
