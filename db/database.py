@@ -1437,6 +1437,27 @@ class DatabaseManager:
         ofertas_guardadas = 0
 
         try:
+            # Optimización masiva: Pre-cargar en memoria Cafés y Ofertas para eliminar consultas N+1
+            hashes_cascada = [item.get("hash_descripcion") for item in catalogo_cascada if item.get("hash_descripcion")]
+            existing_cafes_by_hash = {}
+            if hashes_cascada:
+                cafes_db = session.query(Cafe).filter(Cafe.hash_descripcion.in_(hashes_cascada)).all()
+                existing_cafes_by_hash = {c.hash_descripcion: c for c in cafes_db if c.hash_descripcion}
+
+            all_links = [
+                of.get("link_detalle")
+                for item in catalogo_cascada
+                for of in item.get("ofertas", [])
+                if of.get("link_detalle")
+            ]
+            existing_ofertas_by_link = {}
+            if all_links:
+                ofertas_db = session.query(OfertaTienda).filter(
+                    OfertaTienda.tienda_id == tienda_id,
+                    OfertaTienda.link_detalle.in_(all_links)
+                ).all()
+                existing_ofertas_by_link = {of.link_detalle: of for of in ofertas_db if of.link_detalle}
+
             for i in range(0, len(catalogo_cascada), batch_size):
                 lote = catalogo_cascada[i:i + batch_size]
                 for item in lote:
@@ -1450,8 +1471,13 @@ class DatabaseManager:
                     hash_desc = item.get("hash_descripcion")
 
                     cafe = None
-                    if hash_desc:
+                    if hash_desc and hash_desc in existing_cafes_by_hash:
+                        cafe = existing_cafes_by_hash[hash_desc]
+                    elif hash_desc:
                         cafe = session.query(Cafe).filter(Cafe.hash_descripcion == hash_desc).first()
+                        if cafe:
+                            existing_cafes_by_hash[hash_desc] = cafe
+
                     if not cafe:
                         cafe = session.query(Cafe).filter(
                             Cafe.nombre == nombre,
@@ -1474,6 +1500,8 @@ class DatabaseManager:
                         )
                         session.add(cafe)
                         session.flush()
+                        if hash_desc:
+                            existing_cafes_by_hash[hash_desc] = cafe
                         cafes_agregados += 1
                     else:
                         # Actualizar atributos si cambiaron o se enriquecieron
@@ -1508,10 +1536,7 @@ class DatabaseManager:
                         if not link:
                             continue
 
-                        oferta = session.query(OfertaTienda).filter(
-                            OfertaTienda.link_detalle == link
-                        ).first()
-
+                        oferta = existing_ofertas_by_link.get(link)
                         if not oferta:
                             oferta = OfertaTienda(
                                 cafe_id=cafe.id,
@@ -1525,6 +1550,7 @@ class DatabaseManager:
                                 ultima_actualizacion=fecha_actual,
                             )
                             session.add(oferta)
+                            existing_ofertas_by_link[link] = oferta
                         else:
                             oferta.cafe_id = cafe.id
                             oferta.precio_actual = of.get("precio_actual", oferta.precio_actual)

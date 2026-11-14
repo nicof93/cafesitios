@@ -9,7 +9,12 @@ on:
 jobs:
   scrape_and_sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+        total_shards: [2]
 
     steps:
       - name: Checkout del repositorio
@@ -37,15 +42,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-scraper.txt
-          # Instalación de wheel CPU de llama-cpp-python sin compilar para ultra velocidad
-          pip install llama-cpp-python --prefer-binary --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu || true
 
-      - name: Ejecutar Scraper y Pipeline de Ingesta en Cascada
+      - name: Ejecutar Scraper en Paralelo (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SKIP_DB_MIGRATIONS: "true"
           PYTHONUNBUFFERED: "1"
           OMP_NUM_THREADS: "2"
         run: |
-          python scrapper_application.py
+          python scrapper_application.py --shard ${{ matrix.shard }} --total-shards ${{ matrix.total_shards }} --workers 4
 

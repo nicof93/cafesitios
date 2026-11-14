@@ -66,6 +66,8 @@ def consumir_productos_tienda(tienda: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
 
     productos_por_clave: Dict[str, Dict[str, Any]] = {}
+    errores_totales: List[str] = []
+    catalogos_exitosos = 0
 
     for url_cat in urls_catalogos:
         productos_url = None
@@ -75,9 +77,15 @@ def consumir_productos_tienda(tienda: Dict[str, Any]) -> List[Dict[str, Any]]:
             try:
                 productos_url = driver.consumir_productos()
                 if productos_url is not None:
+                    catalogos_exitosos += 1
                     break
             except Exception as error:
-                errores.append(f"{driver_class.__name__}: {error}")
+                err_msg = f"{driver_class.__name__}: {error}"
+                errores.append(err_msg)
+                errores_totales.append(err_msg)
+                # Si el error es 429 (Rate Limit), detener inmediatamente y propagar como error de tienda
+                if "429" in str(error) or "too many requests" in str(error).lower() or "rate limit" in str(error).lower():
+                    raise RuntimeError(f"HTTP 429 Too Many Requests: Rate limit alcanzado en '{tienda['nombre']}' ({url_cat})")
 
         if productos_url is None:
             if len(urls_catalogos) == 1:
@@ -119,6 +127,11 @@ def consumir_productos_tienda(tienda: Dict[str, Any]) -> List[Dict[str, Any]]:
                     existente['imagen'] = p.get('imagen')
                 if not existente.get('descripcion') and p.get('descripcion'):
                     existente['descripcion'] = p.get('descripcion')
+
+    if not productos_por_clave and urls_catalogos and catalogos_exitosos == 0 and errores_totales:
+        raise RuntimeError(
+            f"No se pudo sincronizar ningún catálogo de '{tienda['nombre']}': {'; '.join(errores_totales)}"
+        )
 
     return list(productos_por_clave.values())
 
@@ -308,18 +321,81 @@ def sincronizar_tienda(
         }
 
 
+def obtener_diagnostico_red() -> Dict[str, Any]:
+    """
+    Obtiene la IP pública del host/runner y los encabezados HTTP base que se utilizarán
+    para las conexiones salientes de scraping para trazabilidad y diagnóstico de rate-limiting.
+    """
+    import json
+    import urllib.request
+    ip_detectada = "No detectada / Offline"
+    endpoints = [
+        "https://api.ipify.org?format=json",
+        "https://ifconfig.me/all.json",
+        "https://icanhazip.com",
+    ]
+    for ep in endpoints:
+        try:
+            req = urllib.request.Request(
+                ep,
+                headers={"User-Agent": "curl/7.68.0"}
+            )
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                raw = resp.read().decode('utf-8', errors='ignore').strip()
+                if raw.startswith('{'):
+                    try:
+                        data = json.loads(raw)
+                        ip_detectada = data.get("ip") or data.get("ip_addr") or raw
+                        break
+                    except Exception:
+                        pass
+                elif raw:
+                    ip_detectada = raw
+                    break
+        except Exception:
+            continue
+
+    headers_base = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/html;q=0.9, */*;q=0.8',
+        'Accept-Language': 'es-CL,es;q=0.9,en;q=0.8',
+    }
+    return {
+        "ip_publica": ip_detectada,
+        "headers": headers_base,
+    }
+
+
 def sincronizar_multiples_tiendas(
     tiendas: list,
     db: Any = None,
     extractor: Any = None,
+    max_workers: Optional[int] = None,
     registrar_log_global: bool = True,
 ) -> dict:
     import time
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    if max_workers is None:
+        try:
+            max_workers = int(os.getenv("SCRAPER_CONCURRENCY", "4"))
+        except (ValueError, TypeError):
+            max_workers = 4
+
     inicio_corrida = time.monotonic()
     if db is None:
         db = DatabaseManager()
     if extractor is None:
         extractor = CoffeeAttributesExtractor()
+
+    # Diagnóstico de Red e Identidad Saliente
+    diag_red = obtener_diagnostico_red()
+    print("\n" + "=" * 70)
+    print(f"🌐 [DIAGNÓSTICO RED] IP Pública Saliente: {diag_red['ip_publica']}")
+    print(f"📡 [DIAGNÓSTICO RED] Headers HTTP Base:   {diag_red['headers']}")
+    print(f"⚙️  [CONCURRENCIA] Hilos de ejecución:     {max_workers} workers")
+    print("=" * 70 + "\n")
+    logging.info(f"[RED] IP: {diag_red['ip_publica']} | Headers: {diag_red['headers']} | Workers: {max_workers}")
 
     detalles = []
     total_nuevos = 0
@@ -329,19 +405,67 @@ def sincronizar_multiples_tiendas(
     tiendas_exitosas = 0
     tiendas_fallidas = 0
 
-    for tienda in tiendas:
-        res = sincronizar_tienda(tienda, db=db, extractor=extractor)
-        detalles.append(res)
-        if res['exito']:
-            tiendas_exitosas += 1
-            total_nuevos += res.get('productos_nuevos', 0)
-            total_actualizados += res.get('productos_actualizados', 0)
-            total_eliminados += res.get('productos_eliminados', 0)
-            total_productos_sincronizados += res.get('total_productos', 0)
-            print(f"✅ {res['nombre']}: {res['total_productos']} productos sincronizados ({res['productos_nuevos']} nuevos, {res['productos_actualizados']} actualizados).")
-        else:
-            tiendas_fallidas += 1
-            print(f"❌ {res['nombre']}: {res['error']}")
+    if max_workers <= 1 or len(tiendas) <= 1:
+        for tienda in tiendas:
+            res = sincronizar_tienda(tienda, db=db, extractor=extractor)
+            detalles.append(res)
+            if res['exito']:
+                tiendas_exitosas += 1
+                total_nuevos += res.get('productos_nuevos', 0)
+                total_actualizados += res.get('productos_actualizados', 0)
+                total_eliminados += res.get('productos_eliminados', 0)
+                total_productos_sincronizados += res.get('total_productos', 0)
+                print(f"✅ {res['nombre']}: {res['total_productos']} productos sincronizados ({res['productos_nuevos']} nuevos, {res['productos_actualizados']} actualizados) en {res.get('duracion_segundos', 0)}s.")
+            else:
+                tiendas_fallidas += 1
+                if res.get('codigo_error') == 'BLOQUEO_BOT_O_RATE_LIMIT' or '429' in str(res.get('error', '')):
+                    print(f"⛔ [RATE LIMIT 429] {res['nombre']}: {res['error']} ({res.get('mensaje_amigable')})")
+                else:
+                    print(f"❌ {res['nombre']}: {res['error']}")
+    else:
+        print(f"⚡ Procesando {len(tiendas)} tiendas de forma concurrente con {max_workers} hilos...")
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_store = {
+                executor.submit(sincronizar_tienda, tienda, db, extractor): tienda
+                for tienda in tiendas
+            }
+            for future in as_completed(future_to_store):
+                try:
+                    res = future.result()
+                except Exception as e:
+                    t_info = future_to_store[future]
+                    t_id = t_info.get("id") if isinstance(t_info, dict) else t_info
+                    t_nombre = t_info.get("nombre") if isinstance(t_info, dict) else f"Tienda #{t_id}"
+                    diag = clasificar_error_sincronizacion(e)
+                    res = {
+                        "tienda_id": t_id,
+                        "nombre": t_nombre,
+                        "exito": False,
+                        "total_productos": 0,
+                        "productos_nuevos": 0,
+                        "productos_actualizados": 0,
+                        "productos_eliminados": 0,
+                        "duracion_segundos": 0.0,
+                        "error": str(e),
+                        "codigo_error": diag["codigo"],
+                        "categoria_error": diag["categoria"],
+                        "mensaje_amigable": diag["mensaje_amigable"],
+                    }
+
+                detalles.append(res)
+                if res['exito']:
+                    tiendas_exitosas += 1
+                    total_nuevos += res.get('productos_nuevos', 0)
+                    total_actualizados += res.get('productos_actualizados', 0)
+                    total_eliminados += res.get('productos_eliminados', 0)
+                    total_productos_sincronizados += res.get('total_productos', 0)
+                    print(f"✅ {res['nombre']}: {res['total_productos']} productos sincronizados ({res['productos_nuevos']} nuevos, {res['productos_actualizados']} actualizados) en {res.get('duracion_segundos', 0)}s.")
+                else:
+                    tiendas_fallidas += 1
+                    if res.get('codigo_error') == 'BLOQUEO_BOT_O_RATE_LIMIT' or '429' in str(res.get('error', '')):
+                        print(f"⛔ [RATE LIMIT 429] {res['nombre']}: {res['error']} ({res.get('mensaje_amigable')})")
+                    else:
+                        print(f"❌ {res['nombre']}: {res['error']}")
 
     duracion_total = round(time.monotonic() - inicio_corrida, 2)
     db.registrar_ultima_sincronizacion()
@@ -380,18 +504,44 @@ def sincronizar_multiples_tiendas(
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Pipeline de Sincronización y Scraping - Cafésitios")
+    parser.add_argument("--workers", type=int, default=None, help="Número de hilos concurrentes (default: 4 o SCRAPER_CONCURRENCY)")
+    parser.add_argument("--shard", type=int, default=1, help="Número del shard actual (1-indexed)")
+    parser.add_argument("--total-shards", type=int, default=1, help="Total de shards en ejecución paralela")
+    parser.add_argument("--tienda-id", type=int, default=None, help="ID específico de una tienda a sincronizar")
+    parser.add_argument("--skip-migrations", action="store_true", help="Omitir chequeo de migraciones DDL")
+
+    args, unknown = parser.parse_known_args()
+
     skip_migrations = (
-        "--skip-migrations" in sys.argv
+        args.skip_migrations
+        or "--skip-migrations" in sys.argv
         or os.getenv("SKIP_DB_MIGRATIONS", "").strip().lower() in ("true", "1", "yes")
     )
+
     db = DatabaseManager()
     if not skip_migrations:
         db.inicializar_db()
     else:
         print("⏩ Omitiendo chequeo de migraciones DDL (SKIP_DB_MIGRATIONS activo).")
+
     tiendas = db.listar_tiendas_activas()
-    res = sincronizar_multiples_tiendas(tiendas, db=db, registrar_log_global=True)
-    print(f"\nProceso finalizado: {res['tiendas_exitosas']}/{res['total_tiendas']} tiendas sincronizadas correctamente.\n")
+
+    if args.tienda_id is not None:
+        tiendas = [t for t in tiendas if t.get('id') == args.tienda_id]
+        print(f"🎯 Modo filtrado: Sincronizando exclusivamente Tienda ID {args.tienda_id} ({len(tiendas)} encontradas).")
+    elif args.total_shards > 1:
+        # Particionamiento uniforme y determinista
+        tiendas = sorted(tiendas, key=lambda t: t['id'])
+        total_original = len(tiendas)
+        shard_num = max(1, min(args.shard, args.total_shards))
+        tiendas = [t for idx, t in enumerate(tiendas) if (idx % args.total_shards) == (shard_num - 1)]
+        print(f"🧩 [SHARDING MATRIX] Shard {shard_num}/{args.total_shards} asignado: {len(tiendas)} de {total_original} tiendas totales.")
+
+    workers = args.workers
+    res = sincronizar_multiples_tiendas(tiendas, db=db, max_workers=workers, registrar_log_global=True)
+    print(f"\nProceso finalizado: {res['tiendas_exitosas']}/{res['total_tiendas']} tiendas sincronizadas correctamente en {res['duracion_segundos']}s.\n")
 
 
 if __name__ == '__main__':

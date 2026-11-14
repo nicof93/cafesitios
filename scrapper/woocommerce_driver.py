@@ -288,7 +288,9 @@ class WooCommerceDriver(BaseDriver):
                     sep = '&' if '?' in base_url else '?'
                     paginated_url = f"{base_url}{sep}page={page}&per_page=100" if 'per_page=' not in base_url else base_url
 
-                    response = requests.get(paginated_url, headers=headers, timeout=15)
+                    response = requests.get(paginated_url, headers=headers, timeout=7)
+                    if response.status_code == 429:
+                        raise RuntimeError(f"HTTP 429 Too Many Requests: Rate limit excedido en WooCommerce para '{self.nombre}' ({paginated_url})")
                     if response.status_code == 200:
                         data = response.json()
                         if isinstance(data, list):
