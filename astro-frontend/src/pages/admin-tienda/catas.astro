@@ -1,0 +1,830 @@
+---
+import StoreAdminLayout from '../../layouts/StoreAdminLayout.astro';
+import SlideOverDrawer from '../../components/admin/SlideOverDrawer.astro';
+import { FeatureFlags } from '../../core/infrastructure/config/FeatureFlags';
+
+if (!FeatureFlags.isCuppingPanelEnabled()) {
+  return Astro.rewrite('/404');
+}
+---
+
+<StoreAdminLayout title="Paneles de Cata Sensorial (SCA) | Panel de Tostaduría" activeNav="catas">
+  <div class="space-y-6">
+
+    <!-- ENCABEZADO Y ACCIÓN PRINCIPAL -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-stone-200/70 shadow-xs">
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">📋 Paneles de Cata Sensorial (SCA)</h1>
+          <span class="rounded-full bg-indigo-100 text-indigo-800 text-xs px-2.5 py-0.5 font-bold">10 Atributos SCA</span>
+        </div>
+        <p class="text-xs text-stone-500 mt-1 max-w-2xl">
+          Crea sesiones de cata con enlaces de duración temporal para evaluar café en mesa con tu equipo o clientes. Las respuestas son inmutables y te permiten calcular puntajes promedio y notas identificadas.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          id="btn-open-new-cata"
+          class="inline-flex items-center justify-center gap-2 rounded-xl bg-stone-900 hover:bg-emerald-800 px-5 py-2.5 text-xs font-bold text-white transition shadow-sm"
+        >
+          <span>➕</span>
+          <span>Nueva Cata</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- BANNER PEDAGÓGICO DE LA CATA SCA -->
+    <div class="rounded-2xl border border-stone-200/80 bg-stone-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-stone-600">
+      <div class="flex items-center gap-2.5">
+        <span class="text-xl shrink-0">☕</span>
+        <div>
+          <span class="font-bold text-stone-800">Estándar SCA Internacional:</span>
+          <span> Evalúa Fragancia/Aroma, Sabor, Residual, Acidez, Cuerpo, Uniformidad, Balance, Taza Limpia, Dulzor y Puntaje General (escala 6.00 a 10.00 con incrementos de 0.25).</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- LISTADO DE CATAS -->
+    <div class="bg-white rounded-2xl border border-stone-200/70 shadow-xs overflow-hidden">
+      <!-- Loading State -->
+      <div id="catas-loading" class="p-12 text-center text-stone-500 text-xs flex flex-col items-center justify-center gap-3">
+        <div class="w-7 h-7 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+        <span>Cargando sesiones de cata...</span>
+      </div>
+
+      <!-- Empty State -->
+      <div id="catas-empty" class="hidden p-12 text-center space-y-3">
+        <div class="text-4xl">☕📋</div>
+        <h3 class="text-sm font-bold text-stone-800">No tienes sesiones de cata creadas aún</h3>
+        <p class="text-xs text-stone-500 max-w-md mx-auto">
+          Crea tu primer panel sensorial para compartir con tu equipo de baristas o participantes en mesa de cata.
+        </p>
+        <button
+          type="button"
+          id="btn-empty-create-cata"
+          class="inline-flex items-center gap-2 rounded-xl bg-stone-900 hover:bg-emerald-800 px-4 py-2 text-xs font-bold text-white transition shadow-sm"
+        >
+          <span>➕ Crear Primer Panel Sensorial</span>
+        </button>
+      </div>
+
+      <!-- Tabla / Grilla de Catas -->
+      <div id="catas-container" class="hidden divide-y divide-stone-100">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-stone-50 text-[11px] font-bold text-stone-500 uppercase tracking-wider border-b border-stone-200">
+              <tr>
+                <th class="py-3.5 px-4">Panel / Nombre</th>
+                <th class="py-3.5 px-4">Café Asociado</th>
+                <th class="py-3.5 px-4 text-center">Respuestas</th>
+                <th class="py-3.5 px-4 text-center">Puntaje Promedio</th>
+                <th class="py-3.5 px-4">Vigencia / Estado</th>
+                <th class="py-3.5 px-4 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="catas-tbody" class="divide-y divide-stone-100 font-medium text-stone-800">
+              <!-- Renderizado dinámico vía JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DRAWER: CREAR NUEVA CATA -->
+  <SlideOverDrawer id="drawer-new-cata" title="Crear Panel Sensorial">
+    <form id="form-new-cata" class="space-y-4">
+      <div>
+        <label for="cata-nombre" class="block text-[11px] font-bold text-stone-700 mb-1">
+          Nombre del Panel de Cata <span class="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          id="cata-nombre"
+          name="nombre"
+          required
+          placeholder="Ej: panel-sensorial-2026-11-12"
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+        />
+        <p class="text-[10px] text-stone-400 mt-1">Por defecto sugerimos la fecha de hoy con el prefijo panel-sensorial-.</p>
+      </div>
+
+      <div>
+        <label for="cata-producto" class="block text-[11px] font-bold text-stone-700 mb-1">
+          Café de tu Tienda a Evaluar (Opcional)
+        </label>
+        <select
+          id="cata-producto"
+          name="producto_id"
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+        >
+          <option value="">-- Sin café asignado (Evaluación de lote libre) --</option>
+        </select>
+        <p class="text-[10px] text-stone-400 mt-1">Puedes asociar un café de tu catálogo ahora o más tarde una vez finalizada la cata.</p>
+      </div>
+
+      <div>
+        <label for="cata-duracion" class="block text-[11px] font-bold text-stone-700 mb-1">
+          Duración del Enlace para Catadores
+        </label>
+        <select
+          id="cata-duracion"
+          name="duracion_horas"
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+        >
+          <option value="2">2 Horas (Sesión en barra presencial)</option>
+          <option value="8">8 Horas (Jornada laboral completa)</option>
+          <option value="24" selected>24 Horas (1 Día - Recomendado)</option>
+          <option value="72">3 Días (Fin de semana de calibración)</option>
+          <option value="168">7 Días (1 Semana)</option>
+        </select>
+        <p class="text-[10px] text-stone-400 mt-1">Pasado este tiempo, el enlace expirará y no recibirá más respuestas.</p>
+      </div>
+
+      <div>
+        <label for="cata-descripcion" class="block text-[11px] font-bold text-stone-700 mb-1">
+          Descripción o Notas del Tueste / Lote (Opcional)
+        </label>
+        <textarea
+          id="cata-descripcion"
+          name="descripcion"
+          rows="3"
+          placeholder="Ej: Batch experimental #4, tueste para filtro, curva de desarrollo 11%..."
+          class="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition resize-none"
+        ></textarea>
+      </div>
+
+      <!-- OPCIÓN DE INICIALIZACIÓN SCA (SOLICITUD DE USUARIO) -->
+      <div class="pt-2 border-t border-stone-100">
+        <label class="inline-flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            id="cata-valores-75"
+            name="valores_iniciales_75"
+            checked
+            class="rounded border-stone-300 text-emerald-700 focus:ring-emerald-600 h-4 w-4"
+          />
+          <span class="text-xs font-bold text-stone-800">Inicializar atributos en 7.50 ("Muy Bueno")</span>
+        </label>
+        <p class="text-[10px] text-stone-400 pl-6">
+          Agiliza la evaluación en pantallas táctiles. Si se desmarca, el catador debe ajustar cada slider desde cero.
+        </p>
+      </div>
+
+      <div>
+        <label class="inline-flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            id="cata-publicar"
+            name="publicar_en_producto"
+            class="rounded border-stone-300 text-emerald-700 focus:ring-emerald-600 h-4 w-4"
+          />
+          <span class="text-xs font-bold text-stone-800">Publicar resultado en la ficha pública del café</span>
+        </label>
+        <p class="text-[10px] text-stone-400 pl-6">
+          Si está marcado y asocias un café, el puntaje promedio y notas del panel se mostrarán en su ficha pública en Cafésitios.
+        </p>
+      </div>
+
+      <div id="drawer-error" class="hidden rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-700 font-semibold"></div>
+    </form>
+
+    <div slot="footer" class="flex items-center justify-end gap-2.5 w-full">
+      <button
+        type="button"
+        id="btn-cancel-cata"
+        class="rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-100 transition shadow-2xs"
+      >
+        Cancelar
+      </button>
+      <button
+        type="button"
+        id="btn-submit-cata"
+        class="rounded-xl bg-emerald-700 hover:bg-emerald-800 px-5 py-2 text-xs font-bold text-white transition shadow-sm"
+      >
+        Crear Sesión de Cata
+      </button>
+    </div>
+  </SlideOverDrawer>
+
+  <!-- DRAWER: VER RESUMEN Y RESULTADOS DE CATA -->
+  <SlideOverDrawer id="drawer-resumen-cata" title="Resumen del Panel Sensorial">
+    <div id="resumen-content" class="space-y-6">
+      <!-- Loading del resumen -->
+      <div id="resumen-loading" class="p-8 text-center text-stone-500 text-xs flex flex-col items-center justify-center gap-2">
+        <div class="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+        <span>Cargando resultados...</span>
+      </div>
+
+      <!-- Datos del resumen -->
+      <div id="resumen-body" class="hidden space-y-6">
+        
+        <!-- Tarjeta de Métricas Clave -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div class="p-3.5 rounded-xl bg-stone-50 border border-stone-200/80">
+            <span class="block text-[10px] uppercase font-bold text-stone-400">Puntaje Promedio</span>
+            <span id="resumen-kpi-score" class="text-xl font-black text-emerald-800">-- SCA</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-stone-50 border border-stone-200/80">
+            <span class="block text-[10px] uppercase font-bold text-stone-400">Participantes</span>
+            <span id="resumen-kpi-count" class="text-xl font-black text-stone-900">0 catadores</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-stone-50 border border-stone-200/80 col-span-2 sm:col-span-1">
+            <span class="block text-[10px] uppercase font-bold text-stone-400">Estado</span>
+            <span id="resumen-kpi-status" class="text-xs font-black inline-block mt-1">Activa</span>
+          </div>
+        </div>
+
+        <!-- Enlace para compartir -->
+        <div class="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-200/80 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+              <span>🔗</span> Enlace Público de la Hoja de Cata
+            </span>
+            <button
+              type="button"
+              id="btn-copy-resumen-link"
+              class="text-xs font-bold text-indigo-700 hover:text-indigo-900 underline flex items-center gap-1"
+            >
+              <span>📋 Copiar Enlace</span>
+            </button>
+          </div>
+          <p id="resumen-link-url" class="text-[11px] font-mono text-indigo-800 break-all select-all bg-white p-2 rounded-lg border border-indigo-100">
+            https://cafesitios.cl/cata/...
+          </p>
+        </div>
+
+        <!-- Configuración de Asociación con Café y Publicación -->
+        <div class="p-4 rounded-xl bg-white border border-stone-200 space-y-3">
+          <h4 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+            <span>☕</span> Publicación en la Ficha del Producto
+          </h4>
+          <div>
+            <label for="resumen-select-prod" class="block text-[10px] font-bold text-stone-600 mb-1">
+              Café Asociado
+            </label>
+            <select
+              id="resumen-select-prod"
+              class="w-full rounded-xl border border-stone-200 px-3 py-1.5 text-xs text-stone-800"
+            >
+              <option value="0">-- Sin café asociado --</option>
+            </select>
+          </div>
+
+          <label class="inline-flex items-center gap-2 cursor-pointer pt-1">
+            <input
+              type="checkbox"
+              id="resumen-toggle-publicar"
+              class="rounded border-stone-300 text-emerald-700 focus:ring-emerald-600 h-4 w-4"
+            />
+            <span class="text-xs font-semibold text-stone-800">Mostrar este puntaje en la vista de detalle del café</span>
+          </label>
+
+          <div class="flex justify-end pt-1">
+            <button
+              type="button"
+              id="btn-save-asociacion"
+              class="rounded-xl bg-stone-900 hover:bg-emerald-800 px-3.5 py-1.5 text-xs font-bold text-white transition shadow-2xs"
+            >
+              Guardar Asociación
+            </button>
+          </div>
+        </div>
+
+        <!-- Radar / Desglose de los 10 Atributos SCA -->
+        <div class="space-y-2">
+          <h4 class="text-xs font-bold text-stone-800 uppercase tracking-wider">
+            Desglose Promedio SCA (10 Atributos)
+          </h4>
+          <div id="resumen-atributos-bars" class="space-y-1.5 bg-stone-50 p-3.5 rounded-xl border border-stone-200/70 text-xs">
+            <!-- Barras generadas por JS -->
+          </div>
+        </div>
+
+        <!-- Notas Sensoriales Identificadas -->
+        <div class="space-y-2">
+          <h4 class="text-xs font-bold text-stone-800 uppercase tracking-wider">
+            Notas Sensoriales Identificadas por el Panel
+          </h4>
+          <div id="resumen-notas-tags" class="flex flex-wrap gap-1.5 p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/60 min-h-[48px] items-center">
+            <!-- Tags generadas por JS -->
+          </div>
+        </div>
+
+        <!-- Detalle de Evaluaciones Individuales (Inmutables) -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold text-stone-800 uppercase tracking-wider">
+              Hojas de Catación Entregadas
+            </h4>
+            <span class="text-[10px] font-semibold text-stone-400 italic">Respuestas inmutables</span>
+          </div>
+          <div id="resumen-respuestas-list" class="space-y-2">
+            <!-- Respuestas generadas por JS -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div slot="footer" class="flex items-center justify-between w-full">
+      <button
+        type="button"
+        id="btn-cerrar-cata-manualmente"
+        class="text-xs text-red-600 hover:text-red-800 font-bold"
+      >
+        Cerrar Sesión de Cata
+      </button>
+      <button
+        type="button"
+        id="btn-close-resumen"
+        class="rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-100 transition shadow-2xs"
+      >
+        Cerrar Ventana
+      </button>
+    </div>
+  </SlideOverDrawer>
+</StoreAdminLayout>
+
+<!-- SCRIPT CLIENTE PARA GESTIÓN DE CATAS -->
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('store_admin_token');
+    if (!token) {
+      window.location.href = '/admin-tienda/login';
+      return;
+    }
+
+    const apiBase = document.body.dataset.apiBase || '';
+
+    // Elementos DOM Principales
+    const catasLoading = document.getElementById('catas-loading');
+    const catasEmpty = document.getElementById('catas-empty');
+    const catasContainer = document.getElementById('catas-container');
+    const catasTbody = document.getElementById('catas-tbody');
+    const btnOpenNew = document.getElementById('btn-open-new-cata');
+    const btnEmptyCreate = document.getElementById('btn-empty-create-cata');
+
+    // Drawer Crear Cata
+    const drawerNew = document.getElementById('drawer-new-cata');
+    const formNew = document.getElementById('form-new-cata');
+    const inputNombre = document.getElementById('cata-nombre');
+    const selectProducto = document.getElementById('cata-producto');
+    const selectDuracion = document.getElementById('cata-duracion');
+    const inputDesc = document.getElementById('cata-descripcion');
+    const checkValores75 = document.getElementById('cata-valores-75');
+    const checkPublicar = document.getElementById('cata-publicar');
+    const btnSubmitCata = document.getElementById('btn-submit-cata');
+    const btnCancelCata = document.getElementById('btn-cancel-cata');
+    const drawerError = document.getElementById('drawer-error');
+
+    // Drawer Resumen
+    const drawerResumen = document.getElementById('drawer-resumen-cata');
+    const resumenLoading = document.getElementById('resumen-loading');
+    const resumenBody = document.getElementById('resumen-body');
+    const kpiScore = document.getElementById('resumen-kpi-score');
+    const kpiCount = document.getElementById('resumen-kpi-count');
+    const kpiStatus = document.getElementById('resumen-kpi-status');
+    const linkUrl = document.getElementById('resumen-link-url');
+    const btnCopyResumenLink = document.getElementById('btn-copy-resumen-link');
+    const selectResumenProd = document.getElementById('resumen-select-prod');
+    const togglePublicar = document.getElementById('resumen-toggle-publicar');
+    const btnSaveAsoc = document.getElementById('btn-save-asociacion');
+    const atributosBars = document.getElementById('resumen-atributos-bars');
+    const notasTags = document.getElementById('resumen-notas-tags');
+    const respuestasList = document.getElementById('resumen-respuestas-list');
+    const btnCerrarCata = document.getElementById('btn-cerrar-cata-manualmente');
+    const btnCloseResumen = document.getElementById('btn-close-resumen');
+
+    let allCatas = [];
+    let storeProducts = [];
+    let currentCataDetail = null;
+
+    // Sugerencia de nombre por defecto: panel-sensorial-YYYY-MM-DD
+    function getSuggestedName() {
+      const today = new Date().toISOString().split('T')[0];
+      return `panel-sensorial-${today}`;
+    }
+
+    // Cargar productos de la tienda para selectores
+    async function fetchStoreProducts() {
+      try {
+        const res = await fetch(`${apiBase}/api/v1/admin-tienda/productos`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          storeProducts = data.items || [];
+          populateProductSelects();
+        }
+      } catch (e) {
+        console.error('Error cargando productos de tienda:', e);
+      }
+    }
+
+    function populateProductSelects() {
+      selectProducto.innerHTML = '<option value="">-- Sin café asignado (Evaluación libre) --</option>';
+      selectResumenProd.innerHTML = '<option value="0">-- Sin café asignado --</option>';
+
+      storeProducts.forEach(p => {
+        const opt1 = document.createElement('option');
+        opt1.value = p.id;
+        opt1.textContent = `${p.nombre} (${p.origen || 'Café'})`;
+        selectProducto.appendChild(opt1);
+
+        const opt2 = document.createElement('option');
+        opt2.value = p.id;
+        opt2.textContent = `${p.nombre}`;
+        selectResumenProd.appendChild(opt2);
+      });
+    }
+
+    // Cargar Catas
+    async function fetchCatas() {
+      try {
+        catasLoading.classList.remove('hidden');
+        catasEmpty.classList.add('hidden');
+        catasContainer.classList.add('hidden');
+
+        const res = await fetch(`${apiBase}/api/v1/admin-tienda/catas`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error('Error al cargar catas');
+
+        allCatas = await res.json();
+        catasLoading.classList.add('hidden');
+
+        if (allCatas.length === 0) {
+          catasEmpty.classList.remove('hidden');
+        } else {
+          catasContainer.classList.remove('hidden');
+          renderCatasTable();
+        }
+      } catch (err) {
+        catasLoading.innerHTML = `<span class="text-red-600 font-semibold">${err.message}</span>`;
+      }
+    }
+
+    function renderCatasTable() {
+      catasTbody.innerHTML = '';
+
+      allCatas.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-stone-50/80 transition';
+
+        const statusBadge = c.estado === 'cerrada'
+          ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-stone-200 text-stone-700">Cerrada</span>'
+          : !c.esta_vigente
+          ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">Expirada</span>'
+          : '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Activa</span>';
+
+        const scoreDisplay = c.puntaje_promedio
+          ? `<span class="font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">${c.puntaje_promedio} pts</span>`
+          : '<span class="text-stone-400 font-semibold italic">Sin evaluar</span>';
+
+        const prodDisplay = c.producto_nombre
+          ? `<span class="font-bold text-stone-800">${c.producto_nombre}</span>`
+          : '<span class="text-stone-400 italic">Muestra libre</span>';
+
+        tr.innerHTML = `
+          <td class="py-3 px-4">
+            <div class="font-bold text-stone-900">${c.nombre}</div>
+            <div class="text-[10px] text-stone-400">${new Date(c.fecha_creacion).toLocaleDateString()}</div>
+          </td>
+          <td class="py-3 px-4">${prodDisplay}</td>
+          <td class="py-3 px-4 text-center">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-bold bg-stone-100 text-stone-800">
+              ${c.total_respuestas}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-center">${scoreDisplay}</td>
+          <td class="py-3 px-4">${statusBadge}</td>
+          <td class="py-3 px-4 text-right">
+            <div class="flex items-center justify-end gap-1.5">
+              <button
+                type="button"
+                data-token="${c.token_publico}"
+                class="btn-copy-link p-1.5 rounded-lg hover:bg-stone-100 text-stone-600 transition"
+                title="Copiar enlace de cata"
+              >
+                📋
+              </button>
+              <button
+                type="button"
+                data-id="${c.id}"
+                class="btn-view-resumen rounded-xl bg-stone-900 hover:bg-emerald-800 text-white font-bold px-3 py-1.5 text-[11px] transition shadow-2xs"
+              >
+                Resultados
+              </button>
+            </div>
+          </td>
+        `;
+
+        catasTbody.appendChild(tr);
+      });
+
+      // Listeners de copiar link
+      document.querySelectorAll('.btn-copy-link').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const t = btn.dataset.token;
+          const url = `${window.location.origin}/cata/${t}`;
+          navigator.clipboard.writeText(url);
+          btn.textContent = '✅';
+          setTimeout(() => btn.textContent = '📋', 2000);
+        });
+      });
+
+      // Listeners de ver resumen
+      document.querySelectorAll('.btn-view-resumen').forEach(btn => {
+        btn.addEventListener('click', () => {
+          openResumenDrawer(btn.dataset.id);
+        });
+      });
+    }
+
+    // Abrir Drawer Nueva Cata
+    function openNewCataDrawer() {
+      formNew.reset();
+      inputNombre.value = getSuggestedName();
+      checkValores75.checked = true;
+      checkPublicar.checked = false;
+      drawerError.classList.add('hidden');
+
+      drawerNew.classList.remove('invisible', 'translate-x-full');
+      const backdrop = document.getElementById('drawer-new-cata-backdrop');
+      if (backdrop) backdrop.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function closeNewCataDrawer() {
+      drawerNew.classList.add('translate-x-full');
+      const backdrop = document.getElementById('drawer-new-cata-backdrop');
+      if (backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
+      setTimeout(() => drawerNew.classList.add('invisible'), 300);
+    }
+
+    btnOpenNew?.addEventListener('click', openNewCataDrawer);
+    btnEmptyCreate?.addEventListener('click', openNewCataDrawer);
+    btnCancelCata?.addEventListener('click', closeNewCataDrawer);
+
+    // Enviar Creación de Cata
+    btnSubmitCata?.addEventListener('click', async () => {
+      try {
+        drawerError.classList.add('hidden');
+        const nombre = inputNombre.value.trim();
+        if (!nombre) {
+          drawerError.textContent = 'El nombre del panel de cata es obligatorio.';
+          drawerError.classList.remove('hidden');
+          return;
+        }
+
+        btnSubmitCata.disabled = true;
+        btnSubmitCata.textContent = 'Creando...';
+
+        const payload = {
+          nombre: nombre,
+          descripcion: inputDesc.value.trim() || null,
+          producto_id: selectProducto.value ? parseInt(selectProducto.value, 10) : null,
+          duracion_horas: parseInt(selectDuracion.value, 10) || 24,
+          valores_iniciales_75: checkValores75.checked,
+          publicar_en_producto: checkPublicar.checked,
+        };
+
+        const res = await fetch(`${apiBase}/api/v1/admin-tienda/catas`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Error al crear la cata');
+        }
+
+        closeNewCataDrawer();
+        await fetchCatas();
+      } catch (err) {
+        drawerError.textContent = err.message;
+        drawerError.classList.remove('hidden');
+      } finally {
+        btnSubmitCata.disabled = false;
+        btnSubmitCata.textContent = 'Crear Sesión de Cata';
+      }
+    });
+
+    // Abrir Drawer Resumen
+    async function openResumenDrawer(cataId) {
+      drawerResumen.classList.remove('invisible', 'translate-x-full');
+      const backdrop = document.getElementById('drawer-resumen-cata-backdrop');
+      if (backdrop) backdrop.classList.remove('opacity-0', 'pointer-events-none');
+
+      resumenLoading.classList.remove('hidden');
+      resumenBody.classList.add('hidden');
+
+      try {
+        const res = await fetch(`${apiBase}/api/v1/admin-tienda/catas/${cataId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error('Error al cargar detalle de cata');
+
+        currentCataDetail = await res.json();
+        renderResumenData();
+      } catch (e) {
+        resumenLoading.innerHTML = `<span class="text-red-600 font-semibold">${e.message}</span>`;
+      }
+    }
+
+    function closeResumenDrawer() {
+      drawerResumen.classList.add('translate-x-full');
+      const backdrop = document.getElementById('drawer-resumen-cata-backdrop');
+      if (backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
+      setTimeout(() => drawerResumen.classList.add('invisible'), 300);
+    }
+
+    btnCloseResumen?.addEventListener('click', closeResumenDrawer);
+
+    function renderResumenData() {
+      if (!currentCataDetail) return;
+      const c = currentCataDetail.cata;
+
+      resumenLoading.classList.add('hidden');
+      resumenBody.classList.remove('hidden');
+
+      kpiScore.textContent = currentCataDetail.puntaje_promedio
+        ? `${currentCataDetail.puntaje_promedio} SCA`
+        : '-- SCA';
+
+      kpiCount.textContent = `${currentCataDetail.total_respuestas} evaluadores`;
+
+      kpiStatus.textContent = c.estado === 'cerrada'
+        ? 'Cerrada'
+        : !c.esta_vigente ? 'Expirada' : 'Activa';
+
+      kpiStatus.className = `text-xs font-black inline-block mt-1 ${
+        c.estado === 'activa' && c.esta_vigente ? 'text-emerald-700' : 'text-stone-500'
+      }`;
+
+      const shareUrl = `${window.location.origin}/cata/${c.token_publico}`;
+      linkUrl.textContent = shareUrl;
+
+      btnCopyResumenLink.onclick = () => {
+        navigator.clipboard.writeText(shareUrl);
+        btnCopyResumenLink.innerHTML = '<span>✅ Copiado</span>';
+        setTimeout(() => btnCopyResumenLink.innerHTML = '<span>📋 Copiar Enlace</span>', 2000);
+      };
+
+      // Select de Producto y Toggle Publicar
+      selectResumenProd.value = c.producto_id || '0';
+      togglePublicar.checked = Boolean(c.publicar_en_producto);
+
+      // Desglose de los 10 atributos SCA
+      atributosBars.innerHTML = '';
+      const attrs = currentCataDetail.promedio_atributos || {};
+      const attrNames = {
+        fragancia_aroma: 'Fragancia / Aroma',
+        sabor: 'Sabor',
+        sabor_residual: 'Sabor Residual',
+        acidez: 'Acidez',
+        cuerpo: 'Cuerpo',
+        uniformidad: 'Uniformidad',
+        balance: 'Balance',
+        taza_limpia: 'Taza Limpia',
+        dulzor: 'Dulzor',
+        puntaje_general: 'Puntaje General',
+      };
+
+      Object.entries(attrNames).forEach(([key, label]) => {
+        const val = attrs[key] || 0;
+        const pct = Math.min(100, Math.max(0, (val / 10) * 100));
+        const div = document.createElement('div');
+        div.className = 'space-y-0.5';
+        div.innerHTML = `
+          <div class="flex justify-between text-[11px] font-bold text-stone-700">
+            <span>${label}</span>
+            <span class="text-emerald-800">${val.toFixed(2)} / 10</span>
+          </div>
+          <div class="w-full bg-stone-200 rounded-full h-1.5 overflow-hidden">
+            <div class="bg-emerald-600 h-1.5 rounded-full" style="width: ${pct}%"></div>
+          </div>
+        `;
+        atributosBars.appendChild(div);
+      });
+
+      // Notas Sensoriales Identificadas
+      notasTags.innerHTML = '';
+      const freq = currentCataDetail.frecuencia_notas || [];
+      if (freq.length === 0) {
+        notasTags.innerHTML = '<span class="text-xs text-stone-400 italic">No se han registrado notas aún</span>';
+      } else {
+        freq.forEach(item => {
+          const pill = document.createElement('span');
+          pill.className = 'inline-flex items-center gap-1.5 rounded-full bg-amber-100/80 text-amber-900 border border-amber-300 px-2.5 py-0.5 text-xs font-semibold';
+          pill.innerHTML = `<span>☕</span><span>${item.nota}</span><span class="bg-amber-200 text-amber-950 rounded-full px-1.5 text-[10px] font-bold">${item.conteo}</span>`;
+          notasTags.appendChild(pill);
+        });
+      }
+
+      // Hojas de Catación Entregadas (Inmutables)
+      respuestasList.innerHTML = '';
+      const resps = currentCataDetail.respuestas || [];
+      if (resps.length === 0) {
+        respuestasList.innerHTML = '<div class="p-4 text-center text-xs text-stone-400 italic">Aún no hay respuestas en este panel.</div>';
+      } else {
+        resps.forEach(r => {
+          const card = document.createElement('div');
+          card.className = 'p-3 rounded-xl bg-stone-50 border border-stone-200/80 text-xs space-y-1.5';
+          const notasStr = (r.notas_identificadas || []).join(', ') || 'Sin notas específicas';
+          card.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-stone-900">👤 ${r.nombre_catador}</span>
+              <span class="font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">${r.puntaje_total} pts</span>
+            </div>
+            <div class="text-[11px] text-stone-500">
+              <span class="font-semibold text-stone-700">Notas:</span> ${notasStr}
+            </div>
+            ${r.observaciones ? `<p class="text-[11px] text-stone-600 bg-white p-2 rounded-lg border border-stone-200/60 italic">"${r.observaciones}"</p>` : ''}
+          `;
+          respuestasList.appendChild(card);
+        });
+      }
+
+      // Control del botón cerrar cata
+      if (c.estado === 'cerrada') {
+        btnCerrarCata.classList.add('hidden');
+      } else {
+        btnCerrarCata.classList.remove('hidden');
+      }
+    }
+
+    // Guardar Asociación con Producto y Publicación
+    btnSaveAsoc?.addEventListener('click', async () => {
+      if (!currentCataDetail) return;
+      const cataId = currentCataDetail.cata.id;
+      const prodId = parseInt(selectResumenProd.value, 10);
+      const publicar = togglePublicar.checked;
+
+      btnSaveAsoc.disabled = true;
+      btnSaveAsoc.textContent = 'Guardando...';
+
+      try {
+        const res = await fetch(`${apiBase}/api/v1/admin-tienda/catas/${cataId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            producto_id: prodId,
+            publicar_en_producto: publicar
+          })
+        });
+
+        if (!res.ok) throw new Error('Error al guardar asociación');
+
+        btnSaveAsoc.textContent = '¡Guardado!';
+        setTimeout(() => btnSaveAsoc.textContent = 'Guardar Asociación', 2000);
+        await fetchCatas();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btnSaveAsoc.disabled = false;
+      }
+    });
+
+    // Cerrar Cata Manualmente
+    btnCerrarCata?.addEventListener('click', async () => {
+      if (!currentCataDetail) return;
+      if (!confirm('¿Seguro que deseas cerrar esta sesión de cata? Ya no se recibirán más respuestas.')) return;
+
+      const cataId = currentCataDetail.cata.id;
+      try {
+        const res = await fetch(`${apiBase}/api/v1/admin-tienda/catas/${cataId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ estado: 'cerrada' })
+        });
+
+        if (res.ok) {
+          closeResumenDrawer();
+          await fetchCatas();
+        }
+      } catch (err) {
+        alert('Error al cerrar la cata.');
+      }
+    });
+
+    // Iniciar carga
+    fetchStoreProducts();
+    fetchCatas();
+  });
+</script>

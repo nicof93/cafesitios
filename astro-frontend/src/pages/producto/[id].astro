@@ -280,6 +280,49 @@ const captionText = product.descripcion_resumida
             </div>
           )}
 
+          <!-- EVALUACIÓN EN PANEL SENSORIAL DEL TOSTADOR (CALIBRACIÓN INTERNA EN MESA) -->
+          {product.panel_cata && (
+            <div class="flex items-start gap-3.5 p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-indigo-400/5 to-indigo-50 border-2 border-indigo-300 shadow-xs">
+              <div class="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-800 text-white font-extrabold text-xl shadow-sm shrink-0">
+                📋
+              </div>
+              <div class="space-y-1 w-full">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-indigo-950">
+                      Panel Sensorial del Tostador:
+                    </span>
+                    <span class="text-base sm:text-lg font-black text-indigo-950 bg-indigo-200/90 border border-indigo-300 px-2.5 py-0.5 rounded-xl shadow-2xs">
+                      {product.panel_cata.puntaje_promedio} pts
+                    </span>
+                  </div>
+                  <span class="text-[11px] font-bold text-indigo-800 bg-indigo-100/70 border border-indigo-200 px-2 py-0.5 rounded-lg">
+                    {product.panel_cata.total_evaluadores} {product.panel_cata.total_evaluadores === 1 ? 'catador' : 'catadores'}
+                  </span>
+                </div>
+
+                <p class="text-xs font-semibold text-indigo-900/90">
+                  {product.panel_cata.nombre_cata}
+                </p>
+
+                {product.panel_cata.notas_destacadas && product.panel_cata.notas_destacadas.length > 0 && (
+                  <div class="flex flex-wrap items-center gap-1 pt-1">
+                    <span class="text-[10px] uppercase font-bold text-indigo-700">Notas de mesa:</span>
+                    {product.panel_cata.notas_destacadas.map(n => (
+                      <span class="inline-flex items-center text-[10px] font-bold bg-white text-indigo-900 border border-indigo-200 px-2 py-0.5 rounded-md shadow-2xs">
+                        {n}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <p class="text-[10px] text-stone-500 pt-0.5 italic">
+                  * Calificación obtenida en mesa de cata de {product.tienda}, complementaria e independiente de la puntuación oficial SCA de origen.
+                </p>
+              </div>
+            </div>
+          )}
+
           <!-- NOTAS DE CATA EN TONOS CÁLIDOS/ÁMBAR (OFICIALES/CONFIRMADAS) -->
           {notasOficiales.length > 0 && (
             <div class="space-y-1.5 pt-1">

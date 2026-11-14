@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 import base64
 import os
+import secrets
 import time
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select, desc, text, or_
@@ -28,6 +29,8 @@ from core.security_store_admin import (
 )
 from db.database import (
     AuditoriaAccionesTienda,
+    Cata,
+    CataRespuesta,
     DatabaseManager,
     HistorialPrecio,
     InteraccionClic,
@@ -52,6 +55,11 @@ from core.store_news_helper import sincronizar_novedad_nueva_tienda
 from api.admin import CatalogTestRequest, CatalogTestResponse, test_store_catalog
 from api.schemas import (
     AdminNovedadesListResponse,
+    CataCreateRequest,
+    CataDetailSummaryResponse,
+    CataItemResponse,
+    CataRespuestaItemResponse,
+    CataUpdateRequest,
     NovedadCreateRequest,
     NovedadItemResponse,
     NovedadUpdateRequest,
@@ -3308,3 +3316,381 @@ def delete_store_novedad(
     db_session.commit()
 
     return {"ok": True, "mensaje": "Publicación eliminada correctamente."}
+
+
+# ============================================================================
+# GESTIÓN DE CATAS Y PANELES SENSORIALES (SCA)
+# ============================================================================
+
+def _cata_to_dto(cata: Cata, request: Request) -> CataItemResponse:
+    ahora = datetime.utcnow()
+    esta_vigente = (cata.estado == 'activa') and (cata.fecha_expiracion > ahora)
+
+    base_url = str(request.base_url).rstrip('/')
+    url_publica = f"{base_url}/cata/{cata.token_publico}"
+
+    respuestas = cata.respuestas or []
+    total_respuestas = len(respuestas)
+    puntaje_promedio = (
+        round(sum(r.puntaje_total for r in respuestas) / total_respuestas, 2)
+        if total_respuestas > 0
+        else None
+    )
+
+    return CataItemResponse(
+        id=cata.id,
+        tienda_id=cata.tienda_id,
+        producto_id=cata.producto_id,
+        producto_nombre=cata.producto.nombre if cata.producto else None,
+        nombre=cata.nombre,
+        descripcion=cata.descripcion,
+        token_publico=cata.token_publico,
+        url_publica=url_publica,
+        fecha_expiracion=cata.fecha_expiracion,
+        estado=cata.estado,
+        esta_vigente=esta_vigente,
+        valores_iniciales_75=cata.valores_iniciales_75,
+        publicar_en_producto=cata.publicar_en_producto,
+        total_respuestas=total_respuestas,
+        puntaje_promedio=puntaje_promedio,
+        fecha_creacion=cata.fecha_creacion,
+    )
+
+
+@admin_tienda_router.get(
+    "/catas",
+    response_model=List[CataItemResponse],
+    summary="Listar paneles de cata sensorial de la tostaduría",
+    description="Retorna todas las catas creadas por la tostaduría con métricas agregadas."
+)
+@router.get("/catas", response_model=List[CataItemResponse], include_in_schema=False)
+def list_store_catas(
+    request: Request,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session)
+) -> List[CataItemResponse]:
+    stmt = (
+        select(Cata)
+        .options(
+            joinedload(Cata.producto),
+            selectinload(Cata.respuestas)
+        )
+        .where(Cata.tienda_id == ctx.tienda_id)
+        .order_by(Cata.fecha_creacion.desc())
+    )
+    catas = db_session.execute(stmt).scalars().all()
+    return [_cata_to_dto(c, request) for c in catas]
+
+
+@admin_tienda_router.post(
+    "/catas",
+    response_model=CataItemResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear un nuevo panel de cata sensorial",
+    description="Crea una sesión de cata con duración configurada y genera el enlace público para catadores."
+)
+@router.post("/catas", response_model=CataItemResponse, status_code=status.HTTP_201_CREATED, include_in_schema=False)
+def create_store_cata(
+    payload: CataCreateRequest,
+    request: Request,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session)
+) -> CataItemResponse:
+    ahora = datetime.utcnow()
+
+    # 1. Nombre por defecto si viene vacío: panel-sensorial-YYYY-MM-DD
+    nombre = (payload.nombre or "").strip()
+    if not nombre:
+        nombre = f"panel-sensorial-{ahora.strftime('%Y-%m-%d')}"
+
+    # 2. Expiración según horas o custom
+    if payload.fecha_expiracion_custom and payload.fecha_expiracion_custom > ahora:
+        fecha_exp = payload.fecha_expiracion_custom
+    else:
+        duracion = max(1, min(720, payload.duracion_horas or 24))
+        fecha_exp = ahora + timedelta(hours=duracion)
+
+    # 3. Validar producto_id si fue seleccionado
+    if payload.producto_id is not None:
+        prod = db_session.execute(
+            select(Producto).where(
+                Producto.id == payload.producto_id,
+                Producto.tienda_id == ctx.tienda_id
+            )
+        ).scalars().first()
+        if not prod:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El café seleccionado no existe o no pertenece a tu tostaduría."
+            )
+
+    token_publico = f"cata_{secrets.token_hex(8)}"
+
+    nueva_cata = Cata(
+        tienda_id=ctx.tienda_id,
+        producto_id=payload.producto_id,
+        nombre=nombre,
+        descripcion=payload.descripcion.strip() if payload.descripcion else None,
+        token_publico=token_publico,
+        fecha_expiracion=fecha_exp,
+        estado="activa",
+        valores_iniciales_75=payload.valores_iniciales_75,
+        publicar_en_producto=payload.publicar_en_producto,
+        fecha_creacion=ahora,
+        fecha_actualizacion=ahora,
+    )
+
+    db_session.add(nueva_cata)
+    db_session.commit()
+    db_session.refresh(nueva_cata)
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="CREAR_CATA_SENSORIAL",
+        entidad="catas",
+        entidad_id=nueva_cata.id,
+        valores_nuevos={"nombre": nueva_cata.nombre, "token": token_publico},
+        ip_origen=get_client_ip(request),
+    )
+
+    if nueva_cata.producto_id:
+        db_session.refresh(nueva_cata, attribute_names=["producto"])
+
+    return _cata_to_dto(nueva_cata, request)
+
+
+@admin_tienda_router.get(
+    "/catas/{cata_id}",
+    response_model=CataDetailSummaryResponse,
+    summary="Obtener resumen y resultados de un panel de cata",
+    description="Retorna el detalle completo de la cata, estadísticas SCA, frecuencias de notas y hojas individuales (inmutables)."
+)
+@router.get("/catas/{cata_id}", response_model=CataDetailSummaryResponse, include_in_schema=False)
+def get_store_cata_detail(
+    cata_id: int,
+    request: Request,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session)
+) -> CataDetailSummaryResponse:
+    cata = db_session.execute(
+        select(Cata)
+        .options(
+            joinedload(Cata.producto),
+            selectinload(Cata.respuestas)
+        )
+        .where(
+            Cata.id == cata_id,
+            Cata.tienda_id == ctx.tienda_id
+        )
+    ).scalars().first()
+
+    if not cata:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El panel de cata no existe o no pertenece a tu tostaduría."
+        )
+
+    respuestas = cata.respuestas or []
+    total = len(respuestas)
+    puntaje_promedio = (
+        round(sum(r.puntaje_total for r in respuestas) / total, 2)
+        if total > 0
+        else None
+    )
+
+    promedio_atributos: Dict[str, float] = {}
+    if total > 0:
+        promedio_atributos = {
+            "fragancia_aroma": round(sum(r.fragancia_aroma for r in respuestas) / total, 2),
+            "sabor": round(sum(r.sabor for r in respuestas) / total, 2),
+            "sabor_residual": round(sum(r.sabor_residual for r in respuestas) / total, 2),
+            "acidez": round(sum(r.acidez for r in respuestas) / total, 2),
+            "cuerpo": round(sum(r.cuerpo for r in respuestas) / total, 2),
+            "uniformidad": round(sum(r.uniformidad for r in respuestas) / total, 2),
+            "balance": round(sum(r.balance for r in respuestas) / total, 2),
+            "taza_limpia": round(sum(r.taza_limpia for r in respuestas) / total, 2),
+            "dulzor": round(sum(r.dulzor for r in respuestas) / total, 2),
+            "puntaje_general": round(sum(r.puntaje_general for r in respuestas) / total, 2),
+        }
+
+    conteo_notas: Dict[str, int] = {}
+    for r in respuestas:
+        if r.notas_identificadas:
+            for nota in r.notas_identificadas:
+                nota_norm = str(nota).strip().lower()
+                if nota_norm:
+                    conteo_notas[nota_norm] = conteo_notas.get(nota_norm, 0) + 1
+
+    frecuencia_notas = [
+        {"nota": k, "conteo": v}
+        for k, v in sorted(conteo_notas.items(), key=lambda x: x[1], reverse=True)
+    ]
+
+    respuestas_dto = [
+        CataRespuestaItemResponse(
+            id=r.id,
+            nombre_catador=r.nombre_catador,
+            fragancia_aroma=r.fragancia_aroma,
+            sabor=r.sabor,
+            sabor_residual=r.sabor_residual,
+            acidez=r.acidez,
+            cuerpo=r.cuerpo,
+            uniformidad=r.uniformidad,
+            balance=r.balance,
+            taza_limpia=r.taza_limpia,
+            dulzor=r.dulzor,
+            puntaje_general=r.puntaje_general,
+            defectos=r.defectos,
+            puntaje_total=r.puntaje_total,
+            notas_identificadas=r.notas_identificadas or [],
+            observaciones=r.observaciones,
+            fecha_creacion=r.fecha_creacion,
+        )
+        for r in respuestas
+    ]
+
+    return CataDetailSummaryResponse(
+        cata=_cata_to_dto(cata, request),
+        total_respuestas=total,
+        puntaje_promedio=puntaje_promedio,
+        promedio_atributos=promedio_atributos,
+        frecuencia_notas=frecuencia_notas,
+        respuestas=respuestas_dto,
+    )
+
+
+@admin_tienda_router.put(
+    "/catas/{cata_id}",
+    response_model=CataItemResponse,
+    summary="Actualizar configuración o asociación de un panel de cata",
+    description="Permite asociar la cata a un café, alternar la publicación en la ficha y cerrar la sesión."
+)
+@router.put("/catas/{cata_id}", response_model=CataItemResponse, include_in_schema=False)
+def update_store_cata(
+    cata_id: int,
+    payload: CataUpdateRequest,
+    request: Request,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session)
+) -> CataItemResponse:
+    cata = db_session.execute(
+        select(Cata)
+        .options(
+            joinedload(Cata.producto),
+            selectinload(Cata.respuestas)
+        )
+        .where(
+            Cata.id == cata_id,
+            Cata.tienda_id == ctx.tienda_id
+        )
+    ).scalars().first()
+
+    if not cata:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El panel de cata no existe o no pertenece a tu tostaduría."
+        )
+
+    valores_previos = {
+        "nombre": cata.nombre,
+        "estado": cata.estado,
+        "producto_id": cata.producto_id,
+        "publicar_en_producto": cata.publicar_en_producto
+    }
+
+    if payload.nombre is not None and payload.nombre.strip():
+        cata.nombre = payload.nombre.strip()
+
+    if payload.descripcion is not None:
+        cata.descripcion = payload.descripcion.strip() or None
+
+    if payload.estado is not None:
+        cata.estado = payload.estado
+
+    if payload.producto_id is not None:
+        if payload.producto_id == 0:
+            cata.producto_id = None
+        else:
+            prod = db_session.execute(
+                select(Producto).where(
+                    Producto.id == payload.producto_id,
+                    Producto.tienda_id == ctx.tienda_id
+                )
+            ).scalars().first()
+            if not prod:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="El café seleccionado no existe o no pertenece a tu tostaduría."
+                )
+            cata.producto_id = payload.producto_id
+
+    if payload.publicar_en_producto is not None:
+        cata.publicar_en_producto = payload.publicar_en_producto
+
+    cata.fecha_actualizacion = datetime.utcnow()
+    db_session.commit()
+    db_session.refresh(cata)
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="ACTUALIZAR_CATA_SENSORIAL",
+        entidad="catas",
+        entidad_id=cata.id,
+        valores_previos=valores_previos,
+        valores_nuevos={
+            "nombre": cata.nombre,
+            "estado": cata.estado,
+            "producto_id": cata.producto_id,
+            "publicar_en_producto": cata.publicar_en_producto
+        },
+        ip_origen=get_client_ip(request),
+    )
+
+    return _cata_to_dto(cata, request)
+
+
+@admin_tienda_router.delete(
+    "/catas/{cata_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Eliminar un panel de cata sensorial",
+    description="Elimina la sesión de cata y sus respuestas asociadas."
+)
+@router.delete("/catas/{cata_id}", status_code=status.HTTP_200_OK, include_in_schema=False)
+def delete_store_cata(
+    cata_id: int,
+    request: Request,
+    ctx: StoreAdminContext = Depends(get_current_store_admin),
+    db_session: Session = Depends(get_db_session)
+) -> Dict[str, Any]:
+    cata = db_session.execute(
+        select(Cata).where(
+            Cata.id == cata_id,
+            Cata.tienda_id == ctx.tienda_id
+        )
+    ).scalars().first()
+
+    if not cata:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El panel de cata no existe o no pertenece a tu tostaduría."
+        )
+
+    log_store_action(
+        db_session=db_session,
+        tienda_id=ctx.tienda_id,
+        usuario_id=ctx.usuario_id,
+        accion="ELIMINAR_CATA_SENSORIAL",
+        entidad="catas",
+        entidad_id=cata.id,
+        valores_previos={"nombre": cata.nombre},
+        ip_origen=get_client_ip(request),
+    )
+
+    db_session.delete(cata)
+    db_session.commit()
+
+    return {"ok": True, "mensaje": "Panel de cata eliminado correctamente."}

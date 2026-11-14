@@ -1,0 +1,599 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { Environment } from '../../core/infrastructure/config/Environment';
+import { FeatureFlags } from '../../core/infrastructure/config/FeatureFlags';
+
+if (!FeatureFlags.isCuppingPanelEnabled()) {
+  return Astro.rewrite('/404');
+}
+
+const { token } = Astro.params;
+const apiBase = Environment.getApiBaseUrl();
+
+let cataData = null;
+let errorStatus = null;
+
+try {
+  const res = await fetch(`${apiBase}/api/v1/catas/publica/${token}`);
+  if (res.ok) {
+    cataData = await res.json();
+  } else {
+    errorStatus = res.status;
+  }
+} catch (e) {
+  errorStatus = 500;
+}
+
+if (errorStatus === 404 || !cataData) {
+  return Astro.rewrite('/404');
+}
+
+const title = `Hoja de Cata: ${cataData.nombre} | ${cataData.tienda_nombre} - Cafesitios`;
+const description = `Hoja de evaluación sensorial SCA para el panel ${cataData.nombre} organizado por ${cataData.tienda_nombre}.`;
+const initialVal = cataData.valores_iniciales_75 ? 7.5 : 6.0;
+const initialUniformidad = 10.0;
+---
+
+<BaseLayout title={title} description={description}>
+  <div class="max-w-2xl mx-auto py-4 px-2 sm:px-4 space-y-6">
+
+    <!-- ESTADO: CATA FINALIZADA O EXPIRADA -->
+    {!cataData.esta_vigente ? (
+      <div class="bg-white rounded-3xl p-8 sm:p-12 text-center border border-stone-200/80 shadow-sm space-y-4">
+        <div class="w-16 h-16 bg-amber-100 text-amber-900 rounded-full flex items-center justify-center text-3xl mx-auto shadow-inner">
+          ⏳
+        </div>
+        <div class="space-y-1">
+          <span class="text-xs font-bold uppercase tracking-wider text-stone-400">
+            {cataData.tienda_nombre}
+          </span>
+          <h1 class="text-xl sm:text-2xl font-black text-stone-900">
+            {cataData.nombre}
+          </h1>
+        </div>
+        <p class="text-xs sm:text-sm text-stone-500 max-w-md mx-auto">
+          Este panel de cata sensorial ya ha finalizado o su enlace de duración definida ha expirado. Muchas gracias a todos los catadores que participaron.
+        </p>
+        <div class="pt-4">
+          <a
+            href="/"
+            class="inline-flex items-center gap-2 rounded-xl bg-stone-900 hover:bg-emerald-800 text-white text-xs font-bold px-5 py-2.5 transition shadow-sm"
+          >
+            <span>Explorar Cafés en Cafesitios</span>
+            <span>→</span>
+          </a>
+        </div>
+      </div>
+    ) : (
+      <!-- HOJA DE CATA ACTIVA -->
+      <div id="cupping-container" class="space-y-6">
+
+        <!-- HEADER DEL PANEL SENSORIAL -->
+        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/80 shadow-xs relative overflow-hidden">
+          <div class="absolute -right-8 -bottom-8 text-8xl text-stone-50 select-none pointer-events-none font-black opacity-60">
+            SCA
+          </div>
+
+          <div class="space-y-2 relative z-10">
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold px-3 py-0.5">
+                <span>☕</span>
+                <span>{cataData.tienda_nombre}</span>
+              </span>
+              <span class="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-2 py-0.5">
+                Panel Oficial
+              </span>
+            </div>
+
+            <h1 class="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">
+              {cataData.nombre}
+            </h1>
+
+            {cataData.producto_nombre && (
+              <div class="flex items-center gap-1.5 text-xs text-stone-600 font-semibold bg-stone-50 p-2.5 rounded-xl border border-stone-100">
+                <span class="text-emerald-700">🌱 Café a evaluar:</span>
+                <span class="text-stone-900 font-bold">{cataData.producto_nombre}</span>
+              </div>
+            )}
+
+            {cataData.descripcion && (
+              <p class="text-xs text-stone-500 leading-relaxed pt-1">
+                {cataData.descripcion}
+              </p>
+            )}
+
+            <div class="text-[11px] text-stone-400 flex items-center gap-1 pt-1">
+              <span>⏱️ Válido hasta: {new Date(cataData.fecha_expiracion).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ({new Date(cataData.fecha_expiracion).toLocaleDateString()})</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- BARRA FLOTANTE STICKY CON EL PUNTAJE TOTAL EN VIVO -->
+        <div class="sticky top-4 z-30">
+          <div class="bg-stone-900/95 backdrop-blur-md text-white rounded-2xl p-4 shadow-xl border border-stone-800 flex items-center justify-between transition-all">
+            <div>
+              <span class="block text-[10px] uppercase font-bold tracking-wider text-stone-400">
+                Puntaje Total SCA
+              </span>
+              <span id="sticky-total-score" class="text-2xl font-black text-emerald-400 tracking-tight">
+                83.75
+              </span>
+              <span class="text-xs font-semibold text-stone-300 ml-1">/ 100 pts</span>
+            </div>
+
+            <div class="text-right">
+              <span id="sticky-score-tier" class="inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                ✨ Especialidad Alta
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- FORMULARIO DE EVALUACIÓN SENSORIAL -->
+        <form id="cupping-form" class="space-y-6">
+
+          <!-- 1. NOMBRE DEL CATADOR (OBLIGATORIO) -->
+          <div class="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs space-y-2">
+            <label for="catador-nombre" class="block text-xs font-extrabold text-stone-800 uppercase tracking-wider">
+              Tu Nombre o Alias <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="catador-nombre"
+              name="nombre_catador"
+              required
+              minlength="2"
+              placeholder="Ej: Nicolás Barista, María Cata, etc."
+              class="w-full rounded-2xl border-2 border-stone-200 px-4 py-3 text-sm text-stone-800 focus:border-emerald-600 focus:ring-0 transition font-semibold"
+            />
+            <p class="text-[11px] text-stone-400">Este nombre identificará tu hoja de evaluación en el panel.</p>
+          </div>
+
+          <!-- 2. LOS 10 ATRIBUTOS SCA -->
+          <div class="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs space-y-6">
+            <div>
+              <h2 class="text-sm font-black text-stone-900 uppercase tracking-wider">
+                Los 10 Atributos de Catación SCA
+              </h2>
+              <p class="text-xs text-stone-400 mt-0.5">
+                Escala oficial de 6.00 (Bueno) a 10.00 (Excepcional) en incrementos de 0.25 puntos.
+              </p>
+            </div>
+
+            <div class="space-y-5 divide-y divide-stone-100" id="attributes-container">
+
+              <!-- Fragancia / Aroma -->
+              <div class="pt-4 first:pt-0 space-y-2" data-attr="fragancia_aroma">
+                <div class="flex justify-between items-center text-xs">
+                  <div>
+                    <span class="font-bold text-stone-800">1. Fragancia / Aroma</span>
+                    <span class="text-[10px] text-stone-400 block">En seco y en infusión / tras romper costra</span>
+                  </div>
+                  <span class="attr-val font-black text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-xl">7.50</span>
+                </div>
+                <input type="range" min="6.0" max="10.0" step="0.25" value={initialVal} class="sca-slider w-full accent-emerald-600 cursor-pointer" />
+              </div>
+
+              <!-- Sabor -->
+              <div class="pt-4 space-y-2" data-attr="sabor">
+                <div class="flex justify-between items-center text-xs">
+                  <div>
+                    <span class="font-bold text-stone-800">2. Sabor</span>
+                    <span class="text-[10px] text-stone-400 block">Carácter principal percibido en taza</span>
+                  </div>
+                  <span class="attr-val font-black text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-xl">7.50</span>
+                </div>
+                <input type="range" min="6.0" max="10.0" step="0.25" value={initialVal} class="sca-slider w-full accent-emerald-600 cursor-pointer" />
+              </div>
+
+              <!-- Sabor Residual (Aftertaste) -->
+              <div class="pt-4 space-y-2" data-attr="sabor_residual">
+                <div class="flex justify-between items-center text-xs">
+                  <div>
+                    <span class="font-bold text-stone-800">3. Sabor Residual (Aftertaste)</span>
+                    <span class="text-[10px] text-stone-400 block">Duración y cualidad del post-gusto</span>
+                  </div>
+                  <span class="attr-val font-black text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-xl">7.50</span>
+                </div>
+                <input type="range" min="6.0" max="10.0" step="0.25" value={initialVal} class="sca-slider w-full accent-emerald-600 cursor-pointer" />
+              </div>
+
+              <!-- Acidez -->
+              <div class="pt-4 space-y-2" data-attr="acidez">
+                <div class="flex justify-between items-center text-xs">
+                  <div>
+                    <span class="font-bold text-stone-800">4. Acidez</span>
+                    <span class="text-[10px] text-stone-400 block">Brillo, vivacidad y estructura (cítrica, málica)</span>
+                  </div>
+                  <span class="attr-val font-black text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-xl">7.50</span>
+                </div>
+                <input type="range" min="6.0" max="10.0" step="0.25" value={initialVal} class="sca-slider w-full accent-emerald-600 cursor-pointer" />
+              </div>
+
+              <!-- Cuerpo -->
+              <div class="pt-4 space-y-2" data-attr="cuerpo">
+                <div class="flex justify-between items-center text-xs">
+                  <div>
+                    <span class="font-bold text-stone-800">5. Cuerpo</span>
+                    <span class="text-[10px] text-stone-400 block">Sensación táctil, peso y viscosidad en boca</span>
+                  </div>
+                  <span class="attr-val font-black text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-xl">7.50</span>
+                </div>
+                <input type="range" min="6.0" max="10.0" step="0.25" value={initialVal} class="sca-slider w-full accent-emerald-600 cursor-pointer" />
+              </div>
+
+              <!-- Uniformidad -->
+              <div class="pt-4 space-y-2" data-attr="uniformidad">
+                <div class="flex justify-between items-center text-xs">
+                  <div>
+                    <span class="font-bold text-stone-800">6. Uniformidad</span>
+                    <span class="text-[10px] text-stone-400 block">Consistencia entre las tazas de la mesa</span>
+                  </div>
+                  <span class="attr-val font-black text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-xl">10.00</span>
+                </div>
+                <input type="range" min="6.0" max="10.0" step="0.25" value={initialUniformidad} class="sca-slider w-full accent-emerald-600 cursor-pointer" />
+              </div>
+
+              <!-- Balance -->
+              <div class="pt-4 space-y-2" data-attr="balance">
+                <div class="flex justify-between items-center text-xs">
+                  <div>
+                    <span class="font-bold text-stone-800">7. Balance</span>
+                    <span class="text-[10px] text-stone-400 block">Armonía e integración entre todos los atributos</span>
+                  </div>
+                  <span class="attr-val font-black text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-xl">7.50</span>
+                </div>
+                <input type="range" min="6.0" max="10.0" step="0.25" value={initialVal} class="sca-slider w-full accent-emerald-600 cursor-pointer" />
+              </div>
+
+              <!-- Taza Limpia -->
+              <div class="pt-4 space-y-2" data-attr="taza_limpia">
+                <div class="flex justify-between items-center text-xs">
+                  <div>
+                    <span class="font-bold text-stone-800">8. Taza Limpia (Clean Cup)</span>
+                    <span class="text-[10px] text-stone-400 block">Ausencia de defectos o interferencias sucias</span>
+                  </div>
+                  <span class="attr-val font-black text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-xl">10.00</span>
+                </div>
+                <input type="range" min="6.0" max="10.0" step="0.25" value={initialUniformidad} class="sca-slider w-full accent-emerald-600 cursor-pointer" />
+              </div>
+
+              <!-- Dulzor -->
+              <div class="pt-4 space-y-2" data-attr="dulzor">
+                <div class="flex justify-between items-center text-xs">
+                  <div>
+                    <span class="font-bold text-stone-800">9. Dulzor</span>
+                    <span class="text-[10px] text-stone-400 block">Presencia de azúcares naturales maduros</span>
+                  </div>
+                  <span class="attr-val font-black text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-xl">10.00</span>
+                </div>
+                <input type="range" min="6.0" max="10.0" step="0.25" value={initialUniformidad} class="sca-slider w-full accent-emerald-600 cursor-pointer" />
+              </div>
+
+              <!-- Puntaje General (Overall) -->
+              <div class="pt-4 space-y-2" data-attr="puntaje_general">
+                <div class="flex justify-between items-center text-xs">
+                  <div>
+                    <span class="font-bold text-stone-800">10. Puntaje General (Overall)</span>
+                    <span class="text-[10px] text-stone-400 block">Apreciación global holística del catador</span>
+                  </div>
+                  <span class="attr-val font-black text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-xl">7.50</span>
+                </div>
+                <input type="range" min="6.0" max="10.0" step="0.25" value={initialVal} class="sca-slider w-full accent-emerald-600 cursor-pointer" />
+              </div>
+
+              <!-- Defectos (Resta) -->
+              <div class="pt-4 space-y-2" data-attr="defectos">
+                <div class="flex justify-between items-center text-xs">
+                  <div>
+                    <span class="font-bold text-stone-800">Defectos (Resta de puntos)</span>
+                    <span class="text-[10px] text-stone-400 block">Tazas manchadas o fermento negativo</span>
+                  </div>
+                  <span class="attr-val font-black text-sm text-red-700 bg-red-50 border border-red-200 px-2.5 py-0.5 rounded-xl">0.00</span>
+                </div>
+                <input type="range" min="0.0" max="10.0" step="0.5" value="0.0" class="sca-slider w-full accent-red-600 cursor-pointer" />
+              </div>
+
+            </div>
+          </div>
+
+          <!-- 3. NOTAS SENSORIALES IDENTIFICADAS -->
+          <div class="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs space-y-4">
+            <div>
+              <h2 class="text-sm font-black text-stone-900 uppercase tracking-wider">
+                Notas Sensoriales Identificadas
+              </h2>
+              <p class="text-xs text-stone-400 mt-0.5">
+                Toca las notas que reconozcas o escribe notas personalizadas.
+              </p>
+            </div>
+
+            <!-- Sugerencias populares SCA -->
+            <div class="flex flex-wrap gap-1.5" id="suggested-notes-container">
+              {['Jazmín', 'Cítricos', 'Chocolate', 'Caramelo', 'Frutos Rojos', 'Durazno', 'Miel', 'Floral', 'Frutos Secos', 'Manzana Verde', 'Especias', 'Vainilla', 'Mora', 'Bergamota'].map(n => (
+                <button
+                  type="button"
+                  data-note={n}
+                  class="btn-suggested-note text-xs font-semibold rounded-full px-3 py-1 bg-stone-100 text-stone-700 hover:bg-amber-100 hover:text-amber-900 transition border border-transparent"
+                >
+                  + {n}
+                </button>
+              ))}
+            </div>
+
+            <!-- Chips de notas seleccionadas -->
+            <div id="selected-notes-chips" class="flex flex-wrap gap-1.5 min-h-[38px] p-2.5 rounded-2xl bg-amber-50/60 border border-amber-200/60 items-center">
+              <span id="no-notes-placeholder" class="text-xs text-stone-400 italic">No has seleccionado notas aún</span>
+            </div>
+
+            <!-- Input nota personalizada -->
+            <div class="flex gap-2">
+              <input
+                type="text"
+                id="input-custom-note"
+                placeholder="Escribe otra nota (ej: té negro, pomelo...)"
+                class="flex-1 rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-800 focus:border-emerald-600 focus:ring-0 transition"
+              />
+              <button
+                type="button"
+                id="btn-add-custom-note"
+                class="rounded-xl bg-stone-800 hover:bg-stone-900 text-white text-xs font-bold px-4 py-2 transition"
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+
+          <!-- 4. OBSERVACIONES Y NOTAS ADICIONALES -->
+          <div class="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs space-y-2">
+            <label for="catador-observaciones" class="block text-xs font-extrabold text-stone-800 uppercase tracking-wider">
+              Observaciones del Tueste o Preparación (Opcional)
+            </label>
+            <textarea
+              id="catador-observaciones"
+              name="observaciones"
+              rows="3"
+              placeholder="Comentarios sobre la curva de tueste, temperatura, molienda o sugerencias para el tostador..."
+              class="w-full rounded-2xl border border-stone-200 p-3 text-xs text-stone-800 focus:border-emerald-600 focus:ring-0 transition resize-none"
+            ></textarea>
+          </div>
+
+          <div id="form-error" class="hidden rounded-2xl bg-red-50 border border-red-200 p-4 text-xs text-red-700 font-semibold"></div>
+
+          <!-- BOTÓN DE ENVÍO -->
+          <div class="pt-2">
+            <button
+              type="submit"
+              id="btn-submit-cupping"
+              class="w-full rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-sm py-4 shadow-lg hover:shadow-xl transition transform active:scale-[0.99] flex items-center justify-center gap-2"
+            >
+              <span>☕ Enviar Hoja de Evaluación</span>
+            </button>
+          </div>
+
+        </form>
+
+      </div>
+
+      <!-- CONFIRMACIÓN DE ENVÍO EXITOSO -->
+      <div id="confirmation-screen" class="hidden bg-white rounded-3xl p-8 sm:p-12 text-center border border-stone-200/80 shadow-sm space-y-6 animate-fade-in">
+        <div class="w-20 h-20 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center text-4xl mx-auto shadow-inner">
+          ✅
+        </div>
+
+        <div class="space-y-1">
+          <span class="text-xs font-bold uppercase tracking-wider text-emerald-700">
+            ¡Evaluación Registrada con Éxito!
+          </span>
+          <h2 class="text-xl sm:text-2xl font-black text-stone-900">
+            Gracias, <span id="conf-catador-name">Catador</span>
+          </h2>
+          <p class="text-xs text-stone-500 max-w-md mx-auto">
+            Tu hoja de cata inmutable ha sido entregada al equipo de <strong>{cataData.tienda_nombre}</strong> para consolidar las estadísticas del panel.
+          </p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-stone-50 border border-stone-200/80 max-w-sm mx-auto space-y-1">
+          <span class="block text-[10px] uppercase font-bold text-stone-400">Puntaje Asignado</span>
+          <span id="conf-total-score" class="text-3xl font-black text-emerald-800">84.50</span>
+          <span class="text-xs font-semibold text-stone-500 block">Puntos SCA</span>
+        </div>
+
+        <div class="pt-2">
+          <a
+            href="/"
+            class="inline-flex items-center gap-2 rounded-xl bg-stone-900 hover:bg-emerald-800 text-white text-xs font-bold px-6 py-3 transition shadow-sm"
+          >
+            <span>Ir a Cafesitios</span>
+            <span>→</span>
+          </a>
+        </div>
+      </div>
+    )}
+
+  </div>
+</BaseLayout>
+
+<script is:inline define:vars={{ token, apiBase }}>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('cupping-form');
+    if (!form) return;
+
+    const stickyScore = document.getElementById('sticky-total-score');
+    const stickyTier = document.getElementById('sticky-score-tier');
+    const formError = document.getElementById('form-error');
+    const btnSubmit = document.getElementById('btn-submit-cupping');
+    const cuppingContainer = document.getElementById('cupping-container');
+    const confScreen = document.getElementById('confirmation-screen');
+    const confName = document.getElementById('conf-catador-name');
+    const confScore = document.getElementById('conf-total-score');
+
+    // Manejo de Sliders de Atributos SCA
+    const sliders = form.querySelectorAll('.sca-slider');
+    
+    function calculateTotalScore() {
+      let total = 0;
+      let defectos = 0;
+
+      sliders.forEach(slider => {
+        const val = parseFloat(slider.value) || 0;
+        const parent = slider.closest('[data-attr]');
+        const attrName = parent?.dataset.attr;
+        
+        // Actualizar etiqueta visual
+        const badge = parent?.querySelector('.attr-val');
+        if (badge) badge.textContent = val.toFixed(2);
+
+        if (attrName === 'defectos') {
+          defectos = val;
+        } else {
+          total += val;
+        }
+      });
+
+      const finalScore = Math.max(0, Math.min(100, total - defectos));
+      stickyScore.textContent = finalScore.toFixed(2);
+
+      // Nivel de Calidad SCA
+      if (finalScore >= 90) {
+        stickyTier.textContent = '🏆 Super Specialty / Raro';
+        stickyTier.className = 'inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40';
+      } else if (finalScore >= 85) {
+        stickyTier.textContent = '✨ Especialidad Alta';
+        stickyTier.className = 'inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+      } else if (finalScore >= 80) {
+        stickyTier.textContent = '☕ Café de Especialidad';
+        stickyTier.className = 'inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40';
+      } else {
+        stickyTier.textContent = 'Café Comercial / Sub-Especialidad';
+        stickyTier.className = 'inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-stone-500/20 text-stone-300 border border-stone-500/40';
+      }
+
+      return finalScore;
+    }
+
+    sliders.forEach(slider => {
+      slider.addEventListener('input', calculateTotalScore);
+    });
+
+    calculateTotalScore();
+
+    // Manejo de Notas Sensoriales Identificadas
+    const selectedNotes = new Set();
+    const chipsContainer = document.getElementById('selected-notes-chips');
+    const noNotesPlaceholder = document.getElementById('no-notes-placeholder');
+    const inputCustom = document.getElementById('input-custom-note');
+    const btnAddCustom = document.getElementById('btn-add-custom-note');
+
+    function renderSelectedNotes() {
+      chipsContainer.innerHTML = '';
+      if (selectedNotes.size === 0) {
+        chipsContainer.appendChild(noNotesPlaceholder);
+        return;
+      }
+
+      selectedNotes.forEach(note => {
+        const chip = document.createElement('span');
+        chip.className = 'inline-flex items-center gap-1 rounded-full bg-amber-200 text-amber-950 font-bold px-2.5 py-0.5 text-xs shadow-2xs animate-fade-in';
+        chip.innerHTML = `<span>${note}</span><button type="button" class="text-amber-800 hover:text-black font-extrabold ml-1">×</button>`;
+        chip.querySelector('button').addEventListener('click', () => {
+          selectedNotes.delete(note);
+          renderSelectedNotes();
+        });
+        chipsContainer.appendChild(chip);
+      });
+    }
+
+    document.querySelectorAll('.btn-suggested-note').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const n = btn.dataset.note;
+        if (n && !selectedNotes.has(n)) {
+          selectedNotes.add(n);
+          renderSelectedNotes();
+        }
+      });
+    });
+
+    function addCustomNote() {
+      const val = inputCustom.value.trim();
+      if (val && !selectedNotes.has(val)) {
+        selectedNotes.add(val);
+        renderSelectedNotes();
+        inputCustom.value = '';
+      }
+    }
+
+    btnAddCustom?.addEventListener('click', addCustomNote);
+    inputCustom?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addCustomNote();
+      }
+    });
+
+    // Envío del Formulario
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      formError.classList.add('hidden');
+
+      const nombre = document.getElementById('catador-nombre').value.trim();
+      if (!nombre || nombre.length < 2) {
+        formError.textContent = 'Por favor ingresa tu nombre o alias (mínimo 2 letras).';
+        formError.classList.remove('hidden');
+        return;
+      }
+
+      const getAttr = (attr) => {
+        const input = form.querySelector(`[data-attr="${attr}"] input`);
+        return input ? parseFloat(input.value) : 7.5;
+      };
+
+      const payload = {
+        nombre_catador: nombre,
+        fragancia_aroma: getAttr('fragancia_aroma'),
+        sabor: getAttr('sabor'),
+        sabor_residual: getAttr('sabor_residual'),
+        acidez: getAttr('acidez'),
+        cuerpo: getAttr('cuerpo'),
+        uniformidad: getAttr('uniformidad'),
+        balance: getAttr('balance'),
+        taza_limpia: getAttr('taza_limpia'),
+        dulzor: getAttr('dulzor'),
+        puntaje_general: getAttr('puntaje_general'),
+        defectos: getAttr('defectos'),
+        notas_identificadas: Array.from(selectedNotes),
+        observaciones: document.getElementById('catador-observaciones').value.trim() || null,
+      };
+
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<span>Enviando evaluación...</span>';
+
+      try {
+        const res = await fetch(`${apiBase}/api/v1/catas/publica/${token}/respuestas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || 'Ocurrió un error al enviar tu hoja de cata.');
+        }
+
+        // Pantalla de Confirmación
+        cuppingContainer.classList.add('hidden');
+        confName.textContent = data.nombre_catador || nombre;
+        confScore.textContent = data.puntaje_total.toFixed(2);
+        confScreen.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      } catch (err) {
+        formError.textContent = err.message;
+        formError.classList.remove('hidden');
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<span>☕ Enviar Hoja de Evaluación</span>';
+      }
+    });
+  });
+</script>

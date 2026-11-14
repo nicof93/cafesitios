@@ -32,6 +32,16 @@ export interface ProductRecipe {
   fecha_creacion?: string;
 }
 
+export interface PanelCataResumen {
+  cata_id: number;
+  nombre_cata: string;
+  puntaje_promedio: number;
+  total_evaluadores: number;
+  fecha_cata?: string;
+  notas_destacadas?: string[];
+  promedio_atributos?: Record<string, number>;
+}
+
 export interface CoffeeProductProps {
   id: number;
   nombre: string;
@@ -51,6 +61,7 @@ export interface CoffeeProductProps {
   escala_agtron?: number;
   altura_msnm?: string;
   puntuacion_sca?: number;
+  panel_cata?: PanelCataResumen;
   atributos_organolepticos?: Record<string, number>;
   variantes_por_gramaje?: any[];
   descripcion?: string;
@@ -91,6 +102,7 @@ export class CoffeeProduct {
   readonly escala_agtron?: number;
   readonly altura_msnm?: string;
   readonly puntuacion_sca?: number;
+  readonly panel_cata?: PanelCataResumen;
   readonly atributos_organolepticos?: Record<string, number>;
   readonly descripcion?: string;
   readonly descripcion_resumida?: string;
@@ -199,6 +211,7 @@ export class CoffeeProduct {
     const maxAlt = (props as any).elevacion_max_msnm;
     this.altura_msnm = props.altura_msnm || (minAlt ? (maxAlt ? `${minAlt} - ${maxAlt} msnm` : `${minAlt} msnm`) : undefined);
     this.puntuacion_sca = props.puntuacion_sca;
+    this.panel_cata = props.panel_cata;
     this.atributos_organolepticos = props.atributos_organolepticos;
     this.descripcion = props.descripcion;
     const descRes = props.descripcion_resumida || props.resumen_corto || (props as any).caracteristicas_fuente?.resumen_corto;

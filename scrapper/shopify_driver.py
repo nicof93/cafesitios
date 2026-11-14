@@ -37,6 +37,8 @@ def calcular_precio_por_kilo(precio_clp: int, formato_gramos: int) -> float:
     return 0.0
 
 class ShopifyDriver(BaseDriver):
+    MAX_HTML_FALLBACKS_PER_STORE: int = 3
+
     @staticmethod
     def extraer_gramos(texto: Optional[str], default: int = 250) -> int:
         return extraer_gramos(texto, default=default) or default
@@ -152,6 +154,8 @@ class ShopifyDriver(BaseDriver):
                     return json.loads(text)
                 return text
         except urllib.error.HTTPError as http_err:
+            if http_err.code == 429:
+                raise RuntimeError(f"HTTP 429 Too Many Requests: Rate limit excedido en {url}")
             if http_err.code in (401, 403, 404):
                 raise RuntimeError(f"HTTP {http_err.code}: {http_err.reason}")
             logging.debug(f"urllib fetch fallo en {url}: {http_err}. Intentando fallback...")
@@ -159,6 +163,8 @@ class ShopifyDriver(BaseDriver):
             logging.debug(f"urllib fetch fallo en {url}: {urllib_err}. Intentando fallback...")
 
         res = requests.get(url, headers=headers, timeout=timeout)
+        if res.status_code == 429:
+            raise RuntimeError(f"HTTP 429 Too Many Requests: Rate limit excedido en {url}")
         if res.status_code != 200:
             raise RuntimeError(f"HTTP {res.status_code}")
         if is_json:
@@ -264,9 +270,15 @@ class ShopifyDriver(BaseDriver):
             except Exception as e:
                 errores_intentos.append(f"{url}: {e}")
                 logging.warning(f"[{self.nombre}] Error al conectar a {url}: {e}")
+                if "429" in str(e) or "too many requests" in str(e).lower():
+                    raise RuntimeError(f"HTTP 429 Too Many Requests: Rate limit excedido al conectar con '{self.nombre}' en {url}")
 
         if not isinstance(data, dict) or 'products' not in data:
             detalle_str = "; ".join(errores_intentos)
+            if any("429" in err or "too many requests" in err.lower() for err in errores_intentos):
+                raise RuntimeError(
+                    f"BLOQUEO_BOT_O_RATE_LIMIT: HTTP 429 Too Many Requests: Rate limit excedido al conectar con '{self.nombre}'. Intentos: {detalle_str}"
+                )
             if any("401" in err or "unauthorized" in err.lower() or "password" in err.lower() for err in errores_intentos):
                 raise RuntimeError(
                     f"TIENDA_PROTEGIDA_PASSWORD: La tienda '{self.nombre}' tiene protección por contraseña (/password) o requiere autorización (HTTP 401). Intentos: {detalle_str}"
@@ -282,6 +294,7 @@ class ShopifyDriver(BaseDriver):
 
         productos_raw = data.get('products', [])
         productos_normalizados = []
+        html_fallbacks_count = 0
 
         NON_COFFEE_KEYWORDS = (
             'taller', 'curso', 'taza', 'mug', 'vaso', 'polera', 'gorro', 'tote bag',
@@ -372,8 +385,18 @@ class ShopifyDriver(BaseDriver):
             es_accesorio = any(k in titulo_prod.lower() for k in NON_COFFEE_KEYWORDS)
 
             ficha_tecnica: Dict[str, Any] = {}
-            if not tiene_atributos_clave and not es_accesorio and url_detalle and url_detalle != base_site:
-                logging.info(f"[{self.nombre}] Faltan atributos clave en JSON para '{titulo_prod}'. Activando fallback HTML...")
+            if (
+                not tiene_atributos_clave
+                and not es_accesorio
+                and url_detalle
+                and url_detalle != base_site
+                and html_fallbacks_count < self.MAX_HTML_FALLBACKS_PER_STORE
+            ):
+                html_fallbacks_count += 1
+                logging.info(
+                    f"[{self.nombre}] Faltan atributos clave en JSON para '{titulo_prod}'. "
+                    f"Activando fallback HTML ({html_fallbacks_count}/{self.MAX_HTML_FALLBACKS_PER_STORE})..."
+                )
                 ficha_tecnica = self.extraer_ficha_tecnica_html(url_detalle)
             else:
                 ficha_tecnica = self.extraer_ficha_tecnica_texto(descripcion_raw)

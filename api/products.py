@@ -30,7 +30,7 @@ from application.get_cheapest_products import GetCheapestProductsUseCase
 from application.compare_products import CompareProductsUseCase
 from application.recommend_products import RecommendProductsUseCase
 from application.get_weekly_price_drops import GetWeeklyPriceDropsUseCase
-from db.database import Producto, ProductoNotaCata, Receta, Tienda, Variante
+from db.database import Cata, Producto, ProductoNotaCata, Receta, Tienda, Variante
 from infrastructure.postgres_repository import PostgresCoffeeRepository
 
 router = APIRouter(prefix="/api/v1/products", tags=["Productos"])
@@ -309,6 +309,57 @@ def recommend_products(
             for r in results
         ]
     )
+
+
+def _obtener_panel_cata_resumen(product_id: int, db_session: Session) -> Optional[Dict[str, Any]]:
+    cata_asociada = (
+        db_session.query(Cata)
+        .options(selectinload(Cata.respuestas))
+        .filter(
+            Cata.producto_id == product_id,
+            Cata.publicar_en_producto.is_(True),
+        )
+        .order_by(Cata.fecha_creacion.desc())
+        .first()
+    )
+    if not cata_asociada or not cata_asociada.respuestas:
+        return None
+
+    respuestas = cata_asociada.respuestas
+    tot = len(respuestas)
+    avg_score = round(sum(r.puntaje_total for r in respuestas) / tot, 2)
+
+    note_counts: Dict[str, int] = {}
+    for r in respuestas:
+        if r.notas_identificadas:
+            for n in r.notas_identificadas:
+                n_str = str(n).strip().lower()
+                if n_str:
+                    note_counts[n_str] = note_counts.get(n_str, 0) + 1
+    sorted_notes = [k for k, v in sorted(note_counts.items(), key=lambda x: x[1], reverse=True)[:6]]
+
+    promedio_attrs = {
+        "fragancia_aroma": round(sum(r.fragancia_aroma for r in respuestas) / tot, 2),
+        "sabor": round(sum(r.sabor for r in respuestas) / tot, 2),
+        "sabor_residual": round(sum(r.sabor_residual for r in respuestas) / tot, 2),
+        "acidez": round(sum(r.acidez for r in respuestas) / tot, 2),
+        "cuerpo": round(sum(r.cuerpo for r in respuestas) / tot, 2),
+        "uniformidad": round(sum(r.uniformidad for r in respuestas) / tot, 2),
+        "balance": round(sum(r.balance for r in respuestas) / tot, 2),
+        "taza_limpia": round(sum(r.taza_limpia for r in respuestas) / tot, 2),
+        "dulzor": round(sum(r.dulzor for r in respuestas) / tot, 2),
+        "puntaje_general": round(sum(r.puntaje_general for r in respuestas) / tot, 2),
+    }
+
+    return {
+        "cata_id": cata_asociada.id,
+        "nombre_cata": cata_asociada.nombre,
+        "puntaje_promedio": avg_score,
+        "total_evaluadores": tot,
+        "fecha_cata": cata_asociada.fecha_creacion,
+        "notas_destacadas": sorted_notes,
+        "promedio_atributos": promedio_attrs,
+    }
 
 
 @productos_router.get(
@@ -653,6 +704,7 @@ def get_product_detail(
                 .all()
             )
         ],
+        "panel_cata": _obtener_panel_cata_resumen(product.id, db_session),
     }
 
 
