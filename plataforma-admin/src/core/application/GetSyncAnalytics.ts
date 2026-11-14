@@ -65,6 +65,9 @@ export interface SyncHistoryLogDTO {
   productos_actualizados: number;
   productos_con_cambio_precio: number;
   mensaje_error?: string | null;
+  ip_origen?: string | null;
+  resumen_codigos?: Record<string, number> | null;
+  codigos_http?: Record<string, number> | null;
 }
 
 export interface PaginatedSyncHistoryDTO {

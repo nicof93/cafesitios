@@ -228,6 +228,8 @@ class AdminStoreItem(BaseModel):
     ultimo_error_sincronizacion: Optional[str] = None
     codigo_error_sincronizacion: Optional[str] = None
     categoria_error_sincronizacion: Optional[str] = None
+    codigo_http_sincronizacion: Optional[int] = None
+    ip_origen_sincronizacion: Optional[str] = None
     slug: Optional[str] = None
     descripcion: Optional[str] = None
     servicios: List[str] = Field(default_factory=list)
@@ -279,6 +281,8 @@ class SingleStoreSyncResponse(BaseModel):
     categoria_error: Optional[str] = None
     mensaje_amigable: Optional[str] = None
     mensaje: str
+    codigo_http: Optional[int] = 200
+    ip_origen: Optional[str] = None
 
 
 class BatchSyncResponse(BaseModel):
@@ -292,6 +296,8 @@ class BatchSyncResponse(BaseModel):
     total_productos_actualizados: int
     duracion_segundos: float
     mensaje: str
+    ip_origen: Optional[str] = None
+    resumen_codigos: Optional[Dict[str, int]] = None
     detalles: List[SingleStoreSyncResponse]
 
 
@@ -747,6 +753,8 @@ def get_admin_status(db_session: Session = Depends(get_db_session)) -> Dict[str,
                     "fecha_ultimo": fecha_ultimo,
                     "ultima_sincronizacion_exitosa": fecha_last_ok,
                     "detalle_error": detalle_error,
+                    "codigo_http": getattr(last_s, "codigo_http", None),
+                    "ip_origen": getattr(last_s, "ip_origen", None),
                     "productos_agregados": last_s.productos_agregados if last_s else 0,
                     "productos_actualizados": last_s.productos_actualizados if last_s else 0,
                 })
@@ -922,6 +930,8 @@ def list_admin_stores(db_session: Session = Depends(get_db_session)) -> AdminSto
                 ultimo_error_sincronizacion=raw_err,
                 codigo_error_sincronizacion=diag_err["codigo"] if diag_err else None,
                 categoria_error_sincronizacion=diag_err["categoria"] if diag_err else None,
+                codigo_http_sincronizacion=getattr(last_sync, "codigo_http", None),
+                ip_origen_sincronizacion=getattr(last_sync, "ip_origen", None),
                 slug=getattr(s, "slug", None),
                 descripcion=getattr(s, "descripcion", None),
                 servicios=getattr(s, "servicios", None) or [],
@@ -2699,6 +2709,8 @@ def sync_single_store(
         categoria_error=diag["categoria"] if diag else None,
         mensaje_amigable=diag["mensaje_amigable"] if diag else None,
         mensaje=mensaje,
+        codigo_http=res.get("codigo_http") or (200 if res["exito"] else None),
+        ip_origen=res.get("ip_origen"),
     )
 
 
@@ -2765,6 +2777,8 @@ def sync_unsynced_stores(
             productos_eliminados=d.get("productos_eliminados", 0),
             duracion_segundos=d["duracion_segundos"],
             error=d["error"],
+            codigo_http=d.get("codigo_http") or (200 if d["exito"] else None),
+            ip_origen=d.get("ip_origen"),
             mensaje=f"{d['nombre']}: {'OK' if d['exito'] else d['error']}",
         )
         for d in batch_res["detalles"]
@@ -2783,6 +2797,8 @@ def sync_unsynced_stores(
         total_productos_actualizados=batch_res["total_productos_actualizados"],
         duracion_segundos=batch_res["duracion_segundos"],
         mensaje=mensaje,
+        ip_origen=batch_res.get("ip_origen"),
+        resumen_codigos=batch_res.get("resumen_codigos"),
         detalles=detalles_dto,
     )
 
@@ -2850,6 +2866,8 @@ def sync_all_stores(
             productos_eliminados=d.get("productos_eliminados", 0),
             duracion_segundos=d["duracion_segundos"],
             error=d["error"],
+            codigo_http=d.get("codigo_http") or (200 if d["exito"] else None),
+            ip_origen=d.get("ip_origen"),
             mensaje=f"{d['nombre']}: {'OK' if d['exito'] else d['error']}",
         )
         for d in batch_res["detalles"]
@@ -2868,6 +2886,8 @@ def sync_all_stores(
         total_productos_actualizados=batch_res["total_productos_actualizados"],
         duracion_segundos=batch_res["duracion_segundos"],
         mensaje=mensaje,
+        ip_origen=batch_res.get("ip_origen"),
+        resumen_codigos=batch_res.get("resumen_codigos"),
         detalles=detalles_dto,
     )
 

@@ -460,6 +460,9 @@ class SyncHistoryLogItem(BaseModel):
     productos_actualizados: int = 0
     productos_con_cambio_precio: int = 0
     mensaje_error: Optional[str] = None
+    ip_origen: Optional[str] = None
+    resumen_codigos: Optional[Dict[str, int]] = None
+    codigos_http: Optional[Dict[str, int]] = None
 
 class PaginatedSyncHistoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

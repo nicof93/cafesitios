@@ -299,6 +299,8 @@ class Sincronizacion(Base):
     productos_agregados = Column(Integer, nullable=False, default=0, server_default='0')
     productos_eliminados = Column(Integer, nullable=False, default=0, server_default='0')
     productos_actualizados = Column(Integer, nullable=False, default=0, server_default='0')
+    ip_origen = Column(String(50), nullable=True)
+    codigo_http = Column(Integer, nullable=True)
     tienda = relationship("Tienda", back_populates="sincronizaciones")
 
 class SincronizacionLog(Base):
@@ -311,6 +313,8 @@ class SincronizacionLog(Base):
     productos_con_cambio_precio = Column(Integer, nullable=False, default=0, server_default='0')
     duracion_segundos = Column(Numeric(10, 2), nullable=False, default=0, server_default='0')
     mensaje_error = Column(Text, nullable=True)
+    ip_origen = Column(String(50), nullable=True)
+    resumen_codigos = Column(JSON, nullable=True)
 
 class Receta(Base):
     __tablename__ = 'recetas'
@@ -920,7 +924,7 @@ class DatabaseManager:
         finally:
             session.close()
 
-    def iniciar_sincronizacion(self, tienda_id: int) -> int:
+    def iniciar_sincronizacion(self, tienda_id: int, ip_origen: Optional[str] = None) -> int:
         session = self.SessionLocal()
         try:
             tienda = session.query(Tienda).filter(
@@ -934,6 +938,7 @@ class DatabaseManager:
                 tienda_id=tienda.id,
                 fecha_inicio=datetime.now(timezone.utc),
                 resultado='en_progreso',
+                ip_origen=ip_origen,
             )
             session.add(sincronizacion)
             session.commit()
@@ -952,6 +957,8 @@ class DatabaseManager:
         productos_agregados: int = 0,
         productos_eliminados: int = 0,
         productos_actualizados: int = 0,
+        codigo_http: Optional[int] = None,
+        ip_origen: Optional[str] = None,
     ):
         session = self.SessionLocal()
         try:
@@ -962,6 +969,10 @@ class DatabaseManager:
             sincronizacion.productos_agregados = productos_agregados
             sincronizacion.productos_eliminados = productos_eliminados
             sincronizacion.productos_actualizados = productos_actualizados
+            if codigo_http is not None:
+                sincronizacion.codigo_http = codigo_http
+            if ip_origen and not sincronizacion.ip_origen:
+                sincronizacion.ip_origen = ip_origen
             session.commit()
         except Exception:
             session.rollback()
@@ -1002,6 +1013,8 @@ class DatabaseManager:
         productos_con_cambio_precio: int = 0,
         duracion_segundos: float = 0.0,
         mensaje_error: str = None,
+        ip_origen: Optional[str] = None,
+        resumen_codigos: Optional[Dict[str, int]] = None,
     ) -> int:
         session = self.SessionLocal()
         try:
@@ -1014,6 +1027,8 @@ class DatabaseManager:
                 productos_con_cambio_precio=int(productos_con_cambio_precio or 0),
                 duracion_segundos=round(float(duracion_segundos or 0.0), 2),
                 mensaje_error=mensaje_error,
+                ip_origen=ip_origen,
+                resumen_codigos=resumen_codigos,
             )
             session.add(log_entry)
             session.commit()

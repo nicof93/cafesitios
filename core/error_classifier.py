@@ -6,6 +6,41 @@ from typing import Any, Dict, Optional, Union
 import re
 
 
+def extraer_codigo_http(error: Union[Exception, str, None], default: Optional[int] = None) -> Optional[int]:
+    """
+    Extrae el código numérico de estado HTTP de una excepción, respuesta o mensaje de error.
+    Si no hay error, retorna 200. Si no se puede determinar, retorna default (None).
+    """
+    if error is None:
+        return 200
+
+    # 1. Si el objeto tiene response.status_code (como requests.HTTPError)
+    response = getattr(error, 'response', None)
+    if response is not None:
+        status_code = getattr(response, 'status_code', None)
+        if isinstance(status_code, int) and 100 <= status_code <= 599:
+            return status_code
+
+    # 2. Si el objeto tiene directamente status_code o code
+    direct_status = getattr(error, 'status_code', None) or getattr(error, 'code', None)
+    if isinstance(direct_status, int) and 100 <= direct_status <= 599:
+        return direct_status
+
+    err_str = str(error)
+
+    # 3. Buscar patrones explícitos de códigos HTTP relevantes
+    match = re.search(r'\b(200|400|401|403|404|408|429|500|502|503|504)\b', err_str)
+    if match:
+        return int(match.group(1))
+
+    # 4. Cualquier código HTTP genérico 4xx o 5xx
+    match_gen = re.search(r'\b([45]\d{2})\b', err_str)
+    if match_gen:
+        return int(match_gen.group(1))
+
+    return default
+
+
 def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[str, Any]:
     """
     Clasifica un error de sincronización en códigos estándar legibles:
@@ -18,6 +53,7 @@ def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[
     - ERROR_BASE_DATOS: Falla en persistencia SQL o constraints.
     - ERROR_DESCONOCIDO: Otros errores.
     """
+    http_code = extraer_codigo_http(error)
     if not error:
         return {
             "codigo": "OK",
@@ -25,6 +61,7 @@ def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[
             "icono": "✅",
             "mensaje_amigable": "El catálogo se sincronizó sin errores.",
             "es_error": False,
+            "codigo_http": 200,
         }
 
     err_str = str(error).strip()
@@ -39,7 +76,7 @@ def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[
         or "protegida por contraseña" in err_lower
         or "password page" in err_lower
     ):
-        return {
+        res = {
             "codigo": "TIENDA_PROTEGIDA_PASSWORD",
             "categoria": "Tienda con Contraseña / Modo Mantenimiento",
             "icono": "🔒",
@@ -48,7 +85,7 @@ def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[
         }
 
     # 2. Conectividad, DNS, Timeout o Servidor Caído
-    if (
+    elif (
         "timeout" in err_lower
         or "timed out" in err_lower
         or "connection refused" in err_lower
@@ -61,7 +98,7 @@ def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[
         or "sitio_caido_o_timeout" in err_lower
         or "no route to host" in err_lower
     ):
-        return {
+        res = {
             "codigo": "SITIO_CAIDO_O_TIMEOUT",
             "categoria": "Sitio Caído o Tiempo de Espera Agotado",
             "icono": "🔌",
@@ -70,7 +107,7 @@ def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[
         }
 
     # 3. Error interno del servidor de la tienda (5xx)
-    if (
+    elif (
         "500" in err_str
         or "502" in err_str
         or "503" in err_str
@@ -80,7 +117,7 @@ def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[
         or "gateway timeout" in err_lower
         or "internal server error" in err_lower
     ):
-        return {
+        res = {
             "codigo": "ERROR_SERVIDOR_TIENDA",
             "categoria": "Falla en Servidor de la Tienda (5xx)",
             "icono": "🛑",
@@ -89,13 +126,13 @@ def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[
         }
 
     # 4. Catálogo no encontrado (404)
-    if (
+    elif (
         "404" in err_str
         or "not found" in err_lower
         or "catalogo_no_encontrado" in err_lower
         or "no se pudo obtener catálogo en ningún endpoint" in err_lower
     ):
-        return {
+        res = {
             "codigo": "CATALOGO_NO_ENCONTRADO",
             "categoria": "Catálogo No Encontrado (404)",
             "icono": "🔍",
@@ -104,7 +141,7 @@ def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[
         }
 
     # 5. Rate limit o bloqueo bot (429 / 403)
-    if (
+    elif (
         "429" in err_str
         or "too many requests" in err_lower
         or "rate limit" in err_lower
@@ -112,7 +149,7 @@ def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[
         or "forbidden" in err_lower
         or "cloudflare" in err_lower
     ):
-        return {
+        res = {
             "codigo": "BLOQUEO_BOT_O_RATE_LIMIT",
             "categoria": "Bloqueo Anti-Bot o Límite de Peticiones (429/403)",
             "icono": "🛡️",
@@ -121,13 +158,13 @@ def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[
         }
 
     # 6. Catálogo vacío
-    if (
+    elif (
         "catálogo vacío" in err_lower
         or "0 productos devueltos" in err_lower
         or "catalogo vacio" in err_lower
         or "catalogo_vacio" in err_lower
     ):
-        return {
+        res = {
             "codigo": "CATALOGO_VACIO",
             "categoria": "Catálogo Vacío (0 Productos)",
             "icono": "📦",
@@ -136,14 +173,14 @@ def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[
         }
 
     # 7. Error de Base de Datos
-    if (
+    elif (
         "stringdatarighttruncation" in err_lower
         or "value too long for type" in err_lower
         or "integrityerror" in err_lower
         or "programmingerror" in err_lower
         or "operationalerror" in err_lower
     ):
-        return {
+        res = {
             "codigo": "ERROR_BASE_DATOS",
             "categoria": "Error de Base de Datos / Persistencia",
             "icono": "💾",
@@ -152,12 +189,12 @@ def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[
         }
 
     # 8. Discrepancia o Validación de Tienda
-    if (
+    elif (
         "cada sincronización debe contener productos de una sola tienda" in err_lower
         or "cada sincronizacion" in err_lower
         or "la tienda activa con id" in err_lower
     ):
-        return {
+        res = {
             "codigo": "ERROR_VALIDACION_TIENDA",
             "categoria": "Discrepancia de Nombre de Tienda",
             "icono": "🏪",
@@ -166,11 +203,15 @@ def clasificar_error_sincronizacion(error: Union[Exception, str, None]) -> Dict[
         }
 
     # 9. Desconocido / Otros
-    return {
-        "codigo": "ERROR_DESCONOCIDO",
-        "categoria": "Error Desconocido",
-        "icono": "⚠️",
-        "mensaje_amigable": err_str[:250],
-        "es_error": True,
-    }
+    else:
+        res = {
+            "codigo": "ERROR_DESCONOCIDO",
+            "categoria": "Error Desconocido",
+            "icono": "⚠️",
+            "mensaje_amigable": err_str[:250],
+            "es_error": True,
+        }
+
+    res["codigo_http"] = http_code
+    return res
 

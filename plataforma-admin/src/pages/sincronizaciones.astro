@@ -139,8 +139,9 @@ const jsonLd = {
         --label-2: "Fecha";
         --label-3: "Hora";
         --label-4: "Duración";
-        --label-5: "Estado";
-        --label-6: "Conteos (Nuevos / Act. / Cambios)";
+        --label-5: "IP Origen";
+        --label-6: "Estado / Códigos";
+        --label-7: "Conteos (Nuevos / Act. / Cambios)";
       }
 
       .sync-data-table thead,
@@ -236,6 +237,12 @@ const jsonLd = {
         .sync-data-table td:nth-child(6)::before,
         .sync-history-table td:nth-child(6)::before {
           content: var(--label-6) ": " / var(--label-6);
+          font-weight: 600;
+          color: #57534e;
+          text-align: left;
+        }
+        .sync-history-table td:nth-child(7)::before {
+          content: var(--label-7) ": " / var(--label-7);
           font-weight: 600;
           color: #57534e;
           text-align: left;
@@ -577,20 +584,22 @@ const jsonLd = {
                   <th scope="col" class="px-4 py-3">Fecha</th>
                   <th scope="col" class="px-4 py-3">Hora</th>
                   <th scope="col" class="px-4 py-3">Duración</th>
-                  <th scope="col" class="px-4 py-3">Estado</th>
+                  <th scope="col" class="px-4 py-3">IP Origen</th>
+                  <th scope="col" class="px-4 py-3">Estado / Códigos HTTP</th>
                   <th scope="col" class="px-4 py-3 text-right">Resultado (Nuevos / Act. / Cambios)</th>
                 </tr>
               </thead>
               <tbody id="sync-history-tbody" class="divide-y divide-stone-200/70">
                 {history.items.length === 0 ? (
                   <tr>
-                    <td colspan="6" class="px-4 py-8 text-center text-xs text-stone-400">
+                    <td colspan="7" class="px-4 py-8 text-center text-xs text-stone-400">
                       Aún no hay corridas registradas en el historial.
                     </td>
                   </tr>
                 ) : (
                   history.items.map((log) => {
                     const logOk = (log.estado || '').toUpperCase() === 'OK';
+                    const codigosObj = log.resumen_codigos || log.codigos_http || null;
                     return (
                       <tr class="hover:bg-stone-50 transition">
                         <th scope="row" class="px-4 py-3 font-bold text-stone-900">#{log.id}</th>
@@ -598,10 +607,39 @@ const jsonLd = {
                         <td class="px-4 py-3 text-stone-500 font-mono">{log.hora} hrs</td>
                         <td class="px-4 py-3 text-stone-600">{log.duracion_estimada}</td>
                         <td class="px-4 py-3">
-                          <span class={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${logOk ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-800'}`}>
-                            {log.estado}
-                          </span>
-                          {log.mensaje_error && <p class="mt-1 text-[10px] text-rose-600">{log.mensaje_error}</p>}
+                          {log.ip_origen ? (
+                            <span class="inline-flex items-center gap-1 font-mono text-[11px] bg-stone-100 text-stone-800 px-2 py-0.5 rounded-md border border-stone-200">
+                              <span>🌐</span>
+                              <span>{log.ip_origen}</span>
+                            </span>
+                          ) : (
+                            <span class="text-stone-400 text-[11px] italic">No registrada</span>
+                          )}
+                        </td>
+                        <td class="px-4 py-3 space-y-1">
+                          <div class="flex flex-wrap items-center gap-1.5">
+                            <span class={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${logOk ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-800'}`}>
+                              {log.estado}
+                            </span>
+                            {codigosObj && Object.entries(codigosObj).map(([code, count]) => {
+                              const is200 = code === '200';
+                              const is429 = code === '429';
+                              const is5xx = code.startsWith('5');
+                              const badgeStyle = is200
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : is429
+                                ? 'bg-amber-50 text-amber-900 border-amber-300'
+                                : is5xx
+                                ? 'bg-rose-50 text-rose-900 border-rose-300'
+                                : 'bg-stone-100 text-stone-700 border-stone-300';
+                              return (
+                                <span class={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-bold border ${badgeStyle}`} title={`Código HTTP ${code} devuelto por ${count} tienda(s)`}>
+                                  {code === '200' ? '✅' : is429 ? '⛔' : is5xx ? '🛑' : '⚠️'} {code}: {count}
+                                </span>
+                              );
+                            })}
+                          </div>
+                          {log.mensaje_error && <p class="mt-1 text-[10px] text-rose-600 line-clamp-2" title={log.mensaje_error}>{log.mensaje_error}</p>}
                         </td>
                         <td class="px-4 py-3 text-right font-medium text-stone-700">
                           <span class="inline-block rounded-md bg-sky-50 px-2 py-0.5 text-sky-900">🆕 {log.productos_nuevos}</span>

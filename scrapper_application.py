@@ -140,6 +140,7 @@ def sincronizar_tienda(
     tienda: Any,
     db: Any = None,
     extractor: Any = None,
+    ip_origen: Optional[str] = None,
 ) -> dict:
     import time
     inicio = time.monotonic()
@@ -161,6 +162,8 @@ def sincronizar_tienda(
                 "productos_eliminados": 0,
                 "duracion_segundos": 0.0,
                 "error": f"La tienda con ID {tienda} no existe en la base de datos.",
+                "codigo_http": 404,
+                "ip_origen": ip_origen,
             }
         tienda = tienda_dict
 
@@ -182,7 +185,7 @@ def sincronizar_tienda(
 
     sincronizacion_id = None
     try:
-        sincronizacion_id = db.iniciar_sincronizacion(tienda_id)
+        sincronizacion_id = db.iniciar_sincronizacion(tienda_id, ip_origen=ip_origen)
         productos = consumir_productos_tienda(tienda)
         catalogo_cascada = []
 
@@ -268,6 +271,8 @@ def sincronizar_tienda(
             'productos_agregados': conteos['agregados'],
             'productos_eliminados': conteos['eliminados'],
             'productos_actualizados': conteos['actualizados'],
+            'codigo_http': 200,
+            'ip_origen': ip_origen,
         })
 
         try:
@@ -291,17 +296,22 @@ def sincronizar_tienda(
             "codigo_error": "OK",
             "categoria_error": None,
             "mensaje_amigable": None,
+            "codigo_http": 200,
+            "ip_origen": ip_origen,
         }
     except Exception as error:
         duracion = round(time.monotonic() - inicio, 2)
         diag = clasificar_error_sincronizacion(error)
-        detalle_err = f"[{diag['codigo']}] {str(error)}"
+        codigo_http = diag.get("codigo_http")
+        detalle_err = f"[{diag['codigo']}]" + (f" [HTTP {codigo_http}]" if codigo_http else "") + f" {str(error)}"
         if sincronizacion_id is not None:
             try:
                 db.finalizar_sincronizacion(
                     sincronizacion_id,
                     'fallido',
                     detalle_error=detalle_err,
+                    codigo_http=codigo_http,
+                    ip_origen=ip_origen,
                 )
             except Exception:
                 pass
@@ -318,6 +328,8 @@ def sincronizar_tienda(
             "codigo_error": diag["codigo"],
             "categoria_error": diag["categoria"],
             "mensaje_amigable": diag["mensaje_amigable"],
+            "codigo_http": codigo_http,
+            "ip_origen": ip_origen,
         }
 
 
@@ -390,12 +402,13 @@ def sincronizar_multiples_tiendas(
 
     # Diagnóstico de Red e Identidad Saliente
     diag_red = obtener_diagnostico_red()
+    ip_saliente = diag_red.get('ip_publica')
     print("\n" + "=" * 70)
-    print(f"🌐 [DIAGNÓSTICO RED] IP Pública Saliente: {diag_red['ip_publica']}")
+    print(f"🌐 [DIAGNÓSTICO RED] IP Pública Saliente: {ip_saliente}")
     print(f"📡 [DIAGNÓSTICO RED] Headers HTTP Base:   {diag_red['headers']}")
     print(f"⚙️  [CONCURRENCIA] Hilos de ejecución:     {max_workers} workers")
     print("=" * 70 + "\n")
-    logging.info(f"[RED] IP: {diag_red['ip_publica']} | Headers: {diag_red['headers']} | Workers: {max_workers}")
+    logging.info(f"[RED] IP: {ip_saliente} | Headers: {diag_red['headers']} | Workers: {max_workers}")
 
     detalles = []
     total_nuevos = 0
@@ -407,7 +420,7 @@ def sincronizar_multiples_tiendas(
 
     if max_workers <= 1 or len(tiendas) <= 1:
         for tienda in tiendas:
-            res = sincronizar_tienda(tienda, db=db, extractor=extractor)
+            res = sincronizar_tienda(tienda, db=db, extractor=extractor, ip_origen=ip_saliente)
             detalles.append(res)
             if res['exito']:
                 tiendas_exitosas += 1
@@ -415,18 +428,20 @@ def sincronizar_multiples_tiendas(
                 total_actualizados += res.get('productos_actualizados', 0)
                 total_eliminados += res.get('productos_eliminados', 0)
                 total_productos_sincronizados += res.get('total_productos', 0)
-                print(f"✅ {res['nombre']}: {res['total_productos']} productos sincronizados ({res['productos_nuevos']} nuevos, {res['productos_actualizados']} actualizados) en {res.get('duracion_segundos', 0)}s.")
+                print(f"✅ {res['nombre']} [HTTP {res.get('codigo_http', 200)}]: {res['total_productos']} productos sincronizados ({res['productos_nuevos']} nuevos, {res['productos_actualizados']} actualizados) en {res.get('duracion_segundos', 0)}s.")
             else:
                 tiendas_fallidas += 1
+                c_http = res.get('codigo_http')
+                c_http_str = f" [HTTP {c_http}]" if c_http else ""
                 if res.get('codigo_error') == 'BLOQUEO_BOT_O_RATE_LIMIT' or '429' in str(res.get('error', '')):
-                    print(f"⛔ [RATE LIMIT 429] {res['nombre']}: {res['error']} ({res.get('mensaje_amigable')})")
+                    print(f"⛔ [RATE LIMIT 429]{c_http_str} {res['nombre']}: {res['error']} ({res.get('mensaje_amigable')})")
                 else:
-                    print(f"❌ {res['nombre']}: {res['error']}")
+                    print(f"❌{c_http_str} {res['nombre']}: {res['error']}")
     else:
         print(f"⚡ Procesando {len(tiendas)} tiendas de forma concurrente con {max_workers} hilos...")
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_store = {
-                executor.submit(sincronizar_tienda, tienda, db, extractor): tienda
+                executor.submit(sincronizar_tienda, tienda, db, extractor, ip_saliente): tienda
                 for tienda in tiendas
             }
             for future in as_completed(future_to_store):
@@ -437,6 +452,7 @@ def sincronizar_multiples_tiendas(
                     t_id = t_info.get("id") if isinstance(t_info, dict) else t_info
                     t_nombre = t_info.get("nombre") if isinstance(t_info, dict) else f"Tienda #{t_id}"
                     diag = clasificar_error_sincronizacion(e)
+                    codigo_http = diag.get("codigo_http")
                     res = {
                         "tienda_id": t_id,
                         "nombre": t_nombre,
@@ -450,6 +466,8 @@ def sincronizar_multiples_tiendas(
                         "codigo_error": diag["codigo"],
                         "categoria_error": diag["categoria"],
                         "mensaje_amigable": diag["mensaje_amigable"],
+                        "codigo_http": codigo_http,
+                        "ip_origen": ip_saliente,
                     }
 
                 detalles.append(res)
@@ -459,13 +477,15 @@ def sincronizar_multiples_tiendas(
                     total_actualizados += res.get('productos_actualizados', 0)
                     total_eliminados += res.get('productos_eliminados', 0)
                     total_productos_sincronizados += res.get('total_productos', 0)
-                    print(f"✅ {res['nombre']}: {res['total_productos']} productos sincronizados ({res['productos_nuevos']} nuevos, {res['productos_actualizados']} actualizados) en {res.get('duracion_segundos', 0)}s.")
+                    print(f"✅ {res['nombre']} [HTTP {res.get('codigo_http', 200)}]: {res['total_productos']} productos sincronizados ({res['productos_nuevos']} nuevos, {res['productos_actualizados']} actualizados) en {res.get('duracion_segundos', 0)}s.")
                 else:
                     tiendas_fallidas += 1
+                    c_http = res.get('codigo_http')
+                    c_http_str = f" [HTTP {c_http}]" if c_http else ""
                     if res.get('codigo_error') == 'BLOQUEO_BOT_O_RATE_LIMIT' or '429' in str(res.get('error', '')):
-                        print(f"⛔ [RATE LIMIT 429] {res['nombre']}: {res['error']} ({res.get('mensaje_amigable')})")
+                        print(f"⛔ [RATE LIMIT 429]{c_http_str} {res['nombre']}: {res['error']} ({res.get('mensaje_amigable')})")
                     else:
-                        print(f"❌ {res['nombre']}: {res['error']}")
+                        print(f"❌{c_http_str} {res['nombre']}: {res['error']}")
 
     duracion_total = round(time.monotonic() - inicio_corrida, 2)
     db.registrar_ultima_sincronizacion()
@@ -474,6 +494,12 @@ def sincronizar_multiples_tiendas(
             db.refrescar_vistas_materializadas()
         except Exception:
             pass
+
+    # Resumen y agregación de códigos HTTP de respuesta
+    resumen_codigos: Dict[str, int] = {}
+    for d in detalles:
+        code_key = str(d.get("codigo_http") or ("200" if d.get("exito") else "ERROR"))
+        resumen_codigos[code_key] = resumen_codigos.get(code_key, 0) + 1
 
     if registrar_log_global and hasattr(db, 'registrar_sincronizacion_log'):
         estado_global = 'OK' if (tiendas_exitosas > 0 or not tiendas) else 'ERROR'
@@ -486,6 +512,8 @@ def sincronizar_multiples_tiendas(
                 productos_con_cambio_precio=0,
                 duracion_segundos=duracion_total,
                 mensaje_error=errores_msg,
+                ip_origen=ip_saliente,
+                resumen_codigos=resumen_codigos,
             )
         except Exception:
             pass
@@ -499,6 +527,8 @@ def sincronizar_multiples_tiendas(
         'total_productos_actualizados': total_actualizados,
         'total_productos_eliminados': total_eliminados,
         'duracion_segundos': duracion_total,
+        'ip_origen': ip_saliente,
+        'resumen_codigos': resumen_codigos,
         'detalles': detalles,
     }
 
