@@ -1398,14 +1398,22 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           } else {
             listEl.innerHTML = detailsList.map((item) => {
               const isOk = item.exito !== undefined ? Boolean(item.exito) : (item.estado === 'exitoso');
+              const httpCode = item.codigo_http;
+              const httpBadge = httpCode ? `
+                <span class="rounded px-1.5 py-0.5 text-[10px] font-mono font-bold border ${httpCode === 200 ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : (httpCode === 429 ? 'bg-amber-50 text-amber-900 border-amber-300' : 'bg-rose-50 text-rose-800 border-rose-300')}">
+                  HTTP ${httpCode}
+                </span>
+              ` : '';
               return `
               <div class="p-3 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-stone-50">
                 <div class="space-y-0.5">
-                  <div class="flex items-center gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
                     <span class="font-bold text-stone-900">${item.nombre || item.tienda_nombre || 'Tienda'}</span>
                     <span class="rounded-full px-2 py-0.2 text-[10px] font-bold ${isOk ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
                       ${isOk ? 'Completado' : 'Fallido'}
                     </span>
+                    ${httpBadge}
+                    ${item.ip_origen ? `<span class="font-mono text-[10px] text-stone-400">🌐 ${item.ip_origen}</span>` : ''}
                   </div>
                   <p class="text-[11px] text-stone-500">${item.mensaje || (isOk ? 'Sincronizado' : item.error || 'Error')}</p>
                 </div>
@@ -1452,13 +1460,23 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           }
           const data = await res.json();
           const isSuccess = Boolean(data.exito || data.estado === 'exitoso');
+          const httpCode = data.codigo_http;
+          const httpBadge = httpCode ? `
+            <span class="rounded px-1.5 py-0.5 text-[10px] font-mono font-bold border ${httpCode === 200 ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : (httpCode === 429 ? 'bg-amber-50 text-amber-900 border-amber-300' : 'bg-rose-50 text-rose-800 border-rose-300')}">
+              HTTP ${httpCode}
+            </span>
+          ` : '';
 
           const summaryHtml = `
             <div class="space-y-2">
               <div class="flex items-center justify-between">
-                <span class="font-bold text-sm ${isSuccess ? 'text-emerald-800' : 'text-rose-800'}">
-                  ${isSuccess ? '✅ Catálogo Sincronizado con Éxito' : '❌ Sincronización con Errores'}
-                </span>
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-sm ${isSuccess ? 'text-emerald-800' : 'text-rose-800'}">
+                    ${isSuccess ? '✅ Catálogo Sincronizado con Éxito' : '❌ Sincronización con Errores'}
+                  </span>
+                  ${httpBadge}
+                  ${data.ip_origen ? `<span class="font-mono text-[10px] text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200">🌐 ${data.ip_origen}</span>` : ''}
+                </div>
                 <span class="text-xs font-mono text-stone-500">${data.duracion_segundos}s</span>
               </div>
               <p class="text-xs text-stone-700">${data.mensaje}</p>
@@ -1547,10 +1565,22 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           const summaryHtml = `
             <div class="space-y-1">
               <div class="flex items-center justify-between">
-                <span class="font-bold text-sm text-stone-900">⚡ Sincronización de Pendientes Finalizada</span>
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-sm text-stone-900">⚡ Sincronización de Pendientes Finalizada</span>
+                  ${data.ip_origen ? `<span class="font-mono text-[10px] text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200">🌐 ${data.ip_origen}</span>` : ''}
+                </div>
                 <span class="text-xs font-mono text-stone-500">${data.duracion_segundos}s</span>
               </div>
               <p class="text-xs text-stone-700">${data.mensaje}</p>
+              ${data.resumen_codigos ? `
+                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                  ${Object.entries(data.resumen_codigos).map(([code, count]) => `
+                    <span class="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border ${code === '200' ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : (code === '429' ? 'bg-amber-50 text-amber-900 border-amber-300' : 'bg-rose-50 text-rose-900 border-rose-300')}">
+                      ${code === '200' ? '✅' : (code === '429' ? '⛔' : '🛑')} ${code}: ${count}
+                    </span>
+                  `).join('')}
+                </div>
+              ` : ''}
               <div class="flex flex-wrap gap-3 pt-2 text-[11px] font-semibold text-stone-700 border-t border-stone-200 mt-2">
                 <span class="text-emerald-700">✅ ${data.tiendas_exitosas} tiendas exitosas</span>
                 <span class="${data.tiendas_fallidas ? 'text-rose-600' : 'text-stone-400'}">❌ ${data.tiendas_fallidas} fallidas</span>
@@ -1594,10 +1624,22 @@ const apiBaseUrl = import.meta.env.PUBLIC_PLATAFORMA_API_BASE_URL || "http://loc
           const summaryHtml = `
             <div class="space-y-1">
               <div class="flex items-center justify-between">
-                <span class="font-bold text-sm text-stone-900">🔄 Sincronización Masiva Completada</span>
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-sm text-stone-900">🔄 Sincronización Masiva Completada</span>
+                  ${data.ip_origen ? `<span class="font-mono text-[10px] text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200">🌐 ${data.ip_origen}</span>` : ''}
+                </div>
                 <span class="text-xs font-mono text-stone-500">${data.duracion_segundos}s</span>
               </div>
               <p class="text-xs text-stone-700">${data.mensaje}</p>
+              ${data.resumen_codigos ? `
+                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                  ${Object.entries(data.resumen_codigos).map(([code, count]) => `
+                    <span class="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border ${code === '200' ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : (code === '429' ? 'bg-amber-50 text-amber-900 border-amber-300' : 'bg-rose-50 text-rose-900 border-rose-300')}">
+                      ${code === '200' ? '✅' : (code === '429' ? '⛔' : '🛑')} ${code}: ${count}
+                    </span>
+                  `).join('')}
+                </div>
+              ` : ''}
               <div class="flex flex-wrap gap-3 pt-2 text-[11px] font-semibold text-stone-700 border-t border-stone-200 mt-2">
                 <span class="text-emerald-700">✅ ${data.tiendas_exitosas} tiendas exitosas</span>
                 <span class="${data.tiendas_fallidas ? 'text-rose-600' : 'text-stone-400'}">❌ ${data.tiendas_fallidas} fallidas</span>

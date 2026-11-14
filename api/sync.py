@@ -464,6 +464,7 @@ def get_sync_history(
             dt = row.fecha_ejecucion
             dur = round(float(row.duracion_segundos or 0.0), 2)
             estado_norm = "OK" if str(row.estado).upper() in ("OK", "EXITOSO", "SUCCESS") else "ERROR"
+            codigos_resumen = row.resumen_codigos if isinstance(getattr(row, "resumen_codigos", None), dict) else None
             items.append(
                 SyncHistoryLogItem(
                     id=row.id,
@@ -477,6 +478,9 @@ def get_sync_history(
                     productos_actualizados=int(row.productos_actualizados or 0),
                     productos_con_cambio_precio=int(row.productos_con_cambio_precio or 0),
                     mensaje_error=row.mensaje_error,
+                    ip_origen=getattr(row, "ip_origen", None),
+                    resumen_codigos=codigos_resumen,
+                    codigos_http=codigos_resumen,
                 )
             )
         return PaginatedSyncHistoryResponse(
@@ -508,6 +512,8 @@ def get_sync_history(
                 except Exception:
                     dur = 0.0
             estado_norm = "OK" if str(row.resultado).lower() in ("ok", "exitoso", "success") else "ERROR"
+            c_code = getattr(row, "codigo_http", None) or (200 if estado_norm == "OK" else None)
+            resumen_c = {str(c_code): 1} if c_code else None
             items.append(
                 SyncHistoryLogItem(
                     id=row.id,
@@ -521,6 +527,9 @@ def get_sync_history(
                     productos_actualizados=int(row.productos_actualizados or 0),
                     productos_con_cambio_precio=0,
                     mensaje_error=row.detalle_error,
+                    ip_origen=getattr(row, "ip_origen", None),
+                    resumen_codigos=resumen_c,
+                    codigos_http=resumen_c,
                 )
             )
 

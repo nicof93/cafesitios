@@ -191,7 +191,7 @@ class WooCommerceDriver(BaseDriver):
 
                 variantes_normalizadas.append({
                     'id_variante_externo': str(var.get('id')),
-                    'opcion': titulo_var,
+                    'opcion': str(titulo_var)[:250] if titulo_var else f"Variación {var.get('id')}",
                     'formato_gramos': var_gramos,
                     'precio_clp': precio_clp,
                     'precio_original_clp': precio_orig_clp,

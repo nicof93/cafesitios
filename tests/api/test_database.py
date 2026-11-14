@@ -297,12 +297,19 @@ class TestDatabaseManager(unittest.TestCase):
                     ).scalar_one()
 
                 self.assertEqual(store_name, 'Tienda existente')
-                self.assertEqual(revision, '0032_catas_y_panel_sensorial')
+                self.assertEqual(revision, '0034_widen_variantes_opcion')
                 table_names = set(inspect(db.engine).get_table_names())
                 self.assertIn('catas', table_names)
                 self.assertIn('cata_respuestas', table_names)
                 self.assertIn('tienda_comentarios', table_names)
                 self.assertIn('novedades_tienda', table_names)
+                # Validar columnas de trazabilidad IP y codigos HTTP
+                sync_log_cols = {col['name'] for col in inspect(db.engine).get_columns('sincronizaciones_log')}
+                self.assertIn('ip_origen', sync_log_cols)
+                self.assertIn('resumen_codigos', sync_log_cols)
+                sync_cols = {col['name'] for col in inspect(db.engine).get_columns('sincronizaciones')}
+                self.assertIn('ip_origen', sync_cols)
+                self.assertIn('codigo_http', sync_cols)
                 self.assertIn('planes_tienda', table_names)
                 self.assertIn('pagos_tienda', table_names)
                 view_names = set(inspect(db.engine).get_view_names())
