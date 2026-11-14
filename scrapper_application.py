@@ -438,7 +438,8 @@ def sincronizar_multiples_tiendas(
                 else:
                     print(f"❌{c_http_str} {res['nombre']}: {res['error']}")
     else:
-        print(f"⚡ Procesando {len(tiendas)} tiendas de forma concurrente con {max_workers} hilos...")
+        timeout_tienda = int(os.getenv("SCRAPER_STORE_TIMEOUT", "60"))
+        print(f"⚡ Procesando {len(tiendas)} tiendas de forma concurrente con {max_workers} hilos (timeout por tienda: {timeout_tienda}s)...")
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_store = {
                 executor.submit(sincronizar_tienda, tienda, db, extractor, ip_saliente): tienda
@@ -446,13 +447,15 @@ def sincronizar_multiples_tiendas(
             }
             for future in as_completed(future_to_store):
                 try:
-                    res = future.result()
-                except Exception as e:
+                    res = future.result(timeout=timeout_tienda)
+                except (TimeoutError, Exception) as e:
                     t_info = future_to_store[future]
                     t_id = t_info.get("id") if isinstance(t_info, dict) else t_info
                     t_nombre = t_info.get("nombre") if isinstance(t_info, dict) else f"Tienda #{t_id}"
-                    diag = clasificar_error_sincronizacion(e)
-                    codigo_http = diag.get("codigo_http")
+                    es_timeout = isinstance(e, TimeoutError) or "timeout" in str(e).lower()
+                    diag = clasificar_error_sincronizacion("timeout" if es_timeout else e)
+                    codigo_http = 408 if es_timeout else diag.get("codigo_http")
+                    error_msg = f"Tiempo de espera agotado ({timeout_tienda}s) al sincronizar tienda" if es_timeout else str(e)
                     res = {
                         "tienda_id": t_id,
                         "nombre": t_nombre,
@@ -461,11 +464,15 @@ def sincronizar_multiples_tiendas(
                         "productos_nuevos": 0,
                         "productos_actualizados": 0,
                         "productos_eliminados": 0,
-                        "duracion_segundos": 0.0,
-                        "error": str(e),
+                        "duracion_segundos": float(timeout_tienda) if es_timeout else 0.0,
+                        "error": error_msg,
                         "codigo_error": diag["codigo"],
                         "categoria_error": diag["categoria"],
-                        "mensaje_amigable": diag["mensaje_amigable"],
+                        "mensaje_amigable": (
+                            f"La sincronización de '{t_nombre}' superó el tiempo límite de {timeout_tienda}s y fue cancelada para continuar con las demás tiendas."
+                            if es_timeout
+                            else diag["mensaje_amigable"]
+                        ),
                         "codigo_http": codigo_http,
                         "ip_origen": ip_saliente,
                     }

@@ -297,7 +297,7 @@ class TestDatabaseManager(unittest.TestCase):
                     ).scalar_one()
 
                 self.assertEqual(store_name, 'Tienda existente')
-                self.assertEqual(revision, '0033_ip_codigos_sync')
+                self.assertEqual(revision, '0034_widen_variantes_opcion')
                 table_names = set(inspect(db.engine).get_table_names())
                 self.assertIn('catas', table_names)
                 self.assertIn('cata_respuestas', table_names)

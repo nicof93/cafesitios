@@ -2,13 +2,19 @@ import hashlib
 import html
 import json
 import logging
+import os
 import re
+import threading
 from typing import Any, Dict, List, Optional, Tuple
 
 from core.normalizer import SCAFlavorWheelNormalizer, sanitize_text
 from scrapper.coffee_metadata import generar_resumen_corto
 
 logger = logging.getLogger("core.extractor")
+
+_GLINER_LOCK = threading.Lock()
+_GLINER_INSTANCE = None
+_GLINER_DISABLED = False
 
 # =====================================================================
 # CONSTANTES Y LISTAS MAESTRAS DE ATRIBUTOS BOTÁNICOS / ORGANOLÉPTICOS
@@ -148,10 +154,14 @@ class CoffeeAttributesExtractor:
 
     def __init__(
         self,
-        gliner_model_name: str = "knowledgator/gliner-multilingual-v2.1",
+        gliner_model_name: Optional[str] = None,
         qwen_model_path: Optional[str] = None,
     ):
-        self.gliner_model_name = gliner_model_name
+        self.gliner_model_name = (
+            gliner_model_name
+            or os.getenv("GLINER_MODEL_ID")
+            or "urchade/gliner_multi-v2.1"
+        )
         self.qwen_model_path = qwen_model_path
         self._gliner_pipeline = None
         self._llm_instance = None
@@ -411,15 +421,45 @@ class CoffeeAttributesExtractor:
         """
         Usa GLiNER multilingüe para token classification zero-shot si faltan atributos críticos.
         """
+        global _GLINER_INSTANCE, _GLINER_DISABLED
+
         data = dict(prev_data)
         data["capa"] = 2
 
-        try:
-            # Lazy import para no bloquear en entornos de pruebas sin GLiNER
-            if self._gliner_pipeline is None:
-                from gliner import GLiNER
-                self._gliner_pipeline = GLiNER.from_pretrained(self.gliner_model_name)
+        # Circuit breaker rápido en memoria
+        if _GLINER_DISABLED and self._gliner_pipeline is None:
+            return data
 
+        pipeline = self._gliner_pipeline
+
+        if pipeline is None:
+            with _GLINER_LOCK:
+                if _GLINER_DISABLED:
+                    return data
+                if _GLINER_INSTANCE is not None:
+                    pipeline = _GLINER_INSTANCE
+                else:
+                    try:
+                        from gliner import GLiNER
+                        hf_token = os.getenv("HF_TOKEN")
+                        kwargs = {}
+                        if hf_token and hf_token.strip():
+                            kwargs["token"] = hf_token.strip()
+
+                        _GLINER_INSTANCE = GLiNER.from_pretrained(
+                            self.gliner_model_name,
+                            **kwargs
+                        )
+                        pipeline = _GLINER_INSTANCE
+                    except Exception as e:
+                        _GLINER_DISABLED = True
+                        logger.warning(
+                            "Circuit breaker activado: Capa 2 (GLiNER) no disponible (%s). Se omitirá GLiNER para el resto de la ejecución.",
+                            e,
+                        )
+                        return data
+
+        try:
             labels = [
                 "nota_de_cata",
                 "variedad_cafe",
@@ -432,7 +472,7 @@ class CoffeeAttributesExtractor:
                 "origen del café",
                 "lote de café",
             ]
-            entities = self._gliner_pipeline.predict_entities(text, labels, threshold=0.4)
+            entities = pipeline.predict_entities(text, labels, threshold=0.4)
 
             for ent in entities:
                 lbl = ent["label"]

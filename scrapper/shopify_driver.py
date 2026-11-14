@@ -362,7 +362,7 @@ class ShopifyDriver(BaseDriver):
 
                 variantes_normalizadas.append({
                     'id_variante_externo': str(var.get('id')),
-                    'opcion': titulo_var,
+                    'opcion': str(titulo_var)[:250] if titulo_var else "Default Title",
                     'formato_gramos': gramos,
                     'precio_clp': precio_clp,
                     'precio_original_clp': precio_orig_clp,

@@ -252,7 +252,7 @@ class Variante(Base):
     id = Column(Integer, primary_key=True)
     producto_id = Column(Integer, ForeignKey('productos.id'), nullable=False)
     id_variante_externo = Column(String(100), unique=True, nullable=False)
-    opcion = Column(String(100), nullable=False)
+    opcion = Column(String(255), nullable=False)
     formato_gramos = Column(Integer, nullable=False)
     precio_clp = Column(Integer, nullable=False)
     precio_original_clp = Column(Integer, nullable=False)
@@ -1321,11 +1321,13 @@ class DatabaseManager:
                         unique_variantes.add(clave_variante)
 
                         kilo_saneado = _sanitize_precio_por_kilo(var_data.get('precio_por_kilo'))
+                        raw_opcion = str(var_data.get('opcion') or 'Estándar').strip()
+                        opcion_saneada = raw_opcion[:250] if len(raw_opcion) > 250 else raw_opcion
 
                         variante_mapping = {
                             'producto_id': producto_id,
                             'id_variante_externo': var_data['id_variante_externo'],
-                            'opcion': var_data['opcion'],
+                            'opcion': opcion_saneada,
                             'formato_gramos': var_data['formato_gramos'],
                             'precio_clp': var_data['precio_clp'],
                             'precio_original_clp': var_data['precio_original_clp'],

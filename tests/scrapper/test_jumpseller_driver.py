@@ -1,6 +1,7 @@
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -99,6 +100,66 @@ class TestJumpsellerDriver(unittest.TestCase):
         self.assertEqual(p['variantes'][0]['precio_clp'], 10990)
         self.assertEqual(p['variantes'][0]['precio_original_clp'], 12211)
         self.assertTrue(p['variantes'][0]['en_oferta'])
+
+    def test_anti_loop_and_max_pages_limit(self):
+        """Verifica que el driver previene bucles infinitos, no sigue rutas cruzadas/idiomas y respeta MAX_PAGES."""
+        import time
+        from unittest.mock import patch
+
+        driver = JumpsellerDriver(
+            nombre="Primates Tostadores",
+            url_base="https://www.primatestostadores.cl/cafe"
+        )
+
+        # Simular HTML con enlaces circulares en el header/menú y paginación
+        mock_html_page = """
+        <html>
+            <head><title>Primates Tostadores</title></head>
+            <body>
+                <nav>
+                    <a href="/en/cafe">English</a>
+                    <a href="/cart">Carrito</a>
+                    <a href="/checkout">Pagar</a>
+                    <a href="/cafe?page=1">Página 1</a>
+                    <a href="/cafe?page=2">Página 2</a>
+                    <a href="https://www.primatestostadores.cl/cafe">Inicio Colección</a>
+                </nav>
+                <div class="products-grid">
+                    <div class="product-block" data-product-id="501">
+                        <a href="/producto-cafe-501" class="product-link">Café Especial 501 250g</a>
+                        <span class="product-block-price">$ 8.990</span>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+
+        call_urls = []
+
+        def mock_get(url, headers=None, timeout=None):
+            call_urls.append(url)
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.text = mock_html_page
+            return resp
+
+        t0 = time.time()
+        with patch("scrapper.jumpseller_driver.requests.get", side_effect=mock_get):
+            productos = driver.consumir_productos(max_pages=20)
+        duration = time.time() - t0
+
+        self.assertLess(duration, 1.0, "La ejecución debe terminar en menos de 1 segundo")
+        self.assertGreater(len(productos), 0)
+        # MAX_PAGES es 10, por lo que nunca debe exceder 10 llamadas
+        self.assertLessEqual(len(call_urls), 10)
+        self.assertLessEqual(len(driver.visited_urls), 10)
+        # No debe haber URLs duplicadas visitadas
+        self.assertEqual(len(call_urls), len(set(call_urls)))
+        # No debe haber visitado /en/, /cart, o /checkout
+        for visited in call_urls:
+            self.assertNotIn("/en/", visited)
+            self.assertNotIn("/cart", visited)
+            self.assertNotIn("/checkout", visited)
 
 
 if __name__ == '__main__':
